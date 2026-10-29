@@ -37,7 +37,7 @@ $('#authForm').onsubmit = async e => {
       if (!$('#aConsent').checked) throw { message: 'Para criar a conta, marque a concordância com o uso dos dados.' };
       const { data, error } = await db.sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin, data: { name: $('#aName').value.trim() } } });
       if (error) throw error;
-      if (!data.session) { msg.textContent = 'Conta criada. Confirme pelo link que enviamos para o seu e-mail e depois entre aqui.'; setMode('login'); return; }
+      if (!data.session) { setMode('login'); $('#aPass').value = ''; msg.className = 'banner ok'; msg.textContent = `Conta criada! Enviamos um link de confirmação para ${email}. Abra o e-mail (veja também o spam), clique no link e depois entre aqui com a sua senha.`; return; }
     } else {
       const { error } = await db.sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
