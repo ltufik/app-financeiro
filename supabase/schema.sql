@@ -288,6 +288,14 @@ begin
     do update set category = excluded.category;
 end $$;
 
+-- Table access for signed-in users (row-level security above still limits rows to their family).
+-- Explicit, so it works even when the project does not expose new tables automatically.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.households, public.members, public.invites, public.categories,
+  public.transactions, public.rules, public.imports, public.studies to authenticated;
+revoke all on public.households, public.members, public.invites, public.categories,
+  public.transactions, public.rules, public.imports, public.studies from anon;
+
 grant execute on function public.create_household(text, text) to authenticated;
 grant execute on function public.create_invite(uuid) to authenticated;
 grant execute on function public.accept_invite(text, text) to authenticated;

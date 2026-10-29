@@ -1,6 +1,5 @@
 -- Testa isolamento entre famílias, convites e replace_month. Rode após o shim e o schema.
 \set ON_ERROR_STOP on
-grant select, insert, update, delete on all tables in schema public to authenticated;
 insert into auth.users values ('00000000-0000-0000-0000-00000000000a', 'a@x'), ('00000000-0000-0000-0000-00000000000b', 'b@x'), ('00000000-0000-0000-0000-00000000000c', 'c@x') on conflict do nothing;
 set role authenticated;
 -- A cria a família
