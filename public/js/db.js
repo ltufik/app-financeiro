@@ -14,6 +14,17 @@ export async function init() {
 
 const must = ({ data, error }) => { if (error) throw error; return data; };
 
+// Human message for a database or network error.
+export function errorText(e) {
+  const m = String(e?.message || e?.code || e || '');
+  if (/could not find the function|does not exist|schema cache|PGRST20/i.test(m)) return 'O banco de dados precisa ser atualizado: rode de novo o arquivo schema.sql no Supabase.';
+  if (/not_member/.test(m)) return 'Você não faz parte desta família.';
+  if (/not_authenticated|JWT|jwt|401/.test(m)) return 'Sua sessão expirou. Saia e entre de novo.';
+  if (/Failed to fetch|NetworkError|network/i.test(m)) return 'Sem conexão com a internet. Tente de novo.';
+  if (/duplicate|unique/i.test(m)) return 'Isso já existe.';
+  return 'Algo deu errado (' + m.slice(0, 80) + '). Tente de novo.';
+}
+
 // Reads every row of a family's table, 1000 at a time.
 async function all(table, hh, order = 'created_at') {
   const out = [];
@@ -29,8 +40,8 @@ export async function myHouseholds(uid) {
 }
 export const createHousehold = async (name, displayName) => must(await sb.rpc('create_household', { p_name: name, p_display_name: displayName || null }));
 export const acceptInvite = async (code, displayName) => must(await sb.rpc('accept_invite', { p_code: code, p_display_name: displayName || null }));
-export const createInvite = async (hh, name, relation) => must(await sb.rpc('create_invite', { p_household: hh, p_name: name || null, p_relation: relation || null }));
-export const listInvites = async hh => must(await sb.from('invites').select('code, invitee_name, relation, created_at, expires_at, used_by').eq('household_id', hh).order('created_at', { ascending: false }));
+export const createInvite = async (hh, name, relation, phone) => must(await sb.rpc('create_invite', { p_household: hh, p_name: name || null, p_relation: relation || null, p_phone: phone || null }));
+export const listInvites = async hh => must(await sb.from('invites').select('code, invitee_name, relation, invitee_phone, created_at, expires_at, used_by').eq('household_id', hh).order('created_at', { ascending: false }));
 export const updateMyMemberName = async (uid, name) => must(await sb.from('members').update({ display_name: name }).eq('user_id', uid));
 
 export async function loadFamily(hh) {

@@ -5,7 +5,8 @@ import { attachMic, speechSupported } from '../speech.js';
 import { classify } from '../lib/categorize.js';
 import { lineify, detect, parseFaturaSantander, parseExtratoSantander, faturaMonth, checkFatura, checkExtrato, detectBank, MONEY } from '../lib/parse.js';
 import { brl, esc, mLong, addM, todayISO, isoToBr, cycleMonth, norm, round2, thisMonth } from '../lib/format.js';
-import { $, toast, catPicker } from '../ui.js';
+import { $, toast, catPicker, confirmInline, invalid, clearInvalid } from '../ui.js';
+import { checkDate } from '../lib/validate.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
 let Q = null;          // quick-entry preview items
@@ -26,7 +27,7 @@ function build(el) {
     <div class="inwrap" style="margin-top:10px"><textarea id="qText" placeholder="Ex.: gastei 230 no mercado hoje no cartão e 350 de terapia por pix"></textarea><button id="qMic"></button></div>
     <p class="tiny muted" style="margin-top:6px">${speechSupported ? 'Toque no microfone, fale e toque de novo para parar.' : 'Para falar, use o microfone do teclado do celular.'}</p>
     <div class="chips" style="margin-top:8px" id="qExamples">${EXAMPLES.map(e => `<button class="chip" type="button">${esc(e)}</button>`).join('')}</div>
-    <div class="rowbtn" style="margin-top:12px"><button class="btn primary" id="qGo" type="button">Interpretar</button><span class="small muted" id="qStatus"></span></div>
+    <div class="rowbtn" style="margin-top:12px"><button class="btn primary" id="qGo" type="button">Interpretar</button><button class="btn" id="qManual" type="button">Preencher à mão</button><span class="small muted" id="qStatus"></span></div>
     <div id="qPreview" hidden style="margin-top:14px"></div>
   </div>
   <div class="panel">
@@ -59,6 +60,7 @@ function build(el) {
   attachMic($('#qMic'), $('#qText'));
   el.querySelectorAll('#qExamples .chip').forEach(b => b.onclick = () => { $('#qText').value = b.textContent; $('#qText').focus(); });
   $('#qGo').onclick = interpret;
+  $('#qManual').onclick = () => { Q = [{ source: 'conta', date: todayISO(), description: '', amount: 0, category: 'A classificar' }]; renderQ(); $('#qStatus').textContent = 'Preencha e salve.'; };
   $('#pdfIn').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) startPdf(f).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')).finally(() => { e.target.value = ''; }); };
   const drop = $('#drop');
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
@@ -73,8 +75,9 @@ function renderManual() {
   const box = $('#manualList');
   box.innerHTML = list.length ? `<ul class="list small">${list.map(t => `<li><span>${esc(isoToBr(t.date))} · ${esc(t.description)}<br><span class="tiny muted">${esc(t.category || 'A classificar')} · ${t.source === 'cartao' ? 'cartão, fatura de ' + mLong(t.month) : 'conta'}</span></span><span class="rowbtn"><span class="amt">${brl(t.amount)}</span><button class="chip" type="button" data-del="${t.id}">Apagar</button></span></li>`).join('')}</ul>` : '<div class="empty small">Nenhum lançamento manual em aberto.</div>';
   box.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-    if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Confirmar'; b.style.borderColor = 'var(--bad)'; return; }
-    try { await db.deleteTransaction(b.dataset.del); S.txs = S.txs.filter(t => t.id !== b.dataset.del); toast('Lançamento apagado'); S.render(); } catch (e) { toast('Não foi possível apagar.'); }
+    const t = S.txs.find(x => x.id === b.dataset.del);
+    if (!await confirmInline(b, { text: `Apagar "${esc(t?.description || '')}" de ${brl(t?.amount || 0)}?`, yes: 'Sim, apagar', danger: true })) return;
+    try { await db.deleteTransaction(b.dataset.del); S.txs = S.txs.filter(x => x.id !== b.dataset.del); toast('Lançamento apagado'); S.render(); } catch (e) { toast('Não foi possível apagar. ' + db.errorText(e)); }
   });
 }
 function renderImports() {
@@ -85,7 +88,8 @@ function renderImports() {
 // ---------- quick entry ----------
 const catList = () => S.categories.map(c => `${c.name} [${c.grp}]`).join(' | ');
 async function interpret() {
-  const txt = $('#qText').value.trim(); if (!txt) return;
+  const txt = $('#qText').value.trim();
+  if (!txt) { invalid($('#qText'), 'Escreva ou fale o gasto, por exemplo: "gastei 45 na padaria no pix".'); return; }
   $('#qGo').disabled = true; $('#qStatus').textContent = 'Interpretando...';
   const prompt = `Você registra lançamentos financeiros de uma família brasileira (${S.hh.name}). Hoje é ${todayISO()}.
 Transforme a frase abaixo em lançamentos. Responda só com JSON no formato:
@@ -121,19 +125,29 @@ function renderQ() {
     tr.querySelectorAll('[data-f]').forEach(inp => inp.onchange = () => {
       const f = inp.dataset.f;
       if (f === 'source') { if (inp.value !== it.source) it.amount = -it.amount; it.source = inp.value; renderQ(); }
-      else it[f] = f === 'amount' ? +inp.value : inp.value;
+      else it[f] = f === 'amount' ? +String(inp.value).replace(',', '.') : inp.value;
     });
     tb.append(tr);
   });
-  $('#qCancel').onclick = () => { box.hidden = true; Q = null; };
+  $('#qCancel').onclick = () => { box.hidden = true; Q = null; $('#qStatus').textContent = ''; };
   $('#qSave').onclick = async () => {
+    clearInvalid(box);
+    // Validate every row before saving.
+    const trs = [...tb.children];
+    for (let i = 0; i < Q.length; i++) {
+      const it = Q[i], tr = trs[i], dErr = checkDate(it.date);
+      if (dErr) return invalid(tr.querySelector('[data-f=date]'), dErr);
+      if (!String(it.description || '').trim()) return invalid(tr.querySelector('[data-f=description]'), 'Escreva o que foi.');
+      if (!isFinite(it.amount) || it.amount === 0) return invalid(tr.querySelector('[data-f=amount]'), 'Informe o valor.');
+      if (Math.abs(it.amount) >= 1e6) return invalid(tr.querySelector('[data-f=amount]'), 'Valor alto demais. Confira se não faltou a vírgula.');
+    }
     $('#qSave').disabled = true;
     try {
       const rows = Q.map(it => ({ household_id: S.hh.id, source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
       const saved = await db.addTransactions(rows);
       S.txs.push(...saved.map(t => ({ ...t, amount: +t.amount })));
       toast(rows.length > 1 ? 'Lançamentos salvos' : 'Lançamento salvo'); box.hidden = true; Q = null; $('#qText').value = ''; $('#qStatus').textContent = ''; S.render();
-    } catch (e) { toast('Não foi possível salvar.'); $('#qSave').disabled = false; }
+    } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#qSave').disabled = false; }
   };
 }
 
@@ -299,8 +313,15 @@ function renderReview() {
     $('#rvPend').querySelectorAll('input').forEach(inp => inp.onchange = () => { pend[+inp.dataset.i]._match = inp.checked; });
   }
   $('#rvMonth').onchange = e => { R.month = e.target.value; renderReview(); };
-  $('#rvCancel').onclick = () => { box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; };
-  $('#rvSave').onclick = () => saveReview(pend);
+  $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; };
+  $('#rvSave').onclick = async e => {
+    const n = rows.length, nPend = rows.filter(r => r.pending).length;
+    const what = source === 'cartao' ? 'a fatura' : 'o extrato';
+    const text = [exist ? `<strong>${mLong(R.month)} já tem ${what} salvo.</strong> Ele será substituído por estes ${n} lançamentos.` : `Salvar ${n} lançamentos em ${mLong(R.month)}?`,
+      info.ok === false ? 'Atenção: a soma não bateu com o total do documento.' : '', nPend ? `${nPend} ainda estão "a classificar" e podem ser ajustados depois no Extrato.` : ''].filter(Boolean).join(' ');
+    if (!await confirmInline(e.target, { text, yes: exist ? 'Sim, substituir' : 'Sim, salvar', danger: exist })) return;
+    saveReview(pend);
+  };
 }
 
 async function saveReview(pend) {
@@ -313,7 +334,7 @@ async function saveReview(pend) {
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
     toast(label + ' salvo'); $('#review').hidden = true; $('#pdfLog').innerHTML = ''; R = null; S.m = month; S.render();
-  } catch (e) { toast('Não foi possível salvar.'); $('#rvSave').disabled = false; }
+  } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#rvSave').disabled = false; }
 }
 
 function reviewInvest(r) {
@@ -325,7 +346,9 @@ function reviewInvest(r) {
   <label class="f" style="margin-top:10px;max-width:280px">Somar valor guardado em outro lugar (opcional)<input type="number" step="0.01" id="ivExtra" value="0"></label>
   <div class="rowbtn" style="margin-top:12px"><button class="btn primary" id="ivSave" type="button">Atualizar investimentos</button><button class="btn" id="ivCancel" type="button">Descartar</button></div>`;
   $('#ivCancel').onclick = () => { box.hidden = true; };
-  $('#ivSave').onclick = async () => {
+  $('#ivSave').onclick = async e => {
+    const cur = +settings().invest?.total || 0, nv = total + (+$('#ivExtra').value || 0);
+    if (!await confirmInline(e.target, { text: `Atualizar os investimentos${cur ? ` de ${brl(cur)}` : ''} para ${brl(nv)}?`, yes: 'Sim, atualizar' })) return;
     const extra = +$('#ivExtra').value || 0, classes = cls.map(c => [c.nome, +c.valor]); if (extra) classes.push(['Outros', extra]);
     const st = { ...settings(), invest: { date: r.data || todayISO(), total: total + extra, liquido: (+r.totalLiquido || 0) + extra, classes } };
     try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; toast('Investimentos atualizados'); box.hidden = true; S.render(); } catch (e) { toast('Não foi possível salvar.'); }

@@ -2,7 +2,8 @@
 import * as db from './db.js';
 import { S, setFamily, reindex, monthKeys, latestClosed } from './state.js';
 import { mLong, thisMonth } from './lib/format.js';
-import { $, $$, toast } from './ui.js';
+import { $, $$, toast, validate, clearInvalid } from './ui.js';
+import { checkEmail, checkPassword, checkName } from './lib/validate.js';
 import * as resumo from './views/resumo.js';
 import * as lancar from './views/lancar.js';
 import * as perguntar from './views/perguntar.js';
@@ -45,8 +46,12 @@ $$('#authForm [data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mod
 $('#authForm').onsubmit = async e => {
   e.preventDefault();
   const email = $('#aEmail').value.trim(), password = $('#aPass').value, msg = $('#aMsg');
-  msg.className = 'small'; msg.textContent = '';
-  if (!email || password.length < 8) { msg.className = 'err'; msg.textContent = 'Informe o e-mail e uma senha com pelo menos 8 caracteres.'; return; }
+  msg.className = 'small'; msg.textContent = ''; clearInvalid($('#authForm'));
+  if (!validate([
+    ...(mode === 'signup' ? [[$('#aName'), checkName($('#aName').value, 'o seu nome', 2, 80)]] : []),
+    [$('#aEmail'), checkEmail(email)],
+    [$('#aPass'), mode === 'signup' ? checkPassword(password) : (password ? '' : 'Digite a sua senha.')],
+  ])) return;
   $('#aGo').disabled = true;
   try {
     if (mode === 'signup') {
@@ -64,16 +69,20 @@ $('#authForm').onsubmit = async e => {
   } finally { $('#aGo').disabled = false; }
 };
 $('#aForgot').onclick = async () => {
-  const email = $('#aEmail').value.trim(); const msg = $('#aMsg');
-  if (!email) { msg.className = 'err'; msg.textContent = 'Digite seu e-mail acima.'; return; }
+  const email = $('#aEmail').value.trim(); const msg = $('#aMsg'); clearInvalid($('#authForm'));
+  if (!validate([[$('#aEmail'), checkEmail(email) && 'Para recuperar a senha, digite seu e-mail acima. ' + checkEmail(email)]])) return;
   const { error } = await db.sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/' });
-  msg.className = error ? 'err' : 'small'; msg.textContent = error ? 'Não foi possível enviar agora.' : 'Enviamos um link para criar uma nova senha.';
+  msg.className = error ? 'err' : 'banner ok'; msg.textContent = error ? 'Não foi possível enviar agora: ' + db.errorText(error) : `Se existir uma conta com ${email}, enviamos um link para criar uma nova senha. Veja também o spam.`;
 };
 $('#resetForm').onsubmit = async e => {
   e.preventDefault();
-  const { error } = await db.sb.auth.updateUser({ password: $('#rPass').value });
-  $('#rMsg').className = error ? 'err' : 'small'; $('#rMsg').textContent = error ? 'Não foi possível salvar. Use pelo menos 8 caracteres.' : 'Senha salva.';
-  if (!error) setTimeout(() => start(), 800);
+  clearInvalid($('#resetForm'));
+  const p1 = $('#rPass').value, p2 = $('#rPass2').value;
+  if (!validate([[$('#rPass'), checkPassword(p1)], [$('#rPass2'), p1 === p2 ? '' : 'As duas senhas não são iguais.']])) return;
+  const { error } = await db.sb.auth.updateUser({ password: p1 });
+  $('#rMsg').className = error ? 'err' : 'banner ok';
+  $('#rMsg').textContent = error ? (/same|different/i.test(error.message || '') ? 'A nova senha precisa ser diferente da anterior.' : 'Não foi possível salvar: ' + db.errorText(error)) : 'Senha nova salva! Entrando no app...';
+  if (!error) { history.replaceState(null, '', location.pathname); setTimeout(() => start(), 1200); }
 };
 
 // ---------- family ----------
@@ -163,6 +172,8 @@ async function showInviteBanner() {
   // Registered first thing: Android only offers a real install (our icon and name) once the service worker is active.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   captureInviteFromUrl();
+  // Read before the Supabase client consumes the link: a password-recovery link carries type=recovery.
+  const recovering = /type=recovery/.test(location.hash) || /type=recovery/.test(location.search);
   try { await db.init(); }
   catch (e) { $('#boot').innerHTML = '<p class="err">O app ainda não foi configurado: faltam as variáveis do Supabase no servidor (veja o README).</p>'; return; }
   db.sb.auth.onAuthStateChange((ev, session) => {
@@ -170,7 +181,7 @@ async function showInviteBanner() {
     if (ev === 'SIGNED_IN' && !S.user) { S.justSignedIn = true; start(); }
     if (ev === 'SIGNED_OUT') { S.user = null; showSignedOut(); }
   });
-  if (/type=recovery/.test(location.hash)) { show('reset'); return; }
+  if (recovering) { show('reset'); return; }
   await start();
   let flash = null; try { flash = sessionStorage.getItem('fin.flash'); sessionStorage.removeItem('fin.flash'); } catch (e) { /* storage blocked */ }
   if (flash) {

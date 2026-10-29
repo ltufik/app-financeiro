@@ -64,3 +64,43 @@ export function md(s) {
 }
 
 export const micSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+
+// ---------- validation feedback ----------
+// Marks a field as invalid with a message under it. Returns false so callers can `return invalid(...)`.
+export function invalid(input, msg) {
+  input.setAttribute('aria-invalid', 'true');
+  let e = input.nextElementSibling?.classList.contains('ferr') ? input.nextElementSibling : null;
+  if (!e) { e = document.createElement('span'); e.className = 'ferr'; e.setAttribute('role', 'alert'); input.insertAdjacentElement('afterend', e); }
+  e.textContent = msg; input.focus();
+  input.addEventListener('input', () => { input.removeAttribute('aria-invalid'); e.remove(); }, { once: true });
+  return false;
+}
+export function clearInvalid(root) {
+  root.querySelectorAll('[aria-invalid]').forEach(i => i.removeAttribute('aria-invalid'));
+  root.querySelectorAll('.ferr').forEach(e => e.remove());
+}
+// Runs [input, message] checks in order; marks the first failure. Returns true when all pass.
+export function validate(pairs) {
+  for (const [input, msg] of pairs) if (msg) return invalid(input, msg);
+  return true;
+}
+
+// ---------- double confirmation ----------
+// Shows "text [Sim] [Cancelar]" right after `anchor` and resolves true/false. Used before every add/delete.
+export function confirmInline(anchor, { text, yes = 'Sim, confirmar', no = 'Cancelar', danger = false } = {}) {
+  document.querySelectorAll('.cfm-row, .cfm').forEach(x => x.remove());
+  return new Promise(resolve => {
+    const box = document.createElement('div');
+    box.className = 'cfm' + (danger ? ' danger' : ''); box.setAttribute('role', 'alertdialog');
+    box.innerHTML = `<p class="small">${text}</p><div class="rowbtn"><button class="btn ${danger ? 'danger-fill' : 'primary'}" type="button" data-y>${esc(yes)}</button><button class="btn" type="button" data-n>${esc(no)}</button></div>`;
+    const host = anchor.closest('li, tr, .rowbtn, .confirm') || anchor;
+    let holder = box;
+    if (host.tagName === 'TR') { holder = document.createElement('tr'); holder.className = 'cfm-row'; const td = document.createElement('td'); td.colSpan = 99; td.append(box); holder.append(td); }
+    host.insertAdjacentElement('afterend', holder);
+    const done = v => { holder.remove(); resolve(v); };
+    box.querySelector('[data-y]').onclick = () => done(true);
+    box.querySelector('[data-n]').onclick = () => done(false);
+    box.querySelector('[data-y]').focus();
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}

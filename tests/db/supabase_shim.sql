@@ -1,4 +1,7 @@
 -- Simula o mínimo do Supabase para testar o schema num Postgres local.
+-- Como no Supabase, a extensão pgcrypto fica no schema "extensions", fora do search_path das funções.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 create schema if not exists auth;
 create table if not exists auth.users (id uuid primary key, email text);
 create or replace function auth.uid() returns uuid language sql stable as $$

@@ -116,3 +116,18 @@ test('outros bancos: banco detectado e conferência por total da fatura ou por t
   assert.equal(checkExtrato(rows, 100, 600), true);
   assert.equal(checkExtrato(rows, null, null, 1000, 400), false);
 });
+
+test('validações: e-mail, senha, nome, telefone, números, mês e data', async () => {
+  const v = await import('../public/js/lib/validate.js');
+  assert.equal(v.checkEmail('luiz@gmail.com'), ''); assert.notEqual(v.checkEmail('luiz@gmail'), ''); assert.notEqual(v.checkEmail('luiz gmail.com'), ''); assert.notEqual(v.checkEmail(''), '');
+  assert.notEqual(v.checkPassword('1234567'), ''); assert.equal(v.checkPassword('12345678'), '');
+  assert.notEqual(v.checkName(' a '), ''); assert.equal(v.checkName('Luana'), ''); assert.notEqual(v.checkName('<script>'), '');
+  assert.deepEqual(v.parsePhoneBR('(11) 98765-4321'), { phone: '5511987654321', error: '' });
+  assert.deepEqual(v.parsePhoneBR('+55 21 3333-4444'), { phone: '552133334444', error: '' });
+  assert.equal(v.parsePhoneBR('').error, ''); assert.equal(v.parsePhoneBR('').phone, null);
+  assert.notEqual(v.parsePhoneBR('98765-4321').error, ''); assert.notEqual(v.parsePhoneBR('(11) 88765-4321').error, ''); assert.notEqual(v.parsePhoneBR('(05) 98765-4321').error, '');
+  assert.equal(v.formatPhoneBR('5511987654321'), '(11) 98765-4321');
+  assert.equal(v.checkNumber('17000', { min: 0 }), ''); assert.notEqual(v.checkNumber('-5', { min: 0 }), ''); assert.notEqual(v.checkNumber('abc'), ''); assert.notEqual(v.checkNumber('2.5', { integer: true }), ''); assert.equal(v.checkNumber('', { allowEmpty: true }), '');
+  assert.equal(v.checkMonth('2026-11'), ''); assert.notEqual(v.checkMonth('2026-13'), ''); assert.notEqual(v.checkMonth('11/2026'), '');
+  assert.equal(v.checkDate('2026-10-06'), ''); assert.notEqual(v.checkDate('2099-01-01'), ''); assert.notEqual(v.checkDate('1990-01-01'), ''); assert.notEqual(v.checkDate('abc'), '');
+});

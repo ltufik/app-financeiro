@@ -4,7 +4,7 @@ import { brl0, esc, todayISO, norm, addM } from '../lib/format.js';
 import * as db from '../db.js';
 import { chat, aiErrorText } from '../ai.js';
 import { attachMic } from '../speech.js';
-import { $, toast, md } from '../ui.js';
+import { $, toast, md, confirmInline } from '../ui.js';
 
 let turns = [], ctl = null;
 
@@ -42,7 +42,7 @@ export function render(el) {
 function renderStudies() {
   const list = S.studies.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
   $('#studyList').innerHTML = list.length ? list.map(s => `<details style="padding:8px 0;border-bottom:1px solid var(--line)"><summary class="small">${esc(s.question)} <span class="tiny muted">· ${new Date(s.created_at).toLocaleDateString('pt-BR')}</span></summary><div class="msg a small" style="margin-top:8px">${md(s.answer)}<div class="act"><button class="chip" type="button" data-del="${s.id}">Apagar estudo</button></div></div></details>`).join('') : '<div class="empty small">Salve aqui as respostas que quiser guardar.</div>';
-  $('#studyList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { try { await db.deleteStudy(b.dataset.del); S.studies = S.studies.filter(s => s.id !== b.dataset.del); renderStudies(); } catch (e) { toast('Não foi possível apagar.'); } });
+  $('#studyList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!await confirmInline(b, { text: 'Apagar este estudo salvo?', yes: 'Sim, apagar', danger: true })) return; try { await db.deleteStudy(b.dataset.del); S.studies = S.studies.filter(s => s.id !== b.dataset.del); renderStudies(); } catch (e) { toast('Não foi possível apagar.'); } });
 }
 
 function renderChat() {

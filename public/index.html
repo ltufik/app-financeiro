@@ -65,8 +65,10 @@
 <!-- NOVA SENHA (link de recuperação) -->
 <section id="reset" class="authwrap" hidden style="padding:0 16px">
   <div class="brandbig">Nova senha</div>
-  <form class="panel stack" id="resetForm">
+  <form class="panel stack" id="resetForm" novalidate>
+    <p class="small muted">Crie uma senha nova com pelo menos 8 caracteres.</p>
     <label class="f">Nova senha<input type="password" id="rPass" autocomplete="new-password" minlength="8" required></label>
+    <label class="f">Repita a nova senha<input type="password" id="rPass2" autocomplete="new-password" minlength="8" required></label>
     <button class="btn primary" type="submit">Salvar senha</button>
     <p class="small" id="rMsg" role="status"></p>
   </form>

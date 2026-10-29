@@ -4,7 +4,7 @@
 -- Ele pode ser rodado de novo: usa "if not exists" / "create or replace".
 -- =====================================================================
 
-create extension if not exists pgcrypto;
+-- No extensions needed: gen_random_uuid() and md5() are built into Postgres 13+.
 
 -- ---------- Tabelas ----------
 
@@ -44,6 +44,7 @@ create table if not exists public.invites (
 -- Who the invite is for (shown to the person who opens the link) and their relation to the family.
 alter table public.invites add column if not exists invitee_name text;
 alter table public.invites add column if not exists relation text;
+alter table public.invites add column if not exists invitee_phone text;
 
 -- Grupo da categoria:
 --   renda   = renda recorrente (entra na taxa de poupança)
@@ -235,18 +236,20 @@ end $$;
 
 -- Gera um código de convite (válido por 7 dias, uso único), opcionalmente para uma pessoa e parentesco.
 drop function if exists public.create_invite(uuid);
-create or replace function public.create_invite(p_household uuid, p_name text default null, p_relation text default null)
+drop function if exists public.create_invite(uuid, text, text);
+create or replace function public.create_invite(p_household uuid, p_name text default null, p_relation text default null, p_phone text default null)
 returns text language plpgsql security definer set search_path = public as $$
 declare c text;
 begin
   if not public.is_member(p_household) then raise exception 'not_member'; end if;
   loop
-    c := translate(upper(encode(gen_random_bytes(8), 'base64')), '+/=O0I1L', '');
+    -- Built-in functions only (on Supabase, pgcrypto lives outside this function's search_path).
+    c := translate(upper(encode(decode(md5(random()::text || clock_timestamp()::text || p_household::text), 'hex'), 'base64')), '+/=O0I1L', '');
     c := substr(c, 1, 8);
     exit when char_length(c) = 8 and not exists (select 1 from invites where code = c);
   end loop;
-  insert into invites(code, household_id, created_by, invitee_name, relation)
-    values (c, p_household, auth.uid(), nullif(trim(p_name), ''), nullif(trim(p_relation), ''));
+  insert into invites(code, household_id, created_by, invitee_name, relation, invitee_phone)
+    values (c, p_household, auth.uid(), nullif(trim(p_name), ''), nullif(trim(p_relation), ''), nullif(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), ''));
   return c;
 end $$;
 
@@ -342,7 +345,7 @@ revoke execute on function public.delete_my_account() from public, anon;
 
 grant execute on function public.create_household(text, text) to authenticated;
 grant execute on function public.delete_my_account() to authenticated;
-grant execute on function public.create_invite(uuid, text, text) to authenticated;
+grant execute on function public.create_invite(uuid, text, text, text) to authenticated;
 grant execute on function public.invite_info(text) to anon, authenticated;
 grant execute on function public.accept_invite(text, text) to authenticated;
 grant execute on function public.replace_month(uuid, text, text, jsonb, uuid[], text, text, jsonb) to authenticated;

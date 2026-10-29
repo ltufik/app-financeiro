@@ -1,7 +1,8 @@
 // First-run onboarding (name, welcome, family, invites) and WhatsApp invites with the code in the link.
 import * as db from './db.js';
 import { S } from './state.js';
-import { $, toast } from './ui.js';
+import { $, toast, validate, clearInvalid } from './ui.js';
+import { checkName, parsePhoneBR, formatPhoneBR } from './lib/validate.js';
 import { esc } from './lib/format.js';
 
 export const RELATIONS = ['Cônjuge ou companheiro(a)', 'Namorado(a)', 'Filho(a)', 'Pai ou mãe', 'Irmão ou irmã', 'Outro parente', 'Amigo(a)'];
@@ -26,36 +27,42 @@ const firstName = s => String(s || '').trim().split(/\s+/)[0] || '';
 export function inviteText(name, code) {
   return `Oi${name ? ', ' + firstName(name) : ''}! Estou usando o Pra Onde Foi para organizar as nossas contas e quero você junto. Toque no link para entrar na ${S.hh.name} (vale por 7 dias):\n${inviteLink(code)}`;
 }
-const waUrl = text => 'https://wa.me/?text=' + encodeURIComponent(text);
+// With a phone the conversation opens directly; without it WhatsApp asks which contact to send to.
+const waUrl = (text, phone) => `https://wa.me/${phone || ''}?text=` + encodeURIComponent(text);
 
 // Invite form + list of invites already sent. Used in onboarding and in Ajustes.
 export function renderInviter(box) {
   box.innerHTML = `<div class="stack">
-    <div class="grid2"><label class="f">Nome<input type="text" id="ivName" autocomplete="off" placeholder="Ex.: Luana"></label>
+    <div class="grid2"><label class="f">Nome<input type="text" id="ivName" autocomplete="off" maxlength="40" placeholder="Ex.: Luana"></label>
     <label class="f">Parentesco<select id="ivRel">${RELATIONS.map(r => `<option>${r}</option>`).join('')}</select></label></div>
+    <label class="f">WhatsApp (opcional)<input type="tel" id="ivPhone" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label>
+    <p class="tiny muted" style="margin-top:-6px">Com o número, o WhatsApp abre direto na conversa da pessoa. Sem ele, você escolhe o contato no WhatsApp.</p>
     <div><button class="btn primary" type="button" id="ivGo">Criar convite</button></div>
     <div id="ivReady"></div>
     <div id="ivList"></div></div>`;
+  $('#ivPhone', box).onblur = e => { const p = parsePhoneBR(e.target.value); if (p.phone) e.target.value = formatPhoneBR(p.phone); };
   $('#ivGo', box).onclick = async () => {
-    const name = $('#ivName', box).value.trim(), rel = $('#ivRel', box).value;
-    if (!name) { toast('Escreva o nome de quem você vai convidar.'); $('#ivName', box).focus(); return; }
+    clearInvalid(box);
+    const nameEl = $('#ivName', box), phoneEl = $('#ivPhone', box);
+    const name = nameEl.value.trim(), rel = $('#ivRel', box).value, ph = parsePhoneBR(phoneEl.value);
+    if (!validate([[nameEl, checkName(name, 'o nome de quem você vai convidar', 2, 40)], [phoneEl, ph.error]])) return;
     $('#ivGo', box).disabled = true;
     try {
-      const code = await db.createInvite(S.hh.id, name, rel);
-      showReady($('#ivReady', box), name, code);
-      $('#ivName', box).value = '';
+      const code = await db.createInvite(S.hh.id, name, rel, ph.phone);
+      showReady($('#ivReady', box), name, code, ph.phone);
+      nameEl.value = ''; phoneEl.value = '';
       drawList(box);
-    } catch (e) { toast('Não foi possível criar o convite.'); }
+    } catch (e) { $('#ivReady', box).innerHTML = `<p class="status err">Não foi possível criar o convite. ${db.errorText(e)}</p>`; }
     finally { $('#ivGo', box).disabled = false; }
   };
   drawList(box);
 }
 
-function showReady(el, name, code) {
+function showReady(el, name, code, phone) {
   const text = inviteText(name, code);
   el.innerHTML = `<div class="confirm" style="border-color:var(--accent)">
     <p class="small">Convite para <strong>${esc(name)}</strong> pronto. Envie pelo WhatsApp: a pessoa toca no link e já entra na família, sem digitar código.</p>
-    <div class="rowbtn" style="margin-top:10px"><a class="btn wa" href="${waUrl(text)}" target="_blank" rel="noopener">${WA_ICON}Enviar pelo WhatsApp</a><button class="btn" type="button" data-copy>Copiar link</button></div>
+    <div class="rowbtn" style="margin-top:10px"><a class="btn wa" href="${waUrl(text, phone)}" target="_blank" rel="noopener">${WA_ICON}Enviar pelo WhatsApp${phone ? ' para ' + esc(formatPhoneBR(phone)) : ''}</a><button class="btn" type="button" data-copy>Copiar link</button></div>
     <p class="tiny muted" style="margin-top:8px">Código, se precisar: <span class="code" style="font-size:15px">${esc(code)}</span></p></div>`;
   el.querySelector('[data-copy]').onclick = async e => {
     try { await navigator.clipboard.writeText(text); e.target.textContent = 'Link copiado'; }
@@ -70,7 +77,7 @@ async function drawList(box) {
   const now = Date.now();
   el.innerHTML = `<h3 style="margin-top:6px">Convites enviados</h3><ul class="list small">${list.map(i => {
     const st = i.used_by ? 'entrou' : new Date(i.expires_at).getTime() < now ? 'venceu' : 'aguardando';
-    return `<li><span>${esc(i.invitee_name || 'Sem nome')}<br><span class="tiny muted">${esc(i.relation || '')}</span></span><span class="rowbtn"><span class="pill ${st === 'entrou' ? 'ok' : st === 'venceu' ? 'no' : 'at'}">${st}</span>${st === 'aguardando' ? `<a class="chip" href="${waUrl(inviteText(i.invitee_name, i.code))}" target="_blank" rel="noopener">Reenviar</a>` : ''}</span></li>`;
+    return `<li><span>${esc(i.invitee_name || 'Sem nome')}<br><span class="tiny muted">${esc([i.relation, i.invitee_phone ? formatPhoneBR(i.invitee_phone) : ''].filter(Boolean).join(' · '))}</span></span><span class="rowbtn"><span class="pill ${st === 'entrou' ? 'ok' : st === 'venceu' ? 'no' : 'at'}">${st}</span>${st === 'aguardando' ? `<a class="chip" href="${waUrl(inviteText(i.invitee_name, i.code), i.invitee_phone ? (i.invitee_phone.startsWith('55') ? i.invitee_phone : '55' + i.invitee_phone) : '')}" target="_blank" rel="noopener">Reenviar</a>` : ''}</span></li>`;
   }).join('')}</ul>`;
 }
 
@@ -103,7 +110,7 @@ async function draw() {
       <button class="btn primary" type="button" id="obNext">Continuar</button></div>`;
     $('#obName').focus();
     const next = async () => {
-      const v = $('#obName').value.trim(); if (!v) { $('#obName').focus(); return; }
+      const v = $('#obName').value.trim(); if (!validate([[$('#obName'), checkName(v, 'como você quer ser chamado', 2, 40)]])) return;
       $('#obNext').disabled = true;
       try { const { data } = await db.sb.auth.updateUser({ data: { display_name: v } }); if (data?.user) S.user = data.user; else S.user.user_metadata = { ...S.user.user_metadata, display_name: v }; } catch (e) { S.user.user_metadata = { ...S.user.user_metadata, display_name: v }; }
       db.updateMyMemberName(S.user.id, v).catch(() => {});
@@ -140,7 +147,7 @@ async function draw() {
       <button class="btn choice" type="button" data-s="0"><strong>Não, só eu</strong><span class="small muted">Você pode convidar alguém depois.</span></button></div>
       <details class="help"><summary>Recebi um código de convite</summary><div class="rowbtn" style="margin-top:8px"><input type="text" id="obCode" autocomplete="off" style="text-transform:uppercase;flex:1 1 160px" placeholder="Código"><button class="btn" type="button" id="obCodeGo">Usar código</button></div></details>`;
     b.querySelectorAll('[data-s]').forEach(x => x.onclick = () => { O.share = x.dataset.s === '1'; go('famname'); });
-    $('#obCodeGo').onclick = () => { const c = $('#obCode').value.trim().toUpperCase(); if (!c) return; lsSet('fin.invite', c); go('invited'); };
+    $('#obCodeGo').onclick = () => { const c = $('#obCode').value.replace(/\s/g, '').toUpperCase(); if (!validate([[$('#obCode'), /^[A-Z0-9]{6,12}$/.test(c) ? '' : 'O código tem 8 letras e números, como no convite.']])) return; lsSet('fin.invite', c); go('invited'); };
     return;
   }
   if (O.step === 'famname') {
@@ -150,13 +157,13 @@ async function draw() {
       <p class="tiny muted">Dá para mudar depois em Ajustes.</p>
       <button class="btn primary" type="button" id="obCreate">Criar</button><button class="btn" type="button" id="obBack">Voltar</button><p class="err" id="obErr"></p></div>`;
     $('#obCreate').onclick = async () => {
-      const name = $('#obFam').value.trim(); if (!name) { $('#obFam').focus(); return; }
+      const name = $('#obFam').value.trim(); if (!validate([[$('#obFam'), checkName(name, 'um nome para a família', 2, 60)]])) return;
       $('#obCreate').disabled = true;
       try {
         const h = await db.createHousehold(name, displayName()); lsSet('fin.hh', h);
         S.hh = { id: h, name, settings: {} };
         if (O.share) go('invite'); else O.onDone();
-      } catch (e) { $('#obErr').textContent = 'Não foi possível criar. Tente de novo.'; $('#obCreate').disabled = false; }
+      } catch (e) { $('#obErr').textContent = 'Não foi possível criar. ' + db.errorText(e); $('#obCreate').disabled = false; }
     };
     $('#obBack').onclick = () => go('share');
     return;

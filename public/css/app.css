@@ -209,3 +209,8 @@ a.btn,a.chip{text-decoration:none;color:inherit}
 .isteps .ico{display:inline-flex;vertical-align:middle;color:var(--blue);background:var(--sunk);border-radius:8px;padding:2px 4px}
 .iarrow{text-align:center;font-size:28px;color:var(--accent);animation:bob 1.2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(6px)}}
+/* ---- validation and confirmations ---- */
+[aria-invalid="true"]{border-color:var(--bad)!important;box-shadow:0 0 0 2px var(--bad-soft)}
+.ferr{display:block;color:var(--bad);font-size:13px;margin-top:4px}
+.cfm{border:1.5px solid var(--accent);background:var(--card);border-radius:12px;padding:12px;margin:8px 0;display:flex;flex-direction:column;gap:10px}
+.cfm.danger{border-color:var(--bad)}

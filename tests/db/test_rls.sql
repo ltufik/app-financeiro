@@ -28,6 +28,7 @@ do $$ begin
   begin insert into transactions(household_id, source, month, amount) select id, 'conta', '2026-10', 1 from households limit 0; exception when others then null; end;
 end $$;
 \set ON_ERROR_STOP off
+\echo (os dois erros a seguir são esperados: B não pode escrever na família de A)
 insert into transactions(household_id, source, month, amount) values (:'ha', 'conta', '2026-10', -1);
 select public.replace_month(:'ha', 'conta', '2026-10', '[]'::jsonb);
 \set ON_ERROR_STOP on
@@ -52,6 +53,7 @@ select category from rules where household_id = :'ha' and kind = 'exact' \gset
 \echo regra aprendida (atualizada): :category
 -- convite já usado
 \set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: convite já usado)
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select public.accept_invite(:'code');
 
