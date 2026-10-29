@@ -160,6 +160,8 @@ async function showInviteBanner() {
 }
 
 (async function boot() {
+  // Registered first thing: Android only offers a real install (our icon and name) once the service worker is active.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   captureInviteFromUrl();
   try { await db.init(); }
   catch (e) { $('#boot').innerHTML = '<p class="err">O app ainda não foi configurado: faltam as variáveis do Supabase no servidor (veja o README).</p>'; return; }
@@ -176,5 +178,4 @@ async function showInviteBanner() {
     const target = !$('#auth').hidden ? $('#aMsg') : !$('#onboard').hidden ? $('#oMsg') : null;
     if (target) { target.className = 'banner ok'; target.textContent = flash; } else toast(flash);
   }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 })();

@@ -1,16 +1,25 @@
 {
+  "id": "/",
   "name": "Pra Onde Foi",
   "short_name": "Pra Onde Foi",
   "description": "Descubra para onde vai o dinheiro da família: pix, cartão e renda num lugar só.",
   "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#EEF1EA",
   "theme_color": "#1E6B58",
+  "categories": ["finance", "productivity"],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/inicio.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Para onde foi o seu dinheiro?" },
+    { "src": "/screenshots/pdf.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Mande a fatura e o extrato em PDF" },
+    { "src": "/screenshots/voz.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Gastou? É só falar" }
   ]
 }

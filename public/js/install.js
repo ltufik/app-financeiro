@@ -45,7 +45,8 @@ export function askInstall({ note = '' } = {}) {
   } else if (isAndroid()) {
     body = `<ol class="isteps"><li><span class="sn">1</span><span>Toque no menu <span class="ico">${ICON_MENU}</span> no canto de cima do Chrome.</span></li>
       <li><span class="sn">2</span><span>Escolha <strong>Instalar app</strong> (ou <strong>Adicionar à tela inicial</strong>).</span></li>
-      <li><span class="sn">3</span><span>Confirme em <strong>Instalar</strong>.</span></li></ol>`;
+      <li><span class="sn">3</span><span>Confirme em <strong>Instalar</strong>.</span></li></ol>
+      <p class="tiny muted">Se no menu só aparecer "Adicionar à tela inicial", espere alguns segundos com o app aberto e abra o menu de novo: assim o ícone fica com o nosso logo, e não com o do Chrome.</p>`;
   } else {
     body = `<ol class="isteps"><li><span class="sn">1</span><span>Toque em <span class="ico">${ICON_SHARE}</span> <strong>Compartilhar</strong>, na barra de baixo do Safari.</span></li>
       <li><span class="sn">2</span><span>Role e toque em <span class="ico">${ICON_ADD}</span> <strong>Adicionar à Tela de Início</strong>.</span></li>
