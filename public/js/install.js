@@ -1,0 +1,76 @@
+// "Install the app" sheet. Browsers do not let a site install itself, so we ask at the right moments:
+// Android gets the native install dialog in one tap; iPhone gets the Safari steps; in-app browsers
+// (Instagram, Facebook...) are told to open the link in Safari or Chrome first.
+import { S } from './state.js';
+import { $ } from './ui.js';
+import { pendingInvite } from './onboarding.js';
+
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
+const ua = navigator.userAgent;
+
+export const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+export const isIOS = () => /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const isAndroid = () => /android/i.test(ua);
+const isMobile = () => isIOS() || isAndroid();
+const inAppBrowser = () => /FBAN|FBAV|Instagram|Line\/|LinkedInApp|Twitter|TikTok|Snapchat|; wv\)/i.test(ua);
+const iosNotSafari = () => isIOS() && /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//i.test(ua);
+
+if (isStandalone()) lsSet('fin.installed', '1');
+
+// Asks again after 3 days, at most 3 times, never once installed.
+export function shouldAskInstall() {
+  if (!isMobile() || isStandalone() || lsGet('fin.installed') === '1') return false;
+  const n = +(lsGet('fin.install.n') || 0), last = +(lsGet('fin.install.t') || 0);
+  return n < 3 && Date.now() - last > 3 * 864e5;
+}
+
+const ICON_SHARE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-label="Compartilhar"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>';
+const ICON_ADD = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+const ICON_MENU = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+
+// note: extra line shown under the steps (e.g. "depois entre com seu e-mail").
+export function askInstall({ note = '' } = {}) {
+  if ($('.isheet')) return;
+  lsSet('fin.install.n', String(+(lsGet('fin.install.n') || 0) + 1)); lsSet('fin.install.t', String(Date.now()));
+  let body;
+  if (inAppBrowser() || iosNotSafari()) {
+    body = `<p>${iosNotSafari() ? 'No iPhone, o app só pode ser instalado pelo <strong>Safari</strong>.' : 'Você abriu o link dentro de outro app.'} Para instalar:</p>
+      <ol class="isteps"><li><span class="sn">1</span><span>Toque em <strong>Copiar link</strong> abaixo.</span></li>
+      <li><span class="sn">2</span><span>Abra o <strong>${isIOS() ? 'Safari' : 'Chrome'}</strong>, cole o link e siga as instruções que vão aparecer.</span></li></ol>
+      <button class="btn primary" type="button" data-copy style="width:100%">Copiar link</button>`;
+  } else if (isAndroid() && S.installEvt) {
+    body = `<button class="btn primary" type="button" data-install style="width:100%;padding:14px">Instalar agora</button>
+      <p class="tiny muted" style="text-align:center">O Android vai pedir para confirmar.</p>`;
+  } else if (isAndroid()) {
+    body = `<ol class="isteps"><li><span class="sn">1</span><span>Toque no menu <span class="ico">${ICON_MENU}</span> no canto de cima do Chrome.</span></li>
+      <li><span class="sn">2</span><span>Escolha <strong>Instalar app</strong> (ou <strong>Adicionar à tela inicial</strong>).</span></li>
+      <li><span class="sn">3</span><span>Confirme em <strong>Instalar</strong>.</span></li></ol>`;
+  } else {
+    body = `<ol class="isteps"><li><span class="sn">1</span><span>Toque em <span class="ico">${ICON_SHARE}</span> <strong>Compartilhar</strong>, na barra de baixo do Safari.</span></li>
+      <li><span class="sn">2</span><span>Role e toque em <span class="ico">${ICON_ADD}</span> <strong>Adicionar à Tela de Início</strong>.</span></li>
+      <li><span class="sn">3</span><span>Toque em <strong>Adicionar</strong>, no canto de cima.</span></li></ol>
+      <div class="iarrow" aria-hidden="true">↓</div>`;
+  }
+  const el = document.createElement('div');
+  el.className = 'isheet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Instalar o app');
+  el.innerHTML = `<div class="isheet-card">
+    <div class="ihead"><img src="/icons/icon-192.png" alt="" width="52" height="52"><div><h3>Instale o Pra Onde Foi</h3><p class="small muted">Fica com ícone na tela do celular, abre em tela cheia e é mais rápido. Leva 10 segundos.</p></div></div>
+    ${body}${note ? `<p class="tiny muted">${note}</p>` : ''}
+    <button class="tour-skip" type="button" data-later style="align-self:center">Agora não, continuar no navegador</button></div>`;
+  document.body.append(el);
+  const close = () => el.remove();
+  el.addEventListener('click', e => { if (e.target === el) close(); });
+  el.querySelector('[data-later]').onclick = close;
+  const ib = el.querySelector('[data-install]');
+  if (ib) ib.onclick = async () => {
+    const evt = S.installEvt; if (!evt) return close();
+    evt.prompt(); const r = await evt.userChoice.catch(() => null);
+    if (r?.outcome === 'accepted') lsSet('fin.installed', '1');
+    S.installEvt = null; close();
+  };
+  const cb = el.querySelector('[data-copy]');
+  if (cb) cb.onclick = async () => { try { await navigator.clipboard.writeText(location.origin + '/' + (pendingInvite() ? '?convite=' + pendingInvite() : '')); cb.textContent = 'Link copiado'; } catch (e) { cb.textContent = location.origin; } };
+}
+
+window.addEventListener('appinstalled', () => { lsSet('fin.installed', '1'); $('.isheet')?.remove(); });

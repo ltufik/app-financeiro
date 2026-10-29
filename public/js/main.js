@@ -10,6 +10,7 @@ import * as extrato from './views/extrato.js';
 import * as ajustes from './views/ajustes.js';
 import { openTour } from './tour.js';
 import { HERO } from './art.js';
+import { askInstall, shouldAskInstall, isIOS } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 
 const VIEWS = { resumo, lancar, perguntar, extrato, ajustes };
@@ -18,7 +19,13 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sto
 
 function show(id) { for (const s of ['boot', 'welcome', 'auth', 'reset', 'onboard', 'app']) $('#' + s).hidden = s !== id; window.scrollTo(0, 0); }
 // Front door: the landing page explains the app; invite links skip straight to sign-up.
-function showSignedOut() { if (pendingInvite()) { show('auth'); showInviteBanner(); } else show('welcome'); }
+function showSignedOut() {
+  if (pendingInvite()) { show('auth'); showInviteBanner(); return; }
+  show('welcome');
+  if (shouldAskInstall()) setTimeout(() => { if (!$('#welcome').hidden) askInstall(); }, 1200);
+}
+// After entering the app in the browser: one more invitation to install (iPhone keeps a separate login).
+const maybeAskInstall = () => { if (shouldAskInstall()) askInstall({ note: isIOS() ? 'Depois de instalar, abra pelo ícone e entre com o mesmo e-mail e senha.' : '' }); };
 $('#wHero').innerHTML = HERO;
 $('#wSignup').onclick = () => { show('auth'); setMode('signup'); $('#aName').focus(); };
 $('#wLogin').onclick = $('#wLogin2').onclick = () => { show('auth'); setMode('login'); $('#aEmail').focus(); };
@@ -92,7 +99,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
 
 // Welcome tour: once per person (remembered in the account, so it does not repeat on another phone).
 const tourDone = () => S.user?.user_metadata?.tour_done || lsGet('fin.tour.' + S.user?.id) === '1';
-function markTour() { lsSet('fin.tour.' + S.user.id, '1'); db.sb.auth.updateUser({ data: { tour_done: true } }).catch(() => {}); }
+function markTour() { lsSet('fin.tour.' + S.user.id, '1'); db.sb.auth.updateUser({ data: { tour_done: true } }).catch(() => {}); setTimeout(maybeAskInstall, 500); }
 S.showTour = () => openTour(S.txs.length
     ? { finalTitle: 'Tudo pronto', finalText: 'Os primeiros passos ficam no Resumo. Você pode rever esta apresentação em Ajustes.', finalLabel: 'Ver meu resumo', onClose: () => markTour() }
     : { finalTitle: 'Primeiro passo: a fatura do cartão', finalText: 'Baixe o PDF da última fatura no app do banco e envie aqui. Em poucos segundos você vê para onde foi o dinheiro.', finalLabel: 'Enviar minha fatura', onClose: done => { markTour(); if (done) S.go('lancar', '#drop'); } });
@@ -136,7 +143,8 @@ async function doStart() {
   show('app');
   const t = lsGet('fin.tab'); setTab(VIEWS[t] ? t : 'resumo');
   if (!tourDone()) S.showTour();
-  else if (S.justSignedIn) toast(`Que bom ter você de volta, ${displayName().split(" ")[0]}!`);
+  else { setTimeout(maybeAskInstall, 1500); }
+  if (tourDone() && S.justSignedIn) toast(`Que bom ter você de volta, ${displayName().split(" ")[0]}!`);
   S.justSignedIn = false;
 }
 

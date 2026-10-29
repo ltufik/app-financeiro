@@ -196,3 +196,16 @@ a.btn,a.chip{text-decoration:none;color:inherit}
 .land-feats strong{color:var(--ink)}
 .land-feats .fi{flex:none;width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
 .land-feats .fi svg{width:22px;height:22px}
+/* ---- install sheet ---- */
+.isheet{position:fixed;inset:0;z-index:25;background:color-mix(in srgb,var(--ink) 50%,transparent);display:flex;align-items:flex-end;justify-content:center}
+.isheet-card{background:var(--paper);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;animation:up .3s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.ihead{display:flex;gap:12px;align-items:center}
+.ihead img{border-radius:14px;flex:none}
+.ihead h3{font-size:19px}
+.isteps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.isteps li{display:flex;gap:12px;align-items:center;font-size:15px}
+.isteps .sn{flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;display:flex;align-items:center;justify-content:center}
+.isteps .ico{display:inline-flex;vertical-align:middle;color:var(--blue);background:var(--sunk);border-radius:8px;padding:2px 4px}
+.iarrow{text-align:center;font-size:28px;color:var(--accent);animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(6px)}}

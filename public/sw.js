@@ -1,7 +1,7 @@
 // Service worker: caches the app shell so it opens fast and installs as an app.
 // Data and /api calls always go to the network.
-const VERSION = 'v4';
-const SHELL = ['/', '/index.html', '/css/app.css', '/js/main.js', '/js/db.js', '/js/ai.js', '/js/ui.js', '/js/state.js', '/js/speech.js', '/js/tour.js', '/js/steps.js', '/js/onboarding.js', '/js/art.js',
+const VERSION = 'v5';
+const SHELL = ['/', '/index.html', '/css/app.css', '/js/main.js', '/js/db.js', '/js/ai.js', '/js/ui.js', '/js/state.js', '/js/speech.js', '/js/tour.js', '/js/steps.js', '/js/onboarding.js', '/js/art.js', '/js/install.js',
   '/js/lib/format.js', '/js/lib/calc.js', '/js/lib/categorize.js', '/js/lib/parse.js',
   '/js/views/resumo.js', '/js/views/lancar.js', '/js/views/perguntar.js', '/js/views/extrato.js', '/js/views/ajustes.js',
   '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png'];

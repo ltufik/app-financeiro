@@ -18,19 +18,22 @@ page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fetching the script/.test(m.text())) errors.push(m.text()); });
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
-await page.route('https://app.test/**', async r => {
-  const u = new URL(r.request().url());
-  if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon' } });
-  if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
-  const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
-  if (!fs.existsSync(p)) return r.fulfill({ status: 404, body: 'nf' });
-  r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
-});
-await page.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
-await page.route('https://cdnjs.cloudflare.com/**/pdf.min.js', r => r.fulfill({ contentType: 'text/javascript', body: `Promise.all([import('https://pdfjs.test/pdf.mjs'),import('https://pdfjs.test/pdf.worker.mjs')]).then(([m,w])=>{globalThis.pdfjsWorker=w;window.pdfjsLib=m;});` }));
-await page.route('https://cdnjs.cloudflare.com/**/pdf.worker.min.js', r => r.fulfill({ contentType: 'text/javascript', body: '' }));
-await page.route('https://pdfjs.test/*', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(PDFJS, new URL(r.request().url()).pathname.slice(1))) }));
-await page.route('https://fonts.**', r => r.fulfill({ body: '' }));
+async function addRoutes(t) {
+  await t.route('https://app.test/**', async r => {
+    const u = new URL(r.request().url());
+    if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon' } });
+    if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
+    const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
+    if (!fs.existsSync(p)) return r.fulfill({ status: 404, body: 'nf' });
+    r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
+  });
+  await t.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
+  await t.route('https://cdnjs.cloudflare.com/**/pdf.min.js', r => r.fulfill({ contentType: 'text/javascript', body: `Promise.all([import('https://pdfjs.test/pdf.mjs'),import('https://pdfjs.test/pdf.worker.mjs')]).then(([m,w])=>{globalThis.pdfjsWorker=w;window.pdfjsLib=m;});` }));
+  await t.route('https://cdnjs.cloudflare.com/**/pdf.worker.min.js', r => r.fulfill({ contentType: 'text/javascript', body: '' }));
+  await t.route('https://pdfjs.test/*', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(PDFJS, new URL(r.request().url()).pathname.slice(1))) }));
+  await t.route('https://fonts.**', r => r.fulfill({ body: '' }));
+}
+await addRoutes(page);
 
 let chatCalls = 0;
 function aiMock(b) {
@@ -240,6 +243,24 @@ await shot('10-excluida');
 ok('sem erros no console', !errors.length, errors.join(' | '));
 
 } catch (e) { results.push(['FAIL', 'exceção: ' + e.message.split('\n')[0], errors.join(' | ')]); if (shots) await page.screenshot({ path: path.join(shots, 'erro.png'), fullPage: true }).catch(() => {}); try { results.push(['info', 'log', await txt('#dLog') + ' / ' + await txt('#pdfLog')]); } catch (x) {} }
+// Install sheet on phones (separate browser contexts with phone user agents).
+for (const [name, uaStr, expect] of [
+  ['iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', 'Adicionar à Tela de Início'],
+  ['Android', 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36', 'Instalar agora'],
+  ['Instagram', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 300.0', 'Copiar link'],
+]) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, userAgent: uaStr, isMobile: true, hasTouch: true });
+  if (name === 'Android') await ctx.addInitScript(() => { setTimeout(() => { const e = new Event('beforeinstallprompt'); e.prompt = () => { window.__prompted = true; }; e.userChoice = Promise.resolve({ outcome: 'accepted' }); window.dispatchEvent(e); }, 600); });
+  const p2 = await ctx.newPage(); await addRoutes(p2);
+  await p2.goto('https://app.test/');
+  await p2.waitForSelector('.isheet', { timeout: 8000 }).catch(() => {});
+  const t2 = (await p2.textContent('.isheet').catch(() => '')) || '';
+  ok(`${name}: convite para instalar aparece na primeira visita`, t2.includes(expect), t2.replace(/\s+/g, ' ').slice(0, 140));
+  if (shots) await p2.screenshot({ path: path.join(shots, 'install-' + name + '.png') });
+  if (name === 'Android' && await p2.$('[data-install]')) { await p2.click('[data-install]'); await p2.waitForTimeout(200); ok('Android: botão abre a instalação do sistema', await p2.evaluate(() => window.__prompted === true && !document.querySelector('.isheet'))); }
+  if (name === 'iPhone') { await p2.click('[data-later]'); await p2.reload(); await p2.waitForTimeout(2000); ok('iPhone: depois de "agora não", não insiste na mesma hora', !(await p2.$('.isheet'))); }
+  await ctx.close();
+}
 await browser.close();
 for (const r of results) console.log(r[0], r[1], r[2] ? '— ' + String(r[2]).slice(0, 160) : '');
 const fails = results.filter(r => r[0] === 'FAIL').length;
