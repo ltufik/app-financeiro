@@ -61,6 +61,7 @@ const rpcs = {
     p_rows.forEach(r => T.transactions.push({ id: uid(), household_id: p_household, source: p_source, month: p_month, date: r.date || null, day: r.day, description: r.description, amount: r.amount, category: r.category, installment: r.installment, card: r.card, manual: false, pending: !!r.pending, import_id: imp, created_at: now() }));
     window.__lastReplace = { p_source, p_month, n: p_rows.length, reconcile: p_reconcile }; return imp;
   },
+  delete_my_account() { const me = session.user.id; const mine = T.members.filter(m => m.user_id === me).map(m => m.household_id); for (const h of mine) if (!T.members.some(m => m.household_id === h && m.user_id !== me)) { T.households = T.households.filter(x => x.id !== h); for (const k of Object.keys(T)) if (k !== 'households') T[k] = T[k].filter(r => r.household_id !== h); } T.members = T.members.filter(m => m.user_id !== me); window.__deletedAccount = me; return null; },
   learn_rule({ p_household, p_source, p_pattern, p_category }) { const r = T.rules.find(x => x.household_id === p_household && x.kind === 'exact' && x.source === p_source && x.pattern === p_pattern); if (r) r.category = p_category; else T.rules.push({ id: uid(), household_id: p_household, source: p_source, kind: 'exact', pattern: p_pattern, category: p_category, priority: 10 }); window.__learned = (window.__learned || 0) + 1; return null; },
 };
 

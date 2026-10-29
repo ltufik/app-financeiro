@@ -17,6 +17,9 @@ create table if not exists public.households (
   created_at  timestamptz not null default now()
 );
 
+-- A family outlives the account that created it (needed to delete an account).
+alter table public.households alter column created_by drop not null;
+
 create table if not exists public.members (
   household_id uuid not null references public.households(id) on delete cascade,
   user_id      uuid not null references auth.users(id) on delete cascade,
@@ -296,7 +299,26 @@ grant select, insert, update, delete on public.households, public.members, publi
 revoke all on public.households, public.members, public.invites, public.categories,
   public.transactions, public.rules, public.imports, public.studies from anon;
 
+-- Deletes the signed-in person's account (LGPD). Families where they are the only member are deleted
+-- with all their data; in shared families another member becomes the owner and the data stays.
+create or replace function public.delete_my_account()
+returns void language plpgsql security definer set search_path = public, auth as $$
+declare me uuid := auth.uid();
+begin
+  if me is null then raise exception 'not_authenticated'; end if;
+  delete from public.households h
+   where exists (select 1 from public.members m where m.household_id = h.id and m.user_id = me)
+     and not exists (select 1 from public.members m where m.household_id = h.id and m.user_id <> me);
+  update public.members m set role = 'owner'
+   where m.household_id in (select household_id from public.members where user_id = me and role = 'owner')
+     and m.user_id = (select x.user_id from public.members x where x.household_id = m.household_id and x.user_id <> me order by x.created_at limit 1);
+  delete from public.members where user_id = me;
+  delete from auth.users where id = me;
+end $$;
+revoke execute on function public.delete_my_account() from public, anon;
+
 grant execute on function public.create_household(text, text) to authenticated;
+grant execute on function public.delete_my_account() to authenticated;
 grant execute on function public.create_invite(uuid) to authenticated;
 grant execute on function public.accept_invite(text, text) to authenticated;
 grant execute on function public.replace_month(uuid, text, text, jsonb, uuid[], text, text, jsonb) to authenticated;

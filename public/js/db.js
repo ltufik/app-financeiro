@@ -83,4 +83,5 @@ export async function exportBackup(hh, household) {
 
 // Deletes all of this family's data (owner only). The login account itself stays.
 export const deleteHousehold = async hh => must(await sb.from('households').delete().eq('id', hh));
+export const deleteMyAccount = async () => must(await sb.rpc('delete_my_account'));
 export const leaveHousehold = async (hh, uid) => must(await sb.from('members').delete().eq('household_id', hh).eq('user_id', uid));

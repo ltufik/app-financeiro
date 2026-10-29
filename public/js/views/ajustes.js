@@ -69,6 +69,9 @@ export function render(el) {
     <div class="log" id="dLog"></div>
     ${owner ? `<details><summary class="small" style="color:var(--bad)">Apagar todos os dados da família</summary><p class="small" style="margin-top:8px">Apaga lançamentos, categorias, regras, estudos e a família. Não dá para desfazer. Digite o nome da família para confirmar.</p><div class="rowbtn" style="margin-top:8px"><input type="text" id="delName" placeholder="${esc(S.hh.name)}" style="flex:1 1 200px"><button class="btn" id="delGo" type="button" style="border-color:var(--bad);color:var(--bad)">Apagar</button></div></details>` : `<div><button class="btn" id="leave" type="button">Sair desta família</button></div>`}
     <div><button class="btn" id="signOut" type="button">Sair da conta</button></div>
+    <details><summary class="small" style="color:var(--bad)">Excluir minha conta</summary>
+      <p class="small" style="margin-top:8px">Apaga o seu login. ${S.members.length > 1 ? 'Como a família tem outras pessoas, os dados dela continuam com elas.' : 'Como você é a única pessoa da família, todos os dados dela também são apagados.'} Não dá para desfazer. Se quiser, baixe um backup antes. Digite EXCLUIR para confirmar.</p>
+      <div class="rowbtn" style="margin-top:8px"><input type="text" id="delAcc" placeholder="EXCLUIR" autocomplete="off" style="flex:1 1 160px"><button class="btn" id="delAccGo" type="button" style="border-color:var(--bad);color:var(--bad)">Excluir conta</button></div></details>
   </div>`;
 
   // help
@@ -136,6 +139,16 @@ export function render(el) {
   };
   else $('#leave').onclick = async () => { try { await db.leaveHousehold(S.hh.id, S.user.id); location.reload(); } catch (e) { toast('Não foi possível sair.'); } };
   $('#signOut').onclick = async () => { await db.sb.auth.signOut(); location.reload(); };
+  $('#delAccGo').onclick = async () => {
+    if ($('#delAcc').value.trim().toUpperCase() !== 'EXCLUIR') { toast('Digite EXCLUIR para confirmar.'); return; }
+    $('#delAccGo').disabled = true;
+    try {
+      await db.deleteMyAccount();
+      try { localStorage.clear(); } catch (e) { /* storage blocked */ }
+      await db.sb.auth.signOut().catch(() => {});
+      location.reload();
+    } catch (e) { toast('Não foi possível excluir a conta.'); $('#delAccGo').disabled = false; }
+  };
 }
 
 const num = (id, label, v) => `<label class="f">${label}<input type="number" step="any" id="${id}" value="${v == null || v === '' || isNaN(+v) ? '' : +(+v).toFixed(4)}"></label>`;

@@ -178,6 +178,9 @@ await page.click('#fInvite'); await page.waitForTimeout(100);
 ok('convite gerado', (await txt('#fCode')).length === 8);
 await shot('08-ajustes');
 ok('sem rolagem horizontal', await page.evaluate(() => document.documentElement.scrollWidth <= 400));
+await page.click('text=Excluir minha conta'); await page.fill('#delAcc', 'excluir'); await page.click('#delAccGo');
+await page.waitForSelector('#auth:not([hidden])', { timeout: 10000 });
+ok('excluir conta volta para a tela de login', true);
 ok('sem erros no console', !errors.length, errors.join(' | '));
 
 } catch (e) { results.push(['FAIL', 'exceção: ' + e.message.split('\n')[0], errors.join(' | ')]); if (shots) await page.screenshot({ path: path.join(shots, 'erro.png'), fullPage: true }).catch(() => {}); try { results.push(['info', 'log', await txt('#dLog') + ' / ' + await txt('#pdfLog')]); } catch (x) {} }

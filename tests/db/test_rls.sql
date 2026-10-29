@@ -45,3 +45,21 @@ select category from rules where household_id = :'ha' and kind = 'exact' \gset
 \set ON_ERROR_STOP off
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select public.accept_invite(:'code');
+
+-- Excluir conta: C (membro da família A) sai; A continua dona e os dados ficam
+\set ON_ERROR_STOP on
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
+select public.delete_my_account();
+reset role;
+select count(*) as a_members from public.members where household_id = :'ha' \gset
+select count(*) as c_user from auth.users where id = '00000000-0000-0000-0000-00000000000c' \gset
+\echo excluir conta de membro: membros restantes :a_members, usuário apagado: :c_user
+-- A exclui a conta: era a única na família A, então a família e os dados somem
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select public.delete_my_account();
+reset role;
+select count(*) as hh_a from public.households where id = :'ha' \gset
+select count(*) as tx_a from public.transactions where household_id = :'ha' \gset
+select count(*) as hh_b from public.households where id = :'hb' \gset
+\echo excluir conta de dona única: família A :hh_a, lançamentos A :tx_a, família B intacta :hh_b
