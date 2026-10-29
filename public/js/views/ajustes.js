@@ -3,6 +3,7 @@ import * as db from '../db.js';
 import { GROUPS } from '../lib/calc.js';
 import { esc, todayISO } from '../lib/format.js';
 import { $, toast } from '../ui.js';
+import { installHelpHTML, wireInstall } from '../steps.js';
 
 const LISTS = {
   assets: { title: 'Bens (imóveis, veículos)', hint: 'Valor de mercado e quanto falta pagar.', cols: [['name', 'Nome', 'text'], ['value', 'Valor', 'number'], ['debt', 'Falta pagar', 'number']] },
@@ -56,6 +57,12 @@ export function render(el) {
   </div>
 
   <div class="panel stack">
+    <h2>Ajuda</h2>
+    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Mostrar os primeiros passos</button></div>
+    <details class="help"><summary>Instalar o app no celular</summary>${installHelpHTML()}</details>
+  </div>
+
+  <div class="panel stack">
     <h2>Dados</h2>
     <div class="rowbtn"><button class="btn" id="dExport" type="button">Baixar backup</button>
       <span class="drop" style="padding:10px 16px;border-width:1px;flex-direction:row"><span>Importar backup</span><input type="file" id="dImport" class="fileover" accept=".json,application/json" aria-label="Importar backup"></span></div>
@@ -63,6 +70,11 @@ export function render(el) {
     ${owner ? `<details><summary class="small" style="color:var(--bad)">Apagar todos os dados da família</summary><p class="small" style="margin-top:8px">Apaga lançamentos, categorias, regras, estudos e a família. Não dá para desfazer. Digite o nome da família para confirmar.</p><div class="rowbtn" style="margin-top:8px"><input type="text" id="delName" placeholder="${esc(S.hh.name)}" style="flex:1 1 200px"><button class="btn" id="delGo" type="button" style="border-color:var(--bad);color:var(--bad)">Apagar</button></div></details>` : `<div><button class="btn" id="leave" type="button">Sair desta família</button></div>`}
     <div><button class="btn" id="signOut" type="button">Sair da conta</button></div>
   </div>`;
+
+  // help
+  $('#hTour').onclick = () => S.showTour('app');
+  $('#hSteps').onclick = () => { try { localStorage.removeItem('fin.steps.hide.' + S.hh.id); } catch (e) { /* storage blocked */ } S.go('resumo', '#stepsBox'); };
+  wireInstall(el);
 
   // family
   $('#fName').onchange = async e => { const n = e.target.value.trim(); if (!n) return; try { await db.renameHousehold(S.hh.id, n); S.hh.name = n; $('#brand').textContent = n; toast('Nome salvo'); } catch (err) { toast('Não foi possível salvar.'); } };

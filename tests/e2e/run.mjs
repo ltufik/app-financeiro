@@ -56,10 +56,25 @@ await page.click('#aGo');
 ok('cadastro exige consentimento', (await txt('#aMsg')).includes('concordância'));
 await page.check('#aConsent'); await page.click('#aGo');
 await page.waitForSelector('#onboard:not([hidden])');
+await page.waitForSelector('.tour');
+ok('apresentação aparece no primeiro acesso', (await txt('.tour')).includes('O dinheiro da família'));
+await shot('01b-tour-1');
+for (let k = 0; k < 2; k++) await page.click('#tourNext');
+await shot('01c-tour-3');
+const nSlides = await page.$$eval('.tour-slide', s => s.length);
+for (let k = 2; k < nSlides - 1; k++) await page.click('#tourNext');
+ok('último passo leva a criar a família', (await txt('#tourNext')) === 'Criar minha família');
+await shot('01d-tour-fim');
+await page.click('#tourNext');
+ok('apresentação fecha e foca o nome da família', !(await page.$('.tour')) && await page.evaluate(() => document.activeElement.id === 'oName'));
 await page.fill('#oName', 'Família Teste'); await page.click('#oCreate');
 await page.waitForSelector('#app:not([hidden])');
 ok('família criada e app aberto', (await txt('#brand')) === 'Família Teste');
-ok('resumo vazio orienta', (await txt('#v-resumo')).includes('Comece pelo primeiro mês'));
+ok('apresentação não repete depois de vista', !(await page.$('.tour')));
+ok('resumo vazio mostra primeiros passos', (await txt('#stepsBox')).includes('0 de 6'), await txt('#stepsBox'));
+await page.click('#stepsBox [data-k="0"]');
+ok('passo leva ao envio do PDF', await page.isVisible('#v-lancar #drop'));
+await page.click('[data-tab=resumo]');
 await shot('02-vazio');
 
 const backup = arg('backup');
@@ -79,6 +94,7 @@ if (backup) {
   await shot('03-resumo-setembro');
   await page.selectOption('#monthSel', 'ano:2026');
   ok('ano: sobra R$ 53.494', (await txt('#v-resumo .big')).includes('53.494'));
+  ok('primeiros passos atualizam com os dados', (await txt('#stepsBox')).includes('3 de 6'), await txt('#stepsBox .tiny'));
 }
 
 await page.click('[data-tab=lancar]');

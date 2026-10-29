@@ -38,6 +38,11 @@ function build(el) {
       <span class="small muted">PDF com senha também funciona: o app pede a senha e não a guarda.</span>
       <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf" aria-label="Escolher PDF">
     </div>
+    <details class="help" style="margin-top:10px"><summary>Onde encontro o PDF?</summary><ol>
+      <li><strong>Fatura do cartão:</strong> no app do banco, abra Cartões → Fatura e procure <em>Baixar PDF</em>, <em>Compartilhar</em> ou <em>Enviar por e-mail</em>.</li>
+      <li><strong>Extrato da conta:</strong> abra Conta → Extrato, escolha o mês inteiro (do dia 1 ao último dia) e procure <em>Exportar PDF</em> ou <em>Compartilhar</em>.</li>
+      <li>No celular, ao compartilhar, escolha <em>Salvar em Arquivos</em> (iPhone) ou <em>Salvar no aparelho</em> (Android). Depois toque em Escolher PDF aqui e procure o arquivo.</li>
+      <li>Se o banco mandar o PDF por e-mail, abra o anexo e salve do mesmo jeito.</li></ol></details>
     <div id="pwBox" hidden style="margin-top:12px" class="stack">
       <label class="f" for="pwIn">Senha do PDF<input type="password" id="pwIn" autocomplete="off"></label>
       <div><button class="btn primary" id="pwGo" type="button">Abrir</button></div>

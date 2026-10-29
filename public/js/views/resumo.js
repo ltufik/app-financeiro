@@ -2,14 +2,15 @@ import { S, goals, monthKeys, calcMonth, calcMonths, txsOf, manualOf, nextFatura
 import { byCategory } from '../lib/calc.js';
 import { brl, brl0, pct, esc, mLong, mShort } from '../lib/format.js';
 import { meter, pill } from '../ui.js';
+import { renderSteps } from '../steps.js';
 
 let goalPreset = 0;
 
 export function render(el) {
   const ks = monthKeys(), G = goals();
   if (!ks.length) {
-    el.innerHTML = `<div class="panel hero"><h2>Comece pelo primeiro mês</h2><p class="muted" style="margin-top:6px">Envie a fatura do cartão ou o extrato da conta em PDF na aba Lançar, ou lance um gasto falando. O resumo aparece aqui.</p><div class="rowbtn" style="margin-top:12px"><button class="btn primary" type="button" data-go="lancar">Lançar agora</button></div></div>`;
-    el.querySelector('[data-go]').onclick = () => S.go('lancar');
+    el.innerHTML = `<div class="panel hero"><h2>Bem-vindos, ${esc(S.hh.name)}!</h2><p class="muted" style="margin-top:6px">O resumo do mês aparece aqui assim que vocês mandarem o primeiro PDF ou lançarem o primeiro gasto. Siga os passos abaixo, um de cada vez.</p></div><div class="panel" id="stepsBox"></div>`;
+    renderSteps(el.querySelector('#stepsBox'));
     return;
   }
   const yr = S.m.startsWith('ano:'), list = yr ? ks.filter(k => k.startsWith(S.m.slice(4))) : [S.m];
@@ -21,7 +22,7 @@ export function render(el) {
   const P0 = patrimonio(), pr = presets();
   if (goalPreset >= pr.length) goalPreset = 0;
 
-  el.innerHTML = `
+  el.innerHTML = `<div class="panel" id="stepsBox" hidden></div>
   <div class="panel hero">
     <p class="muted small">Sobra do dia a dia ${yr ? 'em ' + S.m.slice(4) + ' até agora' : 'em ' + mLong(S.m)}</p>
     <div class="big num" style="color:${a.res < 0 ? 'var(--bad)' : 'var(--ink)'}">${brl(a.res)}</div>
@@ -63,6 +64,7 @@ export function render(el) {
     <div class="panel" id="goalBox"></div>
   </div>`;
   renderGoal(el.querySelector('#goalBox'), G, pr);
+  renderSteps(el.querySelector('#stepsBox'));
 }
 
 function renderGoal(box, G, pr) {

@@ -2,12 +2,13 @@
 import * as db from './db.js';
 import { S, setFamily, reindex, monthKeys, latestClosed } from './state.js';
 import { mLong, thisMonth } from './lib/format.js';
-import { $, $$, banner } from './ui.js';
+import { $, $$ } from './ui.js';
 import * as resumo from './views/resumo.js';
 import * as lancar from './views/lancar.js';
 import * as perguntar from './views/perguntar.js';
 import * as extrato from './views/extrato.js';
 import * as ajustes from './views/ajustes.js';
+import { openTour } from './tour.js';
 
 const VIEWS = { resumo, lancar, perguntar, extrato, ajustes };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -85,7 +86,20 @@ S.reload = async (all = false) => {
   if (all) setFamily(await db.loadFamily(S.hh.id));
   else { const [txs, imports] = await Promise.all([db.reloadTransactions(S.hh.id), db.sb.from('imports').select('*').eq('household_id', S.hh.id)]); S.txs = txs.map(t => ({ ...t, amount: +t.amount })); S.imports = imports.data || S.imports; }
 };
-S.go = tab => setTab(tab);
+S.go = (tab, sel) => {
+  setTab(tab);
+  if (sel) setTimeout(() => { const e = $(sel); if (!e) return; e.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (e.matches('input,textarea,button')) e.focus({ preventScroll: true }); }, 60);
+};
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installEvt = e; });
+
+// Welcome tour: once per person (remembered in the account, so it does not repeat on another phone).
+const tourDone = () => S.user?.user_metadata?.tour_done || lsGet('fin.tour.' + S.user?.id) === '1';
+function markTour() { lsSet('fin.tour.' + S.user.id, '1'); db.sb.auth.updateUser({ data: { tour_done: true } }).catch(() => {}); }
+S.showTour = (where) => openTour(where === 'onboard'
+  ? { finalTitle: 'Primeiro passo: criar a família', finalText: 'Dê um nome, como "Família Silva". Depois você convida quem divide as contas com você.', finalLabel: 'Criar minha família', onClose: () => { markTour(); $('#oName').focus(); } }
+  : S.txs.length
+    ? { finalTitle: 'Tudo pronto', finalText: 'Os primeiros passos ficam no Resumo. Você pode rever esta apresentação em Ajustes.', finalLabel: 'Ver meu resumo', onClose: () => markTour() }
+    : { finalTitle: 'Primeiro passo: a fatura do cartão', finalText: 'Baixe o PDF da última fatura no app do banco e envie aqui. Em poucos segundos você vê para onde foi o dinheiro.', finalLabel: 'Enviar minha fatura', onClose: done => { markTour(); if (done) S.go('lancar', '#drop'); } });
 S.render = () => {
   reindex(); renderMonthSel();
   const v = VIEWS[S.tab]; v.render($('#v-' + S.tab));
@@ -114,12 +128,12 @@ async function doStart() {
   const { data } = await db.sb.auth.getSession();
   S.user = data?.session?.user || null;
   if (!S.user) { show('auth'); return; }
-  if (!(await pickFamily())) return;
+  if (!(await pickFamily())) { if (!tourDone()) S.showTour('onboard'); return; }
   setFamily(await db.loadFamily(S.hh.id));
   $('#brand').textContent = S.hh.name;
   show('app');
   const t = lsGet('fin.tab'); setTab(VIEWS[t] ? t : 'resumo');
-  if (!S.txs.length && S.tab === 'resumo') banner('');
+  if (!tourDone()) S.showTour('app');
 }
 
 (async function boot() {
