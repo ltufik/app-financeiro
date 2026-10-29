@@ -100,3 +100,19 @@ test('format: ciclo do cartão, norm, addM', () => {
   assert.equal(cycleMonth('2026-10-23'), '2026-10'); assert.equal(cycleMonth('2026-10-24'), '2026-11'); assert.equal(cycleMonth('2026-12-30'), '2027-01');
   assert.equal(norm(' Pão  de Açúcar '), 'PAO DE ACUCAR'); assert.equal(addM('2026-01', -1), '2025-12');
 });
+
+test('outros bancos: banco detectado e conferência por total da fatura ou por totais do extrato', async () => {
+  const { detectBank, checkFatura, checkExtrato } = await import('../public/js/lib/parse.js');
+  assert.equal(detectBank('Nu Pagamentos S.A. - Fatura de outubro'), 'Nubank');
+  assert.equal(detectBank('Banco Itaú Unibanco S.A.'), 'Itaú');
+  assert.equal(detectBank('qualquer coisa'), null);
+  const items = [{ card: '', amount: 100 }, { card: '', amount: 50.5 }, { card: '', amount: -20 }];
+  assert.equal(checkFatura(items, [], 130.5).ok, true);
+  assert.equal(checkFatura(items, [], 150.5).ok, false);
+  assert.equal(checkFatura(items, [], null).how, 'sem total');
+  assert.equal(checkFatura([{ card: '1', amount: 100 }, { card: '1', amount: -10 }], [{ final: '1', valorTotal: 90 }]).ok, true);
+  const rows = [{ amount: 1000 }, { amount: -300 }, { amount: -200 }];
+  assert.equal(checkExtrato(rows, null, null, 1000, 500), true);
+  assert.equal(checkExtrato(rows, 100, 600), true);
+  assert.equal(checkExtrato(rows, null, null, 1000, 400), false);
+});

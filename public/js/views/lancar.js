@@ -3,7 +3,7 @@ import * as db from '../db.js';
 import { askJSON, aiErrorText } from '../ai.js';
 import { attachMic, speechSupported } from '../speech.js';
 import { classify } from '../lib/categorize.js';
-import { lineify, detect, parseFaturaSantander, parseExtratoSantander, faturaMonth, checkFatura, checkExtrato, MONEY } from '../lib/parse.js';
+import { lineify, detect, parseFaturaSantander, parseExtratoSantander, faturaMonth, checkFatura, checkExtrato, detectBank, MONEY } from '../lib/parse.js';
 import { brl, esc, mLong, addM, todayISO, isoToBr, cycleMonth, norm, round2, thisMonth } from '../lib/format.js';
 import { $, toast, catPicker } from '../ui.js';
 
@@ -162,6 +162,7 @@ async function openPdf(password) {
     pages.push({ pg, w: vp.width, items: tc.items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width })) });
   }
   const lines1 = pages.flatMap(p => lineify(p.items, p.w, 1)), text = lines1.join('\n'), type = detect(text);
+  PDF.bank = detectBank(text);
   if (type === 'fatura-santander') {
     const r = parseFaturaSantander(pages.flatMap((p, i) => lineify(p.items, p.w, i === 0 ? 1 : 2)));
     if (r.ok) { plog(`Fatura lida: ${r.items.length} lançamentos. Totais por cartão conferem.`, 'var(--good)'); return reviewRows('cartao', r.items, faturaMonth(r.vencimento), { total: r.net, venc: r.vencimento, checks: r.checks }); }
@@ -184,10 +185,13 @@ async function openPdf(password) {
   return viaClaude(doc, pages, text, kind);
 }
 
-const JSON_EXTRATO = `{"tipo":"extrato","mes":"AAAA-MM","saldoAnterior":0.00,"saldoFinal":0.00,"movimentos":[{"data":"dd/mm","descricao":"histórico + nome","valor":-123.45}]}`;
-const JSON_FATURA = `{"tipo":"fatura","vencimento":"dd/mm/aaaa","cartoes":[{"final":"1234","valorTotal":0.00}],"itens":[{"cartao":"1234","data":"dd/mm","descricao":"...","parcela":"01/10 ou vazio","valor":123.45}]}`;
+const JSON_EXTRATO = `{"tipo":"extrato","banco":"nome do banco","mes":"AAAA-MM","saldoAnterior":0.00,"saldoFinal":0.00,"totalEntradas":null,"totalSaidas":null,"movimentos":[{"data":"dd/mm","descricao":"histórico + nome","valor":-123.45}]}`;
+const JSON_FATURA = `{"tipo":"fatura","banco":"nome do banco","vencimento":"dd/mm/aaaa","valorTotalFatura":0.00,"cartoes":[{"final":"1234","valorTotal":0.00}],"itens":[{"cartao":"1234","data":"dd/mm","descricao":"...","parcela":"01/10 ou vazio","valor":123.45}]}`;
 const JSON_INVEST = `{"tipo":"investimentos","data":"AAAA-MM-DD","totalBruto":0.00,"totalLiquido":0.00,"classes":[{"nome":"...","valor":0.00}]}`;
-const RULES_TXT = 'Extrato: só a movimentação da conta, na ordem, débitos com valor negativo; não inclua linhas de saldo. Fatura: ignore o pagamento da fatura anterior; créditos e estornos com valor negativo; se houver vários cartões (titular e adicionais), informe o total de cada um. Investimentos: use o resumo por classe e o total da carteira.';
+const RULES_TXT = `Regras gerais: use null para o que o documento não mostrar; nunca invente valores; valores em reais com ponto decimal.
+Extrato: só a movimentação da conta, na ordem, débitos com valor negativo e créditos positivos; não inclua linhas de saldo nem de totais; inclua rendimentos e tarifas. Se o extrato mostrar total de entradas e de saídas do período, informe em totalEntradas e totalSaidas (positivos).
+Fatura: um item por lançamento da fatura atual, de todos os cartões (titular, adicionais e virtuais), com o final do cartão de cada um; compras e parcelas positivas; créditos, estornos e cashback negativos; inclua anuidade, IOF, juros e encargos como itens. Não inclua o pagamento da fatura anterior, saldo anterior, limite, pagamento mínimo nem simulações de parcelamento. Parcela no formato 02/10 quando houver. Se a fatura mostrar o total de cada cartão, informe em cartoes; informe sempre o valor total da fatura em valorTotalFatura.
+Investimentos: use o resumo por classe de ativo e o total da carteira.`;
 
 async function viaClaude(doc, pages, text, kind) {
   const fmt = kind === 'investimentos' ? JSON_INVEST : kind === 'extrato' ? JSON_EXTRATO : kind === 'fatura' ? JSON_FATURA : `um destes formatos, conforme o documento: ${JSON_EXTRATO} ou ${JSON_FATURA} ou ${JSON_INVEST}`;
@@ -218,16 +222,20 @@ function handleExtracted(r) {
   if (!r || typeof r !== 'object') { plog('Resposta vazia.', 'var(--bad)'); return; }
   if (r.tipo === 'fatura') {
     const items = (r.itens || []).filter(x => x && isFinite(+x.valor)).map(x => ({ day: (x.data || '').slice(0, 5), description: String(x.descricao || '').replace(/\s+/g, ' ').trim(), installment: x.parcela || '', amount: +x.valor, card: x.cartao ? String(x.cartao) : '' }));
-    const c = checkFatura(items, r.cartoes);
-    plog(c.ok ? 'Totais por cartão conferem.' : 'Atenção: a soma dos lançamentos não bate com o total de algum cartão. Revise com cuidado.', c.ok ? 'var(--good)' : 'var(--warn)');
-    return reviewRows('cartao', items, faturaMonth(r.vencimento), { total: round2(items.reduce((a, i) => a + i.amount, 0)), venc: r.vencimento, checks: c.checks, viaClaude: true });
+    const c = checkFatura(items, r.cartoes, r.valorTotalFatura);
+    const bank = r.banco || PDF.bank;
+    plog(`${bank ? 'Fatura do ' + bank : 'Fatura'} lida pelo Claude: ${items.length} lançamentos.`, 'var(--good)');
+    plog(c.ok ? (c.how === 'total' ? 'A soma confere com o total da fatura.' : 'Os totais por cartão conferem.') : c.how === 'sem total' ? 'Não achei o total da fatura no documento para conferir. Revise com cuidado.' : 'Atenção: a soma dos lançamentos não bate com o total do documento. Revise com cuidado antes de salvar.', c.ok ? 'var(--good)' : 'var(--warn)');
+    return reviewRows('cartao', items, faturaMonth(r.vencimento), { total: round2(items.reduce((a, i) => a + i.amount, 0)), venc: r.vencimento, checks: c.checks, viaClaude: true, bank, ok: c.ok });
   }
   if (r.tipo === 'extrato') {
     const mes = /^\d{4}-\d{2}$/.test(r.mes || '') ? r.mes : null;
     const rows = (r.movimentos || []).filter(x => x && isFinite(+x.valor)).map(x => { const d = (x.data || '').slice(0, 5); const [dd, mm] = d.split('/'); return { day: d, date: mes && dd && mm ? `${mes.slice(0, 4)}-${mm}-${dd}` : null, description: String(x.descricao || '').replace(/\s+/g, ' ').trim(), amount: +x.valor }; });
-    const ok = checkExtrato(rows, r.saldoAnterior, r.saldoFinal);
-    plog(ok ? `Saldo de ${brl(+r.saldoAnterior)} para ${brl(+r.saldoFinal)} confere.` : 'Atenção: os movimentos não fecham com os saldos. Revise com cuidado.', ok ? 'var(--good)' : 'var(--warn)');
-    return reviewRows('conta', rows, mes, { saldoIni: +r.saldoAnterior, saldoFim: +r.saldoFinal, viaClaude: true });
+    const ok = checkExtrato(rows, r.saldoAnterior, r.saldoFinal, r.totalEntradas, r.totalSaidas);
+    const bank = r.banco || PDF.bank;
+    plog(`${bank ? 'Extrato do ' + bank : 'Extrato'} lido pelo Claude: ${rows.length} movimentos.`, 'var(--good)');
+    plog(ok ? 'Os movimentos fecham com os saldos (ou com os totais) do documento.' : 'Atenção: os movimentos não fecham com os saldos do documento. Revise com cuidado antes de salvar.', ok ? 'var(--good)' : 'var(--warn)');
+    return reviewRows('conta', rows, mes, { saldoIni: r.saldoAnterior != null ? +r.saldoAnterior : null, saldoFim: r.saldoFinal != null ? +r.saldoFinal : null, viaClaude: true, bank, ok });
   }
   if (r.tipo === 'investimentos') return reviewInvest(r);
   plog('Não reconheci o tipo do documento.', 'var(--bad)');
@@ -268,9 +276,12 @@ function renderReview() {
   const ks = monthKeys(); const months = [...new Set([R.month, ...ks, addM(ks[ks.length - 1] || R.month, 1)])].sort();
   const tot = rows.reduce((a, r) => a + r.amount, 0);
   const head = source === 'cartao' ? `Fatura de ${mLong(R.month)}: ${brl(tot)}` : `Extrato de ${mLong(R.month)}: ${rows.length} movimentos`;
-  const sub = source === 'cartao' ? (info.checks || []).map(c => `cartão ${c.card} ${c.ok ? '✓' : '≠ ' + brl(c.sum) + ' de ' + brl(c.total)}`).join(' · ') : `Saldo inicial ${brl(info.saldoIni)} · saldo final ${brl(info.saldoFim)}`;
+  const sub = [info.bank, source === 'cartao'
+    ? (info.checks || []).map(c => `${c.card === 'total' ? 'total da fatura' : 'cartão ' + c.card} ${c.ok ? '✓' : '≠ ' + brl(c.sum) + ' de ' + brl(c.total)}`).join(' · ')
+    : info.saldoIni != null && info.saldoFim != null ? `Saldo inicial ${brl(info.saldoIni)} · saldo final ${brl(info.saldoFim)}` : ''].filter(Boolean).join(' · ');
   box.innerHTML = `<h3>${esc(head)}</h3><p class="small muted">${esc(sub)}</p>
   <label class="f" style="margin-top:10px;max-width:260px">Salvar no mês<select id="rvMonth">${months.map(k => `<option value="${k}"${k === R.month ? ' selected' : ''}>${mLong(k)}</option>`).join('')}</select></label>
+  ${info.ok === false ? `<p class="banner no" style="margin-top:10px">A soma não bateu com o total do documento. Confira os valores com a fatura ou o extrato antes de salvar; se faltar algum lançamento, você pode lançar à mão depois.</p>` : ''}
   ${exist ? `<p class="banner at" style="margin-top:10px">Este mês já tem ${source === 'cartao' ? 'fatura' : 'extrato'} salvo. Salvar substitui os lançamentos importados antes.</p>` : ''}
   <p class="small" style="margin-top:10px"><span class="pill at">${rows.filter(r => r.pending).length} a classificar</span> <span class="tiny muted">Toque na categoria para trocar. O app aprende.</span></p>
   <div class="tw" style="margin-top:8px;max-height:440px;overflow:auto"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="rvRows"></tbody></table></div>
@@ -298,7 +309,7 @@ async function saveReview(pend) {
   try {
     const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month);
-    await db.replaceMonth(S.hh.id, source, month, payload, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude });
+    await db.replaceMonth(S.hh.id, source, month, payload, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
     toast(label + ' salvo'); $('#review').hidden = true; $('#pdfLog').innerHTML = ''; R = null; S.m = month; S.render();

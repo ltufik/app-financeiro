@@ -38,6 +38,11 @@ function aiMock(b) {
   const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
   if (text.includes('Transforme a frase')) return reply(JSON.stringify({ itens: [{ descricao: 'Mercado', valor: 230, sentido: 'saida', data: '2026-10-06', meio: 'cartao', categoria: 'Mercado' }, { descricao: 'Terapia', valor: 350, sentido: 'saida', data: '2026-10-06', meio: 'conta', categoria: 'Saúde' }] }));
   if (text.includes('Classifique lançamentos')) return reply('[]');
+  if (text.includes('Extraia os dados') && text.includes('Nu Pagamentos')) return reply(JSON.stringify({ tipo: 'fatura', banco: 'Nubank', vencimento: '15/11/2026', valorTotalFatura: 1234.5, cartoes: [], itens: [
+    { cartao: '', data: '09/10', descricao: 'Padaria Pao Quente', parcela: '', valor: 45.9 }, { cartao: '', data: '12/10', descricao: 'Posto Shell Av Brasil', parcela: '', valor: 250 },
+    { cartao: '', data: '15/10', descricao: 'iFood *Restaurante Sabor', parcela: '', valor: 89.6 }, { cartao: '', data: '20/10', descricao: 'Loja Movel Casa', parcela: '02/06', valor: 400 },
+    { cartao: '', data: '25/10', descricao: 'Netflix.com', parcela: '', valor: 55.9 }, { cartao: '', data: '28/10', descricao: 'Supermercado Dia', parcela: '', valor: 413.1 },
+    { cartao: '', data: '30/10', descricao: 'Estorno Loja X', parcela: '', valor: -20 }] }));
   if (b.tools) { chatCalls++; const last = b.messages[b.messages.length - 1]; if (typeof last.content === 'string') return { content: [{ type: 'tool_use', id: 't1', name: 'gastos_por_categoria', input: { meses: ['2026-09'] } }], stop_reason: 'tool_use' }; window_tool = last.content[0].content; return reply('**Resumo:** o maior gasto foi Mercado.\n\n| Categoria | Valor |\n|---|---|\n| Mercado | R$ 1.000 |'); }
   return reply('{}');
 }
@@ -126,6 +131,23 @@ if (fatura && backup) {
   // Same statement re-imported: only the Allpark parking (R$ 70, reclassified by hand in the original data) may differ.
   const after = await txt('#v-resumo .big');
   ok('reimportar a mesma fatura mantém a sobra (±R$ 70 do Allpark)', ['2.658,50', '2.588,50'].some(v => after.includes(v)), after);
+}
+
+const outra = arg('outra');
+if (outra) {
+  await page.click('[data-tab=lancar]');
+  await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
+  await page.setInputFiles('#pdfIn', outra);
+  await page.waitForSelector('#rvSave', { timeout: 30000 });
+  const log = await txt('#pdfLog');
+  ok('fatura de outro banco lida pelo Claude', log.includes('Fatura do Nubank lida pelo Claude: 7 lançamentos'), log);
+  ok('fatura de outro banco conferida pelo total', log.includes('A soma confere com o total da fatura'), log);
+  const rv = await txt('#review');
+  ok('outro banco vai para o mês do vencimento', rv.includes('novembro de 2026'), rv.slice(0, 120));
+  ok('regras genéricas classificam o básico', (await page.$$eval('#rvRows tr', rs => rs.filter(r => /Combust|Assinatura|Restaurante|Mercado/.test(r.textContent)).length)) >= 3);
+  await shot('05b-outro-banco');
+  await page.click('#rvSave'); await page.waitForFunction(() => window.__lastReplace?.p_month === '2026-11');
+  ok('fatura de outro banco salva', true);
 }
 
 await page.click('[data-tab=perguntar]');

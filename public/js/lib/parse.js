@@ -107,15 +107,43 @@ export function parseExtratoSantander(lines) {
   };
 }
 
-// Check rows that Claude extracted against the totals it also read from the document.
-export function checkFatura(items, cards) {
-  const checks = (cards || []).map(c => {
-    const s = items.filter(i => String(i.card) === String(c.final) && i.amount > 0).reduce((a, i) => a + i.amount, 0);
-    return { card: String(c.final), total: +c.valorTotal, sum: Math.round(s * 100) / 100, ok: Math.abs(s - c.valorTotal) < 0.05 };
-  });
-  return { checks, ok: checks.length > 0 && checks.every(c => c.ok) };
+// Bank named in the document, for messages and import statistics.
+const BANKS = [['Nubank', /nu ?pagamentos|nubank/i], ['Itaú', /ita[uú] ?unibanco|banco ita[uú]|itaucard|\bita[uú]\b/i], ['Bradesco', /bradesco/i], ['Santander', /santander/i],
+  ['Banco do Brasil', /banco do brasil|\bbb\b.*ourocard|ourocard/i], ['Caixa', /caixa econ[oô]mica/i], ['Inter', /banco inter\b|\binter&co/i], ['C6 Bank', /\bc6 ?bank|banco c6/i],
+  ['XP', /\bxp investimentos|banco xp/i], ['BTG Pactual', /btg ?pactual/i], ['Sicredi', /sicredi/i], ['Sicoob', /sicoob/i], ['PicPay', /picpay/i], ['Mercado Pago', /mercado ?pago/i], ['Neon', /\bneon\b/i], ['Original', /banco original/i], ['Porto Bank', /porto ?(bank|seguro cart)/i]];
+export function detectBank(text) {
+  const head = String(text || '').slice(0, 6000);
+  for (const [name, re] of BANKS) if (re.test(head)) return name;
+  for (const [name, re] of BANKS) if (re.test(text)) return name;
+  return null;
 }
-export function checkExtrato(rows, saldoIni, saldoFim) {
+
+// Check rows that Claude extracted against totals it also read from the document.
+// Card statements: per card (holder and extra cards) when the bank shows them; otherwise the statement total
+// against purchases minus credits.
+export function checkFatura(items, cards, total) {
+  const checks = (cards || []).filter(c => c && +c.valorTotal).map(c => {
+    const s = items.filter(i => String(i.card) === String(c.final) && i.amount > 0).reduce((a, i) => a + i.amount, 0);
+    const net = items.filter(i => String(i.card) === String(c.final)).reduce((a, i) => a + i.amount, 0);
+    const ok = Math.abs(s - c.valorTotal) < 0.05 || Math.abs(net - c.valorTotal) < 0.05;
+    return { card: String(c.final), total: +c.valorTotal, sum: Math.round((Math.abs(s - c.valorTotal) < 0.05 ? s : net) * 100) / 100, ok };
+  });
+  if (checks.length && checks.every(c => c.ok)) return { checks, ok: true, how: 'cartões' };
+  if (total != null && isFinite(+total) && +total !== 0) {
+    const net = Math.round(items.reduce((a, i) => a + i.amount, 0) * 100) / 100;
+    const ok = Math.abs(net - +total) < 1;
+    return { checks: [{ card: 'total', total: +total, sum: net, ok }], ok, how: 'total' };
+  }
+  return { checks, ok: false, how: checks.length ? 'cartões' : 'sem total' };
+}
+// Account statements: opening + movements = closing balance; or, when the bank shows them,
+// total credits and total debits.
+export function checkExtrato(rows, saldoIni, saldoFim, totalIn, totalOut) {
   const sum = rows.reduce((a, r) => a + r.amount, 0);
-  return saldoIni != null && saldoFim != null && Math.abs(+saldoIni + sum - +saldoFim) < 1;
+  if (saldoIni != null && saldoFim != null && isFinite(+saldoIni) && isFinite(+saldoFim) && Math.abs(+saldoIni + sum - +saldoFim) < 1) return true;
+  if (totalIn != null && totalOut != null && isFinite(+totalIn) && isFinite(+totalOut)) {
+    const inn = rows.filter(r => r.amount > 0).reduce((a, r) => a + r.amount, 0), out = rows.filter(r => r.amount < 0).reduce((a, r) => a - r.amount, 0);
+    return Math.abs(inn - Math.abs(+totalIn)) < 1 && Math.abs(out - Math.abs(+totalOut)) < 1;
+  }
+  return false;
 }
