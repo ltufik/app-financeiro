@@ -1,4 +1,4 @@
-# Finanças da família
+# Pra Onde Foi
 
 App de controle financeiro familiar. Ele permite:
 

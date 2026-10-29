@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Finanças da família</title>
-<meta name="description" content="Controle financeiro da família: lançamentos por voz, faturas e extratos em PDF, projeções e estudos de redução de custo.">
+<title>Pra Onde Foi</title>
+<meta name="description" content="Pra Onde Foi: descubra para onde vai o dinheiro da família. Pix, cartão e renda num lugar só, com lançamento por voz e leitura de faturas em PDF.">
 <meta name="theme-color" content="#1E6B58">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pra Onde Foi">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,10 +25,27 @@
 
 <div id="boot" class="authwrap"><p class="muted">Carregando...</p></div>
 
+<!-- TELA INICIAL -->
+<section id="welcome" class="landing" hidden>
+  <header class="land-top"><span class="logo"><img src="/icons/icon.svg" alt="" width="28" height="28">Pra Onde Foi</span><button class="btn" type="button" id="wLogin">Entrar</button></header>
+  <div id="wHero" class="land-hero"></div>
+  <h1>Para onde foi o seu dinheiro?</h1>
+  <p class="lead">O Pra Onde Foi mostra, centavo por centavo, para onde vai o dinheiro da família: o pix do dia a dia, as comprinhas no cartão e quanto entra de verdade.</p>
+  <div class="land-cta"><button class="btn primary" type="button" id="wSignup">Criar conta grátis</button><button class="btn" type="button" id="wLogin2">Já tenho conta</button></div>
+  <ul class="land-feats">
+    <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 14l2 2 4-4"/></svg></span><span><strong>Mande a fatura e o extrato</strong><br>Em PDF, de qualquer banco. O app lê, confere os totais e separa tudo por categoria.</span></li>
+    <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><strong>Gastou? Fale</strong><br>"Paguei 45 de pão no pix." O app entende e lança na hora.</span></li>
+    <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span><strong>Veja quanto sobra</strong><br>Quanto entrou, quanto saiu e para onde foi, mês a mês.</span></li>
+    <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/></svg></span><span><strong>Use em família</strong><br>Convide quem divide as contas com um link no WhatsApp.</span></li>
+  </ul>
+  <p class="tiny muted" style="text-align:center">Seus dados ficam só com a sua família. PDFs e senhas não são guardados.</p>
+</section>
+
 <!-- ENTRAR -->
 <section id="auth" class="authwrap" hidden style="padding:0 16px">
-  <div class="brandbig">Finanças da família</div>
-  <p class="muted">Acompanhe o mês, lance gastos falando e peça projeções. Os dados ficam só com a sua família.</p>
+  <button class="tour-skip" type="button" id="aBack" style="align-self:flex-start">← Voltar</button>
+  <div class="brandbig">Pra Onde Foi</div>
+  <p class="muted">Entre ou crie sua conta para começar.</p>
   <div class="banner ok" id="aInvite" hidden></div>
   <form class="panel stack" id="authForm" novalidate>
     <div class="chips" role="tablist">
@@ -64,7 +82,7 @@
 <!-- APP -->
 <div id="app" hidden>
 <header class="top"><div class="in">
-  <div class="brand" id="brand">Finanças da família</div>
+  <div class="brand" id="brand">Pra Onde Foi</div>
   <select class="monthsel" id="monthSel" aria-label="Mês"></select>
 </div></header>
 

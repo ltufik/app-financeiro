@@ -52,10 +52,13 @@ const shot = async n => { if (shots) await page.screenshot({ path: path.join(sho
 
 try {
 await page.goto('https://app.test/');
+await page.waitForSelector('#welcome:not([hidden])');
+ok('tela inicial explica o app', (await txt('#welcome')).includes('Para onde foi o seu dinheiro?') && await page.isVisible('#wHero svg'));
+await shot('00-inicial');
+await page.click('#wSignup');
 await page.waitForSelector('#auth:not([hidden])');
-ok('tela de login aparece', true);
+ok('criar conta abre o cadastro', await page.isVisible('#nameRow'));
 await shot('01-login');
-await page.click('[data-mode=signup]');
 await page.fill('#aName', 'Luiz Tufik Elias Neto'); await page.fill('#aEmail', 'luiz@test.com'); await page.fill('#aPass', 'senha-forte-123');
 await page.click('#aGo');
 ok('cadastro exige consentimento', (await txt('#aMsg')).includes('concordância'));
@@ -85,7 +88,7 @@ await page.click('#obDone');
 await page.waitForSelector('#app:not([hidden])');
 ok('família criada e app aberto', (await txt('#brand')) === 'Família Elias');
 await page.waitForSelector('.tour');
-ok('apresentação aparece ao entrar no app', (await txt('.tour')).includes('O dinheiro da família'));
+ok('apresentação aparece ao entrar no app com ilustração', (await txt('.tour')).includes('O dinheiro da família') && await page.isVisible('.tour-slide svg.tour-art'));
 await shot('01e-tour');
 const nSlides = await page.$$eval('.tour-slide', s => s.length);
 for (let k = 0; k < nSlides - 1; k++) await page.click('#tourNext');
@@ -195,7 +198,7 @@ await shot('08-ajustes');
 ok('sem rolagem horizontal', await page.evaluate(() => document.documentElement.scrollWidth <= 400));
 // The invited person opens the WhatsApp link, creates an account and lands in the family.
 await page.click('#signOut');
-await page.waitForSelector('#auth:not([hidden])');
+await page.waitForSelector('#welcome:not([hidden])');
 await page.goto(inviteUrl.replace(/^https:\/\/[^/]+/, 'https://app.test'));
 await page.waitForSelector('#aInvite:not([hidden])');
 ok('quem recebe o link vê quem convidou', (await txt('#aInvite')).includes('Luiz convidou você para participar da Família Elias'), await txt('#aInvite'));
@@ -214,8 +217,8 @@ await page.click('#tourSkip').catch(() => {});
 await page.click('[data-tab=ajustes]');
 ok('membros mostram nome e parentesco', (await txt('#v-ajustes .list')).includes('Luana (você)Cônjuge ou companheiro(a)'), await txt('#v-ajustes .list'));
 ok('convidado vê os dados da família', await page.evaluate(() => window.__db.transactions.length > 0));
-await page.click('#signOut'); await page.waitForSelector('#auth:not([hidden])');
-await page.click('[data-mode=login]'); await page.fill('#aEmail', 'luiz@test.com'); await page.fill('#aPass', 'senha-forte-123'); await page.click('#aGo');
+await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])');
+await page.click('#wLogin'); await page.fill('#aEmail', 'luiz@test.com'); await page.fill('#aPass', 'senha-forte-123'); await page.click('#aGo');
 await page.waitForSelector('#app:not([hidden])');
 ok('dono volta direto para o app, sem repetir onboarding', (await txt('#brand')) === 'Família Elias');
 await page.click('[data-tab=ajustes]');

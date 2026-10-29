@@ -9,13 +9,20 @@ import * as perguntar from './views/perguntar.js';
 import * as extrato from './views/extrato.js';
 import * as ajustes from './views/ajustes.js';
 import { openTour } from './tour.js';
+import { HERO } from './art.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 
 const VIEWS = { resumo, lancar, perguntar, extrato, ajustes };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
 
-function show(id) { for (const s of ['boot', 'auth', 'reset', 'onboard', 'app']) $('#' + s).hidden = s !== id; }
+function show(id) { for (const s of ['boot', 'welcome', 'auth', 'reset', 'onboard', 'app']) $('#' + s).hidden = s !== id; window.scrollTo(0, 0); }
+// Front door: the landing page explains the app; invite links skip straight to sign-up.
+function showSignedOut() { if (pendingInvite()) { show('auth'); showInviteBanner(); } else show('welcome'); }
+$('#wHero').innerHTML = HERO;
+$('#wSignup').onclick = () => { show('auth'); setMode('signup'); $('#aName').focus(); };
+$('#wLogin').onclick = $('#wLogin2').onclick = () => { show('auth'); setMode('login'); $('#aEmail').focus(); };
+$('#aBack').onclick = () => show('welcome');
 
 // ---------- auth ----------
 let mode = 'login';
@@ -116,7 +123,7 @@ async function doStart() {
   show('boot');
   const { data } = await db.sb.auth.getSession();
   S.user = data?.session?.user || null;
-  if (!S.user) { show('auth'); showInviteBanner(); return; }
+  if (!S.user) { showSignedOut(); return; }
   const hasFamily = await pickFamily();
   // Onboarding: how to be called, a pending invite (from a WhatsApp link), or creating the family.
   if (!hasFamily || !displayName() || pendingInvite()) {
@@ -151,12 +158,13 @@ async function showInviteBanner() {
   db.sb.auth.onAuthStateChange((ev, session) => {
     if (ev === 'PASSWORD_RECOVERY') { show('reset'); return; }
     if (ev === 'SIGNED_IN' && !S.user) { S.justSignedIn = true; start(); }
-    if (ev === 'SIGNED_OUT') { S.user = null; show('auth'); }
+    if (ev === 'SIGNED_OUT') { S.user = null; showSignedOut(); }
   });
   if (/type=recovery/.test(location.hash)) { show('reset'); return; }
   await start();
   let flash = null; try { flash = sessionStorage.getItem('fin.flash'); sessionStorage.removeItem('fin.flash'); } catch (e) { /* storage blocked */ }
   if (flash) {
+    if (!$('#welcome').hidden) { show('auth'); setMode('login'); }
     const target = !$('#auth').hidden ? $('#aMsg') : !$('#onboard').hidden ? $('#oMsg') : null;
     if (target) { target.className = 'banner ok'; target.textContent = flash; } else toast(flash);
   }

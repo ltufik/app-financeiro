@@ -24,7 +24,7 @@ export async function inviteInfo(code) {
 export const inviteLink = code => `${location.origin}/?convite=${encodeURIComponent(code)}`;
 const firstName = s => String(s || '').trim().split(/\s+/)[0] || '';
 export function inviteText(name, code) {
-  return `Oi${name ? ', ' + firstName(name) : ''}! Estou usando o Finanças da família para organizar as nossas contas e quero você junto. Toque no link para entrar na ${S.hh.name} (vale por 7 dias):\n${inviteLink(code)}`;
+  return `Oi${name ? ', ' + firstName(name) : ''}! Estou usando o Pra Onde Foi para organizar as nossas contas e quero você junto. Toque no link para entrar na ${S.hh.name} (vale por 7 dias):\n${inviteLink(code)}`;
 }
 const waUrl = text => 'https://wa.me/?text=' + encodeURIComponent(text);
 

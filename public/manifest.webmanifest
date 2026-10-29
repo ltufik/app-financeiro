@@ -1,7 +1,7 @@
 {
-  "name": "Finanças da família",
-  "short_name": "Finanças",
-  "description": "Controle financeiro da família: lançamentos por voz, faturas e extratos em PDF, projeções.",
+  "name": "Pra Onde Foi",
+  "short_name": "Pra Onde Foi",
+  "description": "Descubra para onde vai o dinheiro da família: pix, cartão e renda num lugar só.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
