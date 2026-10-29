@@ -37,7 +37,7 @@ $('#authForm').onsubmit = async e => {
   try {
     if (mode === 'signup') {
       if (!$('#aConsent').checked) throw { message: 'Para criar a conta, marque a concordância com o uso dos dados.' };
-      const { data, error } = await db.sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + (pendingInvite() ? '/?convite=' + pendingInvite() : ''), data: { name: $('#aName').value.trim() } } });
+      const { data, error } = await db.sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + '/' + (pendingInvite() ? '?convite=' + pendingInvite() : ''), data: { name: $('#aName').value.trim() } } });
       if (error) throw error;
       if (!data.session) { setMode('login'); $('#aPass').value = ''; msg.className = 'banner ok'; msg.textContent = `Conta criada! Enviamos um link de confirmação para ${email}. Abra o e-mail (veja também o spam), clique no link e depois entre aqui com a sua senha.`; return; }
     } else {
@@ -52,7 +52,7 @@ $('#authForm').onsubmit = async e => {
 $('#aForgot').onclick = async () => {
   const email = $('#aEmail').value.trim(); const msg = $('#aMsg');
   if (!email) { msg.className = 'err'; msg.textContent = 'Digite seu e-mail acima.'; return; }
-  const { error } = await db.sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+  const { error } = await db.sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/' });
   msg.className = error ? 'err' : 'small'; msg.textContent = error ? 'Não foi possível enviar agora.' : 'Enviamos um link para criar uma nova senha.';
 };
 $('#resetForm').onsubmit = async e => {
