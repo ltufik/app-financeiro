@@ -63,16 +63,20 @@ export function render(el) {
   </div>
 
   <div class="panel stack">
-    <h2>Dados</h2>
+    <h2>Backup</h2>
+    <p class="small muted">Um arquivo com todos os lançamentos, categorias e ajustes da família. Guarde num lugar seguro: ele tem os seus dados financeiros.</p>
     <div class="rowbtn"><button class="btn" id="dExport" type="button">Baixar backup</button>
-      <span class="drop" style="padding:10px 16px;border-width:1px;flex-direction:row"><span>Importar backup</span><input type="file" id="dImport" class="fileover" accept=".json,application/json" aria-label="Importar backup"></span></div>
-    <div class="log" id="dLog"></div>
-    ${owner ? `<details><summary class="small" style="color:var(--bad)">Apagar todos os dados da família</summary><p class="small" style="margin-top:8px">Apaga lançamentos, categorias, regras, estudos e a família. Não dá para desfazer. Digite o nome da família para confirmar.</p><div class="rowbtn" style="margin-top:8px"><input type="text" id="delName" placeholder="${esc(S.hh.name)}" style="flex:1 1 200px"><button class="btn" id="delGo" type="button" style="border-color:var(--bad);color:var(--bad)">Apagar</button></div></details>` : `<div><button class="btn" id="leave" type="button">Sair desta família</button></div>`}
-    <div><button class="btn" id="signOut" type="button">Sair da conta</button></div>
-    <details><summary class="small" style="color:var(--bad)">Excluir minha conta</summary>
-      <p class="small" style="margin-top:8px">Apaga o seu login. ${S.members.length > 1 ? 'Como a família tem outras pessoas, os dados dela continuam com elas.' : 'Como você é a única pessoa da família, todos os dados dela também são apagados.'} Não dá para desfazer. Se quiser, baixe um backup antes. Digite EXCLUIR para confirmar.</p>
-      <div class="rowbtn" style="margin-top:8px"><input type="text" id="delAcc" placeholder="EXCLUIR" autocomplete="off" style="flex:1 1 160px"><button class="btn" id="delAccGo" type="button" style="border-color:var(--bad);color:var(--bad)">Excluir conta</button></div></details>
-  </div>`;
+      <span class="btn" style="position:relative">Importar backup<input type="file" id="dImport" class="fileover" accept=".json,application/json" aria-label="Importar backup"></span></div>
+    <p class="status" id="bkStatus" role="status" hidden></p>
+  </div>
+
+  <div class="panel stack">
+    <h2>Conta</h2>
+    <div class="rowbtn"><button class="btn" id="signOut" type="button">Sair da conta</button>
+      ${owner ? '<button class="btn danger" id="delFam" type="button">Apagar os dados da família</button>' : '<button class="btn" id="leave" type="button">Sair desta família</button>'}
+      <button class="btn danger" id="delAcc" type="button">Excluir minha conta</button></div>
+    <div id="confirmBox"></div>
+  </div>  </div>`;
 
   // help
   $('#hTour').onclick = () => S.showTour('app');
@@ -114,41 +118,69 @@ export function render(el) {
   $('#factsSave').onclick = () => save({ facts: $('#facts').value.split('\n').map(s => s.trim()).filter(Boolean) }, 'Contexto salvo');
 
   // data
-  const dlog = t => { const p = document.createElement('div'); p.textContent = t; $('#dLog').append(p); };
-  $('#dExport').onclick = async () => {
+  const status = (kind, text) => { const p = $('#bkStatus'); p.hidden = false; p.className = 'status ' + kind; p.textContent = text; };
+  const backup = async () => {
+    status('busy', 'Preparando o backup...'); $('#dExport').disabled = true;
     try {
       const b = await db.exportBackup(S.hh.id, S.hh);
+      const name = `backup-${S.hh.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').toLowerCase()}-${todayISO()}.json`;
       const url = URL.createObjectURL(new Blob([JSON.stringify(b)], { type: 'application/json' }));
-      const a = document.createElement('a'); a.href = url; a.download = `backup-${todayISO()}.json`; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch (e) { toast('Não foi possível gerar o backup.'); }
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+      status('ok', `Backup pronto: ${name}, com ${b.transactions.length.toLocaleString('pt-BR')} lançamentos. Ele fica na pasta de downloads (no iPhone, no app Arquivos).`);
+      return true;
+    } catch (e) { status('err', 'Não foi possível gerar o backup. Verifique a internet e tente de novo.'); return false; }
+    finally { $('#dExport').disabled = false; }
   };
+  $('#dExport').onclick = backup;
   $('#dImport').onchange = async e => {
     const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
-    $('#dLog').innerHTML = '';
+    let b;
+    try { b = JSON.parse(await f.text()); if (b.version !== 1 || !Array.isArray(b.transactions)) throw new Error(); }
+    catch (err) { status('err', 'Este arquivo não é um backup do app.'); return; }
+    status('busy', `Importando ${b.transactions.length.toLocaleString('pt-BR')} lançamentos...`);
     try {
-      const b = JSON.parse(await f.text());
-      if (b.version !== 1 || !Array.isArray(b.transactions)) throw new Error('formato');
-      dlog(`Backup com ${b.transactions.length} lançamentos. Importando...`);
-      await db.importBackup(S.hh.id, b, dlog);
-      await S.reload(true); S.render(); $('#dLog').textContent = `Pronto: ${b.transactions.length} lançamentos importados.`; toast('Backup importado');
-    } catch (err) { dlog('Não consegui importar: ' + (err.message || err)); }
+      await db.importBackup(S.hh.id, b, t => status('busy', 'Importando... ' + t));
+      await S.reload(true); S.render();
+      status('ok', `Pronto: ${b.transactions.length.toLocaleString('pt-BR')} lançamentos importados.`); toast('Backup importado');
+    } catch (err) { status('err', 'A importação parou no meio: ' + (err.message || 'erro desconhecido') + '. Tente de novo; o que já entrou não se duplica nas categorias e regras.'); }
   };
-  if (owner) $('#delGo').onclick = async () => {
-    if ($('#delName').value.trim() !== S.hh.name) { toast('Digite o nome exato da família.'); return; }
-    try { await db.deleteHousehold(S.hh.id); toast('Dados apagados'); location.reload(); } catch (e) { toast('Não foi possível apagar.'); }
+
+  // account: every destructive action asks once, in the page, with a backup option
+  const flashAndReload = msg => { try { sessionStorage.setItem('fin.flash', msg); localStorage.removeItem('fin.hh'); } catch (e) { /* storage blocked */ } location.reload(); };
+  const ask = ({ title, text, label, run }) => {
+    const box = $('#confirmBox');
+    box.innerHTML = `<div class="confirm"><h3>${title}</h3><p class="small">${text}</p>
+      <div class="rowbtn" style="margin-top:12px"><button class="btn" type="button" data-b>Baixar backup antes</button></div>
+      <div class="rowbtn" style="margin-top:10px"><button class="btn danger-fill" type="button" data-y>${label}</button><button class="btn" type="button" data-n>Cancelar</button></div>
+      <p class="status" role="status" hidden></p></div>`;
+    const st = box.querySelector('.status'), yes = box.querySelector('[data-y]');
+    box.querySelector('[data-b]').onclick = backup;
+    box.querySelector('[data-n]').onclick = () => { box.innerHTML = ''; };
+    yes.onclick = async () => {
+      yes.disabled = true; st.hidden = false; st.className = 'status busy'; st.textContent = 'Processando...';
+      try { await run(); } catch (e) { st.className = 'status err'; st.textContent = 'Não foi possível concluir. Verifique a internet e tente de novo.'; yes.disabled = false; }
+    };
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
-  else $('#leave').onclick = async () => { try { await db.leaveHousehold(S.hh.id, S.user.id); location.reload(); } catch (e) { toast('Não foi possível sair.'); } };
   $('#signOut').onclick = async () => { await db.sb.auth.signOut(); location.reload(); };
-  $('#delAccGo').onclick = async () => {
-    if ($('#delAcc').value.trim().toUpperCase() !== 'EXCLUIR') { toast('Digite EXCLUIR para confirmar.'); return; }
-    $('#delAccGo').disabled = true;
-    try {
-      await db.deleteMyAccount();
-      try { localStorage.clear(); } catch (e) { /* storage blocked */ }
-      await db.sb.auth.signOut().catch(() => {});
-      location.reload();
-    } catch (e) { toast('Não foi possível excluir a conta.'); $('#delAccGo').disabled = false; }
-  };
+  $('#delAcc').onclick = () => ask({
+    title: 'Excluir minha conta?',
+    text: `Seu login será apagado. ${S.members.length > 1 ? 'A família tem outras pessoas, então os dados dela continuam com elas.' : 'Você é a única pessoa da família, então todos os dados dela também serão apagados.'} Isso não pode ser desfeito.`,
+    label: 'Sim, excluir minha conta',
+    run: async () => { await db.deleteMyAccount(); try { localStorage.clear(); } catch (e) { /* storage blocked */ } await db.sb.auth.signOut().catch(() => {}); flashAndReload('Sua conta foi excluída' + (S.members.length > 1 ? '.' : ', junto com os dados da família.') + ' Obrigado por testar o app.'); },
+  });
+  if (owner) $('#delFam').onclick = () => ask({
+    title: 'Apagar os dados da família?',
+    text: `Lançamentos, categorias, regras, estudos e a família "${esc(S.hh.name)}" serão apagados para todos os membros. Sua conta continua e você pode criar outra família. Isso não pode ser desfeito.`,
+    label: 'Sim, apagar os dados',
+    run: async () => { await db.deleteHousehold(S.hh.id); flashAndReload('Os dados da família foram apagados.'); },
+  });
+  else $('#leave').onclick = () => ask({
+    title: 'Sair desta família?',
+    text: 'Você deixa de ver os dados dela. Os dados continuam com as outras pessoas. Para voltar, é preciso um novo convite.',
+    label: 'Sim, sair da família',
+    run: async () => { await db.leaveHousehold(S.hh.id, S.user.id); flashAndReload('Você saiu da família.'); },
+  });
 }
 
 const num = (id, label, v) => `<label class="f">${label}<input type="number" step="any" id="${id}" value="${v == null || v === '' || isNaN(+v) ? '' : +(+v).toFixed(4)}"></label>`;

@@ -86,8 +86,8 @@ const backup = arg('backup');
 if (backup) {
   await page.click('[data-tab=ajustes]');
   await page.setInputFiles('#dImport', backup);
-  await page.waitForFunction(() => document.querySelector('#dLog')?.textContent.includes('Pronto') || document.querySelector('#dLog')?.textContent.includes('Não consegui'), null, { timeout: 30000 });
-  ok('backup importado', true, await txt('#dLog'));
+  await page.waitForFunction(() => /Pronto|parou|não é/.test(document.querySelector('#bkStatus')?.textContent || ''), null, { timeout: 30000 });
+  ok('backup importado', (await txt('#bkStatus')).includes('Pronto'), await txt('#bkStatus'));
   await page.click('[data-tab=resumo]');
   await page.selectOption('#monthSel', '2026-09');
   const hero = await txt('#v-resumo .big');
@@ -178,9 +178,20 @@ await page.click('#fInvite'); await page.waitForTimeout(100);
 ok('convite gerado', (await txt('#fCode')).length === 8);
 await shot('08-ajustes');
 ok('sem rolagem horizontal', await page.evaluate(() => document.documentElement.scrollWidth <= 400));
-await page.click('text=Excluir minha conta'); await page.fill('#delAcc', 'excluir'); await page.click('#delAccGo');
+await page.evaluate(() => { window.__dl = 0; const o = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (this.download) { window.__dl++; return; } return o.call(this); }; });
+await page.click('#dExport');
+await page.waitForFunction(() => /Backup pronto|Não foi possível/.test(document.querySelector('#bkStatus')?.textContent || ''));
+ok('backup mostra mensagem de sucesso', (await txt('#bkStatus')).includes('Backup pronto') && await page.evaluate(() => window.__dl === 1), await txt('#bkStatus'));
+await page.click('#delAcc');
+ok('excluir conta pede confirmação com opção de backup', (await txt('#confirmBox')).includes('Baixar backup antes'));
+await shot('09-excluir');
+await page.click('#confirmBox [data-n]');
+ok('cancelar fecha a confirmação', (await txt('#confirmBox')) === '');
+await page.click('#delAcc'); await page.click('#confirmBox [data-y]');
 await page.waitForSelector('#auth:not([hidden])', { timeout: 10000 });
-ok('excluir conta volta para a tela de login', true);
+await page.waitForFunction(() => document.querySelector('#aMsg')?.textContent.includes('excluída'));
+ok('depois de excluir aparece a mensagem na tela de login', (await txt('#aMsg')).includes('Sua conta foi excluída'), await txt('#aMsg'));
+await shot('10-excluida');
 ok('sem erros no console', !errors.length, errors.join(' | '));
 
 } catch (e) { results.push(['FAIL', 'exceção: ' + e.message.split('\n')[0], errors.join(' | ')]); if (shots) await page.screenshot({ path: path.join(shots, 'erro.png'), fullPage: true }).catch(() => {}); try { results.push(['info', 'log', await txt('#dLog') + ' / ' + await txt('#pdfLog')]); } catch (x) {} }

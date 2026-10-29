@@ -153,3 +153,14 @@ details summary{cursor:pointer;font-weight:600}
 .help summary{font-size:14px}
 .help ol{margin:8px 0 0;padding-left:20px;font-size:14px;color:var(--muted)}
 .help li{margin:3px 0}
+/* ---- status and confirmations ---- */
+.status{font-size:14px;border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+.status.busy{background:var(--sunk);color:var(--ink)}
+.status.busy::before{content:"";flex:none;width:16px;height:16px;margin-top:2px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+.status.ok{background:var(--accent-soft);color:var(--good)}
+.status.err{background:var(--bad-soft);color:var(--bad)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.danger-fill{background:var(--bad);border-color:var(--bad);color:#fff}
+.confirm{border:1.5px solid var(--bad);border-radius:var(--r);padding:14px;background:var(--card)}
+.banner.ok{background:var(--accent-soft);color:var(--good)}

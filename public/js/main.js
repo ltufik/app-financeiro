@@ -2,7 +2,7 @@
 import * as db from './db.js';
 import { S, setFamily, reindex, monthKeys, latestClosed } from './state.js';
 import { mLong, thisMonth } from './lib/format.js';
-import { $, $$ } from './ui.js';
+import { $, $$, toast } from './ui.js';
 import * as resumo from './views/resumo.js';
 import * as lancar from './views/lancar.js';
 import * as perguntar from './views/perguntar.js';
@@ -146,5 +146,10 @@ async function doStart() {
   });
   if (/type=recovery/.test(location.hash)) { show('reset'); return; }
   await start();
+  let flash = null; try { flash = sessionStorage.getItem('fin.flash'); sessionStorage.removeItem('fin.flash'); } catch (e) { /* storage blocked */ }
+  if (flash) {
+    const target = !$('#auth').hidden ? $('#aMsg') : !$('#onboard').hidden ? $('#oMsg') : null;
+    if (target) { target.className = 'banner ok'; target.textContent = flash; } else toast(flash);
+  }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 })();
