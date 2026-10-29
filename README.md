@@ -56,7 +56,7 @@ No Supabase, em **Authentication → URL Configuration**:
 
 1. Abra o endereço, crie a conta, confirme o e-mail e crie a família.
 2. Para trazer dados antigos, use **Ajustes → Importar backup**.
-3. Para chamar outra pessoa, use **Ajustes → Gerar convite**.
+3. Para chamar outra pessoa, use **Ajustes → Convidar alguém**: o convite vai pelo WhatsApp com um link que já leva a pessoa para a família.
 
 **Instalar no celular:**
 
