@@ -1,3 +1,4 @@
+import { cleanUrl } from './config.js';
 // Calls Claude for signed-in users. The Anthropic API key stays on the server.
 // Env: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY; optional CLAUDE_MODEL, CLAUDE_MODEL_QUICK, ALLOWED_EMAILS (comma-separated).
 const MAX_BODY = 4_000_000;
@@ -5,7 +6,8 @@ const hits = new Map(); // best-effort per-instance rate limit: user -> [timesta
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
-  const { ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY } = process.env;
+  const ANTHROPIC_API_KEY = String(process.env.ANTHROPIC_API_KEY || '').trim();
+  const SUPABASE_URL = cleanUrl(process.env.SUPABASE_URL), SUPABASE_ANON_KEY = String(process.env.SUPABASE_ANON_KEY || '').trim();
   if (!ANTHROPIC_API_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY) return res.status(503).json({ error: 'not_configured' });
 
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
