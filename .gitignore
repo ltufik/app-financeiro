@@ -1,0 +1,7 @@
+node_modules/
+.vercel/
+.env*
+*.pdf
+backup*.json
+*-backup.json
+.DS_Store

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Finanças da família</title>
+<meta name="description" content="Controle financeiro da família: lançamentos por voz, faturas e extratos em PDF, projeções e estudos de redução de custo.">
+<meta name="theme-color" content="#1E6B58">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" defer></script>
+<script type="module" src="/js/main.js"></script>
+</head>
+<body>
+
+<div id="boot" class="authwrap"><p class="muted">Carregando...</p></div>
+
+<!-- ENTRAR -->
+<section id="auth" class="authwrap" hidden style="padding:0 16px">
+  <div class="brandbig">Finanças da família</div>
+  <p class="muted">Acompanhe o mês, lance gastos falando e peça projeções. Os dados ficam só com a sua família.</p>
+  <form class="panel stack" id="authForm" novalidate>
+    <div class="chips" role="tablist">
+      <button class="chip" type="button" data-mode="login" aria-pressed="true">Entrar</button>
+      <button class="chip" type="button" data-mode="signup" aria-pressed="false">Criar conta</button>
+    </div>
+    <label class="f" id="nameRow" hidden>Seu nome<input type="text" id="aName" autocomplete="name"></label>
+    <label class="f">E-mail<input type="email" id="aEmail" autocomplete="email" required></label>
+    <label class="f">Senha<input type="password" id="aPass" autocomplete="current-password" minlength="8" required></label>
+    <label class="small" id="consentRow" hidden style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="aConsent" style="width:auto;margin-top:4px"> <span>Concordo que o app guarde meus lançamentos financeiros para gerar os relatórios, e que trechos sejam enviados ao Claude (Anthropic) para ler PDFs e responder perguntas. Posso apagar meus dados quando quiser.</span></label>
+    <button class="btn primary" type="submit" id="aGo">Entrar</button>
+    <button class="btn" type="button" id="aForgot" style="border:0;background:none;color:var(--accent);padding:0;text-align:left">Esqueci a senha</button>
+    <p class="small" id="aMsg" role="status"></p>
+  </form>
+</section>
+
+<!-- NOVA SENHA (link de recuperação) -->
+<section id="reset" class="authwrap" hidden style="padding:0 16px">
+  <div class="brandbig">Nova senha</div>
+  <form class="panel stack" id="resetForm">
+    <label class="f">Nova senha<input type="password" id="rPass" autocomplete="new-password" minlength="8" required></label>
+    <button class="btn primary" type="submit">Salvar senha</button>
+    <p class="small" id="rMsg" role="status"></p>
+  </form>
+</section>
+
+<!-- FAMÍLIA -->
+<section id="onboard" class="authwrap" hidden style="padding:0 16px">
+  <div class="brandbig">Sua família</div>
+  <div class="panel stack">
+    <h3>Criar uma família</h3>
+    <p class="small muted">Você vira o dono e pode convidar quem divide as contas com você.</p>
+    <label class="f">Nome<input type="text" id="oName" placeholder="Ex.: Família Silva"></label>
+    <button class="btn primary" type="button" id="oCreate">Criar</button>
+  </div>
+  <div class="panel stack">
+    <h3>Entrar com um convite</h3>
+    <label class="f">Código do convite<input type="text" id="oCode" autocomplete="off" style="text-transform:uppercase"></label>
+    <button class="btn" type="button" id="oJoin">Entrar na família</button>
+  </div>
+  <p class="small" id="oMsg" role="status"></p>
+  <button class="btn" type="button" id="oOut" style="align-self:flex-start">Sair</button>
+</section>
+
+<!-- APP -->
+<div id="app" hidden>
+<header class="top"><div class="in">
+  <div class="brand" id="brand">Finanças da família</div>
+  <select class="monthsel" id="monthSel" aria-label="Mês"></select>
+</div></header>
+
+<main>
+  <div id="sysBanner" class="banner at" hidden></div>
+  <section class="view" data-view="resumo" id="v-resumo"></section>
+  <section class="view" data-view="lancar" id="v-lancar" hidden></section>
+  <section class="view" data-view="perguntar" id="v-perguntar" hidden></section>
+  <section class="view" data-view="extrato" id="v-extrato" hidden></section>
+  <section class="view" data-view="ajustes" id="v-ajustes" hidden></section>
+</main>
+
+<nav class="tabs" aria-label="Seções"><div class="in" role="tablist">
+  <button class="tab" role="tab" data-tab="resumo" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Resumo</button>
+  <button class="tab" role="tab" data-tab="lancar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
+  <button class="tab" role="tab" data-tab="perguntar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Perguntar</button>
+  <button class="tab" role="tab" data-tab="extrato" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Extrato</button>
+  <button class="tab" role="tab" data-tab="ajustes" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
+</div></nav>
+</div>
+<div class="toast" id="toast" hidden></div>
+</body>
+</html>
