@@ -164,3 +164,8 @@ details summary{cursor:pointer;font-weight:600}
 .btn.danger-fill{background:var(--bad);border-color:var(--bad);color:#fff}
 .confirm{border:1.5px solid var(--bad);border-radius:var(--r);padding:14px;background:var(--card)}
 .banner.ok{background:var(--accent-soft);color:var(--good)}
+/* ---- onboarding ---- */
+.btn.choice{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px 16px;border-radius:var(--r)}
+.btn.choice:hover,.btn.choice:focus-visible{border-color:var(--accent)}
+.btn.wa{background:#25D366;border-color:#25D366;color:#0b2e17;text-decoration:none;display:inline-flex;align-items:center}
+a.btn,a.chip{text-decoration:none;color:inherit}

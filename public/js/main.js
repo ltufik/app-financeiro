@@ -9,6 +9,7 @@ import * as perguntar from './views/perguntar.js';
 import * as extrato from './views/extrato.js';
 import * as ajustes from './views/ajustes.js';
 import { openTour } from './tour.js';
+import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 
 const VIEWS = { resumo, lancar, perguntar, extrato, ajustes };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -36,7 +37,7 @@ $('#authForm').onsubmit = async e => {
   try {
     if (mode === 'signup') {
       if (!$('#aConsent').checked) throw { message: 'Para criar a conta, marque a concordância com o uso dos dados.' };
-      const { data, error } = await db.sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin, data: { name: $('#aName').value.trim() } } });
+      const { data, error } = await db.sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + (pendingInvite() ? '/?convite=' + pendingInvite() : ''), data: { name: $('#aName').value.trim() } } });
       if (error) throw error;
       if (!data.session) { setMode('login'); $('#aPass').value = ''; msg.className = 'banner ok'; msg.textContent = `Conta criada! Enviamos um link de confirmação para ${email}. Abra o e-mail (veja também o spam), clique no link e depois entre aqui com a sua senha.`; return; }
     } else {
@@ -62,23 +63,13 @@ $('#resetForm').onsubmit = async e => {
 };
 
 // ---------- family ----------
-const displayName = () => S.user?.user_metadata?.name || (S.user?.email || '').split('@')[0];
 async function pickFamily() {
   const list = await db.myHouseholds(S.user.id);
-  if (!list.length) { show('onboard'); return false; }
+  if (!list.length) return false;
   const want = lsGet('fin.hh'); const row = list.find(r => r.household_id === want) || list[0];
   S.hh = row.households; S.role = row.role; lsSet('fin.hh', S.hh.id);
   return true;
 }
-$('#oCreate').onclick = async () => {
-  const n = $('#oName').value.trim(); if (!n) { $('#oMsg').textContent = 'Dê um nome para a família.'; return; }
-  try { await db.createHousehold(n, displayName()); await start(); } catch (e) { $('#oMsg').textContent = 'Não foi possível criar.'; }
-};
-$('#oJoin').onclick = async () => {
-  const c = $('#oCode').value.trim(); if (!c) return;
-  try { const h = await db.acceptInvite(c, displayName()); lsSet('fin.hh', h); await start(); }
-  catch (e) { $('#oMsg').textContent = /used/.test(e.message) ? 'Este convite já foi usado.' : /expired/.test(e.message) ? 'Este convite venceu. Peça um novo.' : 'Convite não encontrado.'; }
-};
 $('#oOut').onclick = async () => { await db.sb.auth.signOut(); location.reload(); };
 
 // ---------- app ----------
@@ -95,9 +86,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
 // Welcome tour: once per person (remembered in the account, so it does not repeat on another phone).
 const tourDone = () => S.user?.user_metadata?.tour_done || lsGet('fin.tour.' + S.user?.id) === '1';
 function markTour() { lsSet('fin.tour.' + S.user.id, '1'); db.sb.auth.updateUser({ data: { tour_done: true } }).catch(() => {}); }
-S.showTour = (where) => openTour(where === 'onboard'
-  ? { finalTitle: 'Primeiro passo: criar a família', finalText: 'Dê um nome, como "Família Silva". Depois você convida quem divide as contas com você.', finalLabel: 'Criar minha família', onClose: () => { markTour(); $('#oName').focus(); } }
-  : S.txs.length
+S.showTour = () => openTour(S.txs.length
     ? { finalTitle: 'Tudo pronto', finalText: 'Os primeiros passos ficam no Resumo. Você pode rever esta apresentação em Ajustes.', finalLabel: 'Ver meu resumo', onClose: () => markTour() }
     : { finalTitle: 'Primeiro passo: a fatura do cartão', finalText: 'Baixe o PDF da última fatura no app do banco e envie aqui. Em poucos segundos você vê para onde foi o dinheiro.', finalLabel: 'Enviar minha fatura', onClose: done => { markTour(); if (done) S.go('lancar', '#drop'); } });
 S.render = () => {
@@ -127,21 +116,41 @@ async function doStart() {
   show('boot');
   const { data } = await db.sb.auth.getSession();
   S.user = data?.session?.user || null;
-  if (!S.user) { show('auth'); return; }
-  if (!(await pickFamily())) { if (!tourDone()) S.showTour('onboard'); return; }
+  if (!S.user) { show('auth'); showInviteBanner(); return; }
+  const hasFamily = await pickFamily();
+  // Onboarding: how to be called, a pending invite (from a WhatsApp link), or creating the family.
+  if (!hasFamily || !displayName() || pendingInvite()) {
+    show('onboard');
+    startOnboarding(hasFamily ? 'existing' : 'full', () => { starting = null; start(); });
+    return;
+  }
   setFamily(await db.loadFamily(S.hh.id));
   $('#brand').textContent = S.hh.name;
   show('app');
   const t = lsGet('fin.tab'); setTab(VIEWS[t] ? t : 'resumo');
-  if (!tourDone()) S.showTour('app');
+  if (!tourDone()) S.showTour();
+  else if (S.justSignedIn) toast(`Que bom ter você de volta, ${displayName().split(" ")[0]}!`);
+  S.justSignedIn = false;
+}
+
+// Someone opened an invite link without being signed in: say who invited them and suggest creating an account.
+async function showInviteBanner() {
+  const code = pendingInvite(), el = $('#aInvite'); if (!code) { el.hidden = true; return; }
+  const info = await inviteInfo(code);
+  if (!info || info.status !== 'ok') { el.hidden = true; return; }
+  el.hidden = false;
+  el.textContent = `${info.inviter || 'Alguém'} convidou você para participar da ${info.family}. Crie sua conta (ou entre, se já tiver uma) e você entra direto na família.`;
+  setMode('signup');
+  if (info.invitee && !$('#aName').value) $('#aName').value = info.invitee;
 }
 
 (async function boot() {
+  captureInviteFromUrl();
   try { await db.init(); }
   catch (e) { $('#boot').innerHTML = '<p class="err">O app ainda não foi configurado: faltam as variáveis do Supabase no servidor (veja o README).</p>'; return; }
   db.sb.auth.onAuthStateChange((ev, session) => {
     if (ev === 'PASSWORD_RECOVERY') { show('reset'); return; }
-    if (ev === 'SIGNED_IN' && !S.user) start();
+    if (ev === 'SIGNED_IN' && !S.user) { S.justSignedIn = true; start(); }
     if (ev === 'SIGNED_OUT') { S.user = null; show('auth'); }
   });
   if (/type=recovery/.test(location.hash)) { show('reset'); return; }

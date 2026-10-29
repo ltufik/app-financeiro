@@ -4,6 +4,7 @@ import { GROUPS } from '../lib/calc.js';
 import { esc, todayISO } from '../lib/format.js';
 import { $, toast } from '../ui.js';
 import { installHelpHTML, wireInstall } from '../steps.js';
+import { renderInviter } from '../onboarding.js';
 
 const LISTS = {
   assets: { title: 'Bens (imóveis, veículos)', hint: 'Valor de mercado e quanto falta pagar.', cols: [['name', 'Nome', 'text'], ['value', 'Valor', 'number'], ['debt', 'Falta pagar', 'number']] },
@@ -19,9 +20,11 @@ export function render(el) {
   <div class="panel stack">
     <h2>Família</h2>
     <label class="f">Nome<input type="text" id="fName" value="${esc(S.hh.name)}"></label>
-    <ul class="list small">${S.members.map(m => `<li><span>${esc(m.display_name || 'Membro')}${m.user_id === S.user.id ? ' (você)' : ''}</span><span class="tiny muted">${m.role === 'owner' ? 'dono' : 'membro'}</span></li>`).join('')}</ul>
-    <div class="rowbtn"><button class="btn" id="fInvite" type="button">Gerar convite</button><span id="fCode" class="code"></span></div>
-    <p class="tiny muted" id="fCodeHint" hidden>Mande este código para quem vai participar. Ele vale por 7 dias e serve para uma pessoa. A pessoa cria a conta no app e escolhe "Entrar com um convite".</p>
+    <ul class="list small">${S.members.map(m => `<li><span>${esc(m.display_name || 'Membro')}${m.user_id === S.user.id ? ' (você)' : ''}${m.relation ? `<br><span class="tiny muted">${esc(m.relation)}</span>` : ''}</span><span class="tiny muted">${m.role === 'owner' ? 'dono' : 'membro'}</span></li>`).join('')}</ul>
+    <label class="f">Como você quer ser chamado<input type="text" id="fMe" value="${esc(S.user.user_metadata?.display_name || '')}"></label>
+    <h3 style="margin-top:6px">Convidar alguém</h3>
+    <p class="tiny muted">O convite vai pelo WhatsApp com um link. A pessoa toca, cria a conta e já entra na família.</p>
+    <div id="fInviter"></div>
   </div>
 
   <div class="panel stack">
@@ -85,7 +88,11 @@ export function render(el) {
 
   // family
   $('#fName').onchange = async e => { const n = e.target.value.trim(); if (!n) return; try { await db.renameHousehold(S.hh.id, n); S.hh.name = n; $('#brand').textContent = n; toast('Nome salvo'); } catch (err) { toast('Não foi possível salvar.'); } };
-  $('#fInvite').onclick = async () => { try { $('#fCode').textContent = await db.createInvite(S.hh.id); $('#fCodeHint').hidden = false; } catch (e) { toast('Não foi possível gerar o convite.'); } };
+  renderInviter($('#fInviter'));
+  $('#fMe').onchange = async e => {
+    const v = e.target.value.trim(); if (!v) return;
+    try { const { data } = await db.sb.auth.updateUser({ data: { display_name: v } }); if (data?.user) S.user = data.user; await db.updateMyMemberName(S.user.id, v); const me = S.members.find(m => m.user_id === S.user.id); if (me) me.display_name = v; toast('Nome salvo'); } catch (err) { toast('Não foi possível salvar.'); }
+  };
 
   // goals
   $('#gSave').onclick = () => save({ goals: { ...g, cardMonthly: val('gCard'), savings: val('gSav') / 100, savingsNoFin: val('gSav2') / 100, patrimonio: val('gPat'), ageNow: val('gAge') || null, ageGoal: val('gAgeGoal') || null, ret: val('gRet') / 100 }, cardCloseDay: Math.min(31, Math.max(1, val('gClose') || 24)) }, 'Metas salvas');

@@ -28,6 +28,7 @@
 <section id="auth" class="authwrap" hidden style="padding:0 16px">
   <div class="brandbig">Finanças da família</div>
   <p class="muted">Acompanhe o mês, lance gastos falando e peça projeções. Os dados ficam só com a sua família.</p>
+  <div class="banner ok" id="aInvite" hidden></div>
   <form class="panel stack" id="authForm" novalidate>
     <div class="chips" role="tablist">
       <button class="chip" type="button" data-mode="login" aria-pressed="true">Entrar</button>
@@ -53,22 +54,11 @@
   </form>
 </section>
 
-<!-- FAMÍLIA -->
-<section id="onboard" class="authwrap" hidden style="padding:0 16px">
-  <div class="brandbig">Sua família</div>
-  <div class="panel stack">
-    <h3>Criar uma família</h3>
-    <p class="small muted">Você vira o dono e pode convidar quem divide as contas com você.</p>
-    <label class="f">Nome<input type="text" id="oName" placeholder="Ex.: Família Silva"></label>
-    <button class="btn primary" type="button" id="oCreate">Criar</button>
-  </div>
-  <div class="panel stack">
-    <h3>Entrar com um convite</h3>
-    <label class="f">Código do convite<input type="text" id="oCode" autocomplete="off" style="text-transform:uppercase"></label>
-    <button class="btn" type="button" id="oJoin">Entrar na família</button>
-  </div>
+<!-- ONBOARDING -->
+<section id="onboard" class="authwrap" hidden style="padding:0 16px 32px">
+  <div id="obBody" class="stack"></div>
   <p class="small" id="oMsg" role="status"></p>
-  <button class="btn" type="button" id="oOut" style="align-self:flex-start">Sair</button>
+  <button class="tour-skip" type="button" id="oOut" style="align-self:flex-start">Sair da conta</button>
 </section>
 
 <!-- APP -->

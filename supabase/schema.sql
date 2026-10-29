@@ -29,6 +29,7 @@ create table if not exists public.members (
   primary key (household_id, user_id)
 );
 create index if not exists members_user_idx on public.members(user_id);
+alter table public.members add column if not exists relation text;
 
 create table if not exists public.invites (
   code         text primary key,
@@ -39,6 +40,10 @@ create table if not exists public.invites (
   used_by      uuid,
   used_at      timestamptz
 );
+
+-- Who the invite is for (shown to the person who opens the link) and their relation to the family.
+alter table public.invites add column if not exists invitee_name text;
+alter table public.invites add column if not exists relation text;
 
 -- Grupo da categoria:
 --   renda   = renda recorrente (entra na taxa de poupança)
@@ -228,17 +233,34 @@ begin
   return h;
 end $$;
 
--- Gera um código de convite (válido por 7 dias).
-create or replace function public.create_invite(p_household uuid)
+-- Gera um código de convite (válido por 7 dias, uso único), opcionalmente para uma pessoa e parentesco.
+drop function if exists public.create_invite(uuid);
+create or replace function public.create_invite(p_household uuid, p_name text default null, p_relation text default null)
 returns text language plpgsql security definer set search_path = public as $$
 declare c text;
 begin
   if not public.is_member(p_household) then raise exception 'not_member'; end if;
-  c := upper(substr(replace(encode(gen_random_bytes(6), 'base64'), '/', 'x'), 1, 8));
-  c := regexp_replace(c, '[^A-Z0-9]', 'K', 'g');
-  insert into invites(code, household_id, created_by) values (c, p_household, auth.uid());
+  loop
+    c := translate(upper(encode(gen_random_bytes(8), 'base64')), '+/=O0I1L', '');
+    c := substr(c, 1, 8);
+    exit when char_length(c) = 8 and not exists (select 1 from invites where code = c);
+  end loop;
+  insert into invites(code, household_id, created_by, invitee_name, relation)
+    values (c, p_household, auth.uid(), nullif(trim(p_name), ''), nullif(trim(p_relation), ''));
   return c;
 end $$;
+
+-- O que a pessoa convidada vê ao abrir o link (antes mesmo de ter conta): família, quem convidou e para quem é.
+create or replace function public.invite_info(p_code text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'family', h.name,
+    'inviter', (select m.display_name from members m where m.household_id = i.household_id and m.user_id = i.created_by),
+    'invitee', i.invitee_name, 'relation', i.relation,
+    'status', case when i.used_by is not null then 'used' when i.expires_at < now() then 'expired' else 'ok' end)
+  from invites i join households h on h.id = i.household_id
+  where i.code = upper(trim(p_code));
+$$;
 
 -- Entra numa família com um código de convite.
 create or replace function public.accept_invite(p_code text, p_display_name text default null)
@@ -248,10 +270,11 @@ begin
   if auth.uid() is null then raise exception 'not_authenticated'; end if;
   select * into inv from invites where code = upper(trim(p_code)) for update;
   if not found then raise exception 'invite_not_found'; end if;
+  if exists (select 1 from members where household_id = inv.household_id and user_id = auth.uid()) then return inv.household_id; end if;
   if inv.used_by is not null then raise exception 'invite_used'; end if;
   if inv.expires_at < now() then raise exception 'invite_expired'; end if;
-  insert into members(household_id, user_id, role, display_name) values (inv.household_id, auth.uid(), 'member', p_display_name)
-    on conflict (household_id, user_id) do nothing;
+  insert into members(household_id, user_id, role, display_name, relation)
+    values (inv.household_id, auth.uid(), 'member', coalesce(nullif(trim(p_display_name), ''), inv.invitee_name), inv.relation);
   update invites set used_by = auth.uid(), used_at = now() where code = inv.code;
   return inv.household_id;
 end $$;
@@ -319,7 +342,8 @@ revoke execute on function public.delete_my_account() from public, anon;
 
 grant execute on function public.create_household(text, text) to authenticated;
 grant execute on function public.delete_my_account() to authenticated;
-grant execute on function public.create_invite(uuid) to authenticated;
+grant execute on function public.create_invite(uuid, text, text) to authenticated;
+grant execute on function public.invite_info(text) to anon, authenticated;
 grant execute on function public.accept_invite(text, text) to authenticated;
 grant execute on function public.replace_month(uuid, text, text, jsonb, uuid[], text, text, jsonb) to authenticated;
 grant execute on function public.learn_rule(uuid, text, text, text) to authenticated;

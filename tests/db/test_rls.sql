@@ -8,7 +8,14 @@ select public.create_household('Família A', 'Ana') as ha \gset
 select count(*) as cats_a from categories where household_id = :'ha' \gset
 \echo categorias A: :cats_a
 insert into transactions(household_id, source, month, description, amount, category, manual) values (:'ha', 'conta', '2026-10', 'mercado manual', -230, 'Mercado', true) returning id as man \gset
-select public.create_invite(:'ha') as code \gset
+select public.create_invite(:'ha', 'Caio', 'Filho(a)') as code \gset
+reset role;
+set role anon;
+select public.invite_info(:'code') as info \gset
+\echo convite visto sem login: :info
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 -- B cria outra família e não vê a de A
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select public.create_household('Família B', 'Bia') as hb \gset
@@ -26,7 +33,9 @@ select public.replace_month(:'ha', 'conta', '2026-10', '[]'::jsonb);
 \set ON_ERROR_STOP on
 -- C entra na família A pelo convite
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
-select public.accept_invite(:'code', 'Caio') = :'ha' as c_joined \gset
+select public.accept_invite(:'code') = :'ha' as c_joined \gset
+select display_name || ' / ' || relation as c_member from members where user_id = '00000000-0000-0000-0000-00000000000c' \gset
+\echo membro criado pelo convite: :c_member
 \echo C entrou na família A: :c_joined
 select count(*) as c_sees from transactions where household_id = :'ha' \gset
 \echo C vê lançamentos de A: :c_sees

@@ -35,7 +35,7 @@ function items() {
     { key: 'extrato', done: t.some(x => x.source === 'conta' && !x.manual), title: 'Envie o extrato da conta do mesmo mês', hint: 'O mês inteiro, do dia 1 ao último dia.', go: ['lancar', '#drop'], btn: 'Enviar' },
     { key: 'falar', done: t.some(x => x.manual), title: 'Lance um gasto falando', hint: 'Ex.: "gastei 45 na padaria no cartão".', go: ['lancar', '#qText'], btn: 'Lançar' },
     { key: 'metas', done: !!(g.cardMonthly || g.patrimonio), title: 'Defina suas metas', hint: 'Quanto quer gastar no cartão e quanto quer juntar.', go: ['ajustes', '#gCard'], btn: 'Definir' },
-    { key: 'convite', done: S.members.length > 1, title: 'Convide quem divide as contas', hint: 'Seu par entra com um código e vê os mesmos números.', go: ['ajustes', '#fInvite'], btn: 'Convidar' },
+    { key: 'convite', done: S.members.length > 1, title: 'Convide quem divide as contas', hint: 'Mande um link pelo WhatsApp: a pessoa toca e já entra na família.', go: ['ajustes', '#ivName'], btn: 'Convidar' },
     { key: 'instalar', done: isStandalone() || lsGet('fin.installed') === '1', title: 'Instale o app no celular', hint: 'Fica com ícone na tela, como os outros apps.', install: true, btn: 'Como?' },
   ];
 }

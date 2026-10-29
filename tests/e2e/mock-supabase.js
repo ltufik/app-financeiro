@@ -1,8 +1,11 @@
 // In-memory stand-in for @supabase/supabase-js, used only by the browser tests.
 // It mimics the calls the app makes; access rules are tested separately against Postgres (tests/db).
-const T = { households: [], members: [], invites: [], categories: [], transactions: [], rules: [], imports: [], studies: [] };
+// State survives page reloads (like a real backend) so invite links can be tested across sessions.
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+const T = load('mock.db', { users: [], households: [], members: [], invites: [], categories: [], transactions: [], rules: [], imports: [], studies: [] });
 window.__db = T;
-let session = null; const listeners = [];
+let session = load('mock.session', null); const listeners = [];
+const persist = () => { localStorage.setItem('mock.db', JSON.stringify(T)); localStorage.setItem('mock.session', JSON.stringify(session)); };
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const clone = x => JSON.parse(JSON.stringify(x));
@@ -18,7 +21,7 @@ class Q {
   upsert(rows) { this.op = 'upsert'; this.p = Array.isArray(rows) ? rows : [rows]; return this; }
   update(p) { this.op = 'update'; this.p = p; return this; }
   delete() { this.op = 'delete'; return this; }
-  then(res, rej) { return Promise.resolve().then(() => this.run()).then(res, rej); }
+  then(res, rej) { return Promise.resolve().then(() => { const r = this.run(); if (this.op !== 'select') persist(); return r; }).then(res, rej); }
   run() {
     const tb = T[this.t], match = r => this.f.every(f => f(r));
     const base = { created_at: now(), created_by: session?.user.id };
@@ -53,15 +56,16 @@ const rpcs = {
     DEFAULT_CATS.forEach(([name, grp, fin]) => T.categories.push({ id: uid(), household_id: h.id, name, grp, financing: !!fin, created_at: now() }));
     return h.id;
   },
-  create_invite({ p_household }) { const c = 'ABC12345'; T.invites.push({ code: c, household_id: p_household }); return c; },
-  accept_invite({ p_code }) { const i = T.invites.find(x => x.code === p_code); if (!i) throw new Error('invite_not_found'); T.members.push({ household_id: i.household_id, user_id: session.user.id, role: 'member' }); return i.household_id; },
+  create_invite({ p_household, p_name, p_relation }) { const c = 'INV' + Math.random().toString(36).slice(2, 7).toUpperCase(); T.invites.push({ code: c, household_id: p_household, created_by: session.user.id, invitee_name: p_name, relation: p_relation, created_at: now(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null }); return c; },
+  invite_info({ p_code }) { const i = T.invites.find(x => x.code === p_code); if (!i) return null; const h = T.households.find(x => x.id === i.household_id); return { family: h?.name, inviter: T.members.find(m => m.household_id === i.household_id && m.user_id === i.created_by)?.display_name, invitee: i.invitee_name, relation: i.relation, status: i.used_by ? 'used' : 'ok' }; },
+  accept_invite({ p_code, p_display_name }) { const i = T.invites.find(x => x.code === p_code); if (!i) throw new Error('invite_not_found'); if (i.used_by) throw new Error('invite_used'); T.members.push({ household_id: i.household_id, user_id: session.user.id, role: 'member', display_name: p_display_name || i.invitee_name, relation: i.relation, created_at: now() }); i.used_by = session.user.id; return i.household_id; },
   replace_month({ p_household, p_source, p_month, p_rows, p_reconcile, p_label, p_file, p_info }) {
     const imp = uid(); T.imports.push({ id: imp, household_id: p_household, source: p_source, month: p_month, label: p_label, file_name: p_file, info: p_info, created_at: now() });
     T.transactions = T.transactions.filter(t => !(t.household_id === p_household && t.source === p_source && t.month === p_month && !t.manual) && !(t.manual && (p_reconcile || []).includes(t.id)));
     p_rows.forEach(r => T.transactions.push({ id: uid(), household_id: p_household, source: p_source, month: p_month, date: r.date || null, day: r.day, description: r.description, amount: r.amount, category: r.category, installment: r.installment, card: r.card, manual: false, pending: !!r.pending, import_id: imp, created_at: now() }));
     window.__lastReplace = { p_source, p_month, n: p_rows.length, reconcile: p_reconcile }; return imp;
   },
-  delete_my_account() { const me = session.user.id; const mine = T.members.filter(m => m.user_id === me).map(m => m.household_id); for (const h of mine) if (!T.members.some(m => m.household_id === h && m.user_id !== me)) { T.households = T.households.filter(x => x.id !== h); for (const k of Object.keys(T)) if (k !== 'households') T[k] = T[k].filter(r => r.household_id !== h); } T.members = T.members.filter(m => m.user_id !== me); window.__deletedAccount = me; return null; },
+  delete_my_account() { setTimeout(persist);  const me = session.user.id; const mine = T.members.filter(m => m.user_id === me).map(m => m.household_id); for (const h of mine) if (!T.members.some(m => m.household_id === h && m.user_id !== me)) { T.households = T.households.filter(x => x.id !== h); for (const k of Object.keys(T)) if (k !== 'households') T[k] = T[k].filter(r => r.household_id !== h); } T.members = T.members.filter(m => m.user_id !== me); window.__deletedAccount = me; return null; },
   learn_rule({ p_household, p_source, p_pattern, p_category }) { const r = T.rules.find(x => x.household_id === p_household && x.kind === 'exact' && x.source === p_source && x.pattern === p_pattern); if (r) r.category = p_category; else T.rules.push({ id: uid(), household_id: p_household, source: p_source, kind: 'exact', pattern: p_pattern, category: p_category, priority: 10 }); window.__learned = (window.__learned || 0) + 1; return null; },
 };
 
@@ -69,15 +73,15 @@ export function createClient() {
   const emit = ev => listeners.forEach(f => f(ev, session));
   return {
     from: t => new Q(t),
-    rpc: async (name, args) => { try { return { data: rpcs[name](args), error: null }; } catch (e) { return { data: null, error: { message: e.message } }; } },
+    rpc: async (name, args) => { try { const d = rpcs[name](args); persist(); return { data: d, error: null }; } catch (e) { return { data: null, error: { message: e.message } }; } },
     auth: {
       getSession: async () => ({ data: { session } }),
       onAuthStateChange: f => { listeners.push(f); return { data: { subscription: { unsubscribe() {} } } }; },
-      signUp: async ({ email, options }) => { session = { access_token: 'tok', user: { id: uid(), email, user_metadata: options?.data || {} } }; setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
-      signInWithPassword: async ({ email }) => { session = { access_token: 'tok', user: { id: uid(), email, user_metadata: {} } }; setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
-      signOut: async () => { session = null; emit('SIGNED_OUT'); return { error: null }; },
+      signUp: async ({ email, options }) => { const u = { id: uid(), email, user_metadata: options?.data || {} }; T.users.push(u); session = { access_token: 'tok', user: u }; window.__redirect = options?.emailRedirectTo; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
+      signInWithPassword: async ({ email }) => { const u = T.users.find(x => x.email === email); if (!u) return { data: {}, error: { message: 'Invalid login credentials' } }; session = { access_token: 'tok', user: u }; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
+      signOut: async () => { session = null; persist(); emit('SIGNED_OUT'); return { error: null }; },
       resetPasswordForEmail: async () => ({ error: null }),
-      updateUser: async () => ({ error: null }),
+      updateUser: async ({ data } = {}) => { if (session && data) { session.user.user_metadata = { ...session.user.user_metadata, ...data }; const u = T.users.find(x => x.id === session.user.id); if (u) u.user_metadata = session.user.user_metadata; persist(); } return { data: { user: session?.user }, error: null }; },
     },
   };
 }

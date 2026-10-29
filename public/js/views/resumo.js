@@ -5,11 +5,12 @@ import { meter, pill } from '../ui.js';
 import { renderSteps } from '../steps.js';
 
 let goalPreset = 0;
+const first = () => (S.user?.user_metadata?.display_name || '').split(' ')[0] || 'você';
 
 export function render(el) {
   const ks = monthKeys(), G = goals();
   if (!ks.length) {
-    el.innerHTML = `<div class="panel hero"><h2>Bem-vindos, ${esc(S.hh.name)}!</h2><p class="muted" style="margin-top:6px">O resumo do mês aparece aqui assim que vocês mandarem o primeiro PDF ou lançarem o primeiro gasto. Siga os passos abaixo, um de cada vez.</p></div><div class="panel" id="stepsBox"></div>`;
+    el.innerHTML = `<div class="panel hero"><h2>Boas-vindas, ${esc(first())}!</h2><p class="muted" style="margin-top:6px">O resumo do mês aparece aqui assim que vocês mandarem o primeiro PDF ou lançarem o primeiro gasto. Siga os passos abaixo, um de cada vez.</p></div><div class="panel" id="stepsBox"></div>`;
     renderSteps(el.querySelector('#stepsBox'));
     return;
   }
@@ -23,6 +24,7 @@ export function render(el) {
   if (goalPreset >= pr.length) goalPreset = 0;
 
   el.innerHTML = `<div class="panel" id="stepsBox" hidden></div>
+  <p class="small muted" style="margin:-4px 2px -8px">Olá, ${esc(first())}.</p>
   <div class="panel hero">
     <p class="muted small">Sobra do dia a dia ${yr ? 'em ' + S.m.slice(4) + ' até agora' : 'em ' + mLong(S.m)}</p>
     <div class="big num" style="color:${a.res < 0 ? 'var(--bad)' : 'var(--ink)'}">${brl(a.res)}</div>

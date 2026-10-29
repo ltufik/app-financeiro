@@ -29,12 +29,14 @@ export async function myHouseholds(uid) {
 }
 export const createHousehold = async (name, displayName) => must(await sb.rpc('create_household', { p_name: name, p_display_name: displayName || null }));
 export const acceptInvite = async (code, displayName) => must(await sb.rpc('accept_invite', { p_code: code, p_display_name: displayName || null }));
-export const createInvite = async hh => must(await sb.rpc('create_invite', { p_household: hh }));
+export const createInvite = async (hh, name, relation) => must(await sb.rpc('create_invite', { p_household: hh, p_name: name || null, p_relation: relation || null }));
+export const listInvites = async hh => must(await sb.from('invites').select('code, invitee_name, relation, created_at, expires_at, used_by').eq('household_id', hh).order('created_at', { ascending: false }));
+export const updateMyMemberName = async (uid, name) => must(await sb.from('members').update({ display_name: name }).eq('user_id', uid));
 
 export async function loadFamily(hh) {
   const [household, members, categories, rules, transactions, imports, studies] = await Promise.all([
     must(await sb.from('households').select('*').eq('id', hh).single()),
-    must(await sb.from('members').select('user_id, role, display_name, created_at').eq('household_id', hh)),
+    must(await sb.from('members').select('user_id, role, display_name, relation, created_at').eq('household_id', hh)),
     all('categories', hh), all('rules', hh), all('transactions', hh), all('imports', hh), all('studies', hh),
   ]);
   return { household, members, categories, rules, transactions, imports, studies };

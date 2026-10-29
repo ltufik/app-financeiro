@@ -48,7 +48,7 @@ Funciona no navegador e pode ser instalado no celular como app (PWA). Cada famí
 No Supabase, em **Authentication → URL Configuration**:
 
 - coloque o endereço da Vercel em **Site URL**;
-- adicione o mesmo endereço em **Redirect URLs**.
+- em **Redirect URLs**, adicione o endereço seguido de `/**`, por exemplo `https://app-financeiro.vercel.app/**`. O `/**` permite que o link de confirmação de quem foi convidado volte com o convite.
 
 É isso que faz os links de confirmação de e-mail e de nova senha voltarem para o app.
 
