@@ -67,6 +67,7 @@ export async function replaceMonth(hh, source, month, rows, reconcileIds, label,
 export const learnRule = async (hh, source, pattern, category) => must(await sb.rpc('learn_rule', { p_household: hh, p_source: source, p_pattern: pattern, p_category: category }));
 
 export const addCategory = async (hh, c) => must(await sb.from('categories').insert({ household_id: hh, ...c }).select().single());
+export const renameCategory = async (id, name) => must(await sb.rpc('rename_category', { p_id: id, p_name: name }));
 export const updateCategory = async (id, patch) => must(await sb.from('categories').update(patch).eq('id', id));
 
 export const addStudy = async (hh, question, answer) => must(await sb.from('studies').insert({ household_id: hh, question, answer }).select().single());

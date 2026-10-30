@@ -191,7 +191,7 @@ test('gráficos: período, validação e dados de cada tipo', async () => {
   const lines = buildChart({ ...base, type: 'linha', metric: 'escolhidas', cats: ['Suplementos'] }, src);
   assert.equal(lines.kind, 'lines'); assert.deepEqual(lines.series[0].values, [0, 150]);
   const bars = buildChart({ ...base, metric: 'rendaGastos' }, src);
-  assert.equal(bars.kind, 'bars'); assert.equal(bars.series.length, 2);
+  assert.equal(bars.kind, 'bars'); assert.equal(bars.series.length, 2); assert.deepEqual(bars.series[0].values, [0, 0]);
   const tx = buildChart({ ...base, type: 'linha', metric: 'taxa' }, src);
   assert.equal(tx.unit, 'pct');
   assert.ok(buildChart({ ...base, metric: 'escolhidas', cats: ['Nada'], type: 'pizza' }, src).empty);
@@ -201,4 +201,39 @@ test('gráficos: período, validação e dados de cada tipo', async () => {
     assert.match(svg, /^<svg/); assert.doesNotMatch(svg, /NaN|undefined/);
     assert.doesNotMatch(legendHTML(d), /NaN|undefined/);
   }
+});
+
+test('insights: faltam dados, vermelho, economia, gasto alto, cartão, fixas e pendências', async () => {
+  const { insights } = await import('../public/js/lib/insights.js');
+  const M = { '2026-07': { res: 1500, renda: 10000, E: 10000, out: 8000, tx: 0.15 }, '2026-08': { res: 1500, renda: 10000, E: 10000, out: 8000, tx: 0.15 },
+    '2026-09': { res: 3000, renda: 10000, E: 10000, out: 7000, tx: 0.3 }, '2026-10': { res: -1200, renda: 10000, E: 10000, out: 11200, tx: -0.12 } };
+  const cats = { '2026-07': { Mercado: 2000, Lazer: 500 }, '2026-08': { Mercado: 2000, Lazer: 500 }, '2026-09': { Mercado: 1800, Lazer: 300 }, '2026-10': { Mercado: 3500, Lazer: 2000 } };
+  const base = { months: Object.keys(M), calc: k => M[k], cats: k => cats[k], fixed: () => 6000, manualCount: () => 0, pending: k => k === '2026-10' ? 3 : 0,
+    goals: { savings: 0.2, cardMonthly: 5000, patrimonio: 1e6 }, nextFatura: { month: '2026-11', total: 6200 }, etaYears: () => 12 };
+  const has = (upto) => (k, src) => k <= upto;
+  const a = insights({ ...base, today: '2026-11-15', has: has('2026-10') });
+  const ids = a.map(x => x.id);
+  assert.equal(a[0].id, 'red'); assert.match(a[0].text, /Mercado e Lazer/);
+  assert.ok(ids.includes('high')); assert.match(a.find(x => x.id === 'high').text, /Lazer \(\+R\$ 1\.567\)/);
+  assert.ok(ids.includes('card') && ids.includes('fixed') && ids.includes('pending'));
+  assert.ok(ids.includes('missing')); assert.match(a.find(x => x.id === 'missing').text, /fatura de novembro/);
+  assert.ok(!ids.includes('saved'));
+  // a good month: congratulations with the time to reach the goal; month ending without entries
+  const b = insights({ ...base, months: ['2026-07', '2026-08', '2026-09'], today: '2026-10-28', has: (k, src) => k <= '2026-09' || (src === 'cartao' && k === '2026-10'), nextFatura: null, fixed: () => 0, pending: () => 0 });
+  const bi = b.map(x => x.id);
+  assert.ok(bi.includes('saved')); assert.match(b.find(x => x.id === 'saved').text, /30% da renda.*cerca de 12 anos/);
+  assert.ok(bi.includes('low')); assert.ok(bi.includes('ending')); assert.match(b.find(x => x.id === 'ending').text, /Faltam 4 dias/);
+  assert.ok(!bi.includes('missing'));
+  // no data at all: nothing to say
+  assert.deepEqual(insights({ ...base, months: [], today: '2026-10-10', has: () => false }), []);
+});
+
+test('grupos: receita e despesa, fixa, variável ou extra', async () => {
+  const { KINDS, kindOf, kindByKey } = await import('../public/js/lib/calc.js');
+  assert.equal(KINDS.length, 7);
+  assert.equal(kindOf({ grp: 'dia', recurring: true }).label, 'Despesa fixa');
+  assert.equal(kindOf({ grp: 'dia', recurring: null }).label, 'Despesa variável');
+  assert.equal(kindOf({ grp: 'renda' }).label, 'Receita fixa');
+  assert.equal(kindOf({ grp: 'fora' }).label, 'Despesa extra');
+  assert.deepEqual([kindByKey('dfixa').grp, kindByKey('dfixa').recurring], ['dia', true]);
 });

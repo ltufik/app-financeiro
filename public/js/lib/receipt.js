@@ -12,7 +12,7 @@ export function receiptPrompt(cats, today) {
 Leia e responda só com JSON no formato ${RECEIPT_JSON}.
 Regras: "valor" de cada item é o valor final pago pelo item (quantidade × preço, já com o desconto do item, se houver). "total" é o valor total pago na nota. "desconto" é o desconto geral da nota (positivo) ou 0.
 "pagamento": cartao se a nota disser cartão de crédito; conta para débito, pix ou dinheiro; null se não disser.
-Para cada item, escolha a categoria mais específica. Use uma destas quando servir: ${cats.join(' | ')}.
+Para cada item, escolha a categoria mais específica. Use uma destas quando servir (são as despesas da família): ${cats.join(' | ')}.
 Se nenhuma servir bem, sugira um nome novo curto e comum (ex.: "Suplementos", "Higiene", "Pet", "Bebidas"). Remédio é saúde; suplemento (whey, creatina, vitaminas, colágeno) é "Suplementos" quando não houver categoria parecida.
 Escreva a descrição do item por extenso quando a nota abreviar (ex.: "CREAT 300G" → "Creatina 300 g"). Nunca invente itens ou valores; se não der para ler, deixe a lista vazia.`;
 }

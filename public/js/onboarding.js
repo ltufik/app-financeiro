@@ -33,7 +33,7 @@ const waUrl = (text, phone) => `https://wa.me/${phone || ''}?text=` + encodeURIC
 // Invite form + list of invites already sent. Used in onboarding and in Ajustes.
 export function renderInviter(box) {
   box.innerHTML = `<div class="stack">
-    <div class="grid2"><label class="f">Nome<input type="text" id="ivName" autocomplete="off" maxlength="40" placeholder="Ex.: Luana"></label>
+    <div class="grid2"><label class="f">Nome<input type="text" id="ivName" autocomplete="off" maxlength="40" placeholder="Ex.: Ana"></label>
     <label class="f">Parentesco<select id="ivRel">${RELATIONS.map(r => `<option>${r}</option>`).join('')}</select></label></div>
     <label class="f">WhatsApp (opcional)<input type="tel" id="ivPhone" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label>
     <p class="tiny muted" style="margin-top:-6px">Com o número, o WhatsApp abre direto na conversa da pessoa. Sem ele, você escolhe o contato no WhatsApp.</p>
@@ -106,11 +106,12 @@ async function draw() {
   const b = $('#obBody'), n = esc(firstName(displayName()));
   if (O.step === 'name') {
     b.innerHTML = `<div class="brandbig">Olá!</div><p class="muted">Antes de começar: como você quer ser chamado no app?</p>
-      <div class="panel stack"><label class="f">Seu nome ou apelido<input type="text" id="obName" autocomplete="given-name" value="${esc(firstName(signupName()))}"></label>
+      <div class="panel stack"><label class="f">Seu nome ou apelido<input type="text" id="obName" autocomplete="given-name" placeholder="${esc(firstName(signupName()) || 'Seu nome')}"></label>
+      ${firstName(signupName()) ? `<p class="tiny muted">Se deixar em branco, fica "${esc(firstName(signupName()))}".</p>` : ''}
       <button class="btn primary" type="button" id="obNext">Continuar</button></div>`;
     $('#obName').focus();
     const next = async () => {
-      const v = $('#obName').value.trim(); if (!validate([[$('#obName'), checkName(v, 'como você quer ser chamado', 2, 40)]])) return;
+      const v = $('#obName').value.trim() || firstName(signupName()); if (!validate([[$('#obName'), checkName(v, 'como você quer ser chamado', 2, 40)]])) return;
       $('#obNext').disabled = true;
       try { const { data } = await db.sb.auth.updateUser({ data: { display_name: v } }); if (data?.user) S.user = data.user; else S.user.user_metadata = { ...S.user.user_metadata, display_name: v }; } catch (e) { S.user.user_metadata = { ...S.user.user_metadata, display_name: v }; }
       db.updateMyMemberName(S.user.id, v).catch(() => {});
@@ -153,11 +154,11 @@ async function draw() {
   if (O.step === 'famname') {
     const sug = O.share ? (lastName() ? 'Família ' + lastName() : 'Nossa família') : 'Finanças de ' + firstName(displayName());
     b.innerHTML = `<div class="brandbig">${O.share ? 'Como vamos chamar a família?' : 'Como vamos chamar o seu espaço?'}</div>
-      <div class="panel stack"><label class="f">Nome<input type="text" id="obFam" value="${esc(sug)}"></label>
-      <p class="tiny muted">Dá para mudar depois no menu ☰.</p>
+      <div class="panel stack"><label class="f">Nome<input type="text" id="obFam" placeholder="${esc(sug)}" maxlength="60"></label>
+      <p class="tiny muted">Se deixar em branco, fica "${esc(sug)}". Dá para mudar depois no menu ☰.</p>
       <button class="btn primary" type="button" id="obCreate">Criar</button><button class="btn" type="button" id="obBack">Voltar</button><p class="err" id="obErr"></p></div>`;
     $('#obCreate').onclick = async () => {
-      const name = $('#obFam').value.trim(); if (!validate([[$('#obFam'), checkName(name, 'um nome para a família', 2, 60)]])) return;
+      const name = $('#obFam').value.trim() || sug; if (!validate([[$('#obFam'), checkName(name, 'um nome para a família', 2, 60)]])) return;
       $('#obCreate').disabled = true;
       try {
         const h = await db.createHousehold(name, displayName()); lsSet('fin.hh', h);

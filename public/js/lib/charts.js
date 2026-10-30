@@ -3,10 +3,10 @@
 
 export const TYPES = { pizza: 'Pizza', barra: 'Barras', linha: 'Linha' };
 export const METRICS = {
-  categorias: 'Gastos por categoria',
+  categorias: 'Despesas por categoria',
   escolhidas: 'Categorias que eu escolher',
   sobra: 'Sobra do mês',
-  rendaGastos: 'Renda e gastos',
+  rendaGastos: 'Receitas e despesas',
   cartao: 'Fatura do cartão',
   taxa: 'Taxa de poupança',
 };
@@ -36,7 +36,7 @@ export function checkChart(c = {}) {
   if (c.title.trim().length > 60) return 'O nome do gráfico pode ter no máximo 60 letras.';
   if (!TYPES[c.type]) return 'Escolha o tipo de gráfico.';
   if (!METRICS[c.metric]) return 'Escolha o que mostrar.';
-  if (c.type === 'pizza' && !BREAKDOWN.has(c.metric)) return 'Pizza mostra como um total se divide. Escolha "Gastos por categoria" ou "Categorias que eu escolher", ou troque para barras ou linha.';
+  if (c.type === 'pizza' && !BREAKDOWN.has(c.metric)) return 'Pizza mostra como um total se divide. Escolha "Despesas por categoria" ou "Categorias que eu escolher", ou troque para barras ou linha.';
   if (c.metric === 'escolhidas' && !(c.cats || []).length) return 'Marque pelo menos uma categoria.';
   if (c.metric === 'escolhidas' && c.cats.length > 8) return 'Escolha no máximo 8 categorias para o gráfico ficar legível.';
   if (!PERIODS[c.period?.kind]) return 'Escolha o período.';
@@ -58,19 +58,19 @@ export function buildChart(c, src) {
     let rows = totals();
     if (c.metric === 'escolhidas') { const want = new Set(c.cats); rows = rows.filter(r => want.has(r[0])); }
     else if (rows.length > 8) { const rest = rows.slice(7).reduce((a, r) => a + r[1], 0); rows = [...rows.slice(0, 7), ['Outras', rest]]; }
-    if (!rows.length) return { empty: c.metric === 'escolhidas' ? 'Essas categorias não tiveram gastos no período.' : 'Não houve gastos do dia a dia no período.' };
+    if (!rows.length) return { empty: c.metric === 'escolhidas' ? 'Essas categorias não tiveram gastos no período.' : 'Não houve despesas no período.' };
     return { kind: c.type === 'pizza' ? 'pie' : 'hbar', unit: 'brl', labels: rows.map(r => r[0]), series: [{ name: 'Gasto', values: rows.map(r => round(r[1])) }] };
   }
   const kind = c.type === 'linha' ? 'lines' : 'bars';
   if (BREAKDOWN.has(c.metric)) {
     const names = c.metric === 'escolhidas' ? c.cats : totals().slice(0, 5).map(r => r[0]);
-    if (!names.length) return { empty: 'Não houve gastos do dia a dia no período.' };
+    if (!names.length) return { empty: 'Não houve despesas no período.' };
     return { kind, unit: 'brl', labels: ms, series: names.map(n => ({ name: n, values: ms.map(k => round(src.cats(k)[n] || 0)) })) };
   }
   const C = ms.map(k => src.calc(k));
   const S = {
     sobra: [{ name: 'Sobra', values: C.map(x => x.res) }],
-    rendaGastos: [{ name: 'Renda', values: C.map(x => x.renda + x.E) }, { name: 'Gastos do dia a dia', values: C.map(x => x.out) }],
+    rendaGastos: [{ name: 'Receitas', values: C.map(x => x.E) }, { name: 'Despesas', values: C.map(x => x.out) }],
     cartao: [{ name: 'Fatura', values: C.map(x => x.cardTotal) }],
     taxa: [{ name: 'Poupança', values: C.map(x => x.tx) }],
   }[c.metric];

@@ -52,7 +52,7 @@ alter table public.invites add column if not exists invitee_phone text;
 --   pontual = entrada pontual, fora da sobra (13º, venda de um bem)
 --   dia     = gasto do dia a dia
 --   fora    = gasto fora do dia a dia (obra, compra pontual grande)
---   neutro  = não é receita nem gasto (transferência, investimento, pagamento da fatura, empréstimo)
+--   neutro  = não é receita nem despesa (transferência, investimento, pagamento da fatura)
 create table if not exists public.categories (
   id           uuid primary key default gen_random_uuid(),
   household_id uuid not null references public.households(id) on delete cascade,
@@ -137,6 +137,11 @@ alter table public.households   enable row level security;
 alter table public.members      enable row level security;
 alter table public.invites      enable row level security;
 alter table public.categories   enable row level security;
+-- Despesa fixa (recorrente) ou variável. Só vale para o grupo "dia".
+alter table public.categories add column if not exists recurring boolean;
+update public.categories set recurring = true where recurring is null and grp = 'dia'
+  and name in ('Moradia e contas', 'Financiamento imobiliário', 'Escola e cursos', 'Assinaturas', 'Seguros', 'Serviços domésticos');
+
 -- Nota fiscal: um lançamento pode ser dividido em categorias (splits = [{category, amount}])
 -- e guardar o que foi lido da nota (receipt = {store, date, total, items:[{description, amount, category}]}).
 -- O arquivo da nota nunca é guardado.
@@ -188,36 +193,35 @@ begin
   returning id into h;
   insert into members(household_id, user_id, role, display_name) values (h, auth.uid(), 'owner', p_display_name);
 
-  insert into categories(household_id, name, grp, financing) values
-    (h, 'Salário', 'renda', false),
-    (h, 'Renda extra', 'renda', false),
-    (h, 'Reembolsos', 'entrada', false),
-    (h, 'Outras entradas', 'entrada', false),
-    (h, 'Entrada pontual (13º, férias, bônus)', 'pontual', false),
-    (h, 'Mercado', 'dia', false),
-    (h, 'Restaurantes e delivery', 'dia', false),
-    (h, 'Moradia e contas', 'dia', false),
-    (h, 'Financiamento imobiliário', 'dia', true),
-    (h, 'Escola e cursos', 'dia', false),
-    (h, 'Saúde', 'dia', false),
-    (h, 'Transporte', 'dia', false),
-    (h, 'Combustível', 'dia', false),
-    (h, 'Lazer', 'dia', false),
-    (h, 'Compras', 'dia', false),
-    (h, 'Vestuário', 'dia', false),
-    (h, 'Assinaturas', 'dia', false),
-    (h, 'Seguros', 'dia', false),
-    (h, 'Pets', 'dia', false),
-    (h, 'Presentes', 'dia', false),
-    (h, 'Serviços domésticos', 'dia', false),
-    (h, 'Impostos e taxas', 'dia', false),
-    (h, 'Tarifas bancárias', 'dia', false),
-    (h, 'Outros', 'dia', false),
-    (h, 'A classificar', 'dia', false),
-    (h, 'Gasto pontual (fora do dia a dia)', 'fora', false),
-    (h, 'Investimentos e transferências', 'neutro', false),
-    (h, 'Pagamento da fatura do cartão', 'neutro', false),
-    (h, 'Empréstimos a terceiros', 'neutro', false);
+  insert into categories(household_id, name, grp, financing, recurring) values
+    (h, 'Salário', 'renda', false, false),
+    (h, 'Renda extra', 'renda', false, false),
+    (h, 'Reembolsos', 'entrada', false, false),
+    (h, 'Outras entradas', 'entrada', false, false),
+    (h, 'Receita extra (13º, férias, bônus)', 'pontual', false, false),
+    (h, 'Mercado', 'dia', false, false),
+    (h, 'Restaurantes e delivery', 'dia', false, false),
+    (h, 'Moradia e contas', 'dia', false, true),
+    (h, 'Financiamento imobiliário', 'dia', true, true),
+    (h, 'Escola e cursos', 'dia', false, true),
+    (h, 'Saúde', 'dia', false, false),
+    (h, 'Transporte', 'dia', false, false),
+    (h, 'Combustível', 'dia', false, false),
+    (h, 'Lazer', 'dia', false, false),
+    (h, 'Compras', 'dia', false, false),
+    (h, 'Vestuário', 'dia', false, false),
+    (h, 'Assinaturas', 'dia', false, true),
+    (h, 'Seguros', 'dia', false, true),
+    (h, 'Pets', 'dia', false, false),
+    (h, 'Presentes', 'dia', false, false),
+    (h, 'Serviços domésticos', 'dia', false, true),
+    (h, 'Impostos e taxas', 'dia', false, false),
+    (h, 'Tarifas bancárias', 'dia', false, false),
+    (h, 'Outros', 'dia', false, false),
+    (h, 'A classificar', 'dia', false, false),
+    (h, 'Despesa extra (reforma, viagem, carro)', 'fora', false, false),
+    (h, 'Investimentos e transferências', 'neutro', false, false),
+    (h, 'Pagamento da fatura do cartão', 'neutro', false, false);
 
   insert into rules(household_id, source, kind, pattern, category, priority) values
     (h, 'conta',  'regex', 'PAGAMENTO.*CART|FATURA|DEB AUTOM DE FATURA', 'Pagamento da fatura do cartão', 50),
@@ -339,6 +343,22 @@ begin
     do update set category = excluded.category;
 end $$;
 
+-- Renomeia uma categoria e leva o novo nome para lançamentos, divisões de nota e regras.
+create or replace function public.rename_category(p_id uuid, p_name text)
+returns void language plpgsql security definer set search_path = public as $$
+declare c record; n text := nullif(trim(p_name), '');
+begin
+  select * into c from categories where id = p_id;
+  if c is null or not public.is_member(c.household_id) then raise exception 'not_member'; end if;
+  if n is null or length(n) > 60 then raise exception 'bad_name'; end if;
+  if exists (select 1 from categories where household_id = c.household_id and lower(name) = lower(n) and id <> p_id) then raise exception 'duplicate'; end if;
+  update categories set name = n where id = p_id;
+  update transactions set category = n where household_id = c.household_id and category = c.name;
+  update rules set category = n where household_id = c.household_id and category = c.name;
+  update transactions t set splits = (select jsonb_agg(case when x->>'category' = c.name then jsonb_set(x, '{category}', to_jsonb(n)) else x end) from jsonb_array_elements(t.splits) x)
+    where t.household_id = c.household_id and t.splits is not null and t.splits @> jsonb_build_array(jsonb_build_object('category', c.name));
+end $$;
+
 -- Table access for signed-in users (row-level security above still limits rows to their family).
 -- Explicit, so it works even when the project does not expose new tables automatically.
 grant usage on schema public to authenticated;
@@ -372,3 +392,4 @@ grant execute on function public.invite_info(text) to anon, authenticated;
 grant execute on function public.accept_invite(text, text) to authenticated;
 grant execute on function public.replace_month(uuid, text, text, jsonb, uuid[], text, text, jsonb) to authenticated;
 grant execute on function public.learn_rule(uuid, text, text, text) to authenticated;
+grant execute on function public.rename_category(uuid, text) to authenticated;

@@ -86,3 +86,18 @@ select count(*) as hh_a from public.households where id = :'ha' \gset
 select count(*) as tx_a from public.transactions where household_id = :'ha' \gset
 select count(*) as hh_b from public.households where id = :'hb' \gset
 \echo excluir conta de dona única: família A :hh_a, lançamentos A :tx_a, família B intacta :hh_b
+
+-- Renomear categoria leva o nome para lançamentos, divisões e regras
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select public.create_household('Família R', 'Rui') as hr \gset
+select (select count(*) from categories where household_id = :'hr' and recurring) as fixas, (select count(*) from categories where household_id = :'hr' and name like 'Empréstimos%') as terceiros \gset
+\echo despesas fixas semeadas: :fixas, categoria de terceiros: :terceiros
+insert into transactions(household_id, source, month, description, amount, category, splits) values (:'hr', 'cartao', '2026-10', 'FARMA', 100, 'Saúde', '[{"category":"Saúde","amount":40},{"category":"Mercado","amount":60}]');
+select public.learn_rule(:'hr', 'cartao', 'FARMA', 'Saúde');
+select id as cid from categories where household_id = :'hr' and name = 'Saúde' \gset
+select public.rename_category(:'cid', 'Saúde e farmácia');
+select (select category from transactions where household_id = :'hr') as tc, (select splits->0->>'category' from transactions where household_id = :'hr') as sc, (select splits->1->>'category' from transactions where household_id = :'hr') as sc2, (select category from rules where household_id = :'hr' and pattern = 'FARMA') as rc \gset
+\echo renomear: lançamento :tc, divisão :sc / :sc2, regra :rc
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: nome repetido)
+select public.rename_category(:'cid', 'mercado');

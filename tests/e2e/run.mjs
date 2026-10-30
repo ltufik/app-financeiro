@@ -32,7 +32,7 @@ async function addRoutes(t) {
   await t.route('https://cdnjs.cloudflare.com/**/pdf.worker.min.js', r => r.fulfill({ contentType: 'text/javascript', body: '' }));
   await t.route('https://pdfjs.test/*', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(PDFJS, new URL(r.request().url()).pathname.slice(1))) }));
   await t.route('https://fonts.**', r => r.fulfill({ body: '' }));
-  await t.route('https://images.unsplash.com/**', r => r.fulfill({ body: fs.readFileSync(path.join(ROOT, 'icons/icon-192.png')), contentType: 'image/png' }));
+  await t.route('https://images.pexels.com/**', r => r.fulfill({ body: fs.readFileSync(path.join(ROOT, 'icons/icon-192.png')), contentType: 'image/png' }));
 }
 await addRoutes(page);
 
@@ -63,7 +63,7 @@ const shot = async n => { if (shots) await page.screenshot({ path: path.join(sho
 try {
 await page.goto('https://app.test/');
 await page.waitForSelector('#welcome:not([hidden])');
-ok('tela inicial explica o app com foto', (await txt('#welcome')).includes('Para onde foi o seu dinheiro?') && await page.isVisible('#wHero img') && (await txt('#wHero')).includes('Unsplash'));
+ok('tela inicial explica o app com foto', (await txt('#welcome')).includes('Para onde foi o seu dinheiro?') && await page.isVisible('#wHero img') && (await txt('#wHero')).includes('Pexels'));
 await shot('00-inicial');
 await page.click('#wSignup');
 await page.waitForSelector('#auth:not([hidden])');
@@ -80,7 +80,7 @@ ok('cadastro exige consentimento', (await txt('#aMsg')).includes('concordância'
 await page.check('#aConsent'); await page.click('#aGo');
 await page.waitForSelector('#onboard:not([hidden])');
 await page.waitForSelector('#obName');
-ok('onboarding pergunta como quer ser chamado', (await page.inputValue('#obName')) === 'Luiz');
+ok('onboarding sugere o nome sem precisar apagar', (await page.inputValue('#obName')) === '' && (await page.getAttribute('#obName', 'placeholder')) === 'Luiz');
 await shot('01b-nome');
 await page.click('#obNext');
 await page.waitForSelector('[data-s="1"]');
@@ -88,7 +88,7 @@ ok('boas-vindas com o nome', (await txt('#obBody')).includes('Boas-vindas, Luiz!
 await shot('01c-divide');
 await page.click('[data-s="1"]');
 await page.waitForSelector('#obFam');
-ok('sugere o nome da família pelo sobrenome', (await page.inputValue('#obFam')) === 'Família Elias', await page.inputValue('#obFam'));
+ok('sugere o nome da família pelo sobrenome, sem precisar apagar', (await page.inputValue('#obFam')) === '' && (await page.getAttribute('#obFam', 'placeholder')) === 'Família Elias');
 await page.click('#obCreate');
 await page.waitForSelector('#ivName');
 await page.click('#ivGo');
@@ -128,7 +128,15 @@ ok('pular fecha o tour guiado', !(await page.$('.coach')));
 ok('depois do tour, vai para a fatura', await page.isVisible('#v-lancar #drop'));
 await page.click('[data-tab=resumo]');
 ok('resumo cumprimenta pelo nome', (await txt('#v-resumo')).includes('Boas-vindas, Luiz!'));
-ok('resumo vazio mostra primeiros passos', (await txt('#stepsBox')).includes('0 de 6'), await txt('#stepsBox .tiny'));
+ok('início vazio mostra a régua de preenchimento em 0%', (await txt('#stepsBox')).includes('Use o app por completo') && (await txt('#stepsBox .regua-n')) === '0%', await txt('#stepsBox .regua-n'));
+ok('régua mostra só os próximos 3 passos, com o que cada um libera', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 3 && (await txt('#stepsBox')).includes('Libera a sobra do mês'));
+await page.click('#stepsBox [data-all]');
+ok('régua mostra todos os passos', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 11);
+await page.click('#stepsBox [data-skip]');
+await page.waitForFunction(() => document.querySelector('#stepsBox .regua-n')?.textContent !== '0%');
+ok('"não tenho" conta na régua', (await txt('#stepsBox .regua-n')) === '10%' && await page.evaluate(() => window.__db.households[0].settings.skips?.invest === true), await txt('#stepsBox .regua-n'));
+await page.click('#stepsBox [data-unskip]'); await page.waitForFunction(() => document.querySelector('#stepsBox .regua-n')?.textContent === '0%');
+await page.click('#stepsBox [data-all]');
 await page.click('#stepsBox [data-k="0"]');
 ok('passo leva ao envio do PDF', await page.isVisible('#v-lancar #drop'));
 await page.click('[data-tab=resumo]');
@@ -171,7 +179,13 @@ if (backup) {
   await shot('03-resumo-setembro');
   await page.selectOption('#monthSel', 'ano:2026');
   ok('ano: sobra R$ 53.494', (await txt('#v-resumo .big')).includes('53.494'));
-  ok('primeiros passos atualizam com os dados', (await txt('#stepsBox')).includes('3 de 6'), await txt('#stepsBox .tiny'));
+  const pctNow = +(await txt('#stepsBox .regua-n')).replace('%', '');
+  ok('régua sobe com os dados importados', pctNow >= 60 && pctNow < 100, pctNow + '%');
+  await page.selectOption('#monthSel', '2026-09');
+  const ins = await txt('#insights');
+  ok('início mostra insights do mês', (await page.$$('#insights .insight')).length >= 1, ins.slice(0, 200));
+  await shot('03b-insights');
+  await page.selectOption('#monthSel', 'ano:2026');
 }
 
 await page.click('[data-tab=lancar]');
@@ -316,7 +330,18 @@ ok('categoria repetida é recusada', (await txt('#v-ajustes')).includes('Essa ca
 await page.fill('#cNew', 'Farmácia'); await page.click('#cAdd'); await page.waitForSelector('.cfm [data-y]');
 ok('criar categoria pede confirmação', (await txt('.cfm')).includes('Criar a categoria "Farmácia"'));
 await page.click('.cfm [data-y]'); await page.waitForTimeout(150);
-ok('categoria criada', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Farmácia')));
+ok('categoria criada', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Farmácia' && c.grp === 'dia' && !c.recurring)));
+ok('grupos aparecem como receita e despesa, fixa ou variável', (await txt('#catList')).includes('Despesa variável') && (await txt('#catList')).includes('Despesa fixa'));
+const farm = '#catList li:has-text("Farmácia")';
+await page.selectOption(farm + ' [data-kind]', 'dfixa'); await page.waitForSelector('#catList .cfm [data-y]');
+await page.click('#catList .cfm [data-y]'); await page.waitForTimeout(200);
+ok('mudar para despesa fixa pede confirmação e salva', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Farmácia' && c.recurring === true)));
+await page.click('#catList li:has-text("Farmácia") [data-ren]');
+await page.fill('#catList .catname input', 'Mercado'); await page.click('#catList [data-ok]');
+ok('renomear para nome repetido é recusado', (await txt('#catList')).includes('Essa categoria já existe'));
+await page.fill('#catList .catname input', 'Farmácia e saúde'); await page.click('#catList [data-ok]'); await page.waitForSelector('#catList .cfm [data-y]');
+await page.click('#catList .cfm [data-y]'); await page.waitForTimeout(200);
+ok('categoria renomeada', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Farmácia e saúde')));
 // forgot password
 await sec('conta');
 await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])'); await page.click('#wLogin');
@@ -378,7 +403,10 @@ await page.waitForFunction(() => /Backup pronto|Não foi possível/.test(documen
 ok('backup mostra mensagem de sucesso', (await txt('#bkStatus')).includes('Backup pronto') && await page.evaluate(() => window.__dl === 1), await txt('#bkStatus'));
 await sec('conta');
 await page.click('#delAcc');
-ok('excluir conta pede confirmação com opção de backup', (await txt('#confirmBox')).includes('Baixar backup antes'));
+ok('excluir conta pede para baixar o backup antes', (await txt('#confirmBox')).includes('Antes, baixe uma cópia dos seus dados'));
+await page.click('#confirmBox [data-b]');
+await page.waitForFunction(() => /Backup pronto|Não foi possível/.test(document.querySelector('#confirmBox [data-bks]')?.textContent || ''));
+ok('backup feito dentro da confirmação mostra o resultado ali mesmo', (await txt('#confirmBox [data-bks]')).includes('Backup pronto') && await page.evaluate(() => window.__dl === 2));
 await shot('09-excluir');
 await page.click('#confirmBox [data-n]');
 ok('cancelar fecha a confirmação', (await txt('#confirmBox')) === '');

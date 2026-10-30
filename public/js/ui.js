@@ -1,6 +1,6 @@
 // Small DOM helpers shared by the views.
 import { esc, pct } from './lib/format.js';
-import { GROUPS } from './lib/calc.js';
+import { KINDS, kindOf } from './lib/calc.js';
 
 export const $ = (s, root = document) => root.querySelector(s);
 export const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -32,9 +32,9 @@ export function catPicker(categories, current, pending, onPick) {
   if (pending) b.style.borderColor = 'var(--warn)';
   b.onclick = () => {
     const sel = document.createElement('select');
-    const byG = {}; for (const c of categories) (byG[c.grp] ||= []).push(c.name);
+    const byG = {}; for (const c of categories) (byG[kindOf(c).key] ||= []).push(c.name);
     sel.innerHTML = (current ? '' : '<option value="" selected disabled>Escolher</option>') +
-      Object.keys(GROUPS).filter(g => byG[g]).map(g => `<optgroup label="${esc(GROUPS[g])}">${byG[g].sort((a, c) => a.localeCompare(c, 'pt')).map(n => `<option${n === current ? ' selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('');
+      KINDS.map(k => k.key).filter(g => byG[g]).map(g => `<optgroup label="${esc(KINDS.find(k => k.key === g).label)}">${byG[g].sort((a, c) => a.localeCompare(c, 'pt')).map(n => `<option${n === current ? ' selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('');
     wrap.replaceChildren(sel); sel.focus();
     sel.onchange = () => onPick(sel.value);
     // Deferred: the table may be redrawn while the select still has focus.

@@ -68,7 +68,7 @@ function openForm(el, c, saved) {
   const box = $('#chForm'), ks = monthKeys(), years = [...new Set(ks.map(k => k.slice(0, 4)))].sort().reverse();
   const cats = S.categories.filter(x => x.grp === 'dia').map(x => x.name).sort((a, b) => a.localeCompare(b, 'pt'));
   box.innerHTML = `<div class="chform stack">
-    <label class="f">Nome do gráfico<input type="text" id="chTitle" maxlength="60" placeholder="Suplementos por mês" value="${esc(c.title)}"></label>
+    <label class="f">Nome do gráfico<input type="text" id="chTitle" maxlength="60" placeholder="Ex.: Mercado por mês" value="${esc(c.title)}"></label>
     <div class="f"><span>Tipo</span><div class="seg" role="group" aria-label="Tipo de gráfico">${Object.entries(TYPES).map(([k, l]) => `<button type="button" class="chip" data-type="${k}" aria-pressed="${c.type === k}">${l}</button>`).join('')}</div></div>
     <label class="f">O que mostrar<select id="chMetric">${Object.entries(METRICS).map(([k, l]) => `<option value="${k}"${c.metric === k ? ' selected' : ''}${c.type === 'pizza' && !BREAKDOWN.has(k) ? ' disabled' : ''}>${l}${c.type === 'pizza' && !BREAKDOWN.has(k) ? ' (não cabe em pizza)' : ''}</option>`).join('')}</select></label>
     <fieldset class="f chcats" id="chCats" ${c.metric === 'escolhidas' ? '' : 'hidden'}><legend>Categorias (até 8)</legend>

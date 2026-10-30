@@ -3,13 +3,27 @@
 // conta amounts are signed (negative = money out); cartao amounts are positive for purchases.
 
 export const GROUPS = {
-  renda: 'Renda recorrente',
-  entrada: 'Outras entradas do dia a dia',
-  pontual: 'Entrada pontual (fora da sobra)',
-  dia: 'Gasto do dia a dia',
-  fora: 'Gasto fora do dia a dia',
-  neutro: 'Não conta (transferências, investimentos, fatura)',
+  renda: 'Receita fixa',
+  entrada: 'Receita variável',
+  pontual: 'Receita extra',
+  dia: 'Despesa',
+  fora: 'Despesa extra',
+  neutro: 'Não conta',
 };
+
+// How people see the groups: income or expense, recurring or not, plus "doesn't count".
+// grp decides the math; recurring only splits day-to-day expenses into fixed and variable.
+export const KINDS = [
+  { key: 'rfixa', side: 'Receitas', grp: 'renda', recurring: true, label: 'Receita fixa', hint: 'Todo mês: salário, aposentadoria, aluguel recebido' },
+  { key: 'rvar', side: 'Receitas', grp: 'entrada', recurring: false, label: 'Receita variável', hint: 'De vez em quando: reembolso, venda, rendimento' },
+  { key: 'rextra', side: 'Receitas', grp: 'pontual', recurring: false, label: 'Receita extra', hint: 'Fora da sobra: 13º, férias, bônus, herança' },
+  { key: 'dfixa', side: 'Despesas', grp: 'dia', recurring: true, label: 'Despesa fixa', hint: 'Todo mês: moradia, escola, assinaturas, seguros' },
+  { key: 'dvar', side: 'Despesas', grp: 'dia', recurring: false, label: 'Despesa variável', hint: 'Muda todo mês: mercado, restaurantes, lazer' },
+  { key: 'dextra', side: 'Despesas', grp: 'fora', recurring: false, label: 'Despesa extra', hint: 'Fora da sobra: reforma, viagem grande, carro' },
+  { key: 'neutro', side: 'Outros', grp: 'neutro', recurring: false, label: 'Não conta', hint: 'Transferência entre contas, investimento, pagamento da fatura' },
+];
+export const kindOf = c => KINDS.find(k => k.grp === c?.grp && (k.grp !== 'dia' || k.recurring === !!c.recurring)) || KINDS[4];
+export const kindByKey = key => KINDS.find(k => k.key === key);
 
 export const catIndex = categories => new Map((categories || []).map(c => [c.name, c]));
 
@@ -32,7 +46,7 @@ export function expandSplits(txs) {
   return out;
 }
 
-// Monthly totals. sobra (res) = entradas do dia a dia - saídas do dia a dia - cartão do dia a dia.
+// Monthly totals. sobra (res) = receitas fixas e variáveis - despesas fixas e variáveis (conta e cartão).
 export function monthCalc(txs, idx) {
   let E = 0, EX = 0, D = 0, DX = 0, card = 0, cardTotal = 0, cardFora = 0, renda = 0, fin = 0;
   for (const t of expandSplits(txs)) {

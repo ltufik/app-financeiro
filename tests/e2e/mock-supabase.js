@@ -48,12 +48,20 @@ class Q {
   }
 }
 
-const DEFAULT_CATS = [['Salário', 'renda'], ['Reembolsos', 'entrada'], ['Outras entradas', 'entrada'], ['Mercado', 'dia'], ['Restaurantes e delivery', 'dia'], ['Saúde', 'dia'], ['A classificar', 'dia'], ['Financiamento imobiliário', 'dia', true], ['Pagamento da fatura do cartão', 'neutro']];
+const DEFAULT_CATS = [['Salário', 'renda'], ['Reembolsos', 'entrada'], ['Outras entradas', 'entrada'], ['Mercado', 'dia'], ['Restaurantes e delivery', 'dia'], ['Saúde', 'dia'], ['A classificar', 'dia'], ['Financiamento imobiliário', 'dia', true, true], ['Assinaturas', 'dia', false, true], ['Pagamento da fatura do cartão', 'neutro']];
 const rpcs = {
+  rename_category({ p_id, p_name }) {
+    const c = T.categories.find(x => x.id === p_id); if (!c) throw new Error('not_member');
+    if (T.categories.some(x => x.household_id === c.household_id && x.id !== p_id && x.name.toLowerCase() === p_name.toLowerCase())) throw new Error('duplicate');
+    const old = c.name; c.name = p_name;
+    T.transactions.forEach(t => { if (t.household_id !== c.household_id) return; if (t.category === old) t.category = p_name; (t.splits || []).forEach(x => { if (x.category === old) x.category = p_name; }); });
+    T.rules.forEach(r => { if (r.household_id === c.household_id && r.category === old) r.category = p_name; });
+    setTimeout(persist); return null;
+  },
   create_household({ p_name, p_display_name }) {
     const h = { id: uid(), name: p_name, settings: { goals: { cardMonthly: 0, savings: 0.2, savingsNoFin: 0.3, patrimonio: 0 }, cardCloseDay: 24 }, created_by: session.user.id, created_at: now() };
     T.households.push(h); T.members.push({ household_id: h.id, user_id: session.user.id, role: 'owner', display_name: p_display_name, created_at: now() });
-    DEFAULT_CATS.forEach(([name, grp, fin]) => T.categories.push({ id: uid(), household_id: h.id, name, grp, financing: !!fin, created_at: now() }));
+    DEFAULT_CATS.forEach(([name, grp, fin, rec]) => T.categories.push({ id: uid(), household_id: h.id, name, grp, financing: !!fin, recurring: !!rec, created_at: now() }));
     return h.id;
   },
   create_invite({ p_household, p_name, p_relation }) { const c = 'INV' + Math.random().toString(36).slice(2, 7).toUpperCase(); T.invites.push({ code: c, household_id: p_household, created_by: session.user.id, invitee_name: p_name, relation: p_relation, created_at: now(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null }); return c; },

@@ -1,6 +1,6 @@
 import { S, settings, goals, reindex } from '../state.js';
 import * as db from '../db.js';
-import { GROUPS } from '../lib/calc.js';
+import { KINDS, kindOf, kindByKey } from '../lib/calc.js';
 import { esc, todayISO } from '../lib/format.js';
 import { $, toast, validate, invalid, clearInvalid, confirmInline } from '../ui.js';
 import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
@@ -49,9 +49,13 @@ export function render(el) {
 
   <div class="panel stack" data-sec="categorias">
     <h2>Categorias</h2>
-    <p class="tiny muted">O grupo decide como a categoria entra na conta da sobra. Marque "financiamento" para a taxa de poupança sem financiamento.</p>
-    <div class="tw"><table><thead><tr><th>Categoria</th><th>Grupo</th><th>Financiamento</th></tr></thead><tbody id="catRows"></tbody></table></div>
-    <div class="rowbtn"><input type="text" id="cNew" placeholder="Nova categoria" style="flex:1 1 180px"><select id="cNewG" style="flex:0 1 220px">${Object.entries(GROUPS).map(([k, l]) => `<option value="${k}"${k === 'dia' ? ' selected' : ''}>${l}</option>`).join('')}</select><button class="btn" id="cAdd" type="button">Adicionar</button></div>
+    <p class="small muted">Toda categoria é uma receita ou uma despesa. As fixas se repetem todo mês; as extras ficam fora da sobra do mês, para não distorcer a conta.</p>
+    <h3 style="margin-top:6px">Criar categoria</h3>
+    <label class="f">Nome<input type="text" id="cNew" maxlength="60" placeholder="Ex.: Academia"></label>
+    <div class="kinds" role="radiogroup" aria-label="Tipo da categoria" id="cKinds">${KINDS.map(k => `<button type="button" class="kind" role="radio" aria-checked="${k.key === 'dvar'}" data-kind="${k.key}"><strong>${k.label}</strong><span>${k.hint}</span></button>`).join('')}</div>
+    <div><button class="btn primary" id="cAdd" type="button">Criar categoria</button></div>
+    <h3 style="margin-top:10px">Suas categorias</h3>
+    <div id="catList" class="stack"></div>
   </div>
 
   <div class="panel stack" data-sec="contexto">
@@ -63,7 +67,7 @@ export function render(el) {
 
   <div class="panel stack" data-sec="ajuda">
     <h2>Ajuda</h2>
-    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Mostrar os primeiros passos</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button></div>
+    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Ver o que falta preencher</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button></div>
     <details class="help"><summary>Instalar o app no celular</summary>${installHelpHTML()}</details>
   </div>
 
@@ -88,7 +92,7 @@ export function render(el) {
   // help
   $('#hTour').onclick = () => S.showTour('app');
   $('#hCoach').onclick = () => S.startCoach(true);
-  $('#hSteps').onclick = () => { try { localStorage.removeItem('fin.steps.hide.' + S.hh.id); } catch (e) { /* storage blocked */ } S.go('resumo', '#stepsBox'); };
+  $('#hSteps').onclick = () => S.go('resumo', '#stepsBox');
   wireInstall(el);
 
   // family
@@ -113,7 +117,7 @@ export function render(el) {
       [$('#gClose'), checkNumber($('#gClose').value, { min: 1, max: 31, integer: true, label: 'Fechamento do cartão', allowEmpty: true })],
     ]);
     if (!ok) return;
-    save({ goals: { ...g, cardMonthly: val('gCard'), savings: val('gSav') / 100, savingsNoFin: val('gSav2') / 100, patrimonio: val('gPat'), ageNow: val('gAge') || null, ageGoal: val('gAgeGoal') || null, ret: val('gRet') / 100 }, cardCloseDay: Math.min(31, Math.max(1, val('gClose') || 24)) }, 'Metas salvas');
+    save({ goals: { ...g, cardMonthly: val('gCard'), savings: val('gSav') / 100, savingsNoFin: val('gSav2') / 100, patrimonio: val('gPat'), ageNow: val('gAge') || null, ageGoal: val('gAgeGoal') || null, ret: val('gRet') / 100 }, goalsSet: true, cardCloseDay: Math.min(31, Math.max(1, val('gClose') || 24)) }, 'Metas salvas');
   };
 
   // lists
@@ -152,25 +156,60 @@ export function render(el) {
   $('#pSave').onclick = () => { clearInvalid(el); if (checkLists()) save({ ...data, invest: { ...(st.invest || {}), total: val('iTotal'), date: $('#iDate').value || todayISO() } }, 'Patrimônio salvo'); };
 
   // categories
-  const cats = S.categories.slice().sort((a, b) => Object.keys(GROUPS).indexOf(a.grp) - Object.keys(GROUPS).indexOf(b.grp) || a.name.localeCompare(b.name, 'pt'));
-  $('#catRows').innerHTML = cats.map(c => `<tr><td>${esc(c.name)}</td><td><select data-c="${c.id}" data-f="grp">${Object.entries(GROUPS).map(([k, l]) => `<option value="${k}"${k === c.grp ? ' selected' : ''}>${l}</option>`).join('')}</select></td><td><input type="checkbox" data-c="${c.id}" data-f="financing" style="width:auto" ${c.financing ? 'checked' : ''}></td></tr>`).join('');
-  $('#catRows').querySelectorAll('[data-c]').forEach(inp => inp.onchange = async () => {
-    const c = S.categories.find(x => x.id === inp.dataset.c), patch = { [inp.dataset.f]: inp.type === 'checkbox' ? inp.checked : inp.value };
-    try { await db.updateCategory(c.id, patch); Object.assign(c, patch); reindex(); toast('Categoria atualizada'); } catch (e) { toast('Não foi possível salvar.'); }
-  });
+  let newKind = 'dvar';
+  el.querySelectorAll('#cKinds .kind').forEach(b => b.onclick = () => { newKind = b.dataset.kind; el.querySelectorAll('#cKinds .kind').forEach(x => x.setAttribute('aria-checked', x === b)); });
+  const drawCats = () => {
+    const box = $('#catList');
+    box.innerHTML = KINDS.map(k => {
+      const list = S.categories.filter(c => kindOf(c).key === k.key).sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+      if (!list.length) return '';
+      return `<section class="catgroup"><h4>${k.label} <span class="tiny muted">${list.length}</span></h4><ul class="list small">${list.map(c => `<li data-c="${c.id}">
+        <span class="catname">${esc(c.name)}${c.financing ? ' <span class="pill ok" style="font-size:11px;padding:1px 6px">financiamento</span>' : ''}</span>
+        <span class="rowbtn"><select data-kind aria-label="Tipo de ${esc(c.name)}">${KINDS.map(x => `<option value="${x.key}"${x.key === k.key ? ' selected' : ''}>${x.label}</option>`).join('')}</select><button class="chip" type="button" data-ren>Renomear</button></span></li>`).join('')}</ul></section>`;
+    }).join('');
+    box.querySelectorAll('li[data-c]').forEach(li => {
+      const c = S.categories.find(x => x.id === li.dataset.c);
+      li.querySelector('[data-kind]').onchange = async e => {
+        const k = kindByKey(e.target.value), patch = { grp: k.grp, recurring: k.recurring };
+        if (!await confirmInline(e.target, { text: `Mudar "${esc(c.name)}" para ${k.label}? Os meses já lançados são recalculados.`, yes: 'Sim, mudar' })) { e.target.value = kindOf(c).key; return; }
+        try { await db.updateCategory(c.id, patch); Object.assign(c, patch); reindex(); toast('Categoria atualizada'); drawCats(); } catch (err) { toast('Não foi possível salvar.'); e.target.value = kindOf(c).key; }
+      };
+      li.querySelector('[data-ren]').onclick = () => {
+        const span = li.querySelector('.catname');
+        span.innerHTML = `<input type="text" maxlength="60" value="${esc(c.name)}" aria-label="Novo nome" style="min-width:160px"><span class="rowbtn" style="margin-top:6px"><button class="btn primary" type="button" data-ok>Salvar nome</button><button class="btn" type="button" data-no>Cancelar</button></span>`;
+        const inp = span.querySelector('input'); inp.focus(); inp.select();
+        span.querySelector('[data-no]').onclick = drawCats;
+        span.querySelector('[data-ok]').onclick = async e => {
+          const name = inp.value.trim();
+          const msg = checkName(name, 'o nome da categoria', 2, 60) || (name !== c.name && S.categories.some(x => x.id !== c.id && x.name.toLowerCase() === name.toLowerCase()) ? 'Essa categoria já existe.' : '');
+          if (msg) return invalid(inp, msg);
+          if (name === c.name) return drawCats();
+          if (!await confirmInline(e.target, { text: `Renomear "${esc(c.name)}" para "${esc(name)}"? Os lançamentos dessa categoria passam a usar o nome novo.`, yes: 'Sim, renomear' })) return;
+          try {
+            await db.renameCategory(c.id, name);
+            const old = c.name; c.name = name;
+            S.txs.forEach(t => { if (t.category === old) t.category = name; (t.splits || []).forEach(x => { if (x.category === old) x.category = name; }); });
+            S.rules.forEach(r => { if (r.category === old) r.category = name; });
+            reindex(); toast('Categoria renomeada'); drawCats();
+          } catch (err) { toast('Não foi possível renomear. ' + db.errorText(err)); }
+        };
+      };
+    });
+  };
+  drawCats();
   $('#cAdd').onclick = async e => {
     clearInvalid(el);
-    const name = $('#cNew').value.trim();
+    const name = $('#cNew').value.trim(), k = kindByKey(newKind);
     if (!validate([[$('#cNew'), checkName(name, 'o nome da categoria', 2, 60) || (S.categories.some(c => c.name.toLowerCase() === name.toLowerCase()) ? 'Essa categoria já existe.' : '')]])) return;
-    if (!await confirmInline(e.target, { text: `Criar a categoria "${esc(name)}" no grupo "${GROUPS[$('#cNewG').value]}"?`, yes: 'Sim, criar' })) return;
-    try { S.categories.push(await db.addCategory(S.hh.id, { name, grp: $('#cNewG').value })); reindex(); toast('Categoria criada'); render(el); } catch (e) { toast('Não foi possível criar. ' + db.errorText(e)); }
+    if (!await confirmInline(e.target, { text: `Criar a categoria "${esc(name)}" como ${k.label}?`, yes: 'Sim, criar' })) return;
+    try { S.categories.push(await db.addCategory(S.hh.id, { name, grp: k.grp, recurring: k.recurring })); reindex(); toast('Categoria criada'); $('#cNew').value = ''; drawCats(); } catch (err) { toast('Não foi possível criar. ' + db.errorText(err)); }
   };
 
   $('#factsSave').onclick = () => save({ facts: $('#facts').value.split('\n').map(s => s.trim()).filter(Boolean) }, 'Contexto salvo');
 
   // data
-  const status = (kind, text) => { const p = $('#bkStatus'); p.hidden = false; p.className = 'status ' + kind; p.textContent = text; };
-  const backup = async () => {
+  const statusBk = (kind, text) => { const p = $('#bkStatus'); p.hidden = false; p.className = 'status ' + kind; p.textContent = text; };
+  const backup = async (status = statusBk) => {
     status('busy', 'Preparando o backup...'); $('#dExport').disabled = true;
     try {
       const b = await db.exportBackup(S.hh.id, S.hh);
@@ -182,26 +221,26 @@ export function render(el) {
     } catch (e) { status('err', 'Não foi possível gerar o backup. Verifique a internet e tente de novo.'); return false; }
     finally { $('#dExport').disabled = false; }
   };
-  $('#dExport').onclick = backup;
+  $('#dExport').onclick = () => backup();
   $('#dImport').onchange = async e => {
     const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
     let b;
     try { b = JSON.parse(await f.text()); if (b.version !== 1 || !Array.isArray(b.transactions)) throw new Error(); }
-    catch (err) { status('err', 'Este arquivo não é um backup do app.'); return; }
+    catch (err) { statusBk('err', 'Este arquivo não é um backup do app.'); return; }
     // Months that already have data are skipped, so importing the same backup twice never duplicates.
     const have = new Set(S.txs.map(t => t.source + '|' + t.month));
     const skip = [...new Set(b.transactions.filter(t => have.has(t.source + '|' + t.month)).map(t => t.month))].sort();
     const toAdd = b.transactions.filter(t => !have.has(t.source + '|' + t.month));
     const anchor = $('#dExport');
     const text = `Importar ${toAdd.length.toLocaleString('pt-BR')} lançamentos para a ${esc(S.hh.name)}?` + (skip.length ? ` Os meses ${skip.map(m => m.split('-').reverse().join('/')).join(', ')} já têm dados e serão pulados para não duplicar.` : '') + (b.household?.settings ? ' As metas e o patrimônio do backup substituem os atuais.' : '');
-    if (!await confirmInline(anchor, { text, yes: 'Sim, importar' })) { status('ok', 'Importação cancelada.'); return; }
+    if (!await confirmInline(anchor, { text, yes: 'Sim, importar' })) { statusBk('ok', 'Importação cancelada.'); return; }
     b = { ...b, transactions: toAdd };
-    status('busy', `Importando ${b.transactions.length.toLocaleString('pt-BR')} lançamentos...`);
+    statusBk('busy', `Importando ${b.transactions.length.toLocaleString('pt-BR')} lançamentos...`);
     try {
-      await db.importBackup(S.hh.id, b, t => status('busy', 'Importando... ' + t));
+      await db.importBackup(S.hh.id, b, t => statusBk('busy', 'Importando... ' + t));
       await S.reload(true); S.render();
-      status('ok', `Pronto: ${b.transactions.length.toLocaleString('pt-BR')} lançamentos importados.`); toast('Backup importado');
-    } catch (err) { status('err', 'A importação parou no meio: ' + db.errorText(err) + ' Tente de novo: os meses que já entraram serão pulados.'); }
+      statusBk('ok', `Pronto: ${b.transactions.length.toLocaleString('pt-BR')} lançamentos importados.`); toast('Backup importado');
+    } catch (err) { statusBk('err', 'A importação parou no meio: ' + db.errorText(err) + ' Tente de novo: os meses que já entraram serão pulados.'); }
   };
 
   // account: every destructive action asks once, in the page, with a backup option
@@ -209,11 +248,14 @@ export function render(el) {
   const ask = ({ title, text, label, run }) => {
     const box = $('#confirmBox');
     box.innerHTML = `<div class="confirm"><h3>${title}</h3><p class="small">${text}</p>
-      <div class="rowbtn" style="margin-top:12px"><button class="btn" type="button" data-b>Baixar backup antes</button></div>
+      <div class="bkfirst"><p class="small"><strong>Antes, baixe uma cópia dos seus dados.</strong> Depois de excluir, não dá para recuperar.</p>
+      <div class="rowbtn" style="margin-top:8px"><button class="btn primary" type="button" data-b>Baixar backup agora</button></div>
+      <p class="status" role="status" data-bks hidden></p></div>
       <div class="rowbtn" style="margin-top:10px"><button class="btn danger-fill" type="button" data-y>${label}</button><button class="btn" type="button" data-n>Cancelar</button></div>
       <p class="status" role="status" hidden></p></div>`;
     const st = box.querySelector('.status'), yes = box.querySelector('[data-y]');
-    box.querySelector('[data-b]').onclick = backup;
+    const bks = box.querySelector('[data-bks]');
+    box.querySelector('[data-b]').onclick = () => backup((k, t) => { bks.hidden = false; bks.className = 'status ' + k; bks.textContent = t; });
     box.querySelector('[data-n]').onclick = () => { box.innerHTML = ''; };
     yes.onclick = async () => {
       yes.disabled = true; st.hidden = false; st.className = 'status busy'; st.textContent = 'Processando...';

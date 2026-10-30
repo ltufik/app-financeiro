@@ -30,7 +30,7 @@ function showSignedOut() {
 }
 // After entering the app in the browser: one more invitation to install (iPhone keeps a separate login).
 const maybeAskInstall = () => { if (shouldAskInstall()) askInstall({ note: isIOS() ? 'Depois de instalar, abra pelo ícone e entre com o mesmo e-mail e senha.' : '' }); };
-$('#wHero').innerHTML = photo('family', { w: 1100, ratio: '3 / 2', fallback: 'hero', cls: 'land-photo' });
+$('#wHero').innerHTML = photo('lost', { w: 1100, ratio: '3 / 2', fallback: 'hero', cls: 'land-photo' });
 $('#wSignup').onclick = () => { show('auth'); setMode('signup'); $('#aName').focus(); };
 $('#wLogin').onclick = $('#wLogin2').onclick = () => { show('auth'); setMode('login'); $('#aEmail').focus(); };
 $('#aBack').onclick = () => show('welcome');
