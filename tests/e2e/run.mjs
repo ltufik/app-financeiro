@@ -268,6 +268,7 @@ if (backup) {
   await page.click('.cfm [data-y]'); await page.waitForSelector('#clReopen');
   ok('mês fechado fica registrado', await page.evaluate(() => !!window.__db.households[0].settings.closed?.['2026-09']) && (await txt('#v-fechar')).includes('Mês fechado em'));
   ok('mês fechado ganha ✓ no seletor', (await page.$eval('#monthSel option[value="2026-09"]', o => o.textContent)).includes('✓'));
+  ok('no celular o mês aparece curto, sem cortar o ano', (await page.$eval('#monthSel option[value="2026-09"]', o => o.textContent)) === 'set. 2026 ✓');
   await page.click('#v-fechar [data-back]'); await page.waitForTimeout(200);
   ok('depois de fechar, o início chama o mês anterior que falta', !(await txt('#closeCard')).includes('setembro de 2026'));
   await page.selectOption('#monthSel', 'ano:2026');

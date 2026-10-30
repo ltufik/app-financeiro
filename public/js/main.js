@@ -1,7 +1,7 @@
 // Boot, sign-in, family selection and tab routing.
 import * as db from './db.js';
 import { S, setFamily, reindex, monthKeys, latestClosed } from './state.js';
-import { mLong, thisMonth } from './lib/format.js';
+import { mLong, mShort, thisMonth } from './lib/format.js';
 import { $, $$, toast, validate, clearInvalid } from './ui.js';
 import { checkEmail, checkPassword, checkName } from './lib/validate.js';
 import * as resumo from './views/resumo.js';
@@ -168,13 +168,17 @@ $('#fbBtn').hidden = !TEST_PHASE; $('#fbBtn').onclick = () => S.go('ajustes', nu
 $('#privBtn').addEventListener('click', () => track('privacidade'));
 initPrivacy($('#privBtn'), () => { $$('.view[data-built]').forEach(v => { delete v.dataset.built; }); S.render(); });
 $('#monthSel').onchange = e => { S.m = e.target.value; if (S.tab === 'fechar' && !S.m.startsWith('ano:')) S.closeMonth = S.m; S.render(); };
+const narrow = window.matchMedia('(max-width: 440px)');
+narrow.addEventListener?.('change', () => { if (S.hh) renderMonthSel(); });
 function renderMonthSel() {
   const ks = monthKeys(), years = [...new Set(ks.map(k => k.slice(0, 4)))].sort().reverse();
   if (!S.m || (!S.m.startsWith('ano:') && !ks.includes(S.m))) S.m = latestClosed() || ks[ks.length - 1] || thisMonth();
   const closed = S.hh?.settings?.closed || {};
-  const opts = [...ks].reverse().map(k => `<option value="${k}"${k === S.m ? ' selected' : ''}>${mLong(k)}${closed[k] ? ' ✓' : ''}</option>`);
-  if (!ks.includes(S.m) && !S.m.startsWith('ano:')) opts.unshift(`<option value="${S.m}" selected>${mLong(S.m)}</option>`);
-  years.forEach(y => opts.push(`<option value="ano:${y}"${S.m === 'ano:' + y ? ' selected' : ''}>Ano de ${y}</option>`));
+  // Phones: short label ("out. 2026") so the year is not cut off.
+  const label = narrow.matches ? k => mShort(k) + '. ' + k.slice(0, 4) : mLong;
+  const opts = [...ks].reverse().map(k => `<option value="${k}"${k === S.m ? ' selected' : ''}>${label(k)}${closed[k] ? ' ✓' : ''}</option>`);
+  if (!ks.includes(S.m) && !S.m.startsWith('ano:')) opts.unshift(`<option value="${S.m}" selected>${label(S.m)}</option>`);
+  years.forEach(y => opts.push(`<option value="ano:${y}"${S.m === 'ano:' + y ? ' selected' : ''}>${narrow.matches ? '' : 'Ano de '}${y}${narrow.matches ? ' inteiro' : ''}</option>`));
   $('#monthSel').innerHTML = opts.join('');
 }
 
