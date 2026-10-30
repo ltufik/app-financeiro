@@ -209,6 +209,10 @@ if (backup) {
   await page.selectOption('#monthSel', '2026-09');
   const ins = await txt('#insights');
   ok('início mostra insights do mês', (await page.$$('#insights .insight')).length >= 1, ins.slice(0, 200));
+  ok('início mostra só 2 avisos, com "ver mais"', (await page.$$('#insights .insight')).length === 2 && await page.isVisible('#insMore'));
+  ok('régua fica compacta depois de 40%', await page.isVisible('#stepsBox.regua-mini') && (await page.$$('#stepsBox .steps li')).length === 0);
+  ok('para onde foi mostra as 5 maiores', (await page.$$eval('#catBars .catbar', b => b.filter(x => !x.hidden).length)) === 5 && await page.isVisible('#catMore'));
+  ok('detalhes (poupança, patrimônio, meta) ficam recolhidos', await page.evaluate(() => !document.querySelector('#homeMore').open));
   await shot('03b-insights');
   // guided month closing
   await page.waitForSelector('#goClose');

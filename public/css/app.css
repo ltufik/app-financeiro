@@ -363,3 +363,13 @@ a.btn,a.chip{text-decoration:none;color:inherit}
 .daily span{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px}
 .daily i{display:block;width:100%;min-height:2px;background:var(--accent);border-radius:3px 3px 0 0}
 .daily b{font-weight:500;color:var(--muted)}
+/* ---- home: compact sections ---- */
+.regua-mini .regua-h > div{flex:1;min-width:0}
+.regua-mini h3{font-size:15px;margin:0}
+.regua-mini .regua-n{font-size:22px}
+details.more{border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+details.more > summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.more > summary::-webkit-details-marker{display:none}
+details.more > summary::after{content:"";width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;flex:none}
+details.more[open] > summary::after{transform:rotate(-135deg)}
+details.more > .stack{padding:0 10px 10px}

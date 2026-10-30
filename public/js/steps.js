@@ -53,12 +53,22 @@ function items() {
 export const completeness = () => { const l = items(); return Math.round(l.reduce((a, i) => a + (i.done || i.skipped ? i.w : 0), 0)); };
 export function stepsComplete() { return completeness() >= 100; }
 
-let showAll = false;
+let showAll = false, expanded = false;
+export const expandSteps = () => { expanded = true; };
 export function renderSteps(box) {
   const list = items(), pctDone = completeness();
   if (pctDone >= 100) { box.hidden = true; return; }
   const todo = list.filter(i => !i.done && !i.skipped), shown = showAll ? list : todo.slice(0, 3);
   box.hidden = false;
+  // Once the basics are in, the ruler shrinks to one line on the home screen.
+  if (pctDone >= 40 && !expanded) {
+    box.classList.add('regua-mini');
+    box.innerHTML = `<div class="regua-h"><div><h3>Use o app por completo</h3><div class="progress regua" role="progressbar" aria-valuenow="${pctDone}" aria-valuemin="0" aria-valuemax="100" aria-label="Preenchimento"><span style="width:${pctDone}%"></span></div></div><span class="regua-n num">${pctDone}%</span></div>
+      <button class="linkbtn small" type="button" data-open>Ver o que falta (${todo.length})</button>`;
+    box.querySelector('[data-open]').onclick = () => { expanded = true; renderSteps(box); };
+    return;
+  }
+  box.classList.remove('regua-mini');
   box.innerHTML = `<div class="regua-h"><div><h3>Use o app por completo</h3><p class="tiny muted">${todo.length} ${todo.length > 1 ? 'passos faltam' : 'passo falta'} para ver tudo o que o app pode mostrar.</p></div><span class="regua-n num">${pctDone}%</span></div>
     <div class="progress regua" role="progressbar" aria-valuenow="${pctDone}" aria-valuemin="0" aria-valuemax="100" aria-label="Preenchimento"><span style="width:${pctDone}%"></span></div>
     <ul class="steps">${shown.map(it => { const k = list.indexOf(it); return `<li class="${it.done ? 'done' : it.skipped ? 'done skipped' : ''}"><span class="ck" aria-hidden="true">${it.done || it.skipped ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span>
@@ -66,7 +76,7 @@ export function renderSteps(box) {
       ${!it.done && !it.skipped && it.skip ? `<br><button class="linkbtn tiny" type="button" data-skip="${k}">${esc(it.skip)}</button>` : ''}${it.skipped ? `<br><button class="linkbtn tiny" type="button" data-unskip="${k}">Desfazer</button>` : ''}</span>
       ${it.done || it.skipped ? '' : `<button class="chip" type="button" data-k="${k}">${it.btn}</button>`}</li>
       ${it.install && !it.done ? `<li hidden id="installHelp" class="help" style="display:block">${installHelpHTML()}<button class="chip" type="button" data-mark style="margin-top:8px">Já instalei</button></li>` : ''}`; }).join('')}</ul>
-    <button class="linkbtn small" type="button" data-all>${showAll ? 'Mostrar só o que falta' : 'Ver todos os ' + list.length + ' passos'}</button>`;
+    <div class="rowbtn"><button class="linkbtn small" type="button" data-all>${showAll ? 'Mostrar só o que falta' : 'Ver todos os ' + list.length + ' passos'}</button>${pctDone >= 40 ? '<button class="linkbtn small" type="button" data-close>Recolher</button>' : ''}</div>`;
   box.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
     const it = list[+b.dataset.k];
     if (it.install) { const h = box.querySelector('#installHelp'); if (h) h.hidden = !h.hidden; return; }
@@ -79,6 +89,7 @@ export function renderSteps(box) {
   box.querySelectorAll('[data-skip]').forEach(b => b.onclick = () => setSkip(list[+b.dataset.skip].key, true));
   box.querySelectorAll('[data-unskip]').forEach(b => b.onclick = () => setSkip(list[+b.dataset.unskip].key, false));
   box.querySelector('[data-all]').onclick = () => { showAll = !showAll; renderSteps(box); };
+  const cl = box.querySelector('[data-close]'); if (cl) cl.onclick = () => { expanded = false; showAll = false; renderSteps(box); };
   const mark = box.querySelector('[data-mark]'); if (mark) mark.onclick = () => { lsSet('fin.installed', '1'); renderSteps(box); };
   wireInstall(box);
 }

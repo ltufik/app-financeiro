@@ -9,7 +9,8 @@ import { brl, brl0, pct, esc, mLong, mShort } from '../lib/format.js';
 import { meter, pill } from '../ui.js';
 import { renderSteps } from '../steps.js';
 
-let goalPreset = 0;
+let goalPreset = 0, showAllInsights = false;
+const moreOpen = () => { try { return localStorage.getItem('fin.home.more') === '1'; } catch (e) { return false; } };
 const first = () => (S.user?.user_metadata?.display_name || '').split(' ')[0] || 'você';
 
 export function render(el) {
@@ -39,6 +40,12 @@ export function render(el) {
   <div id="closeCard"></div>
   <div id="insights" class="insights"></div>
   <div class="panel" id="stepsBox" hidden></div>
+  <div class="panel">
+    <h3>Para onde foi o dinheiro${yr ? ' no período' : ''}</h3>
+    <p class="muted small">Despesas por categoria, conta e cartão juntos.</p>
+    <div style="margin-top:6px" id="catBars">${top.map(([c, v], i) => `<div class="catbar"${i >= 5 ? ' hidden data-more' : ''}><span class="small">${esc(c)}</span><span class="small" style="font-weight:600">${brl0(v)}</span><span class="b"><span style="width:${v / mx * 100}%"></span></span></div>`).join('') || '<p class="small muted">Sem gastos ainda.</p>'}</div>
+    ${top.length > 5 ? `<button class="linkbtn small" type="button" id="catMore">Ver todas as ${top.length} categorias</button>` : ''}
+  </div>
   <div class="grid2">
     <div class="panel">
       <h3>Cartão</h3>
@@ -55,24 +62,26 @@ export function render(el) {
       <p class="tiny muted" style="margin-top:6px">Parcelas ${brl0(nf.parcelas)} · recorrentes ${brl0(nf.recorrentes)}${nf.manuais ? ' · lançados ' + brl0(nf.manuais) : ''}${G.cardMonthly ? '. Espaço até a meta: ' + brl0(G.cardMonthly - nf.total) : ''}.</p>` : '<p class="muted small">Aparece quando houver uma fatura importada.</p>'}
     </div>
   </div>
-  <div class="panel">
-    <h3>Taxa de poupança mês a mês</h3>
-    <p class="muted small">Sobra ÷ receitas fixas.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
-    <svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg>
-  </div>
-  <div class="panel">
-    <h3>Para onde foi o dinheiro${yr ? ' no período' : ''}</h3>
-    <p class="muted small">Despesas por categoria, conta e cartão juntos.</p>
-    <div style="margin-top:6px">${top.slice(0, 12).map(([c, v]) => `<div class="catbar"><span class="small">${esc(c)}</span><span class="small" style="font-weight:600">${brl0(v)}</span><span class="b"><span style="width:${v / mx * 100}%"></span></span></div>`).join('') || '<p class="small muted">Sem gastos ainda.</p>'}
-    ${top.length > 12 ? `<p class="tiny muted" style="margin-top:6px">Outras ${top.length - 12} categorias somam ${brl0(top.slice(12).reduce((s, e) => s + e[1], 0))}.</p>` : ''}</div>
-  </div>
-  <div class="grid2">
-    <div class="panel">
-      <h3>Patrimônio</h3>
-      ${P0.rows.length ? `<div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(P0.total)}</div><ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em Patrimônio e dívidas.</p>'}
+  <details class="more" id="homeMore"${moreOpen() ? ' open' : ''}>
+    <summary><span><strong>Mais detalhes</strong><br><span class="tiny muted">Poupança mês a mês, patrimônio e meta</span></span></summary>
+    <div class="stack">
+      <div class="panel">
+        <h3>Taxa de poupança mês a mês</h3>
+        <p class="muted small">Sobra ÷ receitas fixas.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
+        <svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h3>Patrimônio</h3>
+          ${P0.rows.length ? `<div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(P0.total)}</div><ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em Patrimônio e dívidas.</p>'}
+        </div>
+        <div class="panel" id="goalBox"></div>
+      </div>
     </div>
-    <div class="panel" id="goalBox"></div>
-  </div>`;
+  </details>`;
+  const cm = el.querySelector('#catMore');
+  if (cm) cm.onclick = () => { const hid = el.querySelectorAll('#catBars [data-more]'); const show = [...hid].some(x => x.hidden); hid.forEach(x => { x.hidden = !show; }); cm.textContent = show ? 'Mostrar só as 5 maiores' : `Ver todas as ${top.length} categorias`; };
+  el.querySelector('#homeMore').ontoggle = e => { try { localStorage.setItem('fin.home.more', e.target.open ? '1' : '0'); } catch (x) { /* storage blocked */ } };
   renderGoal(el.querySelector('#goalBox'), G, pr);
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
@@ -91,7 +100,7 @@ function renderInsights(box) {
     pending: k => S.txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
     goals: G, nextFatura: nextFatura(), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
-  }).filter(x => x.id !== 'close').slice(0, 4);
+  }).filter(x => x.id !== 'close');
   const cc = document.getElementById('closeCard'), m2c = monthToClose(monthKeys(), settings().closed || {}, todayISO());
   if (cc) {
     cc.innerHTML = m2c ? `<article class="closecard"><div><span class="tiny">Hora de fechar o mês</span><h3>${esc(mLong(m2c))}</h3><p class="small">Confira se falta algo e veja a retrospectiva. Leva poucos minutos.</p></div><button class="btn primary" type="button" id="goClose">Fechar ${esc(mLong(m2c).split(' ')[0])}</button></article>` : '';
@@ -99,8 +108,10 @@ function renderInsights(box) {
   }
   if (!list.length) { box.hidden = true; return; }
   box.hidden = false;
-  box.innerHTML = list.map(x => `<article class="insight ${x.tone}"><span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
+  const shown = showAllInsights ? list : list.slice(0, 2);
+  box.innerHTML = shown.map(x => `<article class="insight ${x.tone}"><span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
     <div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p>${x.action ? `<button class="linkbtn small" type="button" data-go='${esc(JSON.stringify(x.action.go))}'>${esc(x.action.label)} →</button>` : ''}</div></article>`).join('');
+  if (list.length > 2) { box.insertAdjacentHTML('beforeend', `<button class="linkbtn small" type="button" id="insMore">${showAllInsights ? 'Mostrar menos avisos' : 'Ver mais ' + (list.length - 2) + (list.length - 2 > 1 ? ' avisos' : ' aviso')}</button>`); box.querySelector('#insMore').onclick = () => { showAllInsights = !showAllInsights; renderInsights(box); }; }
   box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
 }
 

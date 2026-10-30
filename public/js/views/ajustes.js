@@ -4,7 +4,7 @@ import { KINDS, kindOf, kindByKey } from '../lib/calc.js';
 import { esc, todayISO } from '../lib/format.js';
 import { $, toast, validate, invalid, clearInvalid, confirmInline } from '../ui.js';
 import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
-import { installHelpHTML, wireInstall } from '../steps.js';
+import { installHelpHTML, wireInstall, expandSteps } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
 import { renderMetrics } from '../metrics.js';
@@ -114,7 +114,7 @@ export function render(el) {
     if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
     el.querySelectorAll('[data-theme-opt]').forEach(x => { x.setAttribute('aria-pressed', x === b); x.setAttribute('aria-checked', x === b); });
   });
-  $('#hSteps').onclick = () => S.go('resumo', '#stepsBox');
+  $('#hSteps').onclick = () => { expandSteps(); S.go('resumo', '#stepsBox'); };
   wireInstall(el);
 
   // family
