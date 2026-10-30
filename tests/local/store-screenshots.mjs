@@ -10,6 +10,7 @@ const MOCK = fs.readFileSync(path.join(HERE, '../e2e/mock-supabase.js'), 'utf8')
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Safari/537.36' });
+await page.addInitScript(() => { window.__noMsgs = true; });
 await page.route('https://app.test/**', r => {
   const u = new URL(r.request().url());
   if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon' } });
@@ -19,7 +20,8 @@ await page.route('https://app.test/**', r => {
   r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
 });
 await page.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
-await page.route(/cdnjs|fonts\.|pexels/, r => r.fulfill({ status: 404, body: '' }));
+if (process.argv.includes('--online')) await page.route(/cdnjs/, r => r.fulfill({ status: 404, body: '' }));
+else await page.route(/cdnjs|fonts\.|pexels/, r => r.fulfill({ status: 404, body: '' }));
 await page.goto('https://app.test/');
 await page.click('#wSignup');
 await page.fill('#aName', 'Ana Souza'); await page.fill('#aEmail', 'ana@exemplo.com'); await page.fill('#aPass', 'senha-forte-123'); await page.check('#aConsent'); await page.click('#aGo');
@@ -32,7 +34,7 @@ await page.click('#menuBtn'); await page.click('#drawer [data-sec="backup"]');
 await page.setInputFiles('#dImport', arg('demo')); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => /Pronto/.test(document.querySelector('#bkStatus')?.textContent || ''));
 await page.evaluate(() => { document.querySelector('#toast').hidden = true; document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()); });
-const out = arg('out'), snap = async n => { await page.evaluate(() => { window.scrollTo(0, 0); const t = document.querySelector('#toast'); if (t) t.hidden = true; document.querySelectorAll('.isheet, .isheet-bg').forEach(x => x.remove()); }); await page.waitForTimeout(300); await page.screenshot({ path: path.join(out, n + '.png') }); };
+const out = arg('out'), snap = async n => { await page.evaluate(() => { window.scrollTo(0, 0); const t = document.querySelector('#toast'); if (t) t.hidden = true; document.querySelectorAll('.isheet, .isheet-bg').forEach(x => x.remove()); }); await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; setTimeout(r, 8000); }))); }); await page.waitForTimeout(300); await page.screenshot({ path: path.join(out, n + '.png') }); };
 await page.evaluate(() => document.querySelectorAll('[class*=isheet]').forEach(x => x.remove()));
 await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09'); await snap('inicio');
 await page.click('[data-tab=lancar]'); await snap('lancar');

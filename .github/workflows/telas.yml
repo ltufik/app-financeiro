@@ -1,0 +1,40 @@
+# Refreshes the app screens used in the product console (Fluxos) and in the install prompt,
+# with the real photos and fonts and a fictional family (Família Souza). Runs on every change
+# to the app's screens, so the console always shows the current version.
+name: Telas do app
+on:
+  push:
+    branches: [main]
+    paths: ['public/**', 'tests/local/flow-screens.mjs', 'tests/local/store-screenshots.mjs', 'tests/fixtures/**', '.github/workflows/telas.yml', '!public/flows/**', '!public/screenshots/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: telas
+  cancel-in-progress: true
+jobs:
+  telas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ferramentas (só para tirar as fotos; o app não usa)
+        run: |
+          mkdir -p /tmp/tools && cd /tmp/tools && npm init -y >/dev/null
+          npm i playwright@1.56.0 pdfjs-dist@6.2.108 >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Telas dos fluxos
+        run: node tests/local/flow-screens.mjs --online --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --demo tests/fixtures/familia-souza.json --pdf tests/fixtures/fatura-ficticia.pdf --out public/flows
+      - name: Telas do convite para instalar
+        run: node tests/local/store-screenshots.mjs --online --playwright /tmp/tools/node_modules/playwright/index.mjs --demo tests/fixtures/familia-souza.json --out public/screenshots
+      - name: Salvar se mudou
+        run: |
+          git config user.name "telas-bot"
+          git config user.email "telas-bot@users.noreply.github.com"
+          git add public/flows public/screenshots
+          if git diff --cached --quiet; then echo "Nada mudou"; exit 0; fi
+          git commit -m "Telas do app atualizadas (fotos e fontes reais)"
+          git pull --rebase origin main && git push

@@ -43,13 +43,15 @@ await page.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, con
 await page.route('https://cdnjs.cloudflare.com/**/pdf.min.js', r => r.fulfill({ contentType: 'text/javascript', body: `Promise.all([import('https://pdfjs.test/pdf.mjs'),import('https://pdfjs.test/pdf.worker.mjs')]).then(([m,w])=>{globalThis.pdfjsWorker=w;window.pdfjsLib=m;});` }));
 await page.route('https://cdnjs.cloudflare.com/**/pdf.worker.min.js', r => r.fulfill({ contentType: 'text/javascript', body: '' }));
 await page.route('https://pdfjs.test/*', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(PDFJS, new URL(r.request().url()).pathname.slice(1))) }));
-await page.route(/fonts\.|pexels/, r => r.fulfill({ status: 404, body: '' }));
+// --online (GitHub Actions): real photos and fonts; offline: the SVG fallbacks.
+if (!process.argv.includes('--online')) await page.route(/fonts\.|pexels/, r => r.fulfill({ status: 404, body: '' }));
 
 const done = [], failed = [];
 const clean = () => page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('.isheet, .isheet-bg').forEach(x => x.remove()); const t = document.querySelector('#toast'); if (t && !window.__keepToast) t.hidden = true; });
 const snap = async (id, { keepToast = false, scrollTo } = {}) => {
   await page.evaluate(k => { window.__keepToast = k; }, keepToast); await clean();
   if (scrollTo) await page.evaluate(s => { const e = document.querySelector(s); if (e) window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 70); }, scrollTo);
+  await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; setTimeout(r, 8000); }))); });
   await page.waitForTimeout(350); await page.screenshot({ path: path.join(out, id + '.jpg'), type: 'jpeg', quality: 72 }); done.push(id);
 };
 const step = async (id, fn, opts) => { try { await fn(); await snap(id, opts); } catch (e) { failed.push(id + ': ' + e.message.split('\n')[0]); } };
