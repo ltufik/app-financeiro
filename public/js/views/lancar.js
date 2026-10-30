@@ -174,6 +174,10 @@ export async function handleShared() {
   } catch (e) { /* no cache: nothing shared */ }
   if (!meta || (!file && !meta.text)) { toast('Não recebi nada do compartilhamento. Tente de novo pelo botão Compartilhar do banco.', 'info'); return; }
   if (!file) { openMode('falar', true); $('#qText').value = meta.text.slice(0, 500); return interpret(); }
+  // Some banks share with a generic type: look at the first bytes to know if it is a PDF or an image.
+  const head = new Uint8Array(await file.slice(0, 12).arrayBuffer()), sig = String.fromCharCode(...head);
+  const sniff = sig.startsWith('%PDF') ? 'application/pdf' : head[0] === 0xFF && head[1] === 0xD8 ? 'image/jpeg' : sig.slice(1, 4) === 'PNG' ? 'image/png' : sig.slice(8, 12) === 'WEBP' ? 'image/webp' : '';
+  if (sniff && sniff !== file.type) file = new File([file], file.name || 'comprovante', { type: sniff });
   const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
   if (isPdf) {
     // Statements and bills have several pages or a known layout; a receipt is a single short page.

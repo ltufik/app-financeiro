@@ -119,7 +119,9 @@
           "accept": [
             "image/*",
             "application/pdf",
-            ".pdf"
+            ".pdf",
+            "application/octet-stream",
+            "*/*"
           ]
         }
       ]

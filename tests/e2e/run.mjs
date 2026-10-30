@@ -625,7 +625,7 @@ await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver 
 await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
 const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
-ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v35', JSON.stringify(fbRow));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v36', JSON.stringify(fbRow));
 ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
 await shot('11-opiniao');
 await sec('duvidas'); await page.waitForSelector('#fqList details');
@@ -688,6 +688,9 @@ const used = await page.evaluate(() => window.__db.usage);
   const prev = await page.evaluate(() => document.querySelector('#qPreview').textContent + [...document.querySelectorAll('#qPreview input, #qPreview select')].map(i => i.value).join(' '));
   ok('comprovante de Pix compartilhado vira lançamento na conta', /João Encanador/.test(prev) && /180/.test(prev) && (await txt('#qStatus')).includes('comprovante'), prev.slice(0, 160));
   if (shots) await page.screenshot({ path: path.join(shots, '17-comprovante.png'), fullPage: true });
+  await page.evaluate(async () => { const png = await (await fetch('/icons/icon-192.png')).blob(); const c = await caches.open('share'); await c.put('/shared/meta', new Response(JSON.stringify({ text: '', name: 'arquivo', type: 'application/octet-stream' }))); await c.put('/shared/file', new Response(png, { headers: { 'content-type': 'application/octet-stream' } })); });
+  await page.goto('https://app.test/?acao=compartilhar'); await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ') + document.querySelector('#qPreview')?.textContent), null, { timeout: 15000 }).catch(() => {});
+  ok('comprovante em formato genérico (como o do Santander) também é lido', /João Encanador/.test(await page.evaluate(() => [...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ') + document.querySelector('#qPreview').textContent)));
   ok('nada sobra guardado depois de ler', await page.evaluate(async () => !(await (await caches.open('share')).match('/shared/file'))));
   await noCoach(); await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
   await page.click('[data-tab=resumo]');
@@ -703,7 +706,7 @@ const used = await page.evaluate(() => window.__db.usage);
   ok('navegação registrada: telas, tempo e caminho', navRec.screens.some(x => x.s === 'lancar' && x.t >= 1) && navRec.flows.some(f => f.f === 'lancar' && f.t === 'inicio'), JSON.stringify(navRec.screens).slice(0, 160));
   ok('toques registrados com o nome do botão, sem valores', navRec.taps.length > 0 && navRec.targets.some(t => /Falar ou escrever/.test(t.t)) && navRec.targets.every(t => !/\d/.test(t.t)), JSON.stringify(navRec.targets).slice(0, 200));
   const errRec = await page.evaluate(() => window.__db.errors.at(-1));
-  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v35', JSON.stringify(errRec));
+  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v36', JSON.stringify(errRec));
 }
 { // Signing in again: whoever already has a name and a family goes straight to Início.
   await page.click('[data-tab=extrato]'); await page.waitForTimeout(200);

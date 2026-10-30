@@ -30,4 +30,5 @@ export const RELEASES = [
     'Android: no app do banco, toque em Compartilhar comprovante e escolha o Pra Onde Foi.',
     'Às 21h, se você não lançou nada no dia, o app lembra. Dá para desligar em Notificações.',
   ] } },
+  { id: 'r36', version: 'v36', at: '2026-10-31T00:00:00Z', backlog: [], semNovidade: 'Ajuste técnico: o app passa a aparecer no Compartilhar de bancos que mandam o comprovante em formato genérico (ex.: Santander). A novidade do compartilhamento já saiu na v35.' },
 ];
