@@ -1,5 +1,6 @@
 // Gráficos: charts the family builds themselves (type, what to show, period), saved in the household settings.
 import { S, settings, monthKeys, calcMonth, txsOf } from '../state.js';
+import { track } from '../usage.js';
 import { byCategory } from '../lib/calc.js';
 import { esc, mLong } from '../lib/format.js';
 import * as db from '../db.js';
@@ -59,7 +60,7 @@ export function render(el) {
 
 async function store(next, msg, el) {
   const st = { ...settings(), charts: next };
-  try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; editing = null; toast(msg); render(el); }
+  try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; editing = null; track('graficos.salvar'); toast(msg); render(el); }
   catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); }
 }
 

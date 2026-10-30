@@ -1,9 +1,12 @@
 // Product console data (/admin): backlog, pricing and product design, for ADMIN_EMAILS only.
 // GET /api/admin?key=backlog  ->  {key, data, updated_at}     PUT /api/admin {key, data}
+// GET /api/admin?view=usage|feedback  ->  usage per person/feature, testers' feedback
+// PATCH /api/admin {feedback: id, status?, note?}
 // Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS.
 import { cleanUrl } from './config.js';
 
-const KEYS = ['backlog', 'pricing', 'canvas', 'notes'];
+const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs'];
+const STATUS = ['novo', 'visto', 'backlog', 'resolvido'];
 const MAX = 400_000;
 
 export default async function handler(req, res) {
@@ -18,6 +21,20 @@ export default async function handler(req, res) {
   if (!admins.includes(String(user.email || '').toLowerCase())) return res.status(403).json({ error: 'not_admin' });
   const H = { apikey: SERVICE, 'content-type': 'application/json', ...(SERVICE.startsWith('sb_') ? {} : { authorization: `Bearer ${SERVICE}` }) };
   try {
+    const rpc = async (fn, args = {}) => { const r = await fetch(`${URL_}/rest/v1/rpc/${fn}`, { method: 'POST', headers: H, body: JSON.stringify(args) }); if (!r.ok) throw new Error('db'); return r.json(); };
+    if (req.method === 'GET' && req.query?.view === 'usage') return res.status(200).json(await rpc('product_usage', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
+    if (req.method === 'GET' && req.query?.view === 'feedback') return res.status(200).json(await rpc('product_feedback'));
+    if (req.method === 'PATCH') {
+      const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+      const id = Number(b.feedback), patch = {};
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'bad_request' });
+      if (b.status != null) { if (!STATUS.includes(b.status)) return res.status(400).json({ error: 'bad_status' }); patch.status = b.status; }
+      if (b.note != null) patch.note = String(b.note).slice(0, 2000);
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'bad_request' });
+      const r = await fetch(`${URL_}/rest/v1/feedback?id=eq.${id}`, { method: 'PATCH', headers: H, body: JSON.stringify(patch) });
+      if (!r.ok) return res.status(502).json({ error: 'db' });
+      return res.status(200).json({ ok: true });
+    }
     if (req.method === 'GET') {
       const key = String(req.query?.key || '');
       if (!KEYS.includes(key)) return res.status(400).json({ error: 'bad_key' });

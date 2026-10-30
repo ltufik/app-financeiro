@@ -154,3 +154,34 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 \echo (o erro a seguir é esperado: pessoa logada não lê a central do produto)
 select * from product_board;
 reset role;
+
+-- Opiniões, dúvidas e uso por funcionalidade
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+\set ON_ERROR_STOP on
+select public.send_feedback(:'hr', 'erro', 'O botão de salvar não respondeu', null, 'lancar', 'Android', 'v25') as fb1 \gset
+select public.send_feedback(:'hr', 'duvida', 'O que é a meta?', 'São os combinados da família.', 'ajustes', 'iPhone', 'v25') as fb2 \gset
+select public.feedback_helpful(:fb2, true);
+select public.track(:'hr', array['lancar.voz', 'lancar.voz', 'inicio', 'Inválido!', null]);
+select count(*) as mine from feedback \gset
+\echo opiniões que B vê (as suas): :mine
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select count(*) as others from feedback \gset
+\echo opiniões de B que A vê: :others
+\set ON_ERROR_STOP off
+\echo (os erros a seguir são esperados: tipo inválido, texto curto, ninguém logado lê o uso, nem as opiniões de todos)
+select public.send_feedback(:'hr', 'spam', 'texto qualquer');
+select public.send_feedback(:'hr', 'ideia', 'a');
+select * from usage;
+select public.product_feedback();
+reset role;
+select sum(n) as nvoz from usage where feature = 'lancar.voz' \gset
+select count(*) as nbad from usage where feature not in ('lancar.voz', 'inicio') \gset
+\echo uso registrado: voz :nvoz vezes, nomes inválidos ignorados: :nbad
+select helpful as hf from feedback where id = :fb2 \gset
+\echo dúvida marcada como resolvida: :hf
+set role service_role;
+select jsonb_array_length(public.product_feedback()) as nfb \gset
+select public.product_usage(30)->'features'->'lancar.voz'->>'n' as un \gset
+\echo central lê opiniões: :nfb e uso de voz: :un
+reset role;

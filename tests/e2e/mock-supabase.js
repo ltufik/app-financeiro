@@ -3,7 +3,7 @@
 // State survives page reloads (like a real backend) so invite links can be tested across sessions.
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
 const T = load('mock.db', { users: [], households: [], members: [], invites: [], categories: [], transactions: [], rules: [], imports: [], studies: [], push_subscriptions: [] });
-T.push_subscriptions ||= [];
+T.push_subscriptions ||= []; T.feedback ||= []; T.usage ||= [];
 window.__db = T;
 let session = load('mock.session', null); const listeners = [];
 const persist = () => { localStorage.setItem('mock.db', JSON.stringify(T)); localStorage.setItem('mock.session', JSON.stringify(session)); };
@@ -16,6 +16,7 @@ class Q {
   select(c) { if (this.op === 'select') this.cols = c || '*'; else this.ret = true; return this; }
   eq(k, v) { this.f.push(r => r[k] === v); return this; }
   order() { return this; }
+  limit() { return this; }
   range(a, b) { this.rng = [a, b]; return this; }
   single() { this.one = true; return this; }
   insert(rows) { this.op = 'insert'; this.p = Array.isArray(rows) ? rows : [rows]; return this; }
@@ -51,6 +52,12 @@ class Q {
 
 const DEFAULT_CATS = [['Salário', 'renda'], ['Reembolsos', 'entrada'], ['Outras entradas', 'entrada'], ['Mercado', 'dia'], ['Restaurantes e delivery', 'dia'], ['Saúde', 'dia'], ['A classificar', 'dia'], ['Financiamento imobiliário', 'dia', true, true], ['Assinaturas', 'dia', false, true], ['Pagamento da fatura do cartão', 'neutro']];
 const rpcs = {
+  send_feedback({ p_household, p_kind, p_text, p_answer, p_screen, p_device, p_version }) {
+    if (!['erro', 'ideia', 'critica', 'duvida'].includes(p_kind)) throw new Error('bad_kind'); if (String(p_text || '').trim().length < 3) throw new Error('too_short');
+    const id = T.feedback.length + 1; T.feedback.push({ id, user_id: session.user.id, household_id: p_household, kind: p_kind, text: p_text, answer: p_answer, screen: p_screen, device: p_device, version: p_version, status: 'novo', helpful: null, created_at: now() }); return id;
+  },
+  feedback_helpful({ p_id, p_helpful }) { const f = T.feedback.find(x => x.id === p_id && x.user_id === session.user.id); if (f) f.helpful = p_helpful; return null; },
+  track({ p_features }) { (p_features || []).forEach(f => { if (/^[a-z_]{2,20}(\.[a-z_]{2,20})?$/.test(f)) T.usage.push(f); }); return null; },
   touch_activity() { window.__touches = (window.__touches || 0) + 1; return null; },
   save_push({ p_household, p_endpoint, p_p256dh, p_auth, p_prefs }) {
     T.push_subscriptions = T.push_subscriptions.filter(s => s.endpoint !== p_endpoint);

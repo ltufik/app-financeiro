@@ -326,3 +326,14 @@ test('pricingCalc: receita, custos e ponto de equilíbrio', () => {
   assert.equal(r.result, 225); assert.equal(r.breakEven, 500);
   assert.equal(pricingCalc({ families: 100, payingPct: 0, priceMonthly: 10, priceYearly: 100, yearlyShare: 0, activePct: 100, aiPerFamily: 2, feePct: 0, fx: 5, supabaseUsd: 0, vercelUsd: 0 }).breakEven, null);
 });
+
+import { FAQ, searchFaq, answerPrompt } from '../public/js/lib/faq.js';
+test('searchFaq: acha pela palavra, sem acento e ignora palavras vazias', () => {
+  assert.equal(searchFaq(FAQ, 'o que é a meta')[0].id, 'metas');
+  assert.equal(searchFaq(FAQ, 'SENHA do pdf')[0].id, 'senha');
+  assert.equal(searchFaq(FAQ, 'convidar minha esposa')[0].id, 'convite');
+  assert.equal(searchFaq(FAQ, '').length, FAQ.length);
+  assert.equal(searchFaq(FAQ, 'xyzzy plutao').length, 0);
+  assert.ok(new Set(FAQ.map(x => x.id)).size === FAQ.length);
+  assert.ok(answerPrompt(FAQ).includes('O que são as metas?'));
+});

@@ -16,6 +16,8 @@ import { initMenu, closeMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
 import { checkAdmin, touchActivity } from './metrics.js';
 import { initPrivacy } from './privacy.js';
+import { track } from './usage.js';
+import { TEST_PHASE } from './feedback.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
@@ -143,6 +145,8 @@ S.render = () => {
 };
 function setTab(t) {
   closeMenu(false);
+  track('aba.' + (t === 'resumo' ? 'inicio' : t === 'ajustes' ? 'menu' : t));
+  if (t === 'ajustes' && S.sec) track('menu.' + S.sec);
   S.tab = t; lsSet('fin.tab', t);
   $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   $$('.view').forEach(v => v.hidden = v.dataset.view !== t);
@@ -150,6 +154,8 @@ function setTab(t) {
 }
 $$('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 initMenu();
+$('#fbBtn').hidden = !TEST_PHASE; $('#fbBtn').onclick = () => S.go('ajustes', null, 'opiniao');
+$('#privBtn').addEventListener('click', () => track('privacidade'));
 initPrivacy($('#privBtn'), () => { $$('.view[data-built]').forEach(v => { delete v.dataset.built; }); S.render(); });
 $('#monthSel').onchange = e => { S.m = e.target.value; if (S.tab === 'fechar' && !S.m.startsWith('ano:')) S.closeMonth = S.m; S.render(); };
 function renderMonthSel() {

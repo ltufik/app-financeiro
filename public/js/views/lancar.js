@@ -1,4 +1,5 @@
 import { S, reindex, closeDay, txsOf, pendingManual, latestCard, latestClosed, monthKeys, settings } from '../state.js';
+import { track } from '../usage.js';
 import * as db from '../db.js';
 import { askJSON, aiErrorText } from '../ai.js';
 import { attachMic, speechSupported } from '../speech.js';
@@ -25,6 +26,7 @@ export function render(el) {
 // One way of entering at a time: the tiles on top open the matching panel.
 let mode = null;
 export function openMode(m, focus) {
+  if (focus) track('lancar.' + m);
   mode = m === 'mao' ? 'falar' : m;
   document.querySelectorAll('#v-lancar [data-panel]').forEach(p => { p.hidden = p.dataset.panel !== mode; });
   document.querySelectorAll('#v-lancar .ltile').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
@@ -186,7 +188,7 @@ function renderQ() {
     $('#qSave').disabled = true;
     try {
       const rows = Q.map(it => ({ household_id: S.hh.id, source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
-      const saved = await db.addTransactions(rows);
+      const saved = await db.addTransactions(rows); track('lancar.salvar');
       S.txs.push(...saved.map(t => ({ ...t, amount: +t.amount })));
       toast(rows.length > 1 ? 'Lançamentos salvos' : 'Lançamento salvo'); box.hidden = true; Q = null; $('#qText').value = ''; $('#qStatus').textContent = ''; S.render();
     } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#qSave').disabled = false; }
@@ -383,7 +385,7 @@ async function saveReview(pend) {
   try {
     const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month);
-    await db.replaceMonth(S.hh.id, source, month, payload, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
+    track('lancar.pdf_ok'); await db.replaceMonth(S.hh.id, source, month, payload, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
@@ -560,7 +562,7 @@ async function saveReceipt(e) {
       const [t] = await db.addTransactions([{ household_id: S.hh.id, source: RC.source, month: RC.source === 'cartao' ? cycleMonth(RC.date, closeDay()) : RC.date.slice(0, 7), date: RC.date, day: isoToBr(RC.date).slice(0, 5), description: RC.store, amount, category: parts[0].category, manual: true, splits, receipt }]);
       S.txs.push({ ...t, amount: +t.amount });
     }
-    toast('Nota salva'); RC = null; box.hidden = true;
+    toast('Nota salva'); track('lancar.nota_ok'); RC = null; box.hidden = true;
     $('#rcLog').innerHTML = ''; rlog(match ? 'Pronto: o lançamento agora mostra os itens da nota por categoria.' : 'Pronto: gasto lançado e dividido por categoria.', 'var(--good)');
     S.render();
   } catch (err) { toast('Não foi possível salvar. ' + db.errorText(err)); e.target.disabled = false; }

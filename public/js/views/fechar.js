@@ -1,6 +1,7 @@
 // "Fechar o mês": guided closing of a month — missing statements, manual entries, uncategorized,
 // fixed expenses that didn't show up, then the month's retrospective.
 import { S, settings, monthKeys, goals, closeDay, reindex } from '../state.js';
+import { track } from '../usage.js';
 import { checklist, retrospective, monthToClose } from '../lib/closing.js';
 import { brl, brl0, pct, esc, mLong, todayISO, isoToBr, norm, round2, cycleMonth } from '../lib/format.js';
 import * as db from '../db.js';
@@ -112,7 +113,7 @@ export function render(el) {
     const by = (S.user?.user_metadata?.display_name || '').split(' ')[0];
     await save({ closed: { ...(settings().closed || {}), [m]: { at: todayISO(), by, res: round2(r.res), tx: Math.round(r.tx * 1000) / 1000 } } });
     notifyFamily('closed', { month: m });
-    toast(r.hitGoal ? 'Mês fechado. Parabéns pela meta!' : 'Mês fechado'); S.closeMonth = m; S.render();
+    track('fechar.mes'); toast(r.hitGoal ? 'Mês fechado. Parabéns pela meta!' : 'Mês fechado'); S.closeMonth = m; S.render();
   };
   const reopen = $('#clReopen');
   if (reopen) reopen.onclick = async e => {

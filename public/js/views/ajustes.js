@@ -9,6 +9,7 @@ import { installHelpHTML, wireInstall, expandSteps } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
 import { renderMetrics } from '../metrics.js';
+import { renderFeedback, renderDuvidas } from '../feedback.js';
 import { PHOTOS } from '../photos.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
@@ -92,7 +93,8 @@ export function render(el) {
     <ul class="small">
       <li>Os lançamentos, as categorias, as metas e os ajustes da sua família. Só quem está na família vê.</li>
       <li>De cada nota fiscal, só os itens e valores lidos. A foto não fica guardada.</li>
-      <li>De cada pessoa, os dias em que abriu o app, para medir se ele está ajudando. Nada do que você fez.</li>
+      <li>De cada pessoa, os dias em que abriu o app e quais partes usou (por exemplo, "lançou por voz"), para saber o que ajuda e o que melhorar. Nunca valores nem o que foi escrito.</li>
+      <li>As opiniões e dúvidas que você mandar, com a tela em que estava e o tipo de celular.</li>
     </ul>
     <h3>O que o app nunca guarda</h3>
     <ul class="small"><li>O arquivo do PDF.</li><li>A senha do PDF.</li><li>Senhas de banco: o app não se conecta ao seu banco.</li></ul>
@@ -123,6 +125,10 @@ export function render(el) {
     <div class="seg" role="radiogroup" aria-label="Aparência" id="themeSeg">${[['light', 'Claro'], ['dark', 'Escuro'], ['auto', 'Igual ao celular']].map(([k, l]) => `<button type="button" class="chip" role="radio" data-theme-opt="${k}" aria-pressed="${theme() === k}" aria-checked="${theme() === k}">${l}</button>`).join('')}</div>
   </div>
 
+  <div class="panel stack" data-sec="duvidas"><div id="faqBox" class="stack"></div></div>
+
+  <div class="panel stack" data-sec="opiniao"><div id="fbBox" class="stack"></div></div>
+
   <div class="panel stack" data-sec="backup">
     <h2>Backup</h2>
     <p class="small muted">Um arquivo com todos os lançamentos, categorias e ajustes da família. Guarde num lugar seguro: ele tem os seus dados financeiros.</p>
@@ -144,6 +150,8 @@ export function render(el) {
   if (sec.key === 'avisos') renderPush($('#pushBox'));
   if (sec.key === 'divisao') renderSplit($('#splitBox'));
   if (sec.key === 'metricas') renderMetrics($('#metricsBox'));
+  if (sec.key === 'duvidas') renderDuvidas($('#faqBox'));
+  if (sec.key === 'opiniao') renderFeedback($('#fbBox'));
   // help
   $('#hTour').onclick = () => S.showTour('app');
   $('#hCoach').onclick = () => S.startCoach(true);

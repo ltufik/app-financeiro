@@ -18,12 +18,27 @@ page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fetching the script/.test(m.text())) errors.push(m.text()); });
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
-const adminStore = {}, adminPuts = [];
+const adminStore = {}, adminPuts = [], adminPatches = [];
+const FB_FIXTURE = [
+  { id: 1, kind: 'erro', text: 'Toquei em salvar a nota e nada aconteceu', status: 'novo', screen: 'lancar', device: 'Android · app instalado', version: 'v26', name: 'Testador Um', email: 'um@test.com', family: 'Família Teste', created_at: '2026-10-29T12:00:00Z' },
+  { id: 2, kind: 'duvida', text: 'O que é a régua do início?', answer: 'É o quanto o app está preenchido.', helpful: false, status: 'novo', screen: 'resumo', device: 'iPhone · navegador', version: 'v26', name: 'Testador Dois', email: 'dois@test.com', family: 'Família Teste', created_at: '2026-10-30T09:00:00Z' },
+  { id: 3, kind: 'ideia', text: 'Ver gasto por semana', status: 'visto', screen: 'graficos', device: 'iPhone', version: 'v25', name: 'Testador Um', email: 'um@test.com', family: 'Família Teste', created_at: '2026-10-28T09:00:00Z' },
+];
+const USE_FIXTURE = { days: 30, at: '2026-10-30T12:00:00Z',
+  people: [{ id: 'a', email: 'um@test.com', name: 'Testador Um', family: 'Família Teste', created_at: '2026-10-01T00:00:00Z', last_day: '2026-10-30', days: 12, features: { 'aba.inicio': 30, 'lancar.salvar': 9, 'perguntar.enviar': 4 }, feedbacks: 2 },
+    { id: 'b', email: 'dois@test.com', name: 'Testador Dois', family: 'Família Teste', created_at: '2026-10-05T00:00:00Z', last_day: '2026-10-10', days: 3, features: { 'aba.inicio': 5, 'lancar.pdf_ok': 2 }, feedbacks: 1 }],
+  features: { 'aba.inicio': { n: 35, users: 2 }, 'lancar.salvar': { n: 9, users: 1 }, 'perguntar.enviar': { n: 4, users: 1 }, 'lancar.pdf_ok': { n: 2, users: 1 } },
+  hours: [[1, 8, 5], [1, 21, 9], [3, 12, 2], [0, 10, 4]],
+  by_day: [['aba', '2026-10-30', 2], ['lancar', '2026-10-29', 1], ['perguntar', '2026-10-28', 1]] };
 async function addRoutes(t) {
   await t.route('https://app.test/**', async r => {
     const u = new URL(r.request().url());
     if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
     if (u.pathname === '/api/metrics') return r.fulfill({ json: u.searchParams.get('probe') ? { admin: true } : { users: 12, users_7d: 3, users_30d: 12, in_family: 11, families: 6, families_shared: 4, families_1_month: 5, families_2_months: 3, families_closed: 2, d7_eligible: 8, d7_retained: 5, d30_eligible: 2, d30_retained: 1, wau: 7, mau: 10, daily: Array.from({ length: 14 }, (_, i) => ({ day: '2026-10-' + String(17 + i).padStart(2, '0'), users: i % 5 })), manual_30d: 40, receipts_30d: 6, imports_30d: 15, studies: 4, charts: 3, push_devices: 5, at: '2026-10-30T12:00:00Z' } });
+    if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
+    if (u.pathname === '/api/admin' && r.request().method() === 'PATCH') { const b = JSON.parse(r.request().postData()); adminPatches.push(b); const f = FB_FIXTURE.find(x => x.id === b.feedback); if (f && b.status) f.status = b.status; return r.fulfill({ json: { ok: true } }); }
     if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); adminStore[b.key] = b.data; adminPuts.push(b.key); return r.fulfill({ json: { ok: true } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
     if (u.pathname === '/api/notify') { notifies.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { sent: 1 } }); }
     if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
@@ -73,6 +88,7 @@ function aiMock(b) {
     { cartao: '', data: '15/10', descricao: 'iFood *Restaurante Sabor', parcela: '', valor: 89.6 }, { cartao: '', data: '20/10', descricao: 'Loja Movel Casa', parcela: '02/06', valor: 400 },
     { cartao: '', data: '25/10', descricao: 'Netflix.com', parcela: '', valor: 55.9 }, { cartao: '', data: '28/10', descricao: 'Supermercado Dia', parcela: '', valor: 413.1 },
     { cartao: '', data: '30/10', descricao: 'Estorno Loja X', parcela: '', valor: -20 }] }));
+  if (String(b.system || '').includes('dúvidas sobre como usar')) return reply('São três combinados da família, em menu ☰ → Metas: limite do cartão, quanto guardar e o sonho.');
   if (b.tools) { chatCalls++; const last = b.messages[b.messages.length - 1]; if (typeof last.content === 'string') return { content: [{ type: 'tool_use', id: 't1', name: 'gastos_por_categoria', input: { meses: ['2026-09'] } }], stop_reason: 'tool_use' }; window_tool = last.content[0].content; return reply('**Resumo:** o maior gasto foi Mercado.\n\n| Categoria | Valor |\n|---|---|\n| Mercado | R$ 1.000 |'); }
   return reply('{}');
 }
@@ -174,7 +190,7 @@ await shot('02-vazio');
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 12 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 14 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 await shot('02b-menu');
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 ok('menu fecha com Esc', await page.isHidden('#drawer'));
@@ -486,9 +502,71 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: canvas salvo', adminStore.canvas?.problema === 'Problema de teste' && adminStore.canvas.personas.length >= 2);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-4-desenho.png'), fullPage: true });
   await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('[data-t="backlog"]');
-  ok('central: no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await ap.setViewportSize({ width: 1280, height: 900 });
+  await ap.click('[data-t="painel"]'); await ap.waitForSelector('#pTop .mlink');
+  ok('central: painel mostra opiniões novas e quem usou', (await ap.textContent('#pTop')).includes('Opiniões novas') && (await ap.textContent('#pTop')).includes('de 2 pessoas'));
+  await ap.click('[data-t="opinioes"]'); await ap.waitForSelector('.fbcard');
+  ok('central: opiniões em aberto com quem mandou e a tela', (await ap.$$('.fbcard')).length === 3 && (await ap.textContent('#aMain')).includes('tela lancar'));
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-5-opinioes.png'), fullPage: true });
+  await ap.click('[data-k="erro"]'); await ap.waitForSelector('.fbcard');
+  ok('central: filtro por tipo', (await ap.$$('.fbcard')).length === 1);
+  const nBl = adminStore.backlog.items.length;
+  await ap.click('.fbcard [data-bl]'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
+  ok('central: opinião vira item do backlog', adminStore.backlog.items.length === nBl + 1 && adminStore.backlog.items[0].origin === 'Erro de Testador Um' && adminPatches.some(x => x.feedback === 1 && x.status === 'backlog'));
+  await ap.click('[data-k="duvida"]'); await ap.waitForSelector('.fbcard [data-faq]');
+  ok('central: dúvida mostra que não resolveu', (await ap.textContent('.fbcard')).includes('Não resolveu'));
+  await ap.click('.fbcard [data-faq]'); await ap.waitForSelector('#fqItems');
+  ok('central: dúvida vira pergunta frequente para responder', (await ap.inputValue('[data-i="0"][data-k="q"]')) === 'O que é a régua do início?');
+  await ap.fill('[data-i="0"][data-k="a"]', 'É o quanto do app vocês já preencheram. Cada passo feito sobe a régua.');
+  await ap.click('#fqPub'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
+  ok('central: dúvidas publicadas', adminStore.faq?.items?.[0]?.q === 'O que é a régua do início?' && adminStore.faq.items.length > 15);
+  await ap.click('[data-t="uso"]'); await ap.waitForSelector('.prow');
+  ok('central: uso por pessoa com quem sumiu em destaque', (await ap.$$('.prow')).length === 2 && !!(await ap.$('.prow .neg')));
+  ok('central: mapas de calor', (await ap.$$('table.heat')).length === 2 && !!(await ap.$('table.heat td[style*="color-mix"]')));
+  await ap.click('.prow'); await ap.waitForSelector('#uPerson .cbox');
+  ok('central: detalhe da pessoa', (await ap.textContent('#uPerson')).includes('Salvou lançamento falado ou escrito'));
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-6-uso.png'), fullPage: true });
+  await ap.click('[data-t="servicos"]'); await ap.waitForSelector('.svt tbody tr');
+  ok('central: matriz de serviços com uso', (await ap.$$('.svt tbody tr')).length >= 20 && (await ap.textContent('.svt')).includes('pessoas'));
+  await ap.selectOption('.svt select[data-k="plan"]', 'pago'); await ap.click('#svSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
+  ok('central: matriz salva', adminStore.services?.items?.[0]?.plan === 'pago');
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-7-servicos.png'), fullPage: true });
+  await ap.click('[data-t="docs"]'); await ap.waitForSelector('.docsec');
+  ok('central: documentação com glossário', (await ap.textContent('#aMain')).includes('Glossário da interface'));
+  await ap.click('[data-ed="0"]'); await ap.fill('#dcBody', 'Texto novo da visão geral'); await ap.click('#dcSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
+  ok('central: seção da documentação salva', adminStore.docs?.items?.[0]?.body === 'Texto novo da visão geral');
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-8-docs.png'), fullPage: true });
+  await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('[data-t="uso"]'); await ap.waitForSelector('.prow');
+  ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await actx.close();
 }
+// Test phase: feedback and FAQ in the app.
+await page.click('#fbBtn'); await page.waitForSelector('#v-ajustes [data-sec="opiniao"]:not([hidden]) #fbText');
+ok('balão do topo abre Dar opinião', await page.isVisible('#fbText'));
+await page.click('#fbSend');
+ok('opinião vazia é recusada', (await page.getAttribute('#fbText', 'aria-invalid')) === 'true');
+await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver quanto gastei por semana');
+await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
+await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
+const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v26', JSON.stringify(fbRow));
+ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
+await shot('11-opiniao');
+await sec('duvidas'); await page.waitForSelector('#fqList details');
+await page.fill('#fqQ', 'meta'); await page.waitForTimeout(300);
+ok('busca nas dúvidas acha a meta', (await txt('#fqList')).startsWith('O que são as metas?'), (await txt('#fqList')).slice(0, 80));
+await page.click('#fqList details summary');
+ok('resposta abre explicando os 3 combinados', (await txt('#fqList details')).includes('limite do cartão'));
+await page.fill('#fqQ', 'consigo usar no computador?'); await page.waitForTimeout(300);
+await page.click('#fqSend'); await page.waitForSelector('#fqAns [data-h]');
+ok('pergunta nova: o assistente responde', (await txt('#fqAns')).includes('três combinados'));
+await page.click('#fqAns [data-h="0"]'); await page.waitForTimeout(200);
+const dq = await page.evaluate(() => window.__db.feedback.at(-1));
+ok('dúvida vai para a equipe com a resposta e "não resolveu"', dq.kind === 'duvida' && dq.text === 'consigo usar no computador?' && !!dq.answer && dq.helpful === false);
+await shot('12-duvidas');
+await page.waitForFunction(() => window.__db.usage.includes('opiniao.ideia'), null, { timeout: 15000 }).catch(() => {});
+const used = await page.evaluate(() => window.__db.usage);
+ok('uso registrado só com nomes das partes', used.includes('menu.opiniao') && used.includes('opiniao.ideia') && used.every(f => /^[a-z_]{2,20}(\.[a-z_]{2,20})?$/.test(f)), used.slice(0, 12).join(','));
 // notifications
 await sec('avisos');
 await page.waitForSelector('#pOn');

@@ -1,16 +1,20 @@
-// Product console (/admin): dashboard, backlog, benchmarking, pricing and product design.
+// Product console (/admin): dashboard, feedback, usage, FAQ, backlog, service matrix, docs, benchmarking, pricing and product design.
 // Only for ADMIN_EMAILS: the data comes from /api/admin and /api/metrics, which check the login.
 import * as db from '../db.js';
 import { esc } from '../lib/format.js';
-import { $, toast, confirmInline, invalid, clearInvalid } from '../ui.js';
+import { $, toast, confirmInline, invalid, clearInvalid, md } from '../ui.js';
 import { checkName, checkNumber } from '../lib/validate.js';
 import { renderMetrics } from '../metrics.js';
 import { BACKLOG, BENCH, PRICING, CANVAS } from './seed.js';
 import { pricingCalc } from '../lib/pricing.js';
+import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
+import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
-const D = { backlog: null, pricing: null, canvas: null };
+const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null };
+const TABS = ['painel', 'opinioes', 'uso', 'duvidas', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+let FB = null, USE = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -31,8 +35,9 @@ async function save(key, msg) {
   if (!token) { $('#aMain').innerHTML = '<div class="panel stack"><h2>Entre primeiro</h2><p class="small">Abra o app, entre com o seu e-mail e senha e volte para esta página.</p><div><a class="btn primary" href="/">Abrir o app</a></div></div>'; return; }
   $('#aWho').textContent = data.session.user.email;
   try {
-    const [b, p, c] = await Promise.all(['backlog', 'pricing', 'canvas'].map(k => api('GET', k)));
+    const [b, p, c, f, sv, dc] = await Promise.all(['backlog', 'pricing', 'canvas', 'faq', 'services', 'docs'].map(k => api('GET', k)));
     D.backlog = b.data || { items: BACKLOG }; D.pricing = p.data || { ...PRICING }; D.canvas = c.data || JSON.parse(JSON.stringify(CANVAS));
+    D.faq = f.data || { items: JSON.parse(JSON.stringify(FAQ)) }; D.services = sv.data || { items: JSON.parse(JSON.stringify(SERVICES)) }; D.docs = dc.data || { items: JSON.parse(JSON.stringify(DOCS)) };
   } catch (e) {
     $('#aMain').innerHTML = e.status === 403 ? '<div class="panel"><h2>Só para o dono do produto</h2><p class="small">Esta página aparece só para os e-mails cadastrados em ADMIN_EMAILS.</p></div>'
       : '<div class="panel"><h2>Não foi possível carregar</h2><p class="small">Confira se o schema.sql foi rodado de novo e se as variáveis do servidor estão certas.</p></div>';
@@ -40,23 +45,33 @@ async function save(key, msg) {
   }
   $('#aNav').hidden = false;
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.onclick = () => go(b.dataset.t));
-  const h = location.hash.slice(1); go(['painel', 'backlog', 'bench', 'preco', 'desenho'].includes(h) ? h : 'painel');
+  const h = location.hash.slice(1); go(TABS.includes(h) ? h : 'painel');
 })();
 
 function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
-  ({ painel, backlog, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, duvidas, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   window.scrollTo(0, 0);
 }
 
 // ---------- Painel ----------
-function painel(el) {
+async function painel(el) {
   const items = D.backlog.items, count = s => items.filter(i => i.status === s).length;
-  el.innerHTML = `<div class="ahead"><h1>Painel</h1><span class="tiny muted">Números somados de todas as famílias</span></div>
+  el.innerHTML = `<div class="ahead"><h1>Painel</h1><span class="tiny muted">Visão geral do produto</span></div>
+    <div class="mgrid" id="pTop"></div>
     <div class="mgrid">${[['No backlog agora', count('agora')], ['Próximos', count('proximo')], ['Ideias', count('ideia')], ['Feitos', count('feito')]].map(([k, v]) => `<div class="mcard"><span class="tiny muted">${k}</span><span class="num">${v}</span></div>`).join('')}</div>
     <div class="panel stack" id="mBox"></div>`;
   renderMetrics(el.querySelector('#mBox'));
+  try {
+    const [fb, us] = await Promise.all([loadFb(), loadUse()]);
+    const week = new Date(Date.now() - 7 * 864e5 - 3 * 3600e3).toISOString().slice(0, 10);
+    const active = us.people.filter(p => p.last_day >= week).length, fresh = fb.filter(f => f.status === 'novo').length, unans = fb.filter(f => f.kind === 'duvida' && f.helpful === false).length;
+    const top = Object.entries(us.features).filter(([k]) => !k.startsWith('aba.') && !k.startsWith('menu.')).sort((a, b) => b[1].users - a[1].users)[0];
+    $('#pTop').innerHTML = [['Opiniões novas', fresh, 'abrir', 'opinioes'], ['Dúvidas sem resposta boa', unans, 'abrir', 'duvidas'], ['Usaram nos últimos 7 dias', active, `de ${us.people.length} pessoas`, 'uso'], ['Mais usado', top ? esc(FEATURE_LABELS[top[0]] || top[0]) : '—', top ? `${top[1].users} pessoas` : '', 'uso']]
+      .map(([k, v, s, t]) => `<button type="button" class="mcard mlink" data-go="${t}"><span class="tiny muted">${k}</span><span class="num" style="${typeof v === 'string' ? 'font-size:17px' : ''}">${v}</span><span class="tiny muted">${s}</span></button>`).join('');
+    el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+  } catch (e) { $('#pTop').innerHTML = '<p class="small muted">Opiniões e uso aparecem depois de rodar o schema.sql novo no Supabase.</p>'; }
 }
 
 // ---------- Backlog ----------
@@ -169,5 +184,166 @@ function desenho(el) {
   $('#cSave').onclick = async e => {
     if (!await confirmInline(e.target, { text: 'Salvar o canvas, as personas e a jornada?', yes: 'Sim, salvar' })) return;
     await save('canvas', 'Desenho do produto salvo.');
+  };
+}
+
+// ---------- shared loaders ----------
+async function getView(name, q = '') {
+  const r = await fetch('/api/admin?view=' + name + q, { headers: { authorization: 'Bearer ' + token } });
+  if (!r.ok) throw new Error(String(r.status)); return r.json();
+}
+async function loadFb(force) { if (!FB || force) FB = await getView('feedback'); return FB; }
+async function loadUse(force) { if (!USE || force) USE = await getView('usage', '&days=' + useDays); return USE; }
+async function patchFb(id, patch) {
+  const r = await fetch('/api/admin', { method: 'PATCH', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ feedback: id, ...patch }) });
+  if (!r.ok) throw new Error(String(r.status));
+}
+const dt = s => s ? new Date(s).toLocaleDateString('pt-BR') : '—';
+const ago = d => { if (!d) return 'nunca'; const n = Math.round((Date.parse(new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)) - Date.parse(d)) / 864e5); return n <= 0 ? 'hoje' : n === 1 ? 'ontem' : `há ${n} dias`; };
+const who = f => esc(f.name || f.email || 'Pessoa que saiu do app');
+const fail = (el, title) => { el.innerHTML = `<div class="ahead"><h1>${title}</h1></div><div class="panel"><p class="small">Não foi possível carregar. Confira se o schema.sql novo foi rodado no Supabase.</p></div>`; };
+
+// ---------- Opiniões ----------
+const FB_KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
+const FB_STATUS = { novo: 'Nova', visto: 'Lida', backlog: 'No backlog', resolvido: 'Resolvida' };
+let fbKind = '', fbStatus = 'aberto';
+async function opinioes(el) {
+  el.innerHTML = '<div class="ahead"><h1>Opiniões</h1></div><p class="small muted">Carregando...</p>';
+  let list; try { list = await loadFb(true); } catch (e) { return fail(el, 'Opiniões'); }
+  const shown = list.filter(f => (!fbKind || f.kind === fbKind) && (fbStatus === '' || (fbStatus === 'aberto' ? ['novo', 'visto'].includes(f.status) : f.status === fbStatus)));
+  el.innerHTML = `<div class="ahead"><h1>Opiniões</h1><span class="tiny muted">${list.length} recebidas · ${list.filter(f => f.status === 'novo').length} novas</span></div>
+    <div class="chips">${[['', 'Todos os tipos'], ...Object.entries(FB_KIND)].map(([k, l]) => `<button class="chip" type="button" data-k="${k}" aria-pressed="${fbKind === k}">${l} <span class="tiny muted">${list.filter(f => !k || f.kind === k).length}</span></button>`).join('')}</div>
+    <div class="chips">${[['aberto', 'Em aberto'], ...Object.entries(FB_STATUS), ['', 'Todas']].map(([k, l]) => `<button class="chip" type="button" data-s="${k}" aria-pressed="${fbStatus === k}">${l}</button>`).join('')}</div>
+    <div class="stack">${shown.map(f => `<article class="panel stack fbcard" data-id="${f.id}">
+      <div class="fbmeta"><span class="tag k-${f.kind}">${FB_KIND[f.kind]}</span><strong>${who(f)}</strong><span class="tiny muted">${esc(f.family || '')} · ${dt(f.created_at)} · tela ${esc(f.screen || '—')} · ${esc(f.device || '')} · ${esc(f.version || '')}</span></div>
+      <p class="small" style="white-space:pre-wrap;margin:0">${esc(f.text)}</p>
+      ${f.kind === 'duvida' ? `<div class="tiny muted" style="border-left:3px solid var(--line);padding-left:10px">${f.answer ? 'Resposta do assistente: ' + esc(f.answer) : 'Sem resposta do assistente.'}<br><strong>${f.helpful === true ? 'Resolveu' : f.helpful === false ? 'Não resolveu' : 'Não respondeu se resolveu'}</strong></div>` : ''}
+      <div class="fbact"><select data-st aria-label="Situação">${Object.entries(FB_STATUS).map(([k, l]) => `<option value="${k}"${k === f.status ? ' selected' : ''}>${l}</option>`).join('')}</select>
+        <input type="text" data-note placeholder="Nota interna (só você vê)" value="${esc(f.note || '')}" maxlength="2000">
+        ${f.kind === 'duvida' ? '<button class="chip" type="button" data-faq>Responder nas Dúvidas</button>' : `<button class="chip" type="button" data-bl${f.status === 'backlog' ? ' disabled' : ''}>Virar item do backlog</button>`}</div>
+    </article>`).join('') || '<p class="small muted">Nada aqui.</p>'}</div>`;
+  el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { fbKind = b.dataset.k; opinioes(el); });
+  el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { fbStatus = b.dataset.s; opinioes(el); });
+  el.querySelectorAll('.fbcard').forEach(card => {
+    const f = list.find(x => x.id === +card.dataset.id);
+    card.querySelector('[data-st]').onchange = async e => { try { await patchFb(f.id, { status: e.target.value }); f.status = e.target.value; toast('Situação atualizada.'); } catch (x) { toast('Não foi possível salvar.'); } };
+    card.querySelector('[data-note]').onchange = async e => { try { await patchFb(f.id, { note: e.target.value }); f.note = e.target.value; toast('Nota salva.'); } catch (x) { toast('Não foi possível salvar.'); } };
+    const bl = card.querySelector('[data-bl]');
+    if (bl) bl.onclick = async e => {
+      const title = f.text.length > 90 ? f.text.slice(0, 90) + '…' : f.text;
+      if (!await confirmInline(e.target, { text: `Adicionar ao backlog como Ideia: "${esc(title)}"?`, yes: 'Sim, adicionar' })) return;
+      D.backlog.items.unshift({ id: uid(), title, problem: f.text, origin: `${FB_KIND[f.kind]} de ${f.name || 'testador'}`, effort: 'M', status: 'ideia', cost: false, notes: `Opinião #${f.id}` });
+      await save('backlog');
+      try { await patchFb(f.id, { status: 'backlog' }); f.status = 'backlog'; } catch (x) { /* backlog already saved */ }
+      toast('Foi para o backlog.'); opinioes(el);
+    };
+    const fq = card.querySelector('[data-faq]');
+    if (fq) fq.onclick = () => { faqDraft = { q: f.text, a: f.answer || '', from: f.id }; go('duvidas'); };
+  });
+}
+
+// ---------- Uso ----------
+const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const heat = (v, mx) => v ? `background:color-mix(in srgb,var(--accent) ${Math.round(15 + 85 * v / mx)}%,var(--card))` : '';
+async function uso(el) {
+  el.innerHTML = '<div class="ahead"><h1>Uso</h1></div><p class="small muted">Carregando...</p>';
+  let u; try { u = await loadUse(true); } catch (e) { return fail(el, 'Uso'); }
+  const feats = Object.entries(u.features).sort((a, b) => b[1].users - a[1].users || b[1].n - a[1].n), mxU = Math.max(1, ...feats.map(f => f[1].users));
+  const hm = Array.from({ length: 7 }, () => Array(24).fill(0)); u.hours.forEach(([d, h, n]) => { hm[d][h] += n; }); const mxH = Math.max(1, ...hm.flat());
+  const days = Array.from({ length: 28 }, (_, i) => new Date(Date.now() - 3 * 3600e3 - (27 - i) * 864e5).toISOString().slice(0, 10));
+  const areas = [...new Set(u.by_day.map(r => r[0]))].sort(), byd = {}; u.by_day.forEach(([a, d, n]) => { byd[a + d] = n; }); const mxD = Math.max(1, ...u.by_day.map(r => r[2]));
+  const people = u.people;
+  el.innerHTML = `<div class="ahead"><h1>Uso</h1><label class="tiny muted">Período <select id="uDays">${[7, 30, 90].map(d => `<option value="${d}"${d === useDays ? ' selected' : ''}>${d} dias</option>`).join('')}</select></label></div>
+    <p class="small muted">Só o nome de cada parte usada, por pessoa, dia e hora. Nenhum valor nem texto das famílias.</p>
+    <div class="panel stack"><h2>Quem está usando</h2><div class="tw"><table class="atable"><thead><tr><th>Pessoa</th><th>Família</th><th>Última vez</th><th>Dias ativos</th><th>O que mais usa</th><th>Opiniões</th></tr></thead><tbody>
+    ${people.map((p, i) => { const top = Object.entries(p.features || {}).filter(([k]) => !k.startsWith('aba.')).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      return `<tr class="prow" data-i="${i}" tabindex="0"><td><strong>${esc(p.name || '—')}</strong><br><span class="tiny muted">${esc(p.email || '')}</span></td><td>${esc(p.family || 'Sem família')}</td><td><span class="${p.last_day && ago(p.last_day).match(/há (\d+)/)?.[1] > 7 ? 'neg' : ''}">${ago(p.last_day)}</span></td><td>${p.days}</td><td class="tiny">${top.map(([k, n]) => `${esc(FEATURE_LABELS[k] || k)} (${n})`).join('<br>') || '—'}</td><td>${p.feedbacks || ''}</td></tr>`; }).join('') || '<tr><td colspan="6">Ninguém ainda.</td></tr>'}</tbody></table></div><p class="tiny muted">Toque numa pessoa para ver tudo o que ela usou. Em coral: sem abrir o app há mais de 7 dias.</p><div id="uPerson"></div></div>
+    <div class="panel stack"><h2>O que mais usam</h2><p class="tiny muted">Pessoas diferentes que usaram cada parte no período (e quantas vezes no total).</p>
+      <div class="frank">${feats.map(([k, v]) => `<div class="frow"><span class="small">${esc(FEATURE_LABELS[k] || k)}</span><span class="fbar"><span style="width:${v.users / mxU * 100}%"></span></span><span class="small num">${v.users} <span class="tiny muted">${v.n}×</span></span></div>`).join('') || '<p class="small muted">Sem uso registrado ainda.</p>'}</div></div>
+    <div class="panel stack"><h2>Mapa de calor: dia e hora</h2><p class="tiny muted">Quando o app é usado (horário de Brasília). Mais escuro = mais uso.</p>
+      <div class="tw"><table class="heat"><thead><tr><th></th>${Array.from({ length: 24 }, (_, h) => `<th>${h % 3 === 0 ? h + 'h' : ''}</th>`).join('')}</tr></thead><tbody>${hm.map((row, d) => `<tr><th>${DOW[d]}</th>${row.map((v, h) => `<td style="${heat(v, mxH)}" title="${DOW[d]} ${h}h: ${v}"></td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
+    <div class="panel stack"><h2>Mapa de calor: parte do app por dia</h2><p class="tiny muted">Pessoas que usaram cada área em cada um dos últimos 28 dias.</p>
+      <div class="tw"><table class="heat"><thead><tr><th></th>${days.map((d, i) => `<th>${i % 7 === 0 ? d.slice(8) + '/' + d.slice(5, 7) : ''}</th>`).join('')}</tr></thead><tbody>${areas.map(a => `<tr><th>${esc(AREA_LABELS[a] || a)}</th>${days.map(d => `<td style="${heat(byd[a + d] || 0, mxD)}" title="${d.split('-').reverse().join('/')}: ${byd[a + d] || 0}"></td>`).join('')}</tr>`).join('') || `<tr><td colspan="29" class="small muted">Sem uso registrado ainda.</td></tr>`}</tbody></table></div></div>`;
+  $('#uDays').onchange = e => { useDays = +e.target.value; uso(el); };
+  el.querySelectorAll('.prow').forEach(tr => tr.onclick = tr.onkeydown = ev => {
+    if (ev.type === 'keydown' && ev.key !== 'Enter') return;
+    const p = people[+tr.dataset.i], all = Object.entries(p.features || {}).sort((a, b) => b[1] - a[1]);
+    $('#uPerson').innerHTML = `<div class="cbox"><h3>${esc(p.name || p.email || '')}</h3><p class="tiny muted">Conta criada em ${dt(p.created_at)} · ${p.days} dias ativos no período</p><ul class="list small">${all.map(([k, n]) => `<li><span>${esc(FEATURE_LABELS[k] || k)}</span><span class="amt">${n}</span></li>`).join('') || '<li>Sem uso no período.</li>'}</ul></div>`;
+  });
+}
+
+// ---------- Dúvidas (FAQ) ----------
+let faqDraft = null;
+async function duvidas(el) {
+  const items = D.faq.items;
+  let asked = []; try { asked = (await loadFb()).filter(f => f.kind === 'duvida'); } catch (e) { /* schema not updated yet */ }
+  if (faqDraft) { items.unshift({ id: uid(), t: 'comeco', q: faqDraft.q, a: faqDraft.a }); faqDraft = null; }
+  el.innerHTML = `<div class="ahead"><h1>Dúvidas</h1><div class="rowbtn"><button class="chip" type="button" id="fqAdd">Nova pergunta</button><button class="btn primary" type="button" id="fqPub">Publicar no app</button></div></div>
+    <p class="small muted">É o que aparece no app em menu ☰ → Dúvidas, e o que o assistente usa para responder perguntas novas. Edite aqui e toque em Publicar.</p>
+    ${asked.length ? `<details class="panel"><summary><strong>Perguntas que chegaram</strong> <span class="tiny muted">${asked.length} · ${asked.filter(a => a.helpful === false).length} não resolvidas</span></summary>
+      <ul class="list small" style="margin-top:10px">${asked.slice(0, 50).map(a => `<li><span>${esc(a.text)}<br><span class="tiny muted">${who(a)} · ${dt(a.created_at)} · ${a.helpful === true ? 'resolveu' : a.helpful === false ? '<span class="neg">não resolveu</span>' : 'sem retorno'}</span></span><button class="chip" type="button" data-use="${a.id}">Usar</button></li>`).join('')}</ul></details>` : ''}
+    <div class="stack" id="fqItems">${items.map((x, i) => `<div class="panel stack fqitem"><div class="fbact"><input type="text" data-i="${i}" data-k="q" value="${esc(x.q)}" aria-label="Pergunta" style="font-weight:700;flex:1">
+      <select data-i="${i}" data-k="t" aria-label="Assunto">${Object.entries(FAQ_TOPICS).map(([k, l]) => `<option value="${k}"${k === x.t ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      <button class="chip" type="button" data-up="${i}" aria-label="Subir"${i ? '' : ' disabled'}>↑</button><button class="chip" type="button" data-del="${i}" aria-label="Apagar">×</button></div>
+      <textarea data-i="${i}" data-k="a" aria-label="Resposta" style="min-height:70px">${esc(x.a)}</textarea></div>`).join('')}</div>`;
+  el.querySelectorAll('[data-k]').forEach(t => t.oninput = t.onchange = () => { items[+t.dataset.i][t.dataset.k] = t.value; });
+  el.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i = +b.dataset.up; [items[i - 1], items[i]] = [items[i], items[i - 1]]; duvidas(el); });
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async e => { const i = +b.dataset.del; if (!await confirmInline(e.target, { text: `Apagar a pergunta "${esc(items[i].q)}"? Vale quando você publicar.`, yes: 'Sim, apagar', danger: true })) return; items.splice(i, 1); duvidas(el); });
+  el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { const a = asked.find(x => x.id === +b.dataset.use); faqDraft = { q: a.text, a: a.answer || '' }; duvidas(el); });
+  $('#fqAdd').onclick = () => { items.unshift({ id: uid(), t: 'comeco', q: '', a: '' }); duvidas(el); el.querySelector('[data-k="q"]').focus(); };
+  $('#fqPub').onclick = async e => {
+    clearInvalid(el);
+    for (const [i, x] of items.entries()) {
+      if ((x.q || '').trim().length < 5) return invalid(el.querySelector(`[data-i="${i}"][data-k="q"]`), 'Escreva a pergunta (pelo menos 5 letras).');
+      if ((x.a || '').trim().length < 10) return invalid(el.querySelector(`[data-i="${i}"][data-k="a"]`), 'Escreva a resposta (pelo menos 10 letras).');
+    }
+    if (!await confirmInline(e.target, { text: `Publicar ${items.length} perguntas no app? Todos os usuários passam a ver esta versão.`, yes: 'Sim, publicar' })) return;
+    await save('faq', 'Dúvidas publicadas no app.');
+  };
+}
+
+// ---------- Matriz de serviços ----------
+async function servicos(el) {
+  const items = D.services.items;
+  let feats = {}; try { feats = (await loadUse()).features; } catch (e) { /* no usage yet */ }
+  const useOf = keys => { let users = 0, n = 0; (keys || []).forEach(k => { const f = feats[k]; if (f) { users = Math.max(users, f.users); n += f.n; } }); return { users, n }; };
+  const sel = (i, k, map) => `<select data-i="${i}" data-k="${k}" aria-label="${k}">${Object.entries(map).map(([v, l]) => `<option value="${v}"${v === items[i][k] ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+  const c = k => items.filter(x => x.status === k).length;
+  el.innerHTML = `<div class="ahead"><h1>Matriz de serviços</h1><button class="btn primary" type="button" id="svSave">Salvar</button></div>
+    <p class="small muted">Tudo o que o app oferece, onde fica, se usa IA (custo por uso), em que plano deve ficar quando houver cobrança e quanto foi usado nos últimos ${useDays} dias.</p>
+    <div class="mgrid">${[['No ar', c('no_ar')], ['Em teste', c('teste')], ['Planejados', c('planejado')], ['Usam IA', items.filter(x => x.ai !== 'nao').length]].map(([k, v]) => `<div class="mcard"><span class="tiny muted">${k}</span><span class="num">${v}</span></div>`).join('')}</div>
+    <div class="panel"><div class="tw"><table class="atable svt"><thead><tr><th>Serviço</th><th>Onde fica</th><th>Situação</th><th>Plano</th><th>IA</th><th>Depende de</th><th>Uso</th></tr></thead><tbody>
+    ${items.map((x, i) => { const u = useOf(x.keys); return `<tr><td><strong>${esc(x.name)}</strong><br><span class="tiny muted">${esc(x.what)}</span></td><td class="tiny">${esc(x.where)}</td><td>${sel(i, 'status', SV_STATUS)}</td><td>${sel(i, 'plan', SV_PLAN)}</td><td>${sel(i, 'ai', SV_AI)}</td><td class="tiny">${esc(x.deps)}</td><td class="num">${(x.keys || []).length ? `${u.users} <span class="tiny muted">pessoas<br>${u.n}×</span>` : '<span class="tiny muted">não medido</span>'}</td></tr>`; }).join('')}
+    </tbody></table></div></div>`;
+  el.querySelectorAll('select[data-k]').forEach(s => s.onchange = () => { items[+s.dataset.i][s.dataset.k] = s.value; });
+  $('#svSave').onclick = async e => { if (!await confirmInline(e.target, { text: 'Salvar a matriz de serviços?', yes: 'Sim, salvar' })) return; await save('services', 'Matriz salva.'); };
+}
+
+// ---------- Documentação ----------
+let docEdit = null;
+function docs(el) {
+  const items = D.docs.items;
+  el.innerHTML = `<div class="ahead"><h1>Documentação</h1><button class="chip" type="button" id="dcAdd">Nova seção</button></div>
+    <div class="dgrid"><nav class="dtoc" aria-label="Seções">${items.map(x => `<a href="#d-${esc(x.id)}" data-jump="${esc(x.id)}">${esc(x.title)}</a>`).join('')}</nav>
+    <div class="stack">${items.map((x, i) => docEdit === i ? `<section class="panel stack" id="d-${esc(x.id)}"><input type="text" id="dcTitle" value="${esc(x.title)}" aria-label="Título" style="font-weight:700">
+        <textarea id="dcBody" style="min-height:280px;font-family:ui-monospace,monospace;font-size:13px" aria-label="Texto">${esc(x.body)}</textarea>
+        <p class="tiny muted">Use ## para subtítulo, - para lista, **negrito** e | para tabela.</p>
+        <div class="rowbtn"><button class="btn primary" type="button" id="dcSave">Salvar seção</button><button class="btn" type="button" id="dcCancel">Cancelar</button><button class="btn danger" type="button" id="dcDel">Apagar seção</button></div></section>`
+      : `<section class="panel stack docsec" id="d-${esc(x.id)}"><div class="ahead"><h2>${esc(x.title)}</h2><button class="chip" type="button" data-ed="${i}">Editar</button></div><div class="small">${md(x.body)}</div></section>`).join('')}</div></div>`;
+  el.querySelectorAll('[data-jump]').forEach(a => a.onclick = ev => { ev.preventDefault(); document.getElementById('d-' + a.dataset.jump)?.scrollIntoView({ behavior: 'smooth' }); });
+  el.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => { docEdit = +b.dataset.ed; docs(el); $('#dcBody').focus(); });
+  $('#dcAdd').onclick = () => { items.push({ id: uid(), title: 'Nova seção', body: '' }); docEdit = items.length - 1; docs(el); $('#dcTitle').select(); };
+  if (docEdit == null) return;
+  $('#dcCancel').onclick = () => { docEdit = null; docs(el); };
+  $('#dcSave').onclick = async e => {
+    clearInvalid(el);
+    const title = $('#dcTitle').value.trim(), m = checkName(title, 'o título', 2, 80); if (m) return invalid($('#dcTitle'), m);
+    if (!await confirmInline(e.target, { text: `Salvar a seção "${esc(title)}"?`, yes: 'Sim, salvar' })) return;
+    Object.assign(items[docEdit], { title, body: $('#dcBody').value }); docEdit = null;
+    await save('docs', 'Documentação salva.'); docs(el);
+  };
+  $('#dcDel').onclick = async e => {
+    if (!await confirmInline(e.target, { text: `Apagar a seção "${esc(items[docEdit].title)}"?`, yes: 'Sim, apagar', danger: true })) return;
+    items.splice(docEdit, 1); docEdit = null; await save('docs', 'Seção apagada.'); docs(el);
   };
 }

@@ -1,4 +1,5 @@
 import { S, settings, goals, monthKeys, calcMonth, txsOf, manualOf, patrimonio, recurringSum, nextFatura, projOpts, latestCard } from '../state.js';
+import { track } from '../usage.js';
 import { byCategory, expandSplits, project, needPmt, payoff, schedule } from '../lib/calc.js';
 import { brl0, esc, todayISO, norm, addM } from '../lib/format.js';
 import * as db from '../db.js';
@@ -102,7 +103,7 @@ async function ask() {
   hist.splice(0, Math.max(0, hist.length - 8));
   hist.push({ role: 'user', content: q });
   try {
-    a.content = await chat({ system: system(), messages: hist, tools: TOOLS(), signal: ctl.signal, onStep: () => { a.content = 'Fazendo as contas...'; renderChat(); } });
+    track('perguntar.enviar'); a.content = await chat({ system: system(), messages: hist, tools: TOOLS(), signal: ctl.signal, onStep: () => { a.content = 'Fazendo as contas...'; renderChat(); } });
     a.done = true;
   } catch (e) { a.content = aiErrorText(e); a.done = false; }
   $('#askGo').disabled = false; $('#askStop').hidden = true; renderChat();

@@ -423,3 +423,13 @@ details.more > .stack{padding:0 10px 10px}
 .xv{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .xv.pos{color:var(--good)}
 .xcat{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Test phase: feedback and FAQ */
+.inwrap input{flex:1;min-width:0}
+.fbst{color:var(--good);font-weight:600;text-align:right}
+.faq{background:var(--card)}
+.faq summary{font-weight:600}
+.faq > div{margin-top:8px}
+#fbBtn{margin-left:0}
+#fbBtn,#privBtn{width:36px}
+@media (max-width:440px){.brand{font-size:16px}.monthsel{max-width:40%;padding:6px 8px;font-size:13px}}
