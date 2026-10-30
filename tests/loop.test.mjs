@@ -68,3 +68,18 @@ test('fluxos: pessoas por etapa e queda desde a anterior', () => {
   const f = flowFunnel([{ s: 'lancar' }, { s: 'lancar_pdf' }, { s: 'alpha' }, { s: 'lancar_revisao' }], { 'aba.lancar': { users: 10 }, 'lancar.pdf': { users: 6 }, 'lancar.pdf_ok': { users: 3 } });
   assert.deepEqual(f.map(x => [x.users, x.drop]), [[10, null], [6, 40], [null, null], [3, 50]]);
 });
+
+import { buildSummary } from '../public/js/admin/summary.js';
+test('resumo para o Claude: números, uso, opiniões e backlog, sem e-mails', () => {
+  const t = buildSummary({
+    metrics: { users: 5, users_7d: 2, families: 3, families_shared: 1, wau: 3, mau: 4, in_family: 5, families_1_month: 2, families_2_months: 1, families_closed: 0, d7_retained: 1, d7_eligible: 2, d30_retained: 0, d30_eligible: 0, imports_30d: 4, manual_30d: 9, receipts_30d: 1, push_devices: 2 },
+    usage: { days: 30, people: [{ name: 'Mari Souza', email: 'mari@x.com', family: 'Família Souza', last_day: '2026-10-30', days: 4, feedbacks: 1, features: { 'aba.inicio': 9, 'lancar.salvar': 3 } }], features: { 'aba.lancar': { users: 3, n: 9 }, 'lancar.pdf': { users: 2, n: 2 }, 'lancar.pdf_ok': { users: 1, n: 1 } }, hours: [[1, 21, 5]] },
+    feedback: [{ id: 7, kind: 'duvida', name: 'Mari Souza', email: 'mari@x.com', text: 'o que é a régua?', answer: 'É o preenchimento.', helpful: false, status: 'novo', screen: 'resumo', created_at: '2026-10-30T10:00:00Z' }],
+    backlog: [{ id: 'semana', title: 'Gasto por semana', status: 'agora', from: [7, 8], effort: 'M' }], today: '2026-10-30',
+  });
+  assert.match(t, /Pessoas: 5/); assert.match(t, /Mari \(família Família Souza\)/); assert.match(t, /Lançamento|Salvou lançamento falado ou escrito 3×/);
+  assert.match(t, /Importar fatura ou extrato: .*Abre Lançar 3 → .* 2 \(−33%\) → .* 1 \(−50%\)/);
+  assert.match(t, /\[#7 Dúvida · Mari · 30\/10\/2026 · tela resumo/); assert.match(t, /NÃO resolveu/);
+  assert.match(t, /semana: Gasto por semana · pedido por 2/); assert.match(t, /Horários de mais uso: 21h/);
+  assert.ok(!t.includes('mari@x.com'));
+});

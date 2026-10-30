@@ -507,6 +507,10 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('[data-t="backlog"]');
   await ap.setViewportSize({ width: 1280, height: 900 });
   await ap.click('[data-t="painel"]'); await ap.waitForSelector('#pTop .mlink');
+  await ap.click('#aCopy'); await ap.waitForFunction(() => !document.querySelector('#aCopy').disabled && (/copiado/.test(document.querySelector('#toast')?.textContent || '') || document.querySelector('dialog[open] textarea')));
+  const resumo = await ap.evaluate(() => document.querySelector('dialog[open] textarea')?.value || navigator.clipboard.readText().catch(() => ''));
+  ok('central: resumo para o Claude com uso, opiniões e backlog, sem e-mail', /Pessoas: 12/.test(resumo) && resumo.includes('Testador (família Família Teste)') && resumo.includes('## Backlog') && !resumo.includes('@test.com'), resumo.slice(0, 120));
+  await ap.evaluate(() => document.querySelectorAll('dialog[open]').forEach(d => { d.close(); d.remove(); }));
   ok('central: painel mostra opiniões novas e quem usou', (await ap.textContent('#pTop')).includes('Opiniões novas') && (await ap.textContent('#pTop')).includes('de 2 pessoas'));
   await ap.click('[data-t="opinioes"]'); await ap.waitForSelector('.fbcard');
   ok('central: opiniões em aberto com quem mandou e a tela', (await ap.$$('.fbcard')).length === 3 && (await ap.textContent('#aMain')).includes('tela lancar'));

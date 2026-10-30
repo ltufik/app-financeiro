@@ -10,6 +10,7 @@ import { pricingCalc } from '../lib/pricing.js';
 import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
 import { NEWS, replyTemplate, replyTitle } from '../lib/news.js';
 import { SCREENS, FLOWS, flowFunnel } from './flows.js';
+import { buildSummary } from './summary.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
@@ -52,7 +53,7 @@ async function save(key, msg) {
       : '<div class="panel"><h2>Não foi possível carregar</h2><p class="small">Confira se o schema.sql foi rodado de novo e se as variáveis do servidor estão certas.</p></div>';
     return;
   }
-  $('#aNav').hidden = false;
+  $('#aNav').hidden = false; $('#aCopy').hidden = false; $('#aCopy').onclick = copySummary;
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.onclick = () => go(b.dataset.t));
   const h = location.hash.slice(1); go(TABS.includes(h) ? h : 'painel');
 })();
@@ -468,4 +469,21 @@ async function fluxos(el) {
     d.onclick = e => { if (e.target === d) d.close(); };
     d.showModal();
   });
+}
+
+// ---------- Resumo para o Claude ----------
+async function copySummary() {
+  const b = $('#aCopy'); b.disabled = true; const old = b.textContent; b.textContent = 'Montando o resumo...';
+  try {
+    const metrics = await fetch('/api/metrics', { headers: { authorization: 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const [usage, feedback] = await Promise.all([loadUse(true).catch(() => null), loadFb(true).catch(() => [])]);
+    const text = buildSummary({ metrics, usage, feedback, backlog: D.backlog.items, today: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) });
+    try { await navigator.clipboard.writeText(text); toast('Resumo copiado. Cole na conversa com o Claude.'); }
+    catch (e) {
+      const d = document.createElement('dialog'); d.className = 'flbox';
+      d.innerHTML = '<div class="stack"><div class="ahead"><h2 style="margin:0">Resumo para o Claude</h2><button class="chip" type="button" data-x aria-label="Fechar">×</button></div><p class="small muted">Copie o texto abaixo (já está selecionado) e cole na conversa.</p><textarea style="min-height:50vh;width:min(680px,86vw);font-size:12.5px"></textarea></div>';
+      document.body.append(d); d.querySelector('textarea').value = text; d.querySelector('[data-x]').onclick = () => { d.close(); d.remove(); };
+      d.showModal(); d.querySelector('textarea').select();
+    }
+  } finally { b.disabled = false; b.textContent = old; }
 }
