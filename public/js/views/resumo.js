@@ -53,7 +53,7 @@ export function render(el) {
   <div class="grid2">
     <div class="panel">
       <h3>Cartão</h3>
-      <p class="muted small">${yr ? 'Média por fatura' : 'Fatura de ' + mLong(S.m)}${G.cardMonthly ? ' · meta ' + brl0(G.cardMonthly) : ''}</p>
+      <p class="muted small">${yr ? 'Média por fatura' : 'Fatura de ' + mLong(S.m)}${G.cardMonthly ? ' · limite ' + brl0(G.cardMonthly) : ''}</p>
       <div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(a.cardTotal / n)}</div>
       ${meter(a.cardTotal / n, G.cardMonthly, 0)}
       <p class="tiny muted" style="margin-top:6px">Entra na sobra: ${brl0(a.card / n)}. O resto são despesas extras ou o que não conta.</p>
@@ -63,15 +63,15 @@ export function render(el) {
       ${nf ? `<p class="muted small">${mLong(nf.month)}: parcelas já contratadas + recorrentes${nf.manuais ? ' + lançados' : ''}</p>
       <div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(nf.total)}</div>
       ${meter(nf.total, G.cardMonthly, 0)}
-      <p class="tiny muted" style="margin-top:6px">Parcelas ${brl0(nf.parcelas)} · recorrentes ${brl0(nf.recorrentes)}${nf.manuais ? ' · lançados ' + brl0(nf.manuais) : ''}${G.cardMonthly ? '. Espaço até a meta: ' + brl0(G.cardMonthly - nf.total) : ''}.</p>` : '<p class="muted small">Aparece quando houver uma fatura importada.</p>'}
+      <p class="tiny muted" style="margin-top:6px">Parcelas ${brl0(nf.parcelas)} · recorrentes ${brl0(nf.recorrentes)}${nf.manuais ? ' · lançados ' + brl0(nf.manuais) : ''}${G.cardMonthly ? '. Ainda cabe no limite: ' + brl0(G.cardMonthly - nf.total) : ''}.</p>` : '<p class="muted small">Aparece quando houver uma fatura importada.</p>'}
     </div>
   </div>
   <details class="more" id="homeMore"${moreOpen() ? ' open' : ''}>
-    <summary><span><strong>Mais detalhes</strong><br><span class="tiny muted">Poupança mês a mês, patrimônio e meta</span></span></summary>
+    <summary><span><strong>Mais detalhes</strong><br><span class="tiny muted">Assinaturas, quem paga o quê, quanto guardaram mês a mês, patrimônio e o sonho de vocês</span></span></summary>
     <div class="stack">
       <div class="panel">
-        <h3>Taxa de poupança mês a mês</h3>
-        <p class="muted small">Sobra ÷ receitas fixas.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
+        <h3>Quanto guardaram, mês a mês</h3>
+        <p class="muted small">Quanto da renda sobrou em cada mês. A linha tracejada é a meta de vocês.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
         <svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg>
       </div>
       <div class="grid2">
@@ -125,12 +125,12 @@ function renderInsights(box) {
 }
 
 function renderGoal(box, G, pr) {
-  if (!G.patrimonio) { box.innerHTML = '<h3>Meta de patrimônio</h3><p class="small muted">Defina no menu ☰, em Metas, quanto quer ter investido e com que idade para ver a projeção.</p>'; return; }
+  if (!G.patrimonio) { box.innerHTML = '<h3>O sonho de vocês</h3><p class="small muted">Diga no menu ☰ → Metas quanto querem ter investido e com que idade. Aqui aparece se o que vocês guardam hoje leva até lá.</p>'; return; }
   const p = pr[goalPreset], pts = projectFor(p[1], p[2]), end = pts[pts.length - 1];
   const need = Math.ceil(needPmtFor(p[2], G.patrimonio) / 50) * 50;
-  box.innerHTML = `<h3>Meta de ${brl0(G.patrimonio)}${G.ageGoal ? ' aos ' + G.ageGoal : ''}</h3>
+  box.innerHTML = `<h3>Sonho: ${brl0(G.patrimonio)} investidos${G.ageGoal ? ' aos ' + G.ageGoal + ' anos' : ''}</h3>
     <div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(end)}</div>
-    <p class="small muted">${esc(p[0])}: aporte de ${brl0(p[1])}/mês${p[2] ? ' + ' + brl0(p[2]) + '/ano' : ''}, retorno de ${pct(G.ret ?? 0.05)} ao ano acima da inflação. ${end >= G.patrimonio ? 'Passa da meta.' : 'Para chegar lá, o aporte mensal precisa ser de ' + brl0(need) + '.'}</p>
+    <p class="small muted">${esc(p[0])}: aporte de ${brl0(p[1])}/mês${p[2] ? ' + ' + brl0(p[2]) + '/ano' : ''}, retorno de ${pct(G.ret ?? 0.05)} ao ano acima da inflação. ${end >= G.patrimonio ? 'Nesse ritmo, vocês chegam lá.' : 'Para chegar lá, o aporte mensal precisa ser de ' + brl0(need) + '.'}</p>
     <div class="chips" style="margin-top:10px">${pr.map((x, i) => `<button class="chip" type="button" aria-pressed="${i === goalPreset}" data-i="${i}">${esc(x[0])}</button>`).join('')}</div>`;
   box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { goalPreset = +b.dataset.i; renderGoal(box, G, pr); });
 }

@@ -13,11 +13,11 @@ import { PHOTOS } from '../photos.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
-  assets: { title: 'Bens (imóveis, veículos)', hint: 'Valor de mercado e quanto falta pagar.', cols: [['name', 'Nome', 'text'], ['value', 'Valor', 'number'], ['debt', 'Falta pagar', 'number']] },
-  debts: { title: 'Financiamentos e dívidas', hint: 'Usados nas simulações de quitação. Taxa ao ano, ex.: 12 para 12%.', cols: [['name', 'Nome', 'text'], ['saldo', 'Saldo devedor', 'number'], ['taxa', 'Taxa % a.a.', 'pct'], ['parcela', 'Parcela', 'number']] },
-  receivables: { title: 'A receber', hint: 'Empréstimos que alguém está pagando. Parcelas em branco = sem fim.', cols: [['name', 'Nome', 'text'], ['monthly', 'Por mês', 'number'], ['start', 'Desde (AAAA-MM)', 'text'], ['n', 'Nº de parcelas', 'int']] },
-  redemptions: { title: 'Resgates previstos', hint: 'Dinheiro que vai entrar numa data (ex.: resgate de previdência).', cols: [['name', 'Nome', 'text'], ['value', 'Valor', 'number'], ['month', 'Mês (AAAA-MM)', 'text']] },
-  recurring: { title: 'Recorrentes do cartão', hint: 'Assinaturas, seguros, contas fixas no cartão. Entram no piso da próxima fatura.', cols: [[0, 'Item', 'text'], [1, 'Valor por mês', 'number'], [2, 'Observação', 'text']] },
+  assets: { title: 'Bens (imóveis, veículos)', hint: 'O que a família tem de valor. Ex.: apartamento que vale R$ 500 mil e ainda faltam R$ 200 mil para quitar.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto vale hoje', 'number'], ['debt', 'Quanto falta pagar', 'number']] },
+  debts: { title: 'Financiamentos e dívidas', hint: 'O que vocês ainda estão pagando. Ex.: financiamento do carro. Serve para o assistente calcular quando quita. Os juros são ao ano: escreva 12 para 12%.', cols: [['name', 'O que é', 'text'], ['saldo', 'Quanto falta pagar', 'number'], ['taxa', 'Juros ao ano (%)', 'pct'], ['parcela', 'Parcela por mês', 'number']] },
+  receivables: { title: 'Dinheiro que alguém está devolvendo', hint: 'Quando vocês emprestaram dinheiro e a pessoa devolve um pouco por mês. Ex.: emprestaram R$ 6.000 para um parente, que devolve R$ 500 por mês em 12 vezes. Se não tem data para acabar, deixe "Quantas vezes" em branco.', cols: [['name', 'Quem está devolvendo', 'text'], ['monthly', 'Quanto por mês', 'number'], ['start', 'Começou em (AAAA-MM)', 'text'], ['n', 'Quantas vezes', 'int']] },
+  redemptions: { title: 'Dinheiro que vai entrar numa data', hint: 'Um valor grande que vocês já sabem que vem. Ex.: resgate da previdência, venda do carro.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto', 'number'], ['month', 'Quando (AAAA-MM)', 'text']] },
+  recurring: { title: 'Contas fixas no cartão', hint: 'O que cai todo mês no cartão: streaming, seguro, academia. Serve para prever a próxima fatura.', cols: [[0, 'O que é', 'text'], [1, 'Quanto por mês', 'number'], [2, 'Observação', 'text']] },
 };
 
 export function render(el) {
@@ -41,11 +41,17 @@ export function render(el) {
 
   <div class="panel stack" data-sec="metas">
     <h2>Metas</h2>
-    <div class="grid3">
-      ${num('gCard', 'Cartão por mês (R$)', g.cardMonthly)}${num('gSav', 'Poupança (%)', g.savings * 100)}${num('gSav2', 'Poupança sem financiamento (%)', g.savingsNoFin * 100)}
-      ${num('gPat', 'Meta de investimentos (R$)', g.patrimonio)}${num('gAge', 'Idade hoje', g.ageNow)}${num('gAgeGoal', 'Idade da meta', g.ageGoal)}
-      ${num('gRet', 'Retorno real ao ano (%)', (g.ret ?? 0.05) * 100)}${num('gClose', 'Fechamento do cartão (dia)', st.cardCloseDay || 24)}
-    </div>
+    <p class="small muted">São três combinados da família. O app usa esses números para avisar quando o gasto passa do ponto e para mostrar se vocês estão no caminho.</p>
+    <h3>1. Limite do cartão</h3>
+    <p class="tiny muted">Até quanto vocês querem que a fatura chegue por mês. Se passar, o app avisa.</p>
+    <div class="grid3">${num('gCard', 'Limite da fatura por mês (R$)', g.cardMonthly)}${num('gClose', 'Dia em que a fatura fecha', st.cardCloseDay || 24)}</div>
+    <h3>2. Quanto guardar</h3>
+    <p class="tiny muted">Quanto da renda vocês querem que sobre no fim do mês. Ex.: 20 quer dizer guardar R$ 20 de cada R$ 100 que entram.</p>
+    <div class="grid3">${num('gSav', 'Guardar da renda (%)', g.savings * 100)}${num('gSav2', 'Se pagam financiamento de imóvel: guardar sem contar ele (%)', g.savingsNoFin * 100)}</div>
+    <h3>3. O sonho de vocês</h3>
+    <p class="tiny muted">Quanto querem ter investido no futuro e com que idade. O app mostra se o que guardam hoje leva até lá.</p>
+    <div class="grid3">${num('gPat', 'Quanto querem ter investido (R$)', g.patrimonio)}${num('gAge', 'Sua idade hoje', g.ageNow)}${num('gAgeGoal', 'Com que idade querem chegar lá', g.ageGoal)}
+      ${num('gRet', 'Rendimento acima da inflação (% ao ano). Na dúvida, deixe 5', (g.ret ?? 0.05) * 100)}</div>
     <div><button class="btn primary" id="gSave" type="button">Salvar metas</button></div>
     <h3 style="margin-top:10px">Orçamento por categoria</h3>
     <p class="tiny muted">Um limite por mês para as categorias que mais pesam. O Início mostra quanto já foi usado e o app avisa antes de estourar.</p>
@@ -164,9 +170,9 @@ export function render(el) {
       [$('#gCard'), checkNumber($('#gCard').value, { min: 0, max: 1e6, label: 'Cartão por mês', allowEmpty: true })],
       [$('#gSav'), checkNumber($('#gSav').value, { min: 0, max: 100, label: 'Poupança (%)', allowEmpty: true })],
       [$('#gSav2'), checkNumber($('#gSav2').value, { min: 0, max: 100, label: 'Poupança sem financiamento (%)', allowEmpty: true })],
-      [$('#gPat'), checkNumber($('#gPat').value, { min: 0, max: 1e9, label: 'Meta de investimentos', allowEmpty: true })],
+      [$('#gPat'), checkNumber($('#gPat').value, { min: 0, max: 1e9, label: 'Quanto querem ter investido', allowEmpty: true })],
       [$('#gAge'), checkNumber($('#gAge').value, { min: 0, max: 120, integer: true, label: 'Idade hoje', allowEmpty: true })],
-      [$('#gAgeGoal'), checkNumber($('#gAgeGoal').value, { min: 1, max: 120, integer: true, label: 'Idade da meta', allowEmpty: true }) || ($('#gAge').value && $('#gAgeGoal').value && +$('#gAgeGoal').value <= +$('#gAge').value ? 'A idade da meta precisa ser maior que a idade de hoje.' : '')],
+      [$('#gAgeGoal'), checkNumber($('#gAgeGoal').value, { min: 1, max: 120, integer: true, label: 'Com que idade querem chegar lá', allowEmpty: true }) || ($('#gAge').value && $('#gAgeGoal').value && +$('#gAgeGoal').value <= +$('#gAge').value ? 'A idade da meta precisa ser maior que a idade de hoje.' : '')],
       [$('#gRet'), checkNumber($('#gRet').value, { min: -10, max: 30, label: 'Retorno real ao ano (%)', allowEmpty: true })],
       [$('#gClose'), checkNumber($('#gClose').value, { min: 1, max: 31, integer: true, label: 'Fechamento do cartão', allowEmpty: true })],
     ]);

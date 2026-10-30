@@ -89,7 +89,7 @@ export function insights(ctx) {
 
   // 4. Next card bill already above the goal
   const nf = ctx.nextFatura, cap = ctx.goals.cardMonthly;
-  if (nf && cap && nf.total > cap) out.push({ id: 'card', tone: 'warn', title: 'Cartão acima da meta', text: `A fatura de ${mName(nf.month)} já soma ${R(nf.total)} entre parcelas e contas fixas, ${R(nf.total - cap)} acima da meta de ${R(cap)}. Segure as compras no cartão até o fechamento.` });
+  if (nf && cap && nf.total > cap) out.push({ id: 'card', tone: 'warn', title: 'Cartão acima do limite', text: `A fatura de ${mName(nf.month)} já soma ${R(nf.total)} entre parcelas e contas fixas, ${R(nf.total - cap)} acima do limite de ${R(cap)}. Segure as compras no cartão até o fechamento.` });
 
   // 5. Fixed costs eating the income
   const fx = ctx.fixed ? ctx.fixed(m) : 0;

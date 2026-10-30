@@ -204,7 +204,7 @@ if (backup) {
   const pills = await txt('#v-resumo .hero .chips');
   ok('setembro: 6% e 18%', pills.includes('Poupança 6%') && pills.includes('Sem o financiamento 18%'), pills);
   ok('próxima fatura com parcelas', (await txt('#v-resumo')).includes('Parcelas R$ 8.401'));
-  ok('meta e patrimônio aparecem', (await txt('#v-resumo')).includes('Meta de R$ 3.000.000 aos 55'));
+  ok('meta e patrimônio aparecem', (await txt('#v-resumo')).includes('Sonho: R$ 3.000.000 investidos aos 55 anos'));
   await shot('03-resumo-setembro');
   await page.selectOption('#monthSel', 'ano:2026');
   ok('ano: sobra R$ 53.494', (await txt('#v-resumo .big')).includes('53.494'));

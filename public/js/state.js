@@ -61,7 +61,7 @@ export function patrimonio() {
   const rows = [];
   if (st.invest?.total) rows.push({ name: 'Investimentos', value: +st.invest.total, note: st.invest.date ? 'em ' + st.invest.date.split('-').reverse().join('/') : '' });
   for (const a of st.assets || []) rows.push({ name: a.name, value: (+a.value || 0) - (+a.debt || 0), note: +a.debt ? `vale R$ ${Math.round(a.value).toLocaleString('pt-BR')}, faltam R$ ${Math.round(a.debt).toLocaleString('pt-BR')}` : 'quitado' });
-  (st.receivables || []).forEach((r, i) => { const left = o.receivables[i].left; if (left) rows.push({ name: 'A receber: ' + r.name, value: left * r.monthly, note: left + ' parcelas' }); });
+  (st.receivables || []).forEach((r, i) => { const left = o.receivables[i].left; if (left) rows.push({ name: 'A receber de ' + r.name, value: left * r.monthly, note: left + ' parcelas' }); });
   return { total: rows.reduce((a, r) => a + r.value, 0), rows };
 }
 
