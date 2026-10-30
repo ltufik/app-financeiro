@@ -2,7 +2,8 @@
 // It mimics the calls the app makes; access rules are tested separately against Postgres (tests/db).
 // State survives page reloads (like a real backend) so invite links can be tested across sessions.
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
-const T = load('mock.db', { users: [], households: [], members: [], invites: [], categories: [], transactions: [], rules: [], imports: [], studies: [] });
+const T = load('mock.db', { users: [], households: [], members: [], invites: [], categories: [], transactions: [], rules: [], imports: [], studies: [], push_subscriptions: [] });
+T.push_subscriptions ||= [];
 window.__db = T;
 let session = load('mock.session', null); const listeners = [];
 const persist = () => { localStorage.setItem('mock.db', JSON.stringify(T)); localStorage.setItem('mock.session', JSON.stringify(session)); };
@@ -50,6 +51,11 @@ class Q {
 
 const DEFAULT_CATS = [['Salário', 'renda'], ['Reembolsos', 'entrada'], ['Outras entradas', 'entrada'], ['Mercado', 'dia'], ['Restaurantes e delivery', 'dia'], ['Saúde', 'dia'], ['A classificar', 'dia'], ['Financiamento imobiliário', 'dia', true, true], ['Assinaturas', 'dia', false, true], ['Pagamento da fatura do cartão', 'neutro']];
 const rpcs = {
+  save_push({ p_household, p_endpoint, p_p256dh, p_auth, p_prefs }) {
+    T.push_subscriptions = T.push_subscriptions.filter(s => s.endpoint !== p_endpoint);
+    T.push_subscriptions.push({ id: uid(), household_id: p_household, user_id: session.user.id, endpoint: p_endpoint, p256dh: p_p256dh, auth: p_auth, prefs: p_prefs || {}, last_sent: {} }); return null;
+  },
+  delete_push({ p_endpoint }) { T.push_subscriptions = T.push_subscriptions.filter(s => s.endpoint !== p_endpoint); return null; },
   rename_category({ p_id, p_name }) {
     const c = T.categories.find(x => x.id === p_id); if (!c) throw new Error('not_member');
     if (T.categories.some(x => x.household_id === c.household_id && x.id !== p_id && x.name.toLowerCase() === p_name.toLowerCase())) throw new Error('duplicate');

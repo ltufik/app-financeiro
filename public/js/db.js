@@ -2,11 +2,12 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
 
 export let sb = null;
+export let config = {};
 
 export async function init() {
   const r = await fetch('/api/config');
   if (!r.ok) throw new Error('config');
-  const cfg = await r.json();
+  const cfg = await r.json(); config = cfg;
   if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) throw new Error('config_missing');
   sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   return sb;
@@ -68,6 +69,9 @@ export const learnRule = async (hh, source, pattern, category) => must(await sb.
 
 export const addCategory = async (hh, c) => must(await sb.from('categories').insert({ household_id: hh, ...c }).select().single());
 export const renameCategory = async (id, name) => must(await sb.rpc('rename_category', { p_id: id, p_name: name }));
+export const savePush = async (hh, sub, prefs) => must(await sb.rpc('save_push', { p_household: hh, p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_prefs: prefs || {} }));
+export const deletePush = async endpoint => must(await sb.rpc('delete_push', { p_endpoint: endpoint }));
+export const myPush = async endpoint => (must(await sb.from('push_subscriptions').select('endpoint, prefs, household_id').eq('endpoint', endpoint)) || [])[0] || null;
 export const updateCategory = async (id, patch) => must(await sb.from('categories').update(patch).eq('id', id));
 
 export const addStudy = async (hh, question, answer) => must(await sb.from('studies').insert({ household_id: hh, question, answer }).select().single());

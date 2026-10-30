@@ -7,6 +7,7 @@ import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
 import { installHelpHTML, wireInstall } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
+import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
   assets: { title: 'Bens (imóveis, veículos)', hint: 'Valor de mercado e quanto falta pagar.', cols: [['name', 'Nome', 'text'], ['value', 'Valor', 'number'], ['debt', 'Falta pagar', 'number']] },
@@ -58,6 +59,12 @@ export function render(el) {
     <div id="catList" class="stack"></div>
   </div>
 
+  <div class="panel stack" data-sec="avisos">
+    <h2>Notificações</h2>
+    <p class="small muted">O app avisa no celular quando algo importante acontece com o dinheiro da família. No máximo um aviso por dia. Vale para este aparelho.</p>
+    <div id="pushBox" class="stack"><p class="small muted">Verificando...</p></div>
+  </div>
+
   <div class="panel stack" data-sec="contexto">
     <h2>Contexto para o assistente</h2>
     <p class="tiny muted">Fatos que ajudam o Claude a entender a família, um por linha (ex.: "A renda extra não entra no controle oficial").</p>
@@ -89,6 +96,7 @@ export function render(el) {
 
   el.querySelectorAll('[data-sec]').forEach(p => { p.hidden = p.dataset.sec !== sec.key; });
   $('#secBack').onclick = () => openMenu();
+  if (sec.key === 'avisos') renderPush($('#pushBox'));
   // help
   $('#hTour').onclick = () => S.showTour('app');
   $('#hCoach').onclick = () => S.startCoach(true);
@@ -290,4 +298,46 @@ const val = id => +$('#' + id).value || 0;
 async function save(patch, msg) {
   const st = { ...settings(), ...patch };
   try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; toast(msg); } catch (e) { toast('Não foi possível salvar.'); }
+}
+
+// Notifications page: what this device can do, which notices, test and turn off.
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
+async function renderPush(box) {
+  const st = await pushStatus().catch(() => 'unsupported');
+  const msg = {
+    'need-install': `<p class="small">No iPhone, os avisos só funcionam com o app instalado na tela de início. Instale e abra pelo ícone; depois volte aqui.</p><details class="help" open><summary>Como instalar</summary>${installHelpHTML()}</details>`,
+    'no-sw': '<p class="small">O app ainda está terminando de instalar neste aparelho. Feche e abra de novo, e volte aqui.</p>',
+    unsupported: '<p class="small">Este navegador não recebe avisos. No Android, use o Chrome. No iPhone, instale o app na tela de início.</p>',
+    'not-configured': '<p class="small">Os avisos ainda não foram ligados no servidor do app. Assim que forem, esta página libera o botão.</p>',
+    denied: `<p class="small">Os avisos estão bloqueados para este app no celular. Para liberar:</p><ol class="small">${isIOS() ? '<li>Abra os Ajustes do iPhone → Notificações.</li><li>Toque em Pra Onde Foi e ligue Permitir Notificações.</li>' : '<li>No Chrome, toque no ícone ao lado do endereço (ou segure o ícone do app → Informações do app).</li><li>Toque em Notificações e escolha Permitir.</li>'}<li>Volte aqui e toque em Ativar avisos.</li></ol>`,
+  }[st];
+  if (msg) { box.innerHTML = msg; wireInstall(box); return; }
+  const prefs = await currentPrefs().catch(() => ({ dados: true, gastos: true, conquistas: true, semanal: true }));
+  box.innerHTML = `${st === 'on' ? '<p class="status ok">Avisos ligados neste celular.</p>' : ''}
+    <fieldset class="pushtypes"><legend class="small muted">Quero ser avisado sobre</legend>
+    ${PUSH_TYPES.map(t => `<label class="radio"><input type="checkbox" data-pt="${t.key}" ${prefs[t.key] !== false ? 'checked' : ''}><span><strong>${t.label}</strong><br><span class="tiny muted">${t.hint}</span></span></label>`).join('')}</fieldset>
+    <div class="rowbtn">${st === 'on' ? '<button class="btn" type="button" id="pTest">Enviar aviso de teste</button><button class="btn danger" type="button" id="pOff">Desligar avisos</button>' : '<button class="btn primary" type="button" id="pOn">Ativar avisos neste celular</button>'}</div>
+    <p class="status" id="pMsg" role="status" hidden></p>`;
+  const say = (k, t) => { const p = $('#pMsg'); p.hidden = false; p.className = 'status ' + k; p.textContent = t; };
+  const read = () => Object.fromEntries([...box.querySelectorAll('[data-pt]')].map(i => [i.dataset.pt, i.checked]));
+  box.querySelectorAll('[data-pt]').forEach(i => i.onchange = async () => {
+    if (!Object.values(read()).some(Boolean)) { i.checked = true; say('err', 'Deixe pelo menos um tipo de aviso ligado, ou toque em Desligar avisos.'); return; }
+    if (st === 'on') { try { await savePrefs(read()); say('ok', 'Preferências salvas.'); } catch (e) { say('err', 'Não foi possível salvar. Verifique a internet.'); } }
+  });
+  if (st !== 'on') $('#pOn').onclick = async () => {
+    say('busy', 'O celular vai pedir permissão. Toque em Permitir.');
+    try {
+      const r = await enablePush(read());
+      if (r === 'on') { lsSet('fin.push.on', '1'); toast('Avisos ligados'); renderPush(box); setTimeout(() => sendTest().catch(() => {}), 400); }
+      else if (r === 'denied') renderPush(box);
+      else say('err', 'Você não permitiu os avisos. Quando quiser, toque em Ativar de novo.');
+    } catch (e) { say('err', 'Não foi possível ligar os avisos. ' + db.errorText(e)); }
+  };
+  else {
+    $('#pTest').onclick = async () => { say('busy', 'Enviando...'); try { await sendTest(); say('ok', 'Aviso enviado. Ele chega em alguns segundos.'); } catch (e) { say('err', 'Não foi possível enviar o teste agora.'); } };
+    $('#pOff').onclick = async e => {
+      if (!await confirmInline(e.target, { text: 'Desligar os avisos neste celular? Dá para ligar de novo quando quiser.', yes: 'Sim, desligar', danger: true })) return;
+      await disablePush(); lsSet('fin.push.on', '0'); toast('Avisos desligados'); renderPush(box);
+    };
+  }
 }

@@ -83,3 +83,20 @@ node tests/e2e/run.mjs --playwright <playwright/index.mjs> --pdfjs <pdfjs-dist/l
 ```
 
 Não coloque PDFs nem backups reais no repositório: o `.gitignore` já bloqueia `*.pdf` e `*backup*.json`.
+
+## Notificações push
+
+Uma vez por dia (09:00 de Brasília, pelo Vercel Cron em `vercel.json`), `api/push-cron.js` calcula os avisos de cada família e envia no máximo um por aparelho. O botão de teste usa `api/push-test.js`. A criptografia do Web Push está em `api/_webpush.js`, sem dependências.
+
+Variáveis no Vercel (Settings → Environment Variables):
+
+| Nome | O que é |
+|---|---|
+| `VAPID_PUBLIC_KEY` | Chave pública dos avisos (pode ser vista pelo navegador) |
+| `VAPID_PRIVATE_KEY` | Chave privada dos avisos (secreta) |
+| `CRON_SECRET` | Senha que o Vercel manda ao chamar a rotina diária (secreta) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave secreta do Supabase (Settings → API Keys → Secret keys). Só o servidor usa |
+
+Gerar um novo par de chaves: `node -e "import('./api/_webpush.js').then(m => console.log(m.generateVapidKeys()))"`.
+
+No iPhone, os avisos só funcionam com o app instalado na tela de início (iOS 16.4 ou mais novo).

@@ -162,7 +162,10 @@ async function doStart() {
   setFamily(await db.loadFamily(S.hh.id));
   $('#brand').textContent = S.hh.name;
   show('app');
-  const t = lsGet('fin.tab'); setTab(VIEWS[t] ? t : 'resumo');
+  // A notification opens the app on a given tab (?tab=...).
+  const want = new URLSearchParams(location.search).get('tab'), t = lsGet('fin.tab');
+  if (VIEWS[want]) history.replaceState(null, '', location.pathname);
+  setTab(VIEWS[want] ? want : VIEWS[t] ? t : 'resumo');
   if (!tourDone()) S.showTour();
   else if (shouldCoach(S.user)) setTimeout(() => S.startCoach(), 700);
   else { setTimeout(maybeAskInstall, 1500); }
@@ -183,7 +186,10 @@ async function showInviteBanner() {
 
 (async function boot() {
   // Registered first thing: Android only offers a real install (our icon and name) once the service worker is active.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.addEventListener('message', e => { if (e.data?.type === 'open' && S.hh) { const t = new URL(e.data.url).searchParams.get('tab'); if (VIEWS[t]) S.go(t); } });
+  }
   captureInviteFromUrl();
   // Read before the Supabase client consumes the link: a password-recovery link carries type=recovery.
   const recovering = /type=recovery/.test(location.hash) || /type=recovery/.test(location.search);

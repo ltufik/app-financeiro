@@ -21,7 +21,8 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 async function addRoutes(t) {
   await t.route('https://app.test/**', async r => {
     const u = new URL(r.request().url());
-    if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon' } });
+    if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
+    if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
     if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
     const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
     if (!fs.existsSync(p)) return r.fulfill({ status: 404, body: 'nf' });
@@ -35,8 +36,19 @@ async function addRoutes(t) {
   await t.route('https://images.pexels.com/**', r => r.fulfill({ body: fs.readFileSync(path.join(ROOT, 'icons/icon-192.png')), contentType: 'image/png' }));
 }
 await addRoutes(page);
+// Fake permission prompt and push service (headless Chromium has no push service).
+await page.addInitScript(() => {
+  if (!navigator.serviceWorker || !window.Notification) return;
+  let perm = 'default', sub = null;
+  window.__permAnswer = 'granted';
+  Object.defineProperty(Notification, 'permission', { get: () => perm, configurable: true });
+  Notification.requestPermission = async () => { perm = window.__permAnswer; return perm; };
+  const fakeSub = () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/e2e', toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'BKey', auth: 'Auth' } }; }, async unsubscribe() { sub = null; return true; } });
+  const pm = { async getSubscription() { return sub; }, async subscribe(o) { window.__subOpts = !!o.applicationServerKey && o.userVisibleOnly; sub = fakeSub(); return sub; } };
+  Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve({ pushManager: pm }), configurable: true });
+});
 
-let chatCalls = 0;
+let chatCalls = 0, window_pushTests = 0;
 function aiMock(b) {
   const text = JSON.stringify(b.messages);
   const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
@@ -131,10 +143,10 @@ ok('resumo cumprimenta pelo nome', (await txt('#v-resumo')).includes('Boas-vinda
 ok('início vazio mostra a régua de preenchimento em 0%', (await txt('#stepsBox')).includes('Use o app por completo') && (await txt('#stepsBox .regua-n')) === '0%', await txt('#stepsBox .regua-n'));
 ok('régua mostra só os próximos 3 passos, com o que cada um libera', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 3 && (await txt('#stepsBox')).includes('Libera a sobra do mês'));
 await page.click('#stepsBox [data-all]');
-ok('régua mostra todos os passos', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 11);
+ok('régua mostra todos os passos', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 12);
 await page.click('#stepsBox [data-skip]');
 await page.waitForFunction(() => document.querySelector('#stepsBox .regua-n')?.textContent !== '0%');
-ok('"não tenho" conta na régua', (await txt('#stepsBox .regua-n')) === '10%' && await page.evaluate(() => window.__db.households[0].settings.skips?.invest === true), await txt('#stepsBox .regua-n'));
+ok('"não tenho" conta na régua', (await txt('#stepsBox .regua-n')) === '5%' && await page.evaluate(() => window.__db.households[0].settings.skips?.invest === true), await txt('#stepsBox .regua-n'));
 await page.click('#stepsBox [data-unskip]'); await page.waitForFunction(() => document.querySelector('#stepsBox .regua-n')?.textContent === '0%');
 await page.click('#stepsBox [data-all]');
 await page.click('#stepsBox [data-k="0"]');
@@ -145,7 +157,7 @@ await shot('02-vazio');
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas', (await page.$$('#drawer [data-sec]')).length === 8 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas', (await page.$$('#drawer [data-sec]')).length === 9 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 await shot('02b-menu');
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 ok('menu fecha com Esc', await page.isHidden('#drawer'));
@@ -342,6 +354,31 @@ ok('renomear para nome repetido é recusado', (await txt('#catList')).includes('
 await page.fill('#catList .catname input', 'Farmácia e saúde'); await page.click('#catList [data-ok]'); await page.waitForSelector('#catList .cfm [data-y]');
 await page.click('#catList .cfm [data-y]'); await page.waitForTimeout(200);
 ok('categoria renomeada', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Farmácia e saúde')));
+// notifications
+await sec('avisos');
+await page.waitForSelector('#pOn');
+ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 4 && (await txt('#pushBox')).includes('Resumo da semana'));
+await page.uncheck('#pushBox [data-pt="semanal"]');
+await page.evaluate(() => { window.__permAnswer = 'default'; });
+await page.click('#pOn');
+await page.waitForFunction(() => /não permitiu/.test(document.querySelector('#pMsg')?.textContent || ''));
+ok('se a pessoa não permitir, explica e não liga', await page.evaluate(() => window.__db.push_subscriptions.length === 0));
+await page.evaluate(() => { window.__permAnswer = 'granted'; });
+await page.click('#pOn');
+await page.waitForSelector('#pTest');
+const ps = await page.evaluate(() => window.__db.push_subscriptions);
+ok('ativar avisos salva o aparelho com as preferências', ps.length === 1 && ps[0].prefs.semanal === false && ps[0].prefs.gastos === true && await page.evaluate(() => window.__subOpts === true), JSON.stringify(ps));
+await page.waitForTimeout(600);
+ok('ao ativar, manda um aviso de teste', window_pushTests >= 1);
+await shot('08b-avisos');
+await page.check('#pushBox [data-pt="semanal"]'); await page.waitForTimeout(150);
+ok('mudar o tipo de aviso salva na hora', await page.evaluate(() => window.__db.push_subscriptions[0].prefs.semanal === true));
+for (const k of ['dados', 'gastos', 'conquistas']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
+await page.click('#pushBox [data-pt="semanal"]');
+ok('não deixa desmarcar todos os tipos', (await txt('#pMsg')).includes('pelo menos um') && await page.isChecked('#pushBox [data-pt="semanal"]'));
+await page.click('#pOff'); await page.waitForSelector('#pushBox .cfm [data-y]');
+await page.click('#pushBox .cfm [data-y]'); await page.waitForSelector('#pOn');
+ok('desligar avisos pede confirmação e remove o aparelho', await page.evaluate(() => window.__db.push_subscriptions.length === 0));
 // forgot password
 await sec('conta');
 await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])'); await page.click('#wLogin');

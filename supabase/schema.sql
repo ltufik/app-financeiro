@@ -343,6 +343,42 @@ begin
     do update set category = excluded.category;
 end $$;
 
+-- Notificações push: um registro por aparelho. prefs = tipos de aviso ligados; last_sent = último envio de cada aviso.
+create table if not exists public.push_subscriptions (
+  id           uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households(id) on delete cascade,
+  user_id      uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  endpoint     text not null unique,
+  p256dh       text not null,
+  auth         text not null,
+  prefs        jsonb not null default '{}'::jsonb,
+  last_sent    jsonb not null default '{}'::jsonb,
+  created_at   timestamptz not null default now()
+);
+alter table public.push_subscriptions enable row level security;
+drop policy if exists push_own on public.push_subscriptions;
+create policy push_own on public.push_subscriptions for select using (user_id = auth.uid());
+grant select on public.push_subscriptions to authenticated;
+revoke all on public.push_subscriptions from anon;
+
+-- Liga os avisos neste aparelho (o mesmo aparelho pode ter sido de outra conta: troca o dono).
+create or replace function public.save_push(p_household uuid, p_endpoint text, p_p256dh text, p_auth text, p_prefs jsonb default '{}'::jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_member(p_household) then raise exception 'not_member'; end if;
+  if p_endpoint !~ '^https://' or length(p_endpoint) > 1000 then raise exception 'bad_endpoint'; end if;
+  insert into push_subscriptions(household_id, user_id, endpoint, p256dh, auth, prefs)
+    values (p_household, auth.uid(), p_endpoint, p_p256dh, p_auth, coalesce(p_prefs, '{}'::jsonb))
+  on conflict (endpoint) do update set household_id = excluded.household_id, user_id = excluded.user_id,
+    p256dh = excluded.p256dh, auth = excluded.auth, prefs = excluded.prefs;
+end $$;
+
+-- Desliga os avisos deste aparelho.
+create or replace function public.delete_push(p_endpoint text)
+returns void language sql security definer set search_path = public as $$
+  delete from push_subscriptions where endpoint = p_endpoint and user_id = auth.uid();
+$$;
+
 -- Renomeia uma categoria e leva o novo nome para lançamentos, divisões de nota e regras.
 create or replace function public.rename_category(p_id uuid, p_name text)
 returns void language plpgsql security definer set search_path = public as $$
@@ -393,3 +429,5 @@ grant execute on function public.accept_invite(text, text) to authenticated;
 grant execute on function public.replace_month(uuid, text, text, jsonb, uuid[], text, text, jsonb) to authenticated;
 grant execute on function public.learn_rule(uuid, text, text, text) to authenticated;
 grant execute on function public.rename_category(uuid, text) to authenticated;
+grant execute on function public.save_push(uuid, text, text, text, jsonb) to authenticated;
+grant execute on function public.delete_push(text) to authenticated;

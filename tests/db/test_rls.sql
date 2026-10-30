@@ -88,6 +88,7 @@ select count(*) as hh_b from public.households where id = :'hb' \gset
 \echo excluir conta de dona única: família A :hh_a, lançamentos A :tx_a, família B intacta :hh_b
 
 -- Renomear categoria leva o nome para lançamentos, divisões e regras
+set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select public.create_household('Família R', 'Rui') as hr \gset
 select (select count(*) from categories where household_id = :'hr' and recurring) as fixas, (select count(*) from categories where household_id = :'hr' and name like 'Empréstimos%') as terceiros \gset
@@ -101,3 +102,22 @@ select (select category from transactions where household_id = :'hr') as tc, (se
 \set ON_ERROR_STOP off
 \echo (o erro a seguir é esperado: nome repetido)
 select public.rename_category(:'cid', 'mercado');
+
+-- Avisos: cada um vê só os próprios aparelhos; o mesmo aparelho troca de dono
+\set ON_ERROR_STOP on
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select public.save_push(:'hr', 'https://push.example/abc', 'k1', 'a1', '{"semanal":false}');
+select public.save_push(:'hr', 'https://push.example/abc', 'k2', 'a2', '{}');
+select count(*) as np, max(p256dh) as pk from push_subscriptions \gset
+\echo aviso salvo sem duplicar: :np registro, chave :pk
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select count(*) as other from push_subscriptions \gset
+\echo outra pessoa vê aparelhos alheios: :other
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: A não é da família R)
+select public.save_push(:'hr', 'https://push.example/zzz', 'k', 'a', '{}');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select public.delete_push('https://push.example/abc');
+select count(*) as left_ from push_subscriptions \gset
+\echo aviso desligado: restam :left_
