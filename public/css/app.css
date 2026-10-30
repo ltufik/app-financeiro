@@ -373,3 +373,13 @@ details.more > summary::-webkit-details-marker{display:none}
 details.more > summary::after{content:"";width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;flex:none}
 details.more[open] > summary::after{transform:rotate(-135deg)}
 details.more > .stack{padding:0 10px 10px}
+/* ---- Lançar: one tile per way of entering ---- */
+.ltiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.ltiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.ltile{appearance:none;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px 12px;display:flex;flex-direction:column;gap:10px;cursor:pointer;color:var(--ink);min-width:0}
+.ltile strong{display:block;font-size:15px}
+.ltile .tiny{display:block;margin-top:2px;line-height:1.35}
+.ltile .lti{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
+.ltile .lti svg{width:22px;height:22px}
+.ltile[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.ltile[aria-pressed="true"] .lti{background:var(--accent);color:var(--accent-ink)}

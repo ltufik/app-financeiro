@@ -17,12 +17,34 @@ const PDF = { bytes: null, name: '' };
 export function render(el) {
   if (!el.dataset.built) build(el);
   renderManual(); renderImports();
+  const nm = pendingManual().length, ni = S.imports.length;
+  $('#lHistSum').textContent = `${nm} em aberto · ${ni} ${ni === 1 ? 'importação' : 'importações'}`;
+}
+
+// One way of entering at a time: the tiles on top open the matching panel.
+let mode = null;
+export function openMode(m, focus) {
+  mode = m === 'mao' ? 'falar' : m;
+  document.querySelectorAll('#v-lancar [data-panel]').forEach(p => { p.hidden = p.dataset.panel !== mode; });
+  document.querySelectorAll('#v-lancar .ltile').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  if (m === 'mao') $('#qManual').click();
+  if (focus) { const p = document.querySelector(`#v-lancar [data-panel="${mode}"]`); p.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (m === 'falar') setTimeout(() => $('#qText').focus({ preventScroll: true }), 300); }
+}
+// Called by S.go before scrolling to an element of this view (e.g. "#drop" from the home ruler).
+export function reveal(sel) {
+  const e = document.querySelector(sel), p = e && e.closest('#v-lancar [data-panel]');
+  if (p && p.hidden) openMode(p.dataset.panel);
+  if (e && e.closest('#lHist')) $('#lHist').open = true;
 }
 
 function build(el) {
   el.dataset.built = '1';
   el.innerHTML = `
-  <div class="panel">
+  <div class="panel stack">
+    <h2>O que você quer lançar?</h2>
+    <div class="ltiles" role="group" aria-label="Como lançar"><button type="button" class="ltile" data-mode="falar" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><strong>Falar ou escrever</strong><span class="tiny muted">"Gastei 45 na padaria no pix"</span></span></button><button type="button" class="ltile" data-mode="nota" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><strong>Foto da nota</strong><span class="tiny muted">Separa cada item por categoria</span></span></button><button type="button" class="ltile" data-mode="pdf" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></span><span><strong>Fatura ou extrato</strong><span class="tiny muted">PDF de qualquer banco</span></span></button><button type="button" class="ltile" data-mode="mao" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span><strong>Preencher à mão</strong><span class="tiny muted">Data, valor e categoria</span></span></button></div>
+  </div>
+  <div class="panel" data-panel="falar" hidden>
     <h2>Lançar um gasto ou entrada</h2>
     <p class="muted small">Fale ou escreva do jeito que diria. Pode ser mais de um na mesma frase.</p>
     <div class="inwrap" style="margin-top:10px"><textarea id="qText" placeholder="Ex.: gastei 230 no mercado hoje no cartão e 350 de terapia por pix"></textarea><button id="qMic"></button></div>
@@ -31,7 +53,7 @@ function build(el) {
     <div class="rowbtn" style="margin-top:12px"><button class="btn primary" id="qGo" type="button">Interpretar</button><button class="btn" id="qManual" type="button">Preencher à mão</button><span class="small muted" id="qStatus"></span></div>
     <div id="qPreview" hidden style="margin-top:14px"></div>
   </div>
-  <div class="panel" id="rcPanel">
+  <div class="panel" id="rcPanel" data-panel="nota" hidden>
     <h2>Nota fiscal ou cupom</h2>
     <p class="muted small">Tire uma foto da nota (ou envie o PDF) e o app separa cada item na categoria certa. Ex.: na farmácia, remédio vai para Saúde e suplemento para Suplementos. A foto não fica guardada.</p>
     <div class="rowbtn" style="margin-top:12px">
@@ -41,7 +63,7 @@ function build(el) {
     <div class="log" id="rcLog" style="margin-top:12px"></div>
     <div id="rcReview" hidden style="margin-top:14px"></div>
   </div>
-  <div class="panel">
+  <div class="panel" data-panel="pdf" hidden>
     <h2>Enviar PDF</h2>
     <p class="muted small">Fatura do cartão, extrato da conta ou extrato de investimentos. O app lê, confere os totais e mostra tudo para você revisar antes de salvar. O arquivo não fica guardado.</p>
     <div class="drop" id="drop" style="margin-top:12px">
@@ -62,12 +84,18 @@ function build(el) {
     <div class="log" id="pdfLog" style="margin-top:12px"></div>
     <div id="review" hidden style="margin-top:14px"></div>
   </div>
-  <div class="panel">
-    <h3>Lançamentos manuais em aberto</h3>
-    <p class="muted small">Entram nas contas do mês até chegar o extrato ou a fatura. Na importação, os que baterem são conciliados.</p>
-    <div id="manualList" style="margin-top:8px"></div>
-  </div>
-  <div class="panel"><h3>Importações</h3><ul class="list small" id="importList"></ul></div>`;
+  <details class="more" id="lHist">
+    <summary><span><strong>Lançados à mão e importações</strong><br><span class="tiny muted" id="lHistSum"></span></span></summary>
+    <div class="stack">
+      <div class="panel">
+        <h3>Lançamentos manuais em aberto</h3>
+        <p class="muted small">Entram nas contas do mês até chegar o extrato ou a fatura. Na importação, os que baterem são conciliados.</p>
+        <div id="manualList" style="margin-top:8px"></div>
+      </div>
+      <div class="panel"><h3>Importações</h3><ul class="list small" id="importList"></ul></div>
+    </div>
+  </details>`;
+  el.querySelectorAll('.ltile').forEach(b => b.onclick = () => openMode(b.dataset.mode, true));
   attachMic($('#qMic'), $('#qText'));
   el.querySelectorAll('#qExamples .chip').forEach(b => b.onclick = () => { $('#qText').value = b.textContent; $('#qText').focus(); });
   $('#qGo').onclick = interpret;

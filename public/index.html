@@ -6,6 +6,8 @@
 <title>Pra Onde Foi</title>
 <meta name="description" content="Pra Onde Foi: descubra para onde vai o dinheiro da família. Pix, cartão e renda num lugar só, com lançamento por voz e leitura de faturas em PDF.">
 <meta name="theme-color" content="#0B3C5D">
+<script>/* Chrome can offer the install before the app's modules load: keep the event for later. */
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__bip = e; });</script>
 <script>/* Appearance: light (Mar aberto) by default; "dark" or "auto" (follow the phone) when chosen in the menu. */
 try { var t = localStorage.getItem('fin.theme') || 'light'; if (t !== 'auto') document.documentElement.setAttribute('data-theme', t); } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }</script>
 <link rel="manifest" href="/manifest.webmanifest">

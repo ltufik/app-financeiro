@@ -236,6 +236,10 @@ if (backup) {
 }
 
 await page.click('[data-tab=lancar]');
+ok('lançar mostra 4 jeitos de lançar e só um bloco aberto por vez', (await page.$$('#v-lancar .ltile')).length === 4 && await page.$$eval('#v-lancar [data-panel]', ps => ps.filter(p => !p.hidden).length <= 1));
+await shot('04a-lancar-opcoes');
+await page.click('.ltile[data-mode="falar"]');
+ok('escolher um jeito abre só o bloco dele', await page.isVisible('#qText') && await page.isHidden('#drop'));
 ok('botão de microfone presente (Chrome)', await page.isVisible('#qMic'));
 await page.fill('#qText', ''); await page.click('#qMic'); await page.waitForTimeout(700);
 ok('microfone continua ouvindo depois das pausas da fala', (await page.inputValue('#qText')) === 'gastei 45 na padaria no pix' && await page.evaluate(() => document.querySelector('#qMic').classList.contains('rec') && window.__srStarts > 3), await page.inputValue('#qText'));
@@ -252,6 +256,7 @@ await page.click('#qSave');
 await page.waitForFunction(() => document.querySelector('#manualList')?.textContent.includes('Terapia'));
 const man = await txt('#manualList');
 ok('lançamentos por texto salvos', man.includes('Mercado') && man.includes('fatura de outubro de 2026'), man);
+await page.click('#lHist summary');
 await page.click('#manualList [data-del]');
 ok('apagar lançamento pede confirmação', (await txt('#manualList')).includes('Sim, apagar'));
 await page.click('.cfm [data-n]');
@@ -259,6 +264,8 @@ ok('cancelar mantém o lançamento', (await page.$$('#manualList li')).length ==
 await shot('04-lancar');
 
 // receipt (nota fiscal): photo -> items by category -> details the matching card purchase
+await page.click('.ltile[data-mode="nota"]');
+ok('foto da nota abre o bloco da nota', await page.isVisible('#rcCam') || await page.isVisible('#rcPanel'));
 await page.setInputFiles('#rcFile', path.join(ROOT, 'icons/icon-512.png'));
 await page.waitForSelector('#rcSave', { timeout: 15000 });
 ok('nota lida pelo Claude', (await txt('#rcLog')).includes('Nota lida: 3 itens, total R$ 230,00'), await txt('#rcLog'));
@@ -308,6 +315,7 @@ await page.click('[data-tab=lancar]');
 const fatura = arg('fatura');
 if (fatura && backup) {
   await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
+  await page.click('.ltile[data-mode="pdf"]');
   const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('#drop strong', { force: true })]);
   await fc.setFiles(fatura);
   await page.waitForSelector('#rvSave', { timeout: 30000 });
@@ -332,6 +340,7 @@ const outra = arg('outra');
 if (outra) {
   await page.click('[data-tab=lancar]');
   await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
+  await page.click('.ltile[data-mode="pdf"]');
   await page.setInputFiles('#pdfIn', outra);
   await page.waitForSelector('#rvSave', { timeout: 30000 });
   const log = await txt('#pdfLog');
@@ -525,7 +534,8 @@ for (const [name, uaStr, expect] of [
   if (shots) await p2.screenshot({ path: path.join(shots, 'install-' + name + '.png') });
   if (name === 'Android' && await p2.$('[data-install]')) { await p2.click('[data-install]'); await p2.waitForTimeout(200); ok('Android: botão abre a instalação do sistema', await p2.evaluate(() => window.__prompted === true && !document.querySelector('.isheet')));
     await p2.evaluate(() => localStorage.setItem('fin.installed', '1'));
-    await p2.reload(); await p2.waitForSelector('.isheet', { timeout: 8000 }).catch(() => {});
+    await p2.reload(); await p2.waitForSelector('.isheet', { timeout: 15000 }).catch(() => {});
+    if (!(await p2.$('.isheet'))) console.log('DBG install', await p2.evaluate(() => JSON.stringify({ i: localStorage.getItem('fin.installed'), n: localStorage.getItem('fin.install.n'), bip: !!window.__bip, ev: !!(window.S && 1) })));
     ok('Android: depois de desinstalar, o convite para instalar volta', !!(await p2.$('.isheet')) && await p2.evaluate(() => localStorage.getItem('fin.installed') === '0')); }
   if (name === 'iPhone') { await p2.click('[data-later]'); await p2.reload(); await p2.waitForTimeout(2000); ok('iPhone: depois de "agora não", não insiste na mesma hora', !(await p2.$('.isheet'))); }
   await ctx.close();

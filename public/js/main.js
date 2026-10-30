@@ -108,13 +108,16 @@ S.reload = async (all = false) => {
 S.go = (tab, sel, sec) => {
   if (sec) S.sec = sec;
   setTab(tab);
+  if (sel) VIEWS[tab]?.reveal?.(sel);
   if (sel) setTimeout(() => { const e = $(sel); if (!e) return; e.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (e.matches('input,textarea,button')) e.focus({ preventScroll: true }); }, 60);
 };
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault(); S.installEvt = e;
+const onInstallable = e => {
+  e.preventDefault && e.preventDefault(); S.installEvt = e;
   // Only fires when the app is NOT installed: if we thought it was (uninstalled since), ask again.
   if (markNotInstalled()) setTimeout(() => { if (!$('.tour') && !$('.coach') && shouldAskInstall()) askInstall(); }, 1200);
-});
+};
+window.addEventListener('beforeinstallprompt', onInstallable);
+if (window.__bip) onInstallable(window.__bip);
 checkStillInstalled();
 
 // Welcome tour: once per person (remembered in the account, so it does not repeat on another phone).
