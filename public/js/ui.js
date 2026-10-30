@@ -5,9 +5,23 @@ import { KINDS, kindOf } from './lib/calc.js';
 export const $ = (s, root = document) => root.querySelector(s);
 export const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 
-export function toast(t) {
-  const el = $('#toast'); el.textContent = t; el.hidden = false;
-  clearTimeout(toast.h); toast.h = setTimeout(() => el.hidden = true, 3400);
+// Result pop-up: success or error, closes by itself in 5 s (countdown shown) or on the X.
+// kind: 'ok' | 'err' | 'info'; when omitted it is guessed from the text.
+const ERR = /^(não (foi possível|consegui|deu)|erro|falhou|sem conexão)|não foi possível|parou no meio/i;
+export function toast(t, kind) {
+  const el = $('#toast'); if (!el) return;
+  kind = kind || (ERR.test(t) ? 'err' : 'ok');
+  clearInterval(toast.h);
+  let left = 5;
+  const icon = kind === 'err' ? '<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>' : kind === 'info' ? '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>' : '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>';
+  el.className = 'toast ' + kind; el.setAttribute('role', kind === 'err' ? 'alert' : 'status');
+  el.innerHTML = `<span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></span>
+    <span class="tt"><strong>${kind === 'err' ? 'Algo deu errado' : kind === 'info' ? 'Aviso' : 'Pronto!'}</strong><span>${esc(t)}</span><span class="tc">Fecha em <b>5</b>s</span></span>
+    <button type="button" class="tx" aria-label="Fechar">×</button>`;
+  el.hidden = false;
+  const close = () => { clearInterval(toast.h); el.hidden = true; };
+  el.querySelector('.tx').onclick = close;
+  toast.h = setInterval(() => { left--; const b = el.querySelector('.tc b'); if (b) b.textContent = left; if (left <= 0) close(); }, 1000);
 }
 
 export function banner(t) { const b = $('#sysBanner'); b.hidden = !t; b.textContent = t || ''; }
@@ -88,20 +102,31 @@ export function validate(pairs) {
 
 // ---------- double confirmation ----------
 // Shows "text [Sim] [Cancelar]" right after `anchor` and resolves true/false. Used before every add/delete.
-export function confirmInline(anchor, { text, yes = 'Sim, confirmar', no = 'Cancelar', danger = false } = {}) {
-  document.querySelectorAll('.cfm-row, .cfm').forEach(x => x.remove());
+export function confirmInline(anchor, { text, yes = 'Sim, confirmar', no = 'Cancelar', danger = false, title } = {}) {
+  // "Are you sure?" pop-up in the middle of the screen (the anchor is only used to give focus back).
+  document.querySelectorAll('.cfm-wrap').forEach(x => x.remove());
   return new Promise(resolve => {
-    const box = document.createElement('div');
-    box.className = 'cfm' + (danger ? ' danger' : ''); box.setAttribute('role', 'alertdialog');
-    box.innerHTML = `<p class="small">${text}</p><div class="rowbtn"><button class="btn ${danger ? 'danger-fill' : 'primary'}" type="button" data-y>${esc(yes)}</button><button class="btn" type="button" data-n>${esc(no)}</button></div>`;
-    const host = anchor.closest('li, tr, .rowbtn, .confirm') || anchor;
-    let holder = box;
-    if (host.tagName === 'TR') { holder = document.createElement('tr'); holder.className = 'cfm-row'; const td = document.createElement('td'); td.colSpan = 99; td.append(box); holder.append(td); }
-    host.insertAdjacentElement('afterend', holder);
-    const done = v => { holder.remove(); resolve(v); };
-    box.querySelector('[data-y]').onclick = () => done(true);
-    box.querySelector('[data-n]').onclick = () => done(false);
-    box.querySelector('[data-y]').focus();
-    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const wrap = document.createElement('div'); wrap.className = 'cfm-wrap';
+    wrap.innerHTML = `<div class="cfm${danger ? ' danger' : ''}" role="alertdialog" aria-modal="true" aria-labelledby="cfmT" aria-describedby="cfmX">
+      <h3 id="cfmT">${esc(title || (danger ? 'Tem certeza?' : 'Confirma?'))}</h3><p class="small" id="cfmX">${text}</p>
+      <div class="rowbtn"><button class="btn ${danger ? 'danger-fill' : 'primary'}" type="button" data-y>${esc(yes)}</button><button class="btn" type="button" data-n>${esc(no)}</button></div></div>`;
+    document.body.append(wrap); document.body.classList.add('cfm-open');
+    const done = v => { wrap.remove(); document.body.classList.remove('cfm-open'); if (anchor && anchor.focus) try { anchor.focus({ preventScroll: true }); } catch (e) { /* gone */ } resolve(v); };
+    wrap.querySelector('[data-y]').onclick = () => done(true);
+    wrap.querySelector('[data-n]').onclick = () => done(false);
+    wrap.onclick = e => { if (e.target === wrap) done(false); };
+    wrap.onkeydown = e => { if (e.key === 'Escape') done(false); };
+    wrap.querySelector(danger ? '[data-n]' : '[data-y]').focus();
   });
+}
+
+// "Working on it" card while a long task runs (reading a PDF or a receipt). set(text) updates the step.
+export function busy(text) {
+  document.querySelectorAll('.busy').forEach(x => x.remove());
+  const el = document.createElement('div'); el.className = 'busy'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+  el.innerHTML = `<span class="spin" aria-hidden="true"></span><span class="bt"><strong>Só um instante</strong><span></span></span>`;
+  document.body.append(el);
+  const set = t => { el.querySelector('.bt span').textContent = t; };
+  set(text);
+  return { set, done: () => el.remove() };
 }

@@ -36,7 +36,7 @@ export function openTour(o = {}) {
     $('#tourCount').textContent = `${i + 1} de ${n}`;
     $('#tourBack').style.visibility = i ? 'visible' : 'hidden';
     $('#tourNext').textContent = i === n - 1 ? slides[i].cta : 'Próximo';
-    $('#tourSkip').style.visibility = i === n - 1 ? 'hidden' : 'visible';
+    $('#tourSkip').textContent = i === n - 1 ? 'Fechar' : 'Pular';
   };
   $('#tourNext').onclick = () => i === n - 1 ? close(true) : go(i + 1);
   $('#tourBack').onclick = () => go(i - 1);

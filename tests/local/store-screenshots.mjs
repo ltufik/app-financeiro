@@ -1,0 +1,41 @@
+// Store/install screenshots (780x1688) with a fictional family, so no real data appears.
+// node tests/local/store-screenshots.mjs --playwright <playwright index.mjs> --demo <demo-backup.json> --out public/screenshots
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const arg = k => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : null; };
+const { chromium } = await import(arg('playwright'));
+const HERE = path.dirname(fileURLToPath(import.meta.url)), ROOT = path.resolve(HERE, '../../public');
+const MOCK = fs.readFileSync(path.join(HERE, '../e2e/mock-supabase.js'), 'utf8');
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Safari/537.36' });
+await page.route('https://app.test/**', r => {
+  const u = new URL(r.request().url());
+  if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon' } });
+  if (u.pathname.startsWith('/api/')) return r.fulfill({ status: 403, json: {} });
+  const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
+  if (!fs.existsSync(p)) return r.fulfill({ status: 404, body: '' });
+  r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
+});
+await page.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
+await page.route(/cdnjs|fonts\.|pexels/, r => r.fulfill({ status: 404, body: '' }));
+await page.goto('https://app.test/');
+await page.click('#wSignup');
+await page.fill('#aName', 'Ana Souza'); await page.fill('#aEmail', 'ana@exemplo.com'); await page.fill('#aPass', 'senha-forte-123'); await page.check('#aConsent'); await page.click('#aGo');
+await page.waitForSelector('#obName'); await page.fill('#obName', 'Ana'); await page.click('#obNext');
+await page.click('[data-s="1"]'); await page.waitForSelector('#obFam'); await page.fill('#obFam', 'Família Souza'); await page.click('#obCreate');
+await page.waitForSelector('#obDone'); await page.click('#obDone');
+await page.waitForSelector('.tour'); await page.click('#tourSkip');
+await page.waitForTimeout(800); if (await page.$('.coach')) await page.click('#coachNever');
+await page.click('#menuBtn'); await page.click('#drawer [data-sec="backup"]');
+await page.setInputFiles('#dImport', arg('demo')); await page.click('.cfm [data-y]');
+await page.waitForFunction(() => /Pronto/.test(document.querySelector('#bkStatus')?.textContent || ''));
+await page.evaluate(() => { document.querySelector('#toast').hidden = true; document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()); });
+const out = arg('out'), snap = async n => { await page.evaluate(() => { window.scrollTo(0, 0); const t = document.querySelector('#toast'); if (t) t.hidden = true; document.querySelectorAll('.isheet, .isheet-bg').forEach(x => x.remove()); }); await page.waitForTimeout(300); await page.screenshot({ path: path.join(out, n + '.png') }); };
+await page.evaluate(() => document.querySelectorAll('[class*=isheet]').forEach(x => x.remove()));
+await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09'); await snap('inicio');
+await page.click('[data-tab=lancar]'); await snap('lancar');
+await page.click('[data-tab=graficos]'); await snap('graficos');
+await browser.close();
+console.log('ok');

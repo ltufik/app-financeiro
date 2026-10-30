@@ -79,7 +79,7 @@ export function render(el) {
 
   <div class="panel stack" data-sec="contexto">
     <h2>Contexto para o assistente</h2>
-    <p class="tiny muted">Fatos que ajudam o Claude a entender a família, um por linha (ex.: "A renda extra não entra no controle oficial").</p>
+    <p class="tiny muted">Fatos que ajudam o assistente a entender a família, um por linha (ex.: "A renda extra não entra no controle oficial").</p>
     <textarea id="facts" style="min-height:140px">${esc((st.facts || []).join('\n'))}</textarea>
     <div><button class="btn primary" id="factsSave" type="button">Salvar</button></div>
   </div>
@@ -288,7 +288,10 @@ export function render(el) {
     } catch (e) { status('err', 'Não foi possível gerar o backup. Verifique a internet e tente de novo.'); return false; }
     finally { $('#dExport').disabled = false; }
   };
-  $('#dExport').onclick = () => backup();
+  $('#dExport').onclick = async e => {
+    if (!await confirmInline(e.target, { title: 'Baixar o backup?', text: 'O arquivo tem todos os dados financeiros da família. Guarde num lugar seguro e não compartilhe.', yes: 'Sim, baixar' })) return;
+    if (await backup()) toast('Backup baixado. Ele está na pasta de downloads do aparelho.'); else toast('Não foi possível gerar o backup. Verifique a internet e tente de novo.');
+  };
   $('#dImport').onchange = async e => {
     const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
     let b;
@@ -323,12 +326,14 @@ export function render(el) {
     const st = box.querySelector('.status'), yes = box.querySelector('[data-y]');
     const bks = box.querySelector('[data-bks]');
     box.querySelector('[data-b]').onclick = () => backup((k, t) => { bks.hidden = false; bks.className = 'status ' + k; bks.textContent = t; });
-    box.querySelector('[data-n]').onclick = () => { box.innerHTML = ''; };
+    box.querySelector('[data-n]').onclick = () => { box.innerHTML = ''; document.body.classList.remove('cfm-open'); };
+    document.body.classList.add('cfm-open');
+    box.onclick = e => { if (e.target === box) { box.innerHTML = ''; document.body.classList.remove('cfm-open'); } };
     yes.onclick = async () => {
       yes.disabled = true; st.hidden = false; st.className = 'status busy'; st.textContent = 'Processando...';
       try { await run(); } catch (e) { st.className = 'status err'; st.textContent = 'Não foi possível concluir. Verifique a internet e tente de novo.'; yes.disabled = false; }
     };
-    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    box.querySelector('[data-n]').focus();
   };
   $('#signOut').onclick = async () => { await db.sb.auth.signOut(); location.reload(); };
   $('#delAcc').onclick = () => ask({

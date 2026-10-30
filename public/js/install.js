@@ -28,7 +28,8 @@ export function markNotInstalled() {
 }
 export async function checkStillInstalled() {
   if (isStandalone() || lsGet('fin.installed') !== '1' || !navigator.getInstalledRelatedApps) return;
-  try { const apps = await navigator.getInstalledRelatedApps(); if (!apps.length) markNotInstalled(); } catch (e) { /* not supported */ }
+  try { const apps = await navigator.getInstalledRelatedApps(); if (!apps.length) return markNotInstalled(); } catch (e) { /* not supported */ }
+  return false;
 }
 
 // Asks again after 3 days, at most 3 times, never once installed.

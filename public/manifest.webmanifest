@@ -41,21 +41,21 @@
       "sizes": "780x1688",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Para onde foi o seu dinheiro?"
+      "label": "Quanto sobrou no mês, avisos e o que fazer"
     },
     {
-      "src": "/screenshots/pdf.png",
+      "src": "/screenshots/lancar.png",
       "sizes": "780x1688",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Mande a fatura e o extrato em PDF"
+      "label": "Lance por voz, foto da nota ou PDF da fatura"
     },
     {
-      "src": "/screenshots/voz.png",
+      "src": "/screenshots/graficos.png",
       "sizes": "780x1688",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Gastou? É só falar"
+      "label": "Gráficos do seu jeito"
     }
   ],
   "related_applications": [

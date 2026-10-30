@@ -23,6 +23,8 @@ function parseJSON(t) {
   const a = s.indexOf('{'), b = s.indexOf('['), start = a < 0 ? b : b < 0 ? a : Math.min(a, b);
   const end = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']'));
   if (start >= 0 && end > start) { try { return JSON.parse(s.slice(start, end + 1)); } catch (e) { /* fall through */ } }
+  // A long list cut off at the token limit: keep the complete items.
+  if (start >= 0 && s[start] === '[') { const lc = s.lastIndexOf('}'); if (lc > start) { try { return JSON.parse(s.slice(start, lc + 1) + ']'); } catch (e) { /* fall through */ } } }
   throw new AIError('bad_json');
 }
 
@@ -62,11 +64,11 @@ export async function chat({ system, messages, tools = [], tier = 'default', sig
 export function aiErrorText(e) {
   return ({
     not_signed_in: 'Entre de novo na sua conta.',
-    not_configured: 'O Claude ainda não foi configurado no servidor (falta a chave da API).',
-    not_allowed: 'Seu e-mail não está liberado para usar o Claude neste app.',
+    not_configured: 'A leitura inteligente ainda não foi configurada no servidor.',
+    not_allowed: 'Seu e-mail não está liberado para a leitura inteligente neste app.',
     rate_limited: 'Muitas perguntas seguidas. Espere um minuto e tente de novo.',
     cancelled: 'Interrompido.',
     network: 'Sem conexão. Verifique a internet.',
-    bad_json: 'O Claude respondeu num formato inesperado. Tente de novo.',
-  })[e && e.code] || 'O Claude não conseguiu responder agora. Tente de novo.';
+    bad_json: 'A resposta veio incompleta. Tente de novo.',
+  })[e && e.code] || 'Não deu para responder agora. Tente de novo.';
 }

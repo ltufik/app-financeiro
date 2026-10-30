@@ -114,11 +114,13 @@ S.go = (tab, sel, sec) => {
 const onInstallable = e => {
   e.preventDefault && e.preventDefault(); S.installEvt = e;
   // Only fires when the app is NOT installed: if we thought it was (uninstalled since), ask again.
-  if (markNotInstalled()) setTimeout(() => { if (!$('.tour') && !$('.coach') && shouldAskInstall()) askInstall(); }, 1200);
+  if (markNotInstalled()) askAgainSoon();
 };
+// The app was uninstalled since the last visit: invite to install again (once the screen is free).
+const askAgainSoon = () => setTimeout(() => { if (!$('.tour') && !$('.coach') && !$('.cfm-wrap') && shouldAskInstall()) askInstall(); }, 1200);
 window.addEventListener('beforeinstallprompt', onInstallable);
 if (window.__bip) onInstallable(window.__bip);
-checkStillInstalled();
+checkStillInstalled().then(changed => { if (changed) askAgainSoon(); });
 
 // Welcome tour: once per person (remembered in the account, so it does not repeat on another phone).
 const tourDone = () => S.user?.user_metadata?.tour_done || lsGet('fin.tour.' + S.user?.id) === '1';

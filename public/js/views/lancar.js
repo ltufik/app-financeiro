@@ -5,7 +5,7 @@ import { attachMic, speechSupported } from '../speech.js';
 import { classify } from '../lib/categorize.js';
 import { lineify, detect, parseFaturaSantander, parseExtratoSantander, faturaMonth, checkFatura, checkExtrato, detectBank, MONEY } from '../lib/parse.js';
 import { brl, esc, mLong, addM, todayISO, isoToBr, cycleMonth, norm, round2, thisMonth } from '../lib/format.js';
-import { $, toast, catPicker, confirmInline, invalid, clearInvalid } from '../ui.js';
+import { $, toast, catPicker, confirmInline, invalid, clearInvalid, busy } from '../ui.js';
 import { checkDate, checkNumber, checkName } from '../lib/validate.js';
 import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '../lib/receipt.js';
 
@@ -100,13 +100,13 @@ function build(el) {
   el.querySelectorAll('#qExamples .chip').forEach(b => b.onclick = () => { $('#qText').value = b.textContent; $('#qText').focus(); });
   $('#qGo').onclick = interpret;
   $('#qManual').onclick = () => { Q = [{ source: 'conta', date: todayISO(), description: '', amount: 0, category: 'A classificar' }]; renderQ(); $('#qStatus').textContent = 'Preencha e salve.'; };
-  $('#pdfIn').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) startPdf(f).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')).finally(() => { e.target.value = ''; }); };
+  $('#pdfIn').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => startPdf(f), pdfResult).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')).finally(() => { e.target.value = ''; }); };
   const drop = $('#drop');
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
   drop.ondragleave = () => drop.classList.remove('over');
-  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) startPdf(f).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')); };
-  $('#pwGo').onclick = () => openPdf($('#pwIn').value);
-  for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) readReceipt(f); };
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => startPdf(f), pdfResult).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')); };
+  $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), pdfResult);
+  for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => readReceipt(f), () => !$('#rcReview').hidden ? $('#rcReview') : $('#rcLog')); };
 }
 
 // ---------- manual entries ----------
@@ -181,6 +181,7 @@ function renderQ() {
       if (!isFinite(it.amount) || it.amount === 0) return invalid(tr.querySelector('[data-f=amount]'), 'Informe o valor.');
       if (Math.abs(it.amount) >= 1e6) return invalid(tr.querySelector('[data-f=amount]'), 'Valor alto demais. Confira se não faltou a vírgula.');
     }
+    if (!await confirmInline($('#qSave'), { title: Q.length > 1 ? `Salvar ${Q.length} lançamentos?` : 'Salvar o lançamento?', text: Q.map(it => `${esc(it.description)}: ${brl(it.amount)} (${it.source === 'cartao' ? 'cartão' : 'conta'}, ${esc(it.category)})`).join('<br>'), yes: 'Sim, salvar' })) return;
     $('#qSave').disabled = true;
     try {
       const rows = Q.map(it => ({ household_id: S.hh.id, source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
@@ -192,7 +193,15 @@ function renderQ() {
 }
 
 // ---------- PDF ----------
-const plog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#pdfLog').append(p); };
+let BUSY = null;
+const pdfResult = () => !$('#review').hidden ? $('#review') : !$('#pwBox').hidden ? $('#pwBox') : $('#pdfLog');
+const plog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#pdfLog').append(p); if (BUSY) BUSY.set(t); };
+// Shows progress while the PDF is read, then brings the result (or the problem) into view.
+async function withBusy(first, run, where) {
+  BUSY = busy(first);
+  try { return await run(); }
+  finally { BUSY.done(); BUSY = null; const t = where(); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
 async function startPdf(file) {
   $('#pdfLog').innerHTML = ''; $('#review').hidden = true; $('#pwBox').hidden = true;
   if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { plog('Este arquivo não parece ser um PDF.', 'var(--bad)'); return; }
@@ -220,7 +229,7 @@ async function openPdf(password) {
   if (type === 'fatura-santander') {
     const r = parseFaturaSantander(pages.flatMap((p, i) => lineify(p.items, p.w, i === 0 ? 1 : 2)));
     if (r.ok) { plog(`Fatura lida: ${r.items.length} lançamentos. Totais por cartão conferem.`, 'var(--good)'); return reviewRows('cartao', r.items, faturaMonth(r.vencimento), { total: r.net, venc: r.vencimento, checks: r.checks }); }
-    plog('A leitura direta não fechou com os totais. Vou pedir ao Claude.', 'var(--warn)');
+    plog('A leitura direta não fechou com os totais. Vou usar a leitura inteligente.', 'var(--warn)');
     return viaClaude(doc, pages, text, 'fatura');
   }
   if (type === 'extrato-santander') {
@@ -251,7 +260,7 @@ async function viaClaude(doc, pages, text, kind) {
   const fmt = kind === 'investimentos' ? JSON_INVEST : kind === 'extrato' ? JSON_EXTRATO : kind === 'fatura' ? JSON_FATURA : `um destes formatos, conforme o documento: ${JSON_EXTRATO} ou ${JSON_FATURA} ou ${JSON_INVEST}`;
   try {
     if (text && (text.match(MONEY) || []).length > 5) {
-      plog('Pedindo ao Claude para ler o documento...');
+      plog('Lendo o documento com a leitura inteligente...');
       const r = await askJSON(`Extraia os dados deste documento financeiro brasileiro (texto extraído de PDF). Responda só com JSON em ${fmt}.\n${RULES_TXT}\nDocumento:\n"""${text.slice(0, 150000)}"""`, { maxTokens: 16000 });
       return handleExtracted(r);
     }
@@ -278,7 +287,7 @@ function handleExtracted(r) {
     const items = (r.itens || []).filter(x => x && isFinite(+x.valor)).map(x => ({ day: (x.data || '').slice(0, 5), description: String(x.descricao || '').replace(/\s+/g, ' ').trim(), installment: x.parcela || '', amount: +x.valor, card: x.cartao ? String(x.cartao) : '' }));
     const c = checkFatura(items, r.cartoes, r.valorTotalFatura);
     const bank = r.banco || PDF.bank;
-    plog(`${bank ? 'Fatura do ' + bank : 'Fatura'} lida pelo Claude: ${items.length} lançamentos.`, 'var(--good)');
+    plog(`${bank ? 'Fatura do ' + bank : 'Fatura'} lida: ${items.length} lançamentos.`, 'var(--good)');
     plog(c.ok ? (c.how === 'total' ? 'A soma confere com o total da fatura.' : 'Os totais por cartão conferem.') : c.how === 'sem total' ? 'Não achei o total da fatura no documento para conferir. Revise com cuidado.' : 'Atenção: a soma dos lançamentos não bate com o total do documento. Revise com cuidado antes de salvar.', c.ok ? 'var(--good)' : 'var(--warn)');
     return reviewRows('cartao', items, faturaMonth(r.vencimento), { total: round2(items.reduce((a, i) => a + i.amount, 0)), venc: r.vencimento, checks: c.checks, viaClaude: true, bank, ok: c.ok });
   }
@@ -287,7 +296,7 @@ function handleExtracted(r) {
     const rows = (r.movimentos || []).filter(x => x && isFinite(+x.valor)).map(x => { const d = (x.data || '').slice(0, 5); const [dd, mm] = d.split('/'); return { day: d, date: mes && dd && mm ? `${mes.slice(0, 4)}-${mm}-${dd}` : null, description: String(x.descricao || '').replace(/\s+/g, ' ').trim(), amount: +x.valor }; });
     const ok = checkExtrato(rows, r.saldoAnterior, r.saldoFinal, r.totalEntradas, r.totalSaidas);
     const bank = r.banco || PDF.bank;
-    plog(`${bank ? 'Extrato do ' + bank : 'Extrato'} lido pelo Claude: ${rows.length} movimentos.`, 'var(--good)');
+    plog(`${bank ? 'Extrato do ' + bank : 'Extrato'} lido: ${rows.length} movimentos.`, 'var(--good)');
     plog(ok ? 'Os movimentos fecham com os saldos (ou com os totais) do documento.' : 'Atenção: os movimentos não fecham com os saldos do documento. Revise com cuidado antes de salvar.', ok ? 'var(--good)' : 'var(--warn)');
     return reviewRows('conta', rows, mes, { saldoIni: r.saldoAnterior != null ? +r.saldoAnterior : null, saldoFim: r.saldoFinal != null ? +r.saldoFinal : null, viaClaude: true, bank, ok });
   }
@@ -299,16 +308,19 @@ async function suggest(source, rows) {
   const unk = rows.filter(r => !r.category); if (!unk.length) return;
   plog(`Pedindo sugestão de categoria para ${unk.length} lançamento${unk.length > 1 ? 's' : ''} novo${unk.length > 1 ? 's' : ''}...`);
   const names = new Set(S.categories.map(c => c.name));
-  try {
-    for (let i = 0; i < unk.length; i += 120) {
-      const chunk = unk.slice(i, i + 120);
-      const r = await askJSON(`Classifique lançamentos financeiros de uma família brasileira. Categorias possíveis (grupo entre colchetes): ${catList()}.
-Responda só com JSON: [{"i":0,"categoria":"<nome exato da lista>","confianca":"alta"|"baixa"}].
+  // Small batches: a long answer can be cut off at the token limit. Each batch gets one retry.
+  let failed = 0;
+  for (let i = 0; i < unk.length; i += 40) {
+    const chunk = unk.slice(i, i + 40);
+    const ask = () => askJSON(`Classifique lançamentos financeiros de uma família brasileira. Categorias possíveis (grupo entre colchetes): ${catList()}.
+Responda só com JSON, sem texto antes ou depois: [{"i":0,"c":"<nome exato da lista>","a":1}] onde a = 1 se tiver certeza, 0 se não.
 Lançamentos (${source === 'cartao' ? 'cartão de crédito' : 'conta corrente; valor negativo = saída'}):
-${chunk.map((r, k) => `${k}. ${r.description} | ${r.amount}`).join('\n')}`, { tier: 'quick', maxTokens: 6000 });
-      (Array.isArray(r) ? r : []).forEach(x => { const row = chunk[+x.i]; if (row && names.has(x.categoria)) { row.category = x.categoria; row.pending = x.confianca !== 'alta'; row.how = 'sugestão'; } });
-    }
-  } catch (e) { plog('Sem sugestões do Claude agora (' + aiErrorText(e) + ').', 'var(--warn)'); }
+${chunk.map((r, k) => `${k}. ${r.description} | ${r.amount}`).join('\n')}`, { tier: 'quick', maxTokens: 4000 });
+    let r = null;
+    try { r = await ask(); } catch (e) { try { r = await ask(); } catch (e2) { if (['not_configured', 'not_allowed', 'not_signed_in'].includes(e2.code)) { plog('Sugestão de categorias indisponível: ' + aiErrorText(e2), 'var(--warn)'); break; } failed += chunk.length; continue; } }
+    (Array.isArray(r) ? r : []).forEach(x => { const row = chunk[+x.i], c = x.c ?? x.categoria; if (row && names.has(c)) { row.category = c; row.pending = !(x.a === 1 || x.confianca === 'alta'); row.how = 'sugestão'; } });
+  }
+  if (failed) plog(`Não consegui sugerir a categoria de ${failed} lançamento${failed > 1 ? 's' : ''}. Eles ficam em "A classificar" para você escolher.`, 'var(--warn)');
   unk.forEach(r => { if (!r.category) { r.category = r.amount > 0 && source === 'conta' ? 'Outras entradas' : 'A classificar'; r.pending = true; } });
 }
 
@@ -397,7 +409,7 @@ function reviewInvest(r) {
 
 // ---------- receipts (nota fiscal) ----------
 let RC = null; // receipt being reviewed
-const rlog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#rcLog').append(p); };
+const rlog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#rcLog').append(p); if (BUSY) BUSY.set(t); };
 // Phone photos are big: shrink to at most 1600 px and JPEG before sending.
 async function shrink(file) {
   const url = URL.createObjectURL(file);
