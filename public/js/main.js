@@ -15,6 +15,7 @@ import { openTour } from './tour.js';
 import { initMenu, closeMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
 import { checkAdmin, touchActivity } from './metrics.js';
+import { initPrivacy } from './privacy.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
@@ -149,6 +150,7 @@ function setTab(t) {
 }
 $$('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 initMenu();
+initPrivacy($('#privBtn'), () => { $$('.view[data-built]').forEach(v => { delete v.dataset.built; }); S.render(); });
 $('#monthSel').onchange = e => { S.m = e.target.value; if (S.tab === 'fechar' && !S.m.startsWith('ano:')) S.closeMonth = S.m; S.render(); };
 function renderMonthSel() {
   const ks = monthKeys(), years = [...new Set(ks.map(k => k.slice(0, 4)))].sort().reverse();

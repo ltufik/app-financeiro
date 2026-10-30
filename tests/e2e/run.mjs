@@ -23,6 +23,7 @@ async function addRoutes(t) {
     const u = new URL(r.request().url());
     if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
     if (u.pathname === '/api/metrics') return r.fulfill({ json: u.searchParams.get('probe') ? { admin: true } : { users: 12, users_7d: 3, users_30d: 12, in_family: 11, families: 6, families_shared: 4, families_1_month: 5, families_2_months: 3, families_closed: 2, d7_eligible: 8, d7_retained: 5, d30_eligible: 2, d30_retained: 1, wau: 7, mau: 10, daily: Array.from({ length: 14 }, (_, i) => ({ day: '2026-10-' + String(17 + i).padStart(2, '0'), users: i % 5 })), manual_30d: 40, receipts_30d: 6, imports_30d: 15, studies: 4, charts: 3, push_devices: 5, at: '2026-10-30T12:00:00Z' } });
+    if (u.pathname === '/api/notify') { notifies.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { sent: 1 } }); }
     if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
     if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
     const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
@@ -57,7 +58,7 @@ await page.addInitScript(() => {
   Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve({ pushManager: pm }), configurable: true });
 });
 
-let chatCalls = 0, window_pushTests = 0;
+let chatCalls = 0, window_pushTests = 0; const notifies = [];
 function aiMock(b) {
   const text = JSON.stringify(b.messages);
   const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
@@ -171,7 +172,7 @@ await shot('02-vazio');
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 10 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 12 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 await shot('02b-menu');
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 ok('menu fecha com Esc', await page.isHidden('#drawer'));
@@ -214,6 +215,12 @@ if (backup) {
   ok('régua fica compacta depois de 40%', await page.isVisible('#stepsBox.regua-mini') && (await page.$$('#stepsBox .steps li')).length === 0);
   ok('para onde foi mostra as 5 maiores', (await page.$$eval('#catBars .catbar', b => b.filter(x => !x.hidden).length)) === 5 && await page.isVisible('#catMore'));
   ok('detalhes (poupança, patrimônio, meta) ficam recolhidos', await page.evaluate(() => !document.querySelector('#homeMore').open));
+  // privacy mode
+  await page.click('#privBtn'); await page.waitForTimeout(150);
+  ok('modo privacidade esconde os valores', (await txt('#v-resumo .big')).includes('R$ ••••') && !/R\$ \d/.test(await txt('#v-resumo')), (await txt('#v-resumo .big')));
+  await page.click('#privBtn'); await page.waitForTimeout(150);
+  ok('desligar a privacidade mostra os valores de novo', (await txt('#v-resumo .big')).includes('2.658,50'));
+  ok('assinaturas e cobranças fixas aparecem nos detalhes', (await txt('#subsBox')).includes('Assinaturas e cobranças fixas') && (await page.$$('#subsBox li')).length >= 1, (await txt('#subsBox')).slice(0, 140));
   await shot('03b-insights');
   // guided month closing
   await page.waitForSelector('#goClose');
@@ -335,6 +342,8 @@ if (fatura && backup) {
   await page.click('.cfm [data-y]');
   await page.waitForFunction(() => window.__lastReplace);
   const lr = await page.evaluate(() => window.__lastReplace);
+  await page.waitForTimeout(200);
+  ok('importar avisa o resto da família', notifies.some(n => n.type === 'imported' && n.source === 'cartao' && n.month === '2026-09'));
   ok('fatura salva no mês certo', lr.p_month === '2026-09' && lr.n === 217, JSON.stringify(lr));
   await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09');
   // Same statement re-imported: only the Allpark parking (R$ 70, reclassified by hand in the original data) may differ.
@@ -370,11 +379,11 @@ ok('estudo salvo', true);
 await shot('06-perguntar');
 
 await page.click('[data-tab=extrato]');
-const nrows = await page.$$eval('#lRows tr', r => r.length);
+const nrows = await page.$$eval('#lRows li', r => r.length);
 ok('extrato lista lançamentos', nrows > 0, nrows + ' linhas');
 if (nrows) {
-  await page.click('#lRows tr:not([data-split]) .chip');
-  const sel = await page.$('#lRows tr:not([data-split]) select');
+  await page.click('#lRows li:not([data-split]) .chip');
+  const sel = await page.$('#lRows li:not([data-split]) select');
   const opt = await sel.evaluate(s => [...s.options].map(o => o.value).find(v => v && v !== s.value));
   await sel.selectOption(opt);
   await page.waitForTimeout(200);
@@ -390,6 +399,12 @@ ok('idade da meta menor que a atual é recusada', (await txt('#v-ajustes')).incl
 await page.fill('#gAge', '42'); await page.fill('#gAgeGoal', '55');
 await page.fill('#gCard', '17000'); await page.click('#gSave'); await page.waitForTimeout(100);
 ok('metas salvas', await page.evaluate(() => window.__db.households[0].settings.goals.cardMonthly === 17000));
+// who pays what (only 1 person yet)
+await sec('divisao');
+ok('quem paga o quê pede um convite quando só há uma pessoa', (await txt('#splitBox')).includes('duas pessoas ou mais'));
+await sec('sobre');
+ok('página sobre explica o que o app guarda e os créditos', (await txt('#v-ajustes')).includes('O que o app nunca guarda') && (await txt('#v-ajustes')).includes('Mikhail Nilov'));
+await sec('metas');
 // budget per category
 await page.click('#bAdd'); await page.click('#bSave');
 ok('orçamento sem categoria é recusado', (await txt('#v-ajustes')).includes('Escolha a categoria'));
@@ -433,7 +448,7 @@ await shot('08c-metricas');
 // notifications
 await sec('avisos');
 await page.waitForSelector('#pOn');
-ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 4 && (await txt('#pushBox')).includes('Resumo da semana'));
+ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 5 && (await txt('#pushBox')).includes('Resumo da semana'));
 await page.uncheck('#pushBox [data-pt="semanal"]');
 await page.evaluate(() => { window.__permAnswer = 'default'; });
 await page.click('#pOn');
@@ -449,7 +464,7 @@ ok('ao ativar, manda um aviso de teste', window_pushTests >= 1);
 await shot('08b-avisos');
 await page.check('#pushBox [data-pt="semanal"]'); await page.waitForTimeout(150);
 ok('mudar o tipo de aviso salva na hora', await page.evaluate(() => window.__db.push_subscriptions[0].prefs.semanal === true));
-for (const k of ['dados', 'gastos', 'conquistas']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
+for (const k of ['dados', 'gastos', 'conquistas', 'familia']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
 await page.click('#pushBox [data-pt="semanal"]');
 ok('não deixa desmarcar todos os tipos', (await txt('#pMsg')).includes('pelo menos um') && await page.isChecked('#pushBox [data-pt="semanal"]'));
 await page.click('#pOff'); await page.waitForSelector('.cfm [data-y]');
@@ -503,11 +518,26 @@ await shot('12-entrar');
 await page.click('#obJoin');
 await page.waitForSelector('#app:not([hidden])');
 ok('convidado está na família certa', (await txt('#brand')) === 'Família Elias');
+ok('quem entra avisa o resto da família', notifies.some(n => n.type === 'joined'));
 await page.click('#tourSkip').catch(() => {});
 await noCoach();
 await sec('familia');
 ok('membros mostram nome e parentesco', (await txt('#v-ajustes .list')).includes('Luana (você)Cônjuge ou companheiro(a)'), await txt('#v-ajustes .list'));
 ok('convidado vê os dados da família', await page.evaluate(() => window.__db.transactions.length > 0));
+await sec('divisao');
+const ncards = (await page.$$('#splitBox [data-card]')).length;
+ok('quem paga o quê lista os cartões das faturas', ncards >= 2, ncards + ' cartões');
+const memberOpt = await page.$eval('#splitBox [data-card]', s => s.options[1].value);
+for (const sel of await page.$$('#splitBox [data-card]')) await sel.selectOption(memberOpt);
+await page.selectOption('#splitBox [data-conta]', memberOpt);
+const shares = await page.$$('#splitBox [data-share]'); await shares[0].fill('60'); await shares[1].fill('30');
+await page.click('#spSave');
+ok('partes que não somam 100% são recusadas', (await txt('#splitBox')).includes('Precisam somar 100%'));
+await shares[1].fill('40'); await page.click('#spSave'); await page.click('.cfm [data-y]'); await page.waitForTimeout(150);
+const spl = await page.evaluate(() => window.__db.households[0].settings.split);
+ok('divisão salva', spl && spl.conta === memberOpt && Object.keys(spl.cards).length === ncards && Math.abs(Object.values(spl.share).reduce((a, b) => a + b, 0) - 1) < 1e-9, JSON.stringify(spl).slice(0, 120));
+await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09');
+ok('início mostra quem pagou o quê e o acerto', (await txt('#settleBox')).includes('Quem pagou o quê em setembro de 2026') && /passa R\$|equilibrado/.test(await txt('#settleBox')), (await txt('#settleBox')).slice(0, 160));
 await sec('conta');
 await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])');
 await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fin.coach.')).forEach(k => localStorage.removeItem(k)));

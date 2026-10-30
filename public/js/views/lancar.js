@@ -7,6 +7,7 @@ import { lineify, detect, parseFaturaSantander, parseExtratoSantander, faturaMon
 import { brl, esc, mLong, addM, todayISO, isoToBr, cycleMonth, norm, round2, thisMonth } from '../lib/format.js';
 import { $, toast, catPicker, confirmInline, invalid, clearInvalid, busy } from '../ui.js';
 import { checkDate, checkNumber, checkName } from '../lib/validate.js';
+import { notifyFamily } from '../push.js';
 import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '../lib/receipt.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
@@ -383,6 +384,7 @@ async function saveReview(pend) {
     const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month);
     await db.replaceMonth(S.hh.id, source, month, payload, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
+    notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
     toast(label + ' salvo'); $('#review').hidden = true; $('#pdfLog').innerHTML = ''; R = null; S.m = month; S.render();

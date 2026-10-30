@@ -4,6 +4,8 @@ import { S, settings, monthKeys, goals, closeDay, reindex } from '../state.js';
 import { checklist, retrospective, monthToClose } from '../lib/closing.js';
 import { brl, brl0, pct, esc, mLong, todayISO, isoToBr, norm, round2, cycleMonth } from '../lib/format.js';
 import * as db from '../db.js';
+import { notifyFamily } from '../push.js';
+import { settle } from '../lib/settle.js';
 import { $, toast, catPicker, confirmInline, invalid, clearInvalid } from '../ui.js';
 import { checkNumber, checkDate } from '../lib/validate.js';
 
@@ -62,6 +64,7 @@ export function render(el) {
     <p class="small">${retroText(r)}</p>
     <div class="row">${[['Receitas', r.receitas], ['Despesas', r.despesas], ['Extras', r.extras]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
     ${r.top.length ? `<h4 class="small" style="margin:6px 0 0">Para onde mais foi</h4><ul class="list small">${r.top.map(t => `<li><span>${esc(t.name)}</span><span class="amt">${brl0(t.value)} <span class="tiny muted">${pct(t.share)}</span></span></li>`).join('')}</ul>` : ''}
+    ${settleHTML(m)}
     <div class="rowbtn">${isClosed ? '<button class="btn" type="button" id="clReopen">Reabrir o mês</button>' : '<button class="btn primary" type="button" id="clClose">Fechar o mês</button>'}</div>
   </section>`;
 
@@ -108,6 +111,7 @@ export function render(el) {
     if (!await confirmInline(e.target, { text: left ? `Ainda ${left > 1 ? 'faltam ' + left + ' coisas' : 'falta 1 coisa'} acima. Fechar ${mLong(m)} mesmo assim?` : `Fechar ${mLong(m)}? Dá para reabrir depois.`, yes: 'Sim, fechar' })) return;
     const by = (S.user?.user_metadata?.display_name || '').split(' ')[0];
     await save({ closed: { ...(settings().closed || {}), [m]: { at: todayISO(), by, res: round2(r.res), tx: Math.round(r.tx * 1000) / 1000 } } });
+    notifyFamily('closed', { month: m });
     toast(r.hitGoal ? 'Mês fechado. Parabéns pela meta!' : 'Mês fechado'); S.closeMonth = m; S.render();
   };
   const reopen = $('#clReopen');
@@ -154,4 +158,12 @@ function addFixed(el, li, x, m) {
 async function save(patch) {
   const st = { ...settings(), ...patch };
   try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); throw e; }
+}
+
+// Settle-up inside the retrospective (families with 2 people or more).
+function settleHTML(m) {
+  if (S.members.length < 2) return '';
+  const r = settle({ txs: S.txs.filter(t => t.month === m), idx: S.catIdx, members: S.members, split: settings().split || {} });
+  const name = id => esc(S.members.find(x => x.user_id === id)?.display_name?.split(' ')[0] || 'Alguém');
+  return `<h4 class="small" style="margin:6px 0 0">Acerto do mês</h4><p class="small">${r.balances.map(b => `${name(b.id)} pagou ${brl0(b.paid)}`).join(' · ')}${r.unknown ? ` · sem dono ${brl0(r.unknown)}` : ''}.<br><strong>${r.transfers.length ? r.transfers.map(t => `${name(t.from)} passa ${brl0(t.amount)} para ${name(t.to)}`).join('; ') : 'Está tudo equilibrado.'}</strong></p>`;
 }

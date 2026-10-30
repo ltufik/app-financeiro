@@ -5,6 +5,7 @@ import { budgetStatus } from './budget.js';
 
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const mName = k => MES[+k.slice(5) - 1];
+const R2 = v => (+v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
 const P = v => Math.round(v * 100) + '%';
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
@@ -47,6 +48,11 @@ export function insights(ctx) {
         action: { label: 'Ver orçamento', go: ['resumo', '#budgetBox'] } });
     }
   }
+
+  // Subscriptions or fixed charges that got more expensive in the latest month.
+  const ups = (ctx.recurring || []).filter(x => x.rise > 0 && x.current);
+  if (ups.length) out.push({ id: 'subs_up', tone: 'warn', title: ups.length > 1 ? `${ups.length} cobranças ficaram mais caras` : `${ups[0].name} ficou mais cara`,
+    text: ups.slice(0, 3).map(x => `${x.name}: de ${R2(x.prev)} para ${R2(x.last)}`).join('; ') + '. Vale conferir se o aumento estava combinado ou se dá para cancelar.', action: { label: 'Ver assinaturas', go: ['resumo', '#subsBox'] } });
 
   // A finished month waiting to be closed.
   if (ctx.toClose) { const n = mName(ctx.toClose); out.push({ id: 'close', tone: 'info', title: `Hora de fechar ${n}`, text: `Confira se falta algo e veja a retrospectiva de ${n}. Leva poucos minutos.`, action: { label: 'Fechar o mês', go: ['fechar'] } }); }

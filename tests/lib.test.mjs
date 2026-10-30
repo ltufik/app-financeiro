@@ -276,3 +276,45 @@ test('orçamento por categoria: uso, ritmo, sugestão e aviso', async () => {
   const b = ins.find(x => x.id === 'budget');
   assert.equal(b.title, 'Orçamento estourado: Lazer'); assert.match(b.text, /Lazer já passou R\$ 100 do limite de R\$ 500\. Mercado já usou 85% de R\$ 2\.000 e faltam 21 dias\./);
 });
+
+test('assinaturas: acha cobranças que se repetem e o aumento de preço', async () => {
+  const { findRecurring, merchant } = await import('../public/js/lib/recurring.js');
+  assert.equal(merchant('NETFLIX.COM*123 SAO PAULO'), 'NETFLIX COM SAO');
+  const ms = ['2026-06', '2026-07', '2026-08', '2026-09'];
+  const idx = catIndex([{ name: 'Assinaturas', grp: 'dia' }, { name: 'Mercado', grp: 'dia' }, { name: 'Fatura', grp: 'neutro' }]);
+  const T = (month, description, amount, extra = {}) => ({ month, source: 'cartao', description, amount, category: 'Assinaturas', ...extra });
+  const txs = [
+    ...ms.map((m, i) => T(m, 'NETFLIX.COM', i < 3 ? 39.9 : 44.9)),
+    ...ms.slice(1).map(m => T(m, 'SPOTIFY', 21.9)),
+    ...ms.map((m, i) => T(m, 'SUPERMERCADO X', [400, 900, 300, 1200][i], { category: 'Mercado' })),
+    ...ms.map(m => T(m, 'LOJA MOVEIS', 400, { installment: '02/10' })),
+    ...ms.map(m => T(m, 'PAGAMENTO FATURA', 5000, { category: 'Fatura' })),
+    T('2026-08', 'ACADEMIA', 120), T('2026-09', 'ACADEMIA', 120),
+  ];
+  const r = findRecurring(txs, ms, { idx });
+  assert.deepEqual(r.map(x => x.name), ['NETFLIX COM', 'SPOTIFY']);
+  assert.equal(r[0].rise, 5); assert.equal(r[0].prev, 39.9); assert.equal(r[0].current, true);
+  assert.equal(r[1].rise, 0);
+});
+
+test('divisão do casal: quem pagou o quê e o acerto', async () => {
+  const { settle, payerOf } = await import('../public/js/lib/settle.js');
+  const idx = catIndex([{ name: 'Mercado', grp: 'dia' }, { name: 'Salário', grp: 'renda' }, { name: 'Obra', grp: 'fora' }]);
+  const members = [{ user_id: 'a' }, { user_id: 'b' }];
+  const split = { cards: { '1111': 'a', '2222': 'b' }, conta: 'a' };
+  const txs = [
+    { source: 'cartao', card: '1111', amount: 1000, category: 'Mercado' },
+    { source: 'cartao', card: '2222', amount: 200, category: 'Mercado' },
+    { source: 'conta', amount: -600, category: 'Obra' },
+    { source: 'conta', amount: 8000, category: 'Salário' },
+    { source: 'cartao', manual: true, created_by: 'b', amount: 100, category: 'Mercado' },
+    { source: 'cartao', card: '9999', amount: 50, category: 'Mercado' },
+  ];
+  assert.equal(payerOf(txs[4], split), 'b'); assert.equal(payerOf(txs[5], split), null);
+  const s = settle({ txs, idx, members, split });
+  assert.equal(s.total, 1950); assert.equal(s.unknown, 50);
+  assert.deepEqual(s.balances.map(b => [b.id, b.paid, b.due]), [['a', 1600, 950], ['b', 300, 950]]);
+  assert.deepEqual(s.transfers, [{ from: 'b', to: 'a', amount: 650 }]);
+  const s2 = settle({ txs, idx, members, split: { ...split, share: { a: 0.7, b: 0.3 } } });
+  assert.deepEqual(s2.transfers, [{ from: 'b', to: 'a', amount: 270 }]);
+});

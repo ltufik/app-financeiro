@@ -12,7 +12,7 @@ export function render(el) {
       <div class="chips" style="margin-top:10px" id="srcChips"></div>
       <div class="rowbtn" style="margin-top:10px"><input type="search" id="lSearch" placeholder="Buscar" aria-label="Buscar lançamentos" style="flex:1 1 200px"><button class="chip" id="lPend" aria-pressed="false" type="button">Só a classificar</button></div>
       <p class="tiny muted" style="margin-top:8px">Trocar a categoria corrige o lançamento e ensina o app: da próxima vez o mesmo lançamento já vem certo.</p></div>
-      <div class="tw"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="lRows"></tbody></table></div>
+      <ul class="xlist" id="lRows"></ul>
       <p class="small muted" id="lCount"></p>`;
     $('#lSearch').oninput = e => { q = norm(e.target.value); draw(); };
     $('#lPend').onclick = () => { pendOnly = !pendOnly; draw(); };
@@ -30,18 +30,22 @@ function draw() {
     .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.day || '').localeCompare(b.day || ''));
   const tb = $('#lRows'); tb.innerHTML = '';
   for (const t of rows) {
-    const tr = document.createElement('tr'); if (t.pending) tr.className = 'pend';
-    tr.innerHTML = `<td>${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}</td><td style="min-width:180px">${esc(t.description)}${t.installment ? ' <span class="tiny muted">' + esc(t.installment) + '</span>' : ''}${t.manual ? ' <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}${t.splits?.length ? `<span class="tiny muted splits">Nota${t.receipt?.store ? ' ' + esc(t.receipt.store) : ''}: ${t.splits.map(x => esc(x.category) + ' ' + brl(x.amount)).join(' · ')}</span>` : ''}</td><td></td><td class="r${src === 'conta' && t.amount > 0 ? ' neg' : ''}">${brl(t.amount)}</td>`;
+    // One card per transaction: what and when on the left, amount on the right, category below.
+    const tr = document.createElement('li'); tr.className = 'xrow' + (t.pending ? ' pend' : '');
+    tr.innerHTML = `<div class="xmain"><span class="xd">${esc(t.description)}${t.installment ? ' <span class="tiny muted">' + esc(t.installment) + '</span>' : ''}</span>
+      <span class="tiny muted">${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}${t.card ? ' · cartão ' + esc(t.card) : ''}${t.manual ? ' · <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}</span>
+      ${t.splits?.length ? `<span class="tiny muted splits">Nota${t.receipt?.store ? ' ' + esc(t.receipt.store) : ''}: ${t.splits.map(x => esc(x.category) + ' ' + brl(x.amount)).join(' · ')}</span>` : ''}</div>
+      <span class="xv${src === 'conta' && t.amount > 0 ? ' pos' : ''}">${brl(t.amount)}</span><div class="xcat"></div>`;
     if (t.splits?.length) {
       tr.dataset.split = '1';
-      tr.children[2].innerHTML = `<span class="tiny">Dividido pela nota</span><br><button class="chip" type="button" style="font-size:12px;margin-top:4px">Desfazer</button>`;
-      tr.children[2].querySelector('button').onclick = async e => {
+      tr.querySelector('.xcat').innerHTML = `<span class="tiny">Dividido pela nota</span> <button class="chip" type="button" style="font-size:12px">Desfazer</button>`;
+      tr.querySelector('.xcat button').onclick = async e => {
         if (!await confirmInline(e.target, { text: `Desfazer a divisão da nota em "${esc(t.description)}"? O lançamento volta para uma categoria só (${esc(t.category || 'A classificar')}).`, yes: 'Sim, desfazer', danger: true })) return;
         try { await db.updateTransaction(t.id, { splits: null, receipt: null }); t.splits = null; t.receipt = null; toast('Divisão desfeita'); S.render(); } catch (err) { toast('Não foi possível desfazer.'); }
       };
       tb.append(tr); continue;
     }
-    tr.children[2].append(catPicker(S.categories, t.category, t.pending, async c => {
+    tr.querySelector('.xcat').append(catPicker(S.categories, t.category, t.pending, async c => {
       try {
         await db.updateTransaction(t.id, { category: c, pending: false }); t.category = c; t.pending = false;
         if (!t.manual) { await db.learnRule(S.hh.id, t.source, norm(t.description), c).catch(() => {}); S.rules.push({ source: t.source, kind: 'exact', pattern: norm(t.description), category: c }); }

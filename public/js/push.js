@@ -6,6 +6,7 @@ export const PUSH_TYPES = [
   { key: 'dados', label: 'Falta de dados', hint: 'Quando faltar o extrato ou a fatura, ou o mês estiver acabando sem lançamentos.' },
   { key: 'gastos', label: 'Gastos', hint: 'Mês no vermelho, gasto acima da média, cartão acima da meta.' },
   { key: 'conquistas', label: 'Conquistas', hint: 'Quando vocês economizarem bem ou gastarem menos que o normal.' },
+  { key: 'familia', label: 'Família', hint: 'Na hora em que alguém entra na família, importa uma fatura ou fecha o mês.' },
   { key: 'semanal', label: 'Resumo da semana', hint: 'Aos domingos, quanto saiu nos últimos 7 dias.' },
 ];
 export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -32,7 +33,7 @@ export async function pushStatus() {
 export async function currentPrefs() {
   const sub = pushSupported() && await (await reg()).pushManager.getSubscription();
   const row = sub ? await db.myPush(sub.endpoint).catch(() => null) : null;
-  return { dados: true, gastos: true, conquistas: true, semanal: true, ...(row?.prefs || {}) };
+  return { dados: true, gastos: true, conquistas: true, familia: true, semanal: true, ...(row?.prefs || {}) };
 }
 
 // Must run from a tap (iPhone and Chrome only ask permission after a user gesture).
@@ -59,4 +60,12 @@ export async function sendTest() {
   const { data } = await db.sb.auth.getSession();
   const r = await fetch('/api/push-test', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (data?.session?.access_token || '') }, body: JSON.stringify({ subscription: sub.toJSON() }) });
   if (!r.ok) throw new Error('send');
+}
+
+// Tells the other members (push), without waiting: someone joined, imported a statement or closed a month.
+export async function notifyFamily(type, extra = {}) {
+  try {
+    const { data } = await db.sb.auth.getSession();
+    await fetch('/api/notify', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (data?.session?.access_token || '') }, body: JSON.stringify({ household: S.hh.id, type, ...extra }) });
+  } catch (e) { /* best effort */ }
 }

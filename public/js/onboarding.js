@@ -1,5 +1,6 @@
 // First-run onboarding (name, welcome, family, invites) and WhatsApp invites with the code in the link.
 import * as db from './db.js';
+import { notifyFamily } from './push.js';
 import { S } from './state.js';
 import { $, toast, validate, clearInvalid } from './ui.js';
 import { checkName, parsePhoneBR, formatPhoneBR } from './lib/validate.js';
@@ -135,7 +136,7 @@ async function draw() {
       <button class="btn" type="button" id="obNo">Agora não</button><p class="err" id="obErr"></p></div>`;
     $('#obJoin').onclick = async () => {
       $('#obJoin').disabled = true;
-      try { const h = await db.acceptInvite(code, displayName()); clearInvite(); lsSet('fin.hh', h); O.onDone(); }
+      try { const h = await db.acceptInvite(code, displayName()); clearInvite(); lsSet('fin.hh', h); S.hh = { ...(S.hh || {}), id: h }; notifyFamily('joined'); O.onDone(); }
       catch (e) { $('#obErr').textContent = 'Não foi possível entrar. ' + (/used/.test(e.message) ? 'O convite já foi usado.' : /expired/.test(e.message) ? 'O convite venceu.' : 'Tente de novo.'); $('#obJoin').disabled = false; }
     };
     $('#obNo').onclick = () => { clearInvite(); after(); };

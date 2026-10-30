@@ -9,6 +9,7 @@ import { installHelpHTML, wireInstall, expandSteps } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
 import { renderMetrics } from '../metrics.js';
+import { PHOTOS } from '../photos.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
@@ -30,6 +31,12 @@ export function render(el) {
     <h3 style="margin-top:6px">Convidar alguém</h3>
     <p class="tiny muted">O convite vai pelo WhatsApp com um link. A pessoa toca, cria a conta e já entra na família.</p>
     <div id="fInviter"></div>
+  </div>
+
+  <div class="panel stack" data-sec="divisao">
+    <h2>Quem paga o quê</h2>
+    <p class="small muted">Ligue cada cartão e a conta a uma pessoa. O Início e o fechamento do mês mostram quanto cada um pagou e quem deve passar quanto para quem. Lançamentos feitos à mão contam para quem lançou.</p>
+    <div id="splitBox" class="stack"></div>
   </div>
 
   <div class="panel stack" data-sec="metas">
@@ -72,6 +79,22 @@ export function render(el) {
     <div id="pushBox" class="stack"><p class="small muted">Verificando...</p></div>
   </div>
 
+  <div class="panel stack" data-sec="sobre">
+    <h2>Sobre o app</h2>
+    <p class="small"><strong>Pra Onde Foi</strong> mostra para onde vai o dinheiro da família: lê faturas e extratos em PDF de qualquer banco, confere os totais e separa por categoria. Versão de teste com família e amigos.</p>
+    <h3>O que o app guarda</h3>
+    <ul class="small">
+      <li>Os lançamentos, as categorias, as metas e os ajustes da sua família. Só quem está na família vê.</li>
+      <li>De cada nota fiscal, só os itens e valores lidos. A foto não fica guardada.</li>
+      <li>De cada pessoa, os dias em que abriu o app, para medir se ele está ajudando. Nada do que você fez.</li>
+    </ul>
+    <h3>O que o app nunca guarda</h3>
+    <ul class="small"><li>O arquivo do PDF.</li><li>A senha do PDF.</li><li>Senhas de banco: o app não se conecta ao seu banco.</li></ul>
+    <p class="small">Você pode baixar uma cópia de tudo em Backup e apagar tudo em Conta, quando quiser.</p>
+    <h3>Créditos das fotos</h3>
+    <p class="small muted">Fotos do Pexels, de uso gratuito: ${[...new Set(Object.values(PHOTOS).map(p => p.by))].map(esc).join(', ')}.</p>
+  </div>
+
   <div class="panel stack" data-sec="metricas">
     <h2>Métricas do produto</h2>
     <div id="metricsBox" class="stack"></div>
@@ -111,6 +134,7 @@ export function render(el) {
   el.querySelectorAll('[data-sec]').forEach(p => { p.hidden = p.dataset.sec !== sec.key; });
   $('#secBack').onclick = () => openMenu();
   if (sec.key === 'avisos') renderPush($('#pushBox'));
+  if (sec.key === 'divisao') renderSplit($('#splitBox'));
   if (sec.key === 'metricas') renderMetrics($('#metricsBox'));
   // help
   $('#hTour').onclick = () => S.showTour('app');
@@ -407,3 +431,29 @@ async function renderPush(box) {
 }
 
 function theme() { try { return localStorage.getItem('fin.theme') || 'light'; } catch (e) { return 'light'; } }
+
+// "Quem paga o quê": card and account owners, and how expenses are shared.
+function renderSplit(box) {
+  const sp = settings().split || {}, mem = S.members, nm = m => esc(m.display_name || 'Membro');
+  if (mem.length < 2) { box.innerHTML = '<p class="small">Só faz sentido com duas pessoas ou mais na família. Convide quem divide as contas em Família e convites.</p><div><button class="chip" type="button" data-inv>Convidar alguém</button></div>'; box.querySelector('[data-inv]').onclick = () => S.go('ajustes', '#ivName', 'familia'); return; }
+  const cards = [...new Set(S.txs.filter(t => t.source === 'cartao' && t.card).map(t => t.card))].sort();
+  const opt = (sel, none = 'Ninguém / não sei') => `<option value="">${none}</option>` + mem.map(m => `<option value="${m.user_id}"${m.user_id === sel ? ' selected' : ''}>${nm(m)}</option>`).join('');
+  const share = mem.map(m => Math.round(((sp.share || {})[m.user_id] ?? 1 / mem.length) * 100));
+  box.innerHTML = `<h3>Cartões</h3>
+    ${cards.length ? cards.map(c => `<label class="f">Cartão final ${esc(c)}<select data-card="${esc(c)}">${opt(sp.cards?.[c])}</select></label>`).join('') : '<p class="small muted">Os cartões aparecem aqui depois da primeira fatura importada.</p>'}
+    <h3>Conta</h3>
+    <label class="f">Quem paga o que sai da conta<select data-conta>${opt(sp.conta)}</select></label>
+    <h3>Como dividir as despesas</h3>
+    <div class="grid2">${mem.map((m, i) => `<label class="f">${nm(m)} (%)<input type="number" min="0" max="100" step="1" data-share="${m.user_id}" value="${share[i]}"></label>`).join('')}</div>
+    <p class="tiny muted">Meio a meio é o comum. Se um ganha mais, dá para dividir na proporção da renda (ex.: 60 e 40).</p>
+    <div><button class="btn primary" type="button" id="spSave">Salvar</button></div>`;
+  $('#spSave').onclick = async e => {
+    clearInvalid(box);
+    const ins = [...box.querySelectorAll('[data-share]')], tot = ins.reduce((a, i) => a + (+i.value || 0), 0);
+    for (const i of ins) { const m = checkNumber(i.value, { min: 0, max: 100, integer: true, label: 'Parte' }); if (m) return invalid(i, m); }
+    if (tot !== 100) return invalid(ins[ins.length - 1], `As partes somam ${tot}%. Precisam somar 100%.`);
+    if (!await confirmInline(e.target, { text: 'Salvar quem paga cada cartão e conta, e a divisão das despesas?', yes: 'Sim, salvar' })) return;
+    const split = { cards: Object.fromEntries([...box.querySelectorAll('[data-card]')].filter(s => s.value).map(s => [s.dataset.card, s.value])), conta: box.querySelector('[data-conta]').value || null, share: Object.fromEntries(ins.map(i => [i.dataset.share, (+i.value) / 100])) };
+    save({ split }, 'Divisão salva');
+  };
+}

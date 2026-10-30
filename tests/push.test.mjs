@@ -95,3 +95,12 @@ test('rotina diária: lê o banco, manda o aviso certo, marca o envio e remove a
   assert.deepEqual(patches, [['?id=eq.s1', { last_sent: { red: '2026-11-15' } }]]);
   assert.deepEqual(deletes.sort(), ['?id=eq.s2', '?id=eq.s3']);
 });
+
+test('avisos da família: textos de entrou, importou e fechou', async () => {
+  const { message } = await import('../api/notify.js');
+  assert.equal(message({ type: 'joined', name: 'Luana', family: 'Família Elias' }).title, 'Luana entrou na família');
+  assert.equal(message({ type: 'imported', name: 'Luana', source: 'cartao', month: '2026-10' }).title, 'Luana importou a fatura de outubro');
+  assert.equal(message({ type: 'imported', name: 'Luiz', source: 'conta', month: '2026-09' }).title, 'Luiz importou o extrato de setembro');
+  assert.equal(message({ type: 'closed', name: 'Luiz', month: '2026-09' }).url, '/?tab=fechar');
+  assert.equal(message({ type: 'x' }), null);
+});

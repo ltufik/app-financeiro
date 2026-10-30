@@ -412,3 +412,14 @@ details.more > .stack{padding:0 10px 10px}
 /* account confirmations (delete account, family) also open as a pop-up */
 #confirmBox:not(:empty){position:fixed;inset:0;z-index:55;background:color-mix(in srgb,var(--deep) 55%,transparent);display:flex;align-items:center;justify-content:center;padding:16px}
 #confirmBox .confirm{width:min(460px,100%);max-height:calc(100vh - 32px);overflow:auto;border:0;border-top:5px solid var(--bad);border-radius:20px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+#privBtn{margin-left:0}
+#privBtn[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+/* ---- statement as cards ---- */
+.xlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.xrow{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:start}
+.xrow.pend{border-color:var(--warn);background:color-mix(in srgb,var(--warn-soft) 45%,var(--card))}
+.xmain{display:flex;flex-direction:column;gap:2px;min-width:0}
+.xd{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.xv{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.xv.pos{color:var(--good)}
+.xcat{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}

@@ -2,6 +2,8 @@ import { S, goals, monthKeys, calcMonth, calcMonths, txsOf, manualOf, nextFatura
 import { insights } from '../lib/insights.js';
 import { monthToClose } from '../lib/closing.js';
 import { budgetStatus, budgetsOf } from '../lib/budget.js';
+import { findRecurring } from '../lib/recurring.js';
+import { settle } from '../lib/settle.js';
 import { settings } from '../state.js';
 import { expandSplits } from '../lib/calc.js';
 import { todayISO } from '../lib/format.js';
@@ -79,8 +81,12 @@ export function render(el) {
         </div>
         <div class="panel" id="goalBox"></div>
       </div>
+      <div class="panel" id="subsBox"></div>
+      <div class="panel" id="settleBox" hidden></div>
     </div>
   </details>`;
+  renderSubs(el.querySelector('#subsBox'));
+  if (!yr) renderSettle(el.querySelector('#settleBox'), list[0]);
   const cm = el.querySelector('#catMore');
   if (cm) cm.onclick = () => { const hid = el.querySelectorAll('#catBars [data-more]'); const show = [...hid].some(x => x.hidden); hid.forEach(x => { x.hidden = !show; }); cm.textContent = show ? 'Mostrar só as 5 maiores' : `Ver todas as ${top.length} categorias`; };
   el.querySelector('#homeMore').ontoggle = e => { try { localStorage.setItem('fin.home.more', e.target.open ? '1' : '0'); } catch (x) { /* storage blocked */ } };
@@ -101,7 +107,7 @@ function renderInsights(box) {
     has: (k, src) => S.txs.some(t => t.month === k && t.source === src && !t.manual),
     manualCount: k => S.txs.filter(t => t.month === k && t.manual).length,
     pending: k => S.txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
-    goals: G, nextFatura: nextFatura(), budgets: budgetsOf(settings()), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
+    goals: G, nextFatura: nextFatura(), budgets: budgetsOf(settings()), recurring: findRecurring(S.txs, monthKeys(), { idx }), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
   }).filter(x => x.id !== 'close');
   const cc = document.getElementById('closeCard'), m2c = monthToClose(monthKeys(), settings().closed || {}, todayISO());
@@ -164,4 +170,28 @@ function renderBudget(box, spent) {
     <div class="rowbtn">${rows.length > 5 ? `<button class="linkbtn small" type="button" data-ball>${showAllBudget ? 'Mostrar só 5' : 'Ver todas as ' + rows.length}</button>` : ''}<button class="linkbtn small" type="button" data-bset>Ajustar limites</button></div>`;
   box.querySelector('[data-bset]').onclick = () => S.go('ajustes', '#bRows', 'metas');
   const all = box.querySelector('[data-ball]'); if (all) all.onclick = () => { showAllBudget = !showAllBudget; renderBudget(box, spent); };
+}
+
+// Subscriptions and fixed charges found in the statements.
+function renderSubs(box) {
+  const subs = findRecurring(S.txs, monthKeys(), { idx: S.catIdx });
+  if (!subs.length) { box.innerHTML = '<h3>Assinaturas e cobranças fixas</h3><p class="small muted">Aparecem aqui quando a mesma cobrança vier em pelo menos 3 dos últimos 4 meses.</p>'; return; }
+  const tot = subs.filter(x => x.current).reduce((a, x) => a + x.last, 0);
+  box.innerHTML = `<h3>Assinaturas e cobranças fixas</h3>
+    <p class="small muted">${subs.length} encontradas · ${brl0(tot)} por mês no último mês. Revise de vez em quando: é dinheiro que sai sem você perceber.</p>
+    <ul class="list small">${subs.map(x => `<li><span>${esc(x.name)}<br><span class="tiny muted">${x.months} dos últimos 4 meses${x.current ? '' : ' · não veio no último mês'}</span>${x.rise ? `<br><span class="tiny" style="color:var(--coral)">Subiu ${brl(x.rise)} (era ${brl(x.prev)})</span>` : ''}</span><span class="amt">${brl(x.last)}</span></li>`).join('')}</ul>`;
+}
+
+// Settle-up between the people of the family for the month on screen.
+function renderSettle(box, month) {
+  if (S.members.length < 2) { box.hidden = true; return; }
+  const r = settle({ txs: txsOf(month), idx: S.catIdx, members: S.members, split: settings().split || {} });
+  const name = id => S.members.find(m => m.user_id === id)?.display_name?.split(' ')[0] || 'Alguém';
+  box.hidden = false;
+  box.innerHTML = `<h3>Quem pagou o quê em ${esc(mLong(month))}</h3>
+    <ul class="list small">${r.balances.map(b => `<li><span>${esc(name(b.id))}<br><span class="tiny muted">parte justa ${brl0(b.due)}</span></span><span class="amt">${brl0(b.paid)}</span></li>`).join('')}
+      ${r.unknown ? `<li><span>Sem dono definido<br><span class="tiny muted">cartão ou conta ainda sem pessoa ligada</span></span><span class="amt">${brl0(r.unknown)}</span></li>` : ''}</ul>
+    <p class="small" style="margin-top:8px"><strong>${r.transfers.length ? r.transfers.map(t => `${esc(name(t.from))} passa ${brl0(t.amount)} para ${esc(name(t.to))}`).join('; ') : 'Está tudo equilibrado.'}</strong></p>
+    <button class="linkbtn small" type="button" data-split>Ajustar quem paga o quê</button>`;
+  box.querySelector('[data-split]').onclick = () => S.go('ajustes', null, 'divisao');
 }
