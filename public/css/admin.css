@@ -7,8 +7,8 @@ body.admin{background:var(--paper)}
 .atop .btn{background:transparent;color:var(--deep-ink);border-color:color-mix(in srgb,var(--deep-ink) 35%,transparent);text-decoration:none}
 .ashell{max-width:1240px;margin:0 auto;padding:20px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;align-items:start}
 @media (max-width:820px){.ashell{grid-template-columns:1fr;padding:14px 16px}}
-.anav{position:sticky;top:76px;display:flex;flex-direction:column;gap:4px}
-@media (max-width:820px){.anav{position:static;flex-direction:row;overflow-x:auto;gap:6px}}
+.anav{position:sticky;top:76px;display:flex;flex-direction:column;gap:6px}
+@media (max-width:820px){.anav{position:static}}
 .anav button{appearance:none;border:0;background:none;text-align:left;padding:10px 12px;border-radius:10px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
 .anav button:hover{background:var(--sunk)}
 .anav button[aria-current]{background:var(--accent-soft);color:var(--accent)}
@@ -95,3 +95,22 @@ body.admin{background:var(--paper)}
 .flbig img{width:100%;height:auto;border-radius:14px;border:1px solid var(--line)}
 @media (max-width:640px){.flbig{grid-template-columns:1fr}}
 .fflow{padding:10px 4px 8px 10px}
+
+/* Side menu groups (accordion) */
+.agroup{border-radius:14px;transition:background .15s}
+.agroup.open{background:var(--card);box-shadow:0 2px 10px rgba(11,60,93,.06)}
+.anav .agh{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;color:var(--ink);font-weight:700;border-radius:14px}
+.anav .agh:hover{background:var(--sunk)}
+.agroup.open .agh:hover{background:transparent}
+.agi{width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.agi svg{width:17px;height:17px}
+.agt{flex:1}
+.agc{display:inline-flex;color:var(--muted);transition:transform .2s}
+.agc svg{width:16px;height:16px}
+.agroup.open .agc{transform:rotate(90deg)}
+.agl{display:flex;flex-direction:column;gap:2px;padding:0 8px 8px 48px}
+.agl button{padding:8px 10px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.agl button[aria-current]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.agb{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--coral);color:#fff;font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.agb[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.agc{transition:none}}

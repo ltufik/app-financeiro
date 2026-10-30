@@ -53,16 +53,41 @@ async function save(key, msg) {
       : '<div class="panel"><h2>Não foi possível carregar</h2><p class="small">Confira se o schema.sql foi rodado de novo e se as variáveis do servidor estão certas.</p></div>';
     return;
   }
-  $('#aNav').hidden = false; $('#aCopy').hidden = false; $('#aCopy').onclick = copySummary;
-  document.querySelectorAll('#aNav [data-t]').forEach(b => b.onclick = () => go(b.dataset.t));
+  drawNav(); $('#aNav').hidden = false; $('#aCopy').hidden = false; $('#aCopy').onclick = copySummary;
+  loadFb().then(navBadges).catch(() => {});
   const h = location.hash.slice(1); go(TABS.includes(h) ? h : 'painel');
 })();
 
 function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
+  openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
   ({ painel, opinioes, uso, duvidas, novidades, fluxos, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   window.scrollTo(0, 0);
+}
+
+// ---------- Side menu: three groups that open on click ----------
+const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const NAV = [
+  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades']] },
+  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
+  { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
+];
+const CHEV = IC('<path d="M9 6l6 6-6 6"/>');
+function drawNav() {
+  $('#aNav').innerHTML = NAV.map(g => `<div class="agroup" data-g="${g.id}"><button type="button" class="agh" aria-expanded="false" aria-controls="ag-${g.id}"><span class="agi">${g.icon}</span><span class="agt">${g.title}</span><span class="agb" hidden></span><span class="agc">${CHEV}</span></button>
+    <div class="agl" id="ag-${g.id}" hidden>${g.items.map(([k, l]) => `<button type="button" data-t="${k}">${l}<span class="agb" hidden></span></button>`).join('')}</div></div>`).join('');
+  $('#aNav').querySelectorAll('.agh').forEach(h => h.onclick = () => { const g = h.closest('.agroup').dataset.g; openGroup(h.getAttribute('aria-expanded') === 'true' ? null : g); });
+  $('#aNav').querySelectorAll('[data-t]').forEach(b => b.onclick = () => go(b.dataset.t));
+}
+function openGroup(id) {
+  $('#aNav').querySelectorAll('.agroup').forEach(g => { const on = g.dataset.g === id; g.querySelector('.agh').setAttribute('aria-expanded', on); g.querySelector('.agl').hidden = !on; g.classList.toggle('open', on); });
+}
+// Small counters: new opinions, questions the assistant did not solve.
+function navBadges(fb = []) {
+  const set = (sel, n) => { const b = $('#aNav').querySelector(sel); if (b) { b.hidden = !n; b.textContent = n; } };
+  const fresh = fb.filter(f => f.status === 'novo' && f.kind !== 'duvida').length, unans = fb.filter(f => f.kind === 'duvida' && f.helpful === false && f.status !== 'resolvido').length;
+  set('[data-t="opinioes"] .agb', fresh); set('[data-t="duvidas"] .agb', unans); set('[data-g="acompanhar"] .agh .agb', fresh + unans);
 }
 
 // ---------- Painel ----------
