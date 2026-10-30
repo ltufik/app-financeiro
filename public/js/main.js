@@ -14,6 +14,7 @@ import * as fechar from './views/fechar.js';
 import { openTour } from './tour.js';
 import { initMenu, closeMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
+import { checkAdmin, touchActivity } from './metrics.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
@@ -172,6 +173,7 @@ async function doStart() {
   }
   setFamily(await db.loadFamily(S.hh.id));
   $('#brand').textContent = S.hh.name;
+  touchActivity(); checkAdmin();
   show('app');
   // A notification opens the app on a given tab (?tab=...).
   const want = new URLSearchParams(location.search).get('tab'), t = lsGet('fin.tab');

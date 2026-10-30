@@ -121,3 +121,23 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select public.delete_push('https://push.example/abc');
 select count(*) as left_ from push_subscriptions \gset
 \echo aviso desligado: restam :left_
+
+-- Métricas: registrar o dia de uso e calcular o funil; ninguém logado lê as métricas
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select public.touch_activity(:'hr');
+select public.touch_activity(:'hr');
+reset role;
+select count(*) as nact from activity \gset
+\echo dias de uso registrados (sem duplicar): :nact
+update auth.users set created_at = now() - interval '10 days';
+insert into activity(user_id, household_id, day) select id, null, (now() at time zone 'America/Sao_Paulo')::date - 1 from auth.users where id = '00000000-0000-0000-0000-00000000000b' on conflict do nothing;
+set role service_role;
+select public.product_metrics() as pm \gset
+\echo métricas: :pm
+reset role;
+set role authenticated;
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: pessoa logada não lê métricas)
+select public.product_metrics();
+reset role;

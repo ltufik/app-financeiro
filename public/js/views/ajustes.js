@@ -7,6 +7,7 @@ import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
 import { installHelpHTML, wireInstall } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
+import { renderMetrics } from '../metrics.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
@@ -19,7 +20,7 @@ const LISTS = {
 
 export function render(el) {
   const st = settings(), g = goals(), owner = S.role === 'owner';
-  const sec = SECTIONS.find(x => x.key === S.sec) || SECTIONS[0]; S.sec = sec.key;
+  const sec = SECTIONS.find(x => x.key === S.sec && (!x.admin || S.isAdmin)) || SECTIONS[0]; S.sec = sec.key;
   el.innerHTML = `<div class="subhead"><button class="chip" type="button" id="secBack" aria-label="Voltar ao menu">‹ Menu</button><h2>${sec.title}</h2></div>
   <div class="panel stack" data-sec="familia">
     <label class="f">Nome<input type="text" id="fName" value="${esc(S.hh.name)}"></label>
@@ -65,6 +66,11 @@ export function render(el) {
     <div id="pushBox" class="stack"><p class="small muted">Verificando...</p></div>
   </div>
 
+  <div class="panel stack" data-sec="metricas">
+    <h2>Métricas do produto</h2>
+    <div id="metricsBox" class="stack"></div>
+  </div>
+
   <div class="panel stack" data-sec="contexto">
     <h2>Contexto para o assistente</h2>
     <p class="tiny muted">Fatos que ajudam o Claude a entender a família, um por linha (ex.: "A renda extra não entra no controle oficial").</p>
@@ -99,6 +105,7 @@ export function render(el) {
   el.querySelectorAll('[data-sec]').forEach(p => { p.hidden = p.dataset.sec !== sec.key; });
   $('#secBack').onclick = () => openMenu();
   if (sec.key === 'avisos') renderPush($('#pushBox'));
+  if (sec.key === 'metricas') renderMetrics($('#metricsBox'));
   // help
   $('#hTour').onclick = () => S.showTour('app');
   $('#hCoach').onclick = () => S.startCoach(true);

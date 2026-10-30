@@ -379,6 +379,62 @@ returns void language sql security definer set search_path = public as $$
   delete from push_subscriptions where endpoint = p_endpoint and user_id = auth.uid();
 $$;
 
+-- Métricas do produto: um registro por pessoa por dia em que abriu o app (sem nada do que ela fez).
+create table if not exists public.activity (
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  household_id uuid references public.households(id) on delete cascade,
+  day          date not null,
+  primary key (user_id, day)
+);
+alter table public.activity enable row level security;
+revoke all on public.activity from anon, authenticated;
+
+create or replace function public.touch_activity(p_household uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return; end if;
+  insert into activity(user_id, household_id, day)
+    values (auth.uid(), case when public.is_member(p_household) then p_household end, (now() at time zone 'America/Sao_Paulo')::date)
+  on conflict do nothing;
+end $$;
+
+-- Números agregados do produto (sem dados de nenhuma família). Só o servidor (service_role) chama.
+create or replace function public.product_metrics()
+returns jsonb language sql security definer set search_path = public as $$
+  with u as (select id, created_at from auth.users),
+  fam as (select h.id, h.settings, (select count(*) from members m where m.household_id = h.id) as nmem from households h),
+  imp as (select household_id, count(distinct month) as months from transactions where not manual group by household_id),
+  act as (select user_id, day from activity)
+  select jsonb_build_object(
+    'users', (select count(*) from u),
+    'users_7d', (select count(*) from u where created_at > now() - interval '7 days'),
+    'users_30d', (select count(*) from u where created_at > now() - interval '30 days'),
+    'in_family', (select count(distinct user_id) from members),
+    'families', (select count(*) from fam),
+    'families_shared', (select count(*) from fam where nmem >= 2),
+    'families_1_month', (select count(*) from imp where months >= 1),
+    'families_2_months', (select count(*) from imp where months >= 2),
+    'families_closed', (select count(*) from fam where coalesce(jsonb_typeof(settings->'closed'), '') = 'object' and settings->'closed' <> '{}'::jsonb),
+    'd7_eligible', (select count(*) from u where created_at <= now() - interval '7 days'),
+    'd7_retained', (select count(*) from u where created_at <= now() - interval '7 days' and exists (select 1 from act where act.user_id = u.id and act.day >= (u.created_at at time zone 'America/Sao_Paulo')::date + 7)),
+    'd30_eligible', (select count(*) from u where created_at <= now() - interval '30 days'),
+    'd30_retained', (select count(*) from u where created_at <= now() - interval '30 days' and exists (select 1 from act where act.user_id = u.id and act.day >= (u.created_at at time zone 'America/Sao_Paulo')::date + 30)),
+    'wau', (select count(distinct user_id) from act where day > current_date - 7),
+    'mau', (select count(distinct user_id) from act where day > current_date - 30),
+    'daily', (select coalesce(jsonb_agg(jsonb_build_object('day', d::date, 'users', (select count(*) from act where act.day = d::date)) order by d), '[]'::jsonb)
+              from generate_series(current_date - 13, current_date, interval '1 day') d),
+    'manual_30d', (select count(*) from transactions where manual and created_at > now() - interval '30 days'),
+    'receipts_30d', (select count(*) from transactions where receipt is not null and created_at > now() - interval '30 days'),
+    'imports_30d', (select count(*) from imports where source in ('conta', 'cartao') and created_at > now() - interval '30 days'),
+    'studies', (select count(*) from studies),
+    'charts', (select coalesce(sum(jsonb_array_length(settings->'charts')), 0) from fam where jsonb_typeof(settings->'charts') = 'array'),
+    'push_devices', (select count(*) from push_subscriptions),
+    'at', now()
+  );
+$$;
+revoke all on function public.product_metrics() from public, anon, authenticated;
+grant execute on function public.product_metrics() to service_role;
+
 -- Renomeia uma categoria e leva o novo nome para lançamentos, divisões de nota e regras.
 create or replace function public.rename_category(p_id uuid, p_name text)
 returns void language plpgsql security definer set search_path = public as $$
@@ -431,3 +487,4 @@ grant execute on function public.learn_rule(uuid, text, text, text) to authentic
 grant execute on function public.rename_category(uuid, text) to authenticated;
 grant execute on function public.save_push(uuid, text, text, text, jsonb) to authenticated;
 grant execute on function public.delete_push(text) to authenticated;
+grant execute on function public.touch_activity(uuid) to authenticated;

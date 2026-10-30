@@ -51,6 +51,7 @@ class Q {
 
 const DEFAULT_CATS = [['Salário', 'renda'], ['Reembolsos', 'entrada'], ['Outras entradas', 'entrada'], ['Mercado', 'dia'], ['Restaurantes e delivery', 'dia'], ['Saúde', 'dia'], ['A classificar', 'dia'], ['Financiamento imobiliário', 'dia', true, true], ['Assinaturas', 'dia', false, true], ['Pagamento da fatura do cartão', 'neutro']];
 const rpcs = {
+  touch_activity() { window.__touches = (window.__touches || 0) + 1; return null; },
   save_push({ p_household, p_endpoint, p_p256dh, p_auth, p_prefs }) {
     T.push_subscriptions = T.push_subscriptions.filter(s => s.endpoint !== p_endpoint);
     T.push_subscriptions.push({ id: uid(), household_id: p_household, user_id: session.user.id, endpoint: p_endpoint, p256dh: p_p256dh, auth: p_auth, prefs: p_prefs || {}, last_sent: {} }); return null;

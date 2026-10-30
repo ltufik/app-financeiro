@@ -22,6 +22,7 @@ async function addRoutes(t) {
   await t.route('https://app.test/**', async r => {
     const u = new URL(r.request().url());
     if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
+    if (u.pathname === '/api/metrics') return r.fulfill({ json: u.searchParams.get('probe') ? { admin: true } : { users: 12, users_7d: 3, users_30d: 12, in_family: 11, families: 6, families_shared: 4, families_1_month: 5, families_2_months: 3, families_closed: 2, d7_eligible: 8, d7_retained: 5, d30_eligible: 2, d30_retained: 1, wau: 7, mau: 10, daily: Array.from({ length: 14 }, (_, i) => ({ day: '2026-10-' + String(17 + i).padStart(2, '0'), users: i % 5 })), manual_30d: 40, receipts_30d: 6, imports_30d: 15, studies: 4, charts: 3, push_devices: 5, at: '2026-10-30T12:00:00Z' } });
     if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
     if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
     const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
@@ -169,7 +170,7 @@ await shot('02-vazio');
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas', (await page.$$('#drawer [data-sec]')).length === 9 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 10 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 await shot('02b-menu');
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 ok('menu fecha com Esc', await page.isHidden('#drawer'));
@@ -388,6 +389,13 @@ ok('renomear para nome repetido é recusado', (await txt('#catList')).includes('
 await page.fill('#catList .catname input', 'Farmácia e saúde'); await page.click('#catList [data-ok]'); await page.waitForSelector('#catList .cfm [data-y]');
 await page.click('#catList .cfm [data-y]'); await page.waitForTimeout(200);
 ok('categoria renomeada', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Farmácia e saúde')));
+// product metrics (admin)
+await sec('metricas');
+await page.waitForSelector('#metricsBox .funnel');
+const mt = await txt('#metricsBox');
+ok('métricas mostram funil, retenção e uso', mt.includes('Famílias com 2 meses ou mais') && mt.includes('63%') && mt.includes('Notas fiscais lidas'), mt.slice(0, 160));
+ok('app registra o dia de uso', await page.evaluate(() => (window.__touches || 0) >= 1));
+await shot('08c-metricas');
 // notifications
 await sec('avisos');
 await page.waitForSelector('#pOn');

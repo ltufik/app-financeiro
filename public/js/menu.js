@@ -13,6 +13,7 @@ export const SECTIONS = [
   { key: 'contexto', title: 'O que o assistente sabe', desc: 'Fatos da família para respostas melhores', icon: I('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>') },
   { key: 'ajuda', title: 'Ajuda', desc: 'Apresentação, tour guiado, instalar, aparência', icon: I('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/>') },
   { key: 'backup', title: 'Backup', desc: 'Baixar ou importar os dados', icon: I('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>') },
+  { key: 'metricas', admin: true, title: 'Métricas do produto', desc: 'Funil, retenção e uso (só para você)', icon: I('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>') },
   { key: 'conta', title: 'Conta', desc: 'Sair, sair da família, excluir conta', icon: I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>') },
 ];
 
@@ -29,7 +30,7 @@ export function openMenu() {
   const me = S.user?.user_metadata?.display_name || '';
   dr.innerHTML = `<div class="drawer-h"><div><div class="tiny muted">${esc(me)}</div><div class="drawer-fam">${esc(S.hh?.name || 'Pra Onde Foi')}</div></div>
       <button class="iconbtn" type="button" id="drawerX" aria-label="Fechar menu">${I('<path d="M6 6l12 12M18 6L6 18"/>')}</button></div>
-    <ul class="drawer-list">${SECTIONS.map(s => `<li><button type="button" data-sec="${s.key}" ${S.tab === 'ajustes' && S.sec === s.key ? 'aria-current="page"' : ''}>
+    <ul class="drawer-list">${SECTIONS.filter(s => !s.admin || S.isAdmin).map(s => `<li><button type="button" data-sec="${s.key}" ${S.tab === 'ajustes' && S.sec === s.key ? 'aria-current="page"' : ''}>
       <span class="di">${s.icon}</span><span><strong>${s.title}</strong><br><span class="tiny muted">${s.desc}</span></span></button></li>`).join('')}</ul>
     <p class="tiny muted drawer-foot">Pra Onde Foi · versão de teste</p>`;
   lastFocus = document.activeElement;

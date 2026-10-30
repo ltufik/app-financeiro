@@ -349,3 +349,17 @@ a.btn,a.chip{text-decoration:none;color:inherit}
 .pendlist .pd{display:flex;flex-direction:column;min-width:0;flex:1 1 150px}
 .pendlist .pc{flex:0 1 auto;flex-wrap:nowrap}
 .okchip{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+/* ---- product metrics ---- */
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.mgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.mcard{background:var(--sunk);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.mcard .num{font-size:26px;font-weight:700;line-height:1.1}
+.funnel{display:flex;flex-direction:column;gap:8px}
+.frow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 76px;gap:10px;align-items:center}
+.frow > .num{text-align:right;white-space:nowrap}
+.fbar{height:10px;border-radius:5px;background:var(--sunk);overflow:hidden}
+.fbar span{display:block;height:100%;background:var(--accent);border-radius:5px}
+.daily{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;height:110px;align-items:end}
+.daily span{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px}
+.daily i{display:block;width:100%;min-height:2px;background:var(--accent);border-radius:3px 3px 0 0}
+.daily b{font-weight:500;color:var(--muted)}
