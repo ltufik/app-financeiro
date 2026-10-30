@@ -1,5 +1,5 @@
-// "Compras com Apple Pay": a personal code and the steps to create the iPhone automation
-// (Atalhos → Automação → Transação) that sends each Wallet purchase to /api/quick.
+// "Atalhos do iPhone": a personal code and the steps for two shortcuts that send to /api/quick:
+// Apple Pay (Atalhos → Automação → Transação) and Siri ("E aí Siri, gastei" + what was said).
 import * as db from './db.js';
 import { S } from './state.js';
 import { esc } from './lib/format.js';
@@ -13,12 +13,14 @@ const copyBtn = (label, value) => `<div class="apcopy"><code>${esc(value)}</code
 export async function renderApplePay(box, fresh = null) {
   const { data: st } = await db.sb.rpc('quick_token_status', { p_household: S.hh.id });
   const url = location.origin + '/api/quick';
-  box.innerHTML = `<p class="small">No iPhone, cada compra que você fizer por aproximação (Apple Pay) pode entrar sozinha no app: valor, lugar e data. Leva uns 5 minutos para configurar, uma vez só.</p>
-    <p class="tiny muted">Funciona só para compras feitas com o iPhone ou o relógio (Apple Pay). As outras continuam vindo pela fatura. Quando a fatura chegar, o app junta as duas, sem duplicar.</p>
-    ${fresh ? `<div class="status ok stack" style="display:block"><strong>Seu código</strong><p class="tiny" style="margin:4px 0 8px">Ele aparece só agora. Copie e use no passo 7. Se perder, é só gerar outro.</p>${copyBtn('código', 'Bearer ' + fresh)}</div>`
-      : st ? `<p class="status ok">Atalho ligado desde ${new Date(st.created_at).toLocaleDateString('pt-BR')}. ${st.uses ? `${st.uses} ${st.uses === 1 ? 'compra recebida' : 'compras recebidas'}, a última em ${new Date(st.last_used).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.` : 'Nenhuma compra recebida ainda: faça uma compra por aproximação para testar.'}</p>` : ''}
+  box.innerHTML = `<p class="small">Dois atalhos para lançar sem abrir o app, com um código só:</p>
+    <ul class="small" style="margin:0"><li><strong>Apple Pay</strong>: cada compra por aproximação com o iPhone ou o relógio entra sozinha (valor, lugar e data).</li>
+    <li><strong>Siri</strong>: diga "E aí Siri, gastei" e fale o gasto, como "45 na padaria no pix". Ótimo para pix e dinheiro.</li></ul>
+    <p class="tiny muted">Quando a fatura ou o extrato chegar, o app junta tudo, sem duplicar. Cada atalho leva uns 5 minutos para montar, uma vez só.</p>
+    ${fresh ? `<div class="status ok stack" style="display:block"><strong>Seu código</strong><p class="tiny" style="margin:4px 0 8px">Ele aparece só agora. Copie e use nos dois atalhos (campo Authorization). Se perder, é só gerar outro.</p>${copyBtn('código', 'Bearer ' + fresh)}</div>`
+      : st ? `<p class="status ok">Atalho ligado desde ${new Date(st.created_at).toLocaleDateString('pt-BR')}. ${st.uses ? `${st.uses} ${st.uses === 1 ? 'lançamento recebido' : 'lançamentos recebidos'}, o último em ${new Date(st.last_used).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.` : 'Nada recebido ainda: faça uma compra por aproximação ou fale com a Siri para testar.'}</p>` : ''}
     <div class="rowbtn"><button class="btn primary" type="button" id="apGen">${st || fresh ? 'Gerar um código novo' : 'Gerar meu código'}</button>${st || fresh ? '<button class="btn danger" type="button" id="apDel">Desligar</button>' : ''}</div>
-    <details class="help"${fresh ? ' open' : ''}><summary>Como montar o atalho no iPhone</summary><ol>
+    <details class="help"${fresh ? ' open' : ''}><summary>Atalho 1: compras com Apple Pay</summary><ol>
       <li>Abra o app <strong>Atalhos</strong> (já vem no iPhone) e toque em <strong>Automação</strong>, embaixo.</li>
       <li>Toque em <strong>+</strong> (ou <strong>Nova Automação</strong>) e escolha <strong>Transação</strong>, o ícone da Carteira.</li>
       <li>Em <strong>Cartão</strong>, escolha os seus cartões. Deixe as categorias todas marcadas. Marque <strong>Executar Imediatamente</strong> e toque em <strong>Avançar</strong>.</li>
@@ -31,6 +33,14 @@ export async function renderApplePay(box, fresh = null) {
         <br>• <strong>Corpo da Solicitação</strong>: JSON. Adicione três campos de texto: <code>valor</code>, <code>loja</code> e <code>cartao</code>. Em cada valor, toque e escolha a variável <strong>Entrada do Atalho</strong>, depois toque nela de novo e escolha, na ordem: <strong>Valor</strong>, <strong>Comerciante</strong> e <strong>Cartão ou Passe</strong>.</li>
       <li>Opcional: adicione a ação <strong>Mostrar Notificação</strong> com a variável <strong>Conteúdo da URL</strong>. Assim, a cada compra aparece "Lançado no Pra Onde Foi: ...".</li>
       <li>Toque em <strong>OK</strong>. Pronto: faça uma compra por aproximação e veja aqui o contador subir.</li>
+    </ol></details>
+    <details class="help"><summary>Atalho 2: "E aí Siri, gastei"</summary><ol>
+      <li>No app <strong>Atalhos</strong>, na aba <strong>Atalhos</strong>, toque em <strong>+</strong>. Dê o nome <strong>Gastei</strong>: é o que você vai falar para a Siri.</li>
+      <li>Adicione a ação <strong>Ditar Texto</strong> (idioma: Português do Brasil).</li>
+      <li>Adicione <strong>Obter Conteúdo da URL</strong> e cole este endereço: ${copyBtn('endereço', url + '?formato=texto')}</li>
+      <li>Abra as opções da ação: <strong>Método</strong> POST; <strong>Cabeçalhos</strong>: <code>Authorization</code> com o seu código; <strong>Corpo da Solicitação</strong> JSON com um campo de texto <code>texto</code>, e no valor escolha a variável <strong>Texto Ditado</strong>.</li>
+      <li>Adicione <strong>Falar Texto</strong> com a variável <strong>Conteúdo da URL</strong>: a Siri confirma o que lançou.</li>
+      <li>Toque em <strong>OK</strong>. Teste: "E aí Siri, gastei" → "45 na padaria no pix". Dá para falar mais de um gasto de uma vez.</li>
     </ol><p class="tiny muted">Os nomes podem mudar um pouco de uma versão do iPhone para outra. Travou? Mande uma opinião pelo balão no topo com um print.</p></details>`;
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast('Copiado.'); } catch (e) { const c = b.previousElementSibling; const r = document.createRange(); r.selectNodeContents(c); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selecionei: copie com o menu do celular.', 'info'); }

@@ -92,6 +92,7 @@ function aiMock(b) {
   const text = JSON.stringify(b.messages);
   const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
   if (text.includes('Transforme a frase')) return reply(JSON.stringify({ itens: [{ descricao: 'Mercado', valor: 230, sentido: 'saida', data: '2026-10-06', meio: 'cartao', categoria: 'Mercado' }, { descricao: 'Terapia', valor: 350, sentido: 'saida', data: '2026-10-06', meio: 'conta', categoria: 'Saúde' }] }));
+  if (text.includes('documento compartilhado')) return reply(JSON.stringify({ tipo: 'comprovante', itens: [{ descricao: 'Pix para João Encanador', valor: 180, sentido: 'saida', data: '2026-10-29', meio: 'conta', categoria: 'Casa' }] }));
   if (text.includes('Classifique lançamentos')) return reply('[]');
   if (text.includes('nota fiscal ou cupom')) return reply(JSON.stringify({ loja: 'Drogaria Mar', data: '2026-10-06', total: 230, pagamento: 'cartao', itens: [
     { descricao: 'Arroz 5 kg', valor: 30, categoria: 'Mercado' }, { descricao: 'Whey protein 900 g', valor: 150, categoria: 'Suplementos' }, { descricao: 'Dipirona', valor: 50, categoria: 'Saúde' }] }));
@@ -673,6 +674,21 @@ const used = await page.evaluate(() => window.__db.usage);
   if (shots) await page.screenshot({ path: path.join(shots, '16-applepay.png'), fullPage: true });
   await page.click('[data-tab=resumo]');
 }
+{ // Icon shortcuts and the evening reminder open Lançar straight on the microphone; things shared from the bank app are read.
+  await page.goto('https://app.test/?acao=voz'); await page.waitForSelector('#app:not([hidden])'); await page.waitForTimeout(700);
+  ok('atalho "Lançar falando" abre direto no microfone', (await page.getAttribute('.tab[data-tab="lancar"]', 'aria-selected')) === 'true' && await page.isVisible('#qText') && !(await page.url()).includes('acao='));
+  await page.evaluate(async () => { const c = await caches.open('share'); await c.put('/shared/meta', new Response(JSON.stringify({ text: 'paguei 60 de estacionamento no pix', name: '', type: '' }))); await c.delete('/shared/file'); });
+  await page.goto('https://app.test/?acao=compartilhar'); await page.waitForSelector('#qPreview:not([hidden])', { timeout: 10000 });
+  ok('texto compartilhado vira lançamento para conferir', (await txt('#qPreview')).length > 10 && (await page.inputValue('#qText')).includes('estacionamento'));
+  await page.evaluate(async () => { const png = await (await fetch('/icons/icon-192.png')).blob(); const c = await caches.open('share'); await c.put('/shared/meta', new Response(JSON.stringify({ text: '', name: 'comprovante.png', type: 'image/png' }))); await c.put('/shared/file', new Response(png, { headers: { 'content-type': 'image/png' } })); });
+  await page.goto('https://app.test/?acao=compartilhar'); await page.waitForFunction(() => /João Encanador/.test(document.querySelector('#qPreview')?.textContent + [...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 15000 }).catch(() => {});
+  const prev = await page.evaluate(() => document.querySelector('#qPreview').textContent + [...document.querySelectorAll('#qPreview input, #qPreview select')].map(i => i.value).join(' '));
+  ok('comprovante de Pix compartilhado vira lançamento na conta', /João Encanador/.test(prev) && /180/.test(prev) && (await txt('#qStatus')).includes('comprovante'), prev.slice(0, 160));
+  if (shots) await page.screenshot({ path: path.join(shots, '17-comprovante.png'), fullPage: true });
+  ok('nada sobra guardado depois de ler', await page.evaluate(async () => !(await (await caches.open('share')).match('/shared/file'))));
+  await noCoach(); await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
+  await page.click('[data-tab=resumo]');
+}
 { // Navigation, taps and errors are recorded (names of screens and buttons only).
   await page.click('[data-tab=lancar]'); await page.waitForTimeout(1200); await page.click('.ltile[data-mode="falar"]');
   await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
@@ -703,7 +719,7 @@ ok('uso registrado só com nomes das partes', used.includes('menu.opiniao') && u
 // notifications
 await sec('avisos');
 await page.waitForSelector('#pOn');
-ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 5 && (await txt('#pushBox')).includes('Resumo da semana'));
+ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 6 && (await txt('#pushBox')).includes('Resumo da semana'));
 await page.uncheck('#pushBox [data-pt="semanal"]');
 await page.evaluate(() => { window.__permAnswer = 'default'; });
 await page.click('#pOn');
@@ -719,7 +735,7 @@ ok('ao ativar, manda um aviso de teste', window_pushTests >= 1);
 await shot('08b-avisos');
 await page.check('#pushBox [data-pt="semanal"]'); await page.waitForTimeout(150);
 ok('mudar o tipo de aviso salva na hora', await page.evaluate(() => window.__db.push_subscriptions[0].prefs.semanal === true));
-for (const k of ['dados', 'gastos', 'conquistas', 'familia']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
+for (const k of ['dados', 'gastos', 'conquistas', 'familia', 'lembrete']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
 await page.click('#pushBox [data-pt="semanal"]');
 ok('não deixa desmarcar todos os tipos', (await txt('#pMsg')).includes('pelo menos um') && await page.isChecked('#pushBox [data-pt="semanal"]'));
 await page.click('#pOff'); await page.waitForSelector('.cfm [data-y]');

@@ -104,3 +104,27 @@ test('avisos da família: textos de entrou, importou e fechou', async () => {
   assert.equal(message({ type: 'closed', name: 'Luiz', month: '2026-09' }).url, '/?tab=fechar');
   assert.equal(message({ type: 'x' }), null);
 });
+
+import { runReminder, reminderMessage } from '../api/_daily.js';
+test('lembrete das 21h: só para quem não lançou nada hoje, uma vez por dia', async () => {
+  const sent = [], patched = [], k = browser().sub.keys;
+  const subs = [{ id: 1, user_id: 'a', household_id: 'h', endpoint: 'https://push.example/a', p256dh: k.p256dh, auth: k.auth, prefs: {}, last_sent: {} },
+    { id: 2, user_id: 'b', household_id: 'h', endpoint: 'https://push.example/b', p256dh: 'x', auth: 'y', prefs: {}, last_sent: {} },
+    { id: 3, user_id: 'c', household_id: 'h', endpoint: 'https://push.example/c', p256dh: 'x', auth: 'y', prefs: { lembrete: false }, last_sent: {} },
+    { id: 4, user_id: 'd', household_id: 'h', endpoint: 'https://push.example/d', p256dh: 'x', auth: 'y', prefs: {}, last_sent: { lembrete: '2026-10-30' } }];
+  const fetchImpl = async (url, o = {}) => {
+    const u = new URL(url), t = u.pathname.split('/').pop(), json = d => ({ ok: true, status: 201, json: async () => d });
+    if (u.hostname === 'push.example') { sent.push(u.pathname); return { ok: true, status: 201 }; }
+    if (t === 'push_subscriptions' && (o.method || 'GET') === 'GET') return json(subs);
+    if (t === 'push_subscriptions') { patched.push(JSON.parse(o.body)); return json([]); }
+    if (t === 'transactions') return json(u.searchParams.get('created_by') === 'eq.b' ? [{ id: 9 }] : []);
+    if (t === 'members') return json([{ display_name: 'Mari Souza' }]);
+    return json([]);
+  };
+  const { publicKey, privateKey } = generateVapidKeys();
+  const out = await runReminder({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'sb_secret_x', vapid: { publicKey, privateKey, subject: 'https://paraondefoi.app.br' }, fetchImpl, now: Date.parse('2026-10-31T00:05:00Z') });
+  assert.deepEqual(out, { sent: 1, skipped: 1, removed: 0, errors: 0 });
+  assert.deepEqual(sent, ['/a']); assert.equal(patched[0].last_sent.lembrete, '2026-10-30');
+  assert.equal(reminderMessage('Mari Souza').title, 'Mari, gastou algo hoje no pix ou em dinheiro?');
+  assert.equal(reminderMessage('').title, 'Gastou algo hoje no pix ou em dinheiro?');
+});

@@ -131,3 +131,27 @@ test('atalho do iPhone: o servidor confere o código, classifica e lança', asyn
     r = await call('Bearer ' + code, { valor: 'abc' }); assert.equal(r.status, 400);
   } finally { globalThis.fetch = realFetch; }
 });
+test('Siri: frase falada vira lançamento, com o sinal certo e resposta em texto', async () => {
+  process.env.ANTHROPIC_API_KEY = 'k';
+  const code = 'abcdefghijklmnopqrstuvwxyz012345', hash = crypto.createHash('sha256').update(code).digest('hex'), inserted = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, o = {}) => {
+    const json = d => ({ ok: true, status: 200, json: async () => d });
+    if (String(url).includes('anthropic')) return json({ content: [{ type: 'text', text: '{"itens":[{"descricao":"Padaria","valor":45,"sentido":"saida","data":"2026-10-30","meio":"conta","categoria":"Mercado"},{"descricao":"Uber","valor":"23,50","sentido":"saida","meio":"cartao","categoria":"Inexistente"}]}' }] });
+    const u = new URL(url), t = u.pathname.split('/').pop();
+    if (t === 'quick_tokens' && (o.method || 'GET') === 'GET') return json([{ user_id: 'u1', household_id: 'h1', uses: 0 }]);
+    if (t === 'households') return json([{ name: 'Família Souza', settings: { cardCloseDay: 24 } }]);
+    if (t === 'categories') return json([{ name: 'Mercado', grp: 'dia' }, { name: 'A classificar', grp: 'dia' }]);
+    if (t === 'rules') return json([]);
+    if (t === 'transactions') { inserted.push(...JSON.parse(o.body)); return json([]); }
+    return json([]);
+  };
+  let status, text;
+  try {
+    await quick({ method: 'POST', url: '/api/quick?formato=texto', query: { formato: 'texto' }, headers: { authorization: 'Bearer ' + code }, body: { texto: '45 na padaria no pix e 23,50 de uber no cartão' } },
+      { setHeader() {}, status(s) { status = s; return this; }, json() {}, send(t) { text = t; } });
+  } finally { globalThis.fetch = realFetch; }
+  assert.equal(status, 200); assert.match(text, /^Lançado: Padaria, R\$\s?45,00; Uber, R\$\s?23,50 no cartão\.$/);
+  assert.equal(inserted.length, 2); assert.equal(inserted[0].amount, -45); assert.equal(inserted[0].source, 'conta'); assert.equal(inserted[0].category, 'Mercado');
+  assert.equal(inserted[1].amount, 23.5); assert.equal(inserted[1].source, 'cartao'); assert.equal(inserted[1].category, 'A classificar'); assert.equal(inserted[1].created_by, 'u1');
+});

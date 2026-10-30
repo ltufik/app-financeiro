@@ -8,6 +8,7 @@ export const PUSH_TYPES = [
   { key: 'conquistas', label: 'Conquistas', hint: 'Quando vocês economizarem bem ou gastarem menos que o normal.' },
   { key: 'familia', label: 'Família', hint: 'Na hora em que alguém entra na família, importa uma fatura ou fecha o mês.' },
   { key: 'semanal', label: 'Resumo da semana', hint: 'Aos domingos, quanto saiu nos últimos 7 dias.' },
+  { key: 'lembrete', label: 'Lembrete do fim do dia', hint: 'Às 21h, só se você não lançou nada no dia: um toque abre o microfone.' },
 ];
 export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 export const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;

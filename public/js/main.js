@@ -182,6 +182,16 @@ function renderMonthSel() {
   $('#monthSel').innerHTML = opts.join('');
 }
 
+// ?acao=voz|nota|pdf|compartilhar (icon shortcuts, the evening reminder, Android share): kept until the app opens.
+{ const a = new URLSearchParams(location.search).get('acao'); if (/^(voz|nota|pdf|compartilhar)$/.test(a || '')) { try { sessionStorage.setItem('fin.acao', a); } catch (e) { /* storage blocked */ } history.replaceState(null, '', location.pathname); } }
+function runAcao(a) {
+  track('atalho.' + a);
+  S.go('lancar');
+  if (a === 'compartilhar') return lancar.handleShared();
+  lancar.openMode({ voz: 'falar', nota: 'nota', pdf: 'pdf' }[a], true);
+  if (a === 'voz') setTimeout(() => { $('#qText')?.focus(); $('#qMic')?.click(); }, 250);
+}
+
 let starting = null;
 function start() { return starting ||= doStart().finally(() => { starting = null; }); }
 async function doStart() {
@@ -202,11 +212,13 @@ async function doStart() {
   $('#brand').textContent = S.hh.name;
   touchActivity(); checkAdmin();
   show('app');
-  // A notification opens the app on a given tab (?tab=...).
   // Opens on Início; a notification can open another tab (?tab=...).
   const want = new URLSearchParams(location.search).get('tab');
   if (VIEWS[want]) history.replaceState(null, '', location.pathname);
   setTab(VIEWS[want] ? want : 'resumo');
+  // Shortcut on the icon, the evening reminder or something shared with the app: go straight there.
+  const acao = (() => { try { const a = sessionStorage.getItem('fin.acao'); sessionStorage.removeItem('fin.acao'); return a; } catch (e) { return null; } })();
+  if (acao && tourDone()) { runAcao(acao); S.justSignedIn = false; return; }
   if (!tourDone()) S.showTour();
   else if (shouldCoach(S.user)) setTimeout(() => S.startCoach(), 700);
   else { setTimeout(afterIntro, 900); }

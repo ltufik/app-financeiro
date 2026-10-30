@@ -144,17 +144,67 @@ Frase: """${txt}"""`;
     const r = await askJSON(prompt, { tier: 'quick', maxTokens: 1500 });
     const its = (r?.itens || []).filter(x => x && +x.valor > 0);
     if (!its.length) throw { code: 'empty' };
-    const names = new Set(S.categories.map(c => c.name));
-    Q = its.map(x => {
-      const source = x.meio === 'cartao' ? 'cartao' : 'conta';
-      const date = /^\d{4}-\d{2}-\d{2}$/.test(x.data || '') ? x.data : todayISO();
-      const sign = x.sentido === 'entrada' ? 1 : -1;
-      return { source, date, description: String(x.descricao || txt).slice(0, 80), amount: round2(source === 'cartao' ? -sign * x.valor : sign * x.valor), category: names.has(x.categoria) ? x.categoria : (sign > 0 ? 'Outras entradas' : 'A classificar') };
-    });
+    Q = itemsToQ(its, txt);
     renderQ(); $('#qStatus').textContent = 'Confira e salve.';
   } catch (e) { $('#qStatus').textContent = e.code === 'empty' ? 'Não achei um valor. Tente dizer quanto foi e o que foi.' : aiErrorText(e); }
   finally { $('#qGo').disabled = false; }
 }
+// Items from the assistant ({descricao, valor, sentido, data, meio, categoria}) as rows to review.
+function itemsToQ(its, fallback) {
+  const names = new Set(S.categories.map(c => c.name));
+  return its.map(x => {
+    const source = x.meio === 'cartao' ? 'cartao' : 'conta';
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(x.data || '') ? x.data : todayISO();
+    const sign = x.sentido === 'entrada' ? 1 : -1, v = Math.abs(+x.valor);
+    return { source, date, description: String(x.descricao || fallback || '').slice(0, 80), amount: round2(source === 'cartao' ? -sign * v : sign * v), category: names.has(x.categoria) ? x.categoria : (sign > 0 ? 'Outras entradas' : 'A classificar') };
+  });
+}
+
+// ---------- shared with the app (Android: "Compartilhar" in the bank app) ----------
+// A Pix/TED receipt becomes an entry to review; a fiscal receipt goes to "Foto da nota";
+// a statement PDF goes to "Fatura ou extrato"; shared text is read like a spoken phrase.
+export async function handleShared() {
+  let meta = null, file = null;
+  try {
+    const c = await caches.open('share');
+    const m = await c.match('/shared/meta'); meta = m ? await m.json() : null;
+    const f = await c.match('/shared/file');
+    if (f) { const b = await f.blob(); file = new File([b], meta?.name || 'compartilhado', { type: meta?.type || b.type }); }
+    await c.delete('/shared/meta'); await c.delete('/shared/file');
+  } catch (e) { /* no cache: nothing shared */ }
+  if (!meta || (!file && !meta.text)) { toast('Não recebi nada do compartilhamento. Tente de novo pelo botão Compartilhar do banco.', 'info'); return; }
+  if (!file) { openMode('falar', true); $('#qText').value = meta.text.slice(0, 500); return interpret(); }
+  const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+  if (isPdf) {
+    // Statements and bills have several pages or a known layout; a receipt is a single short page.
+    let pages = 0, text = '';
+    try { const doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise; pages = doc.numPages; const tc = await (await doc.getPage(1)).getTextContent(); text = tc.items.map(i => i.str).join(' '); }
+    catch (e) { pages = 0; }
+    if (!pages || pages > 1 || /fatura|extrato|saldo anterior|total desta fatura/i.test(text)) { openMode('pdf', true); return withBusy('Lendo ' + file.name + '...', () => startPdf(file), pdfResult); }
+    return withBusy('Lendo o comprovante...', () => readProof({ text }), () => $('#qPreview'));
+  }
+  if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) { toast('Esse tipo de arquivo não dá para ler. Compartilhe a imagem ou o PDF do comprovante.', 'info'); return; }
+  return withBusy('Lendo o que você compartilhou...', () => readProof({ file }), () => (!$('#qPreview').hidden ? $('#qPreview') : !$('#rcReview').hidden ? $('#rcReview') : null));
+}
+async function readProof({ file, text = '' }) {
+  openMode('falar', false);
+  const images = file ? [await shrink(file)] : [];
+  const doc = text ? '\nTexto do documento:\n"""' + text.slice(0, 8000) + '"""' : '';
+  const prompt = `Você recebeu ${file ? 'a imagem' : 'o texto'} de um documento compartilhado por uma família brasileira (${S.hh.name}). Hoje é ${todayISO()}.
+Diga o que é e extraia os lançamentos. Responda só com JSON:
+{"tipo":"comprovante"|"nota"|"outro","itens":[{"descricao":"texto curto: para quem ou de quem e o motivo, se houver","valor":123.45,"sentido":"saida"|"entrada","data":"AAAA-MM-DD","meio":"cartao"|"conta","categoria":"<nome exato de uma categoria da lista>"}]}
+"comprovante" = comprovante de Pix, TED, transferência, pagamento de boleto ou compra no débito/crédito (um lançamento). "nota" = nota fiscal ou cupom com vários itens de compra. "outro" = nada disso (deixe itens vazio).
+Regras: valor sempre positivo; Pix e transferência enviados, boleto e débito são "conta" e "saida"; recebidos são "entrada"; compra no crédito é "cartao". Não invente: se não achar o valor, deixe itens vazio.
+Categorias: ${catList()}${doc}`;
+  let r;
+  try { r = await askJSON(prompt, { tier: 'quick', images, maxTokens: 1500 }); }
+  catch (e) { toast(aiErrorText(e)); return; }
+  if (r?.tipo === 'nota' && file) { openMode('nota', true); return readReceipt(file); }
+  const its = (r?.itens || []).filter(x => x && +x.valor > 0);
+  if (r?.tipo === 'outro' || !its.length) { toast('Não achei um valor nesse arquivo. Confira se é um comprovante ou lance falando.', 'info'); openMode('falar', true); return; }
+  Q = itemsToQ(its, 'Comprovante'); renderQ(); $('#qStatus').textContent = 'Lido do comprovante. Confira e salve.'; track('lancar.comprovante');
+}
+
 function renderQ() {
   const box = $('#qPreview'); box.hidden = false;
   box.innerHTML = `<div class="tw"><table><thead><tr><th>Data</th><th>Descrição</th><th>Onde</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody></tbody></table></div>
