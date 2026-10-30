@@ -202,7 +202,7 @@ await shot('02-vazio');
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 14 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 15 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 await shot('02b-menu');
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 ok('menu fecha com Esc', await page.isHidden('#drawer'));
@@ -661,6 +661,17 @@ const used = await page.evaluate(() => window.__db.usage);
   await mp.click('.ann [data-p]'); await mp.reload(); await mp.waitForTimeout(2500);
   ok('novidade não se repete', !(await mp.$('.ann')));
   await mctx.close();
+}
+{ // Apple Pay on the iPhone: personal code (only its hash is saved) and the steps.
+  await sec('applepay'); await page.waitForSelector('#apGen');
+  ok('compras com Apple Pay: explica e mostra o passo a passo', (await txt('#apBox')).includes('Transação') && (await txt('#apBox')).includes('/api/quick'));
+  await page.click('#apGen'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]'); await page.waitForSelector('#apBox .status.ok code');
+  const code = await page.textContent('#apBox .status.ok code');
+  const hash = await page.evaluate(() => window.__db.quick?.hash);
+  const expect = await page.evaluate(async c => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(c)))].map(x => x.toString(16).padStart(2, '0')).join(''), code.replace('Bearer ', ''));
+  ok('código gerado aparece uma vez e só o hash é salvo', /^Bearer [A-Za-z0-9_-]{30,}$/.test(code) && hash === expect && !JSON.stringify(await page.evaluate(() => window.__db)).includes(code.replace('Bearer ', '')));
+  if (shots) await page.screenshot({ path: path.join(shots, '16-applepay.png'), fullPage: true });
+  await page.click('[data-tab=resumo]');
 }
 { // Navigation, taps and errors are recorded (names of screens and buttons only).
   await page.click('[data-tab=lancar]'); await page.waitForTimeout(1200); await page.click('.ltile[data-mode="falar"]');

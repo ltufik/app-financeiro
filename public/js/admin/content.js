@@ -35,6 +35,7 @@ export const SERVICES = [
   sv('pat', 'Patrimônio e dívidas', 'Investimentos, bens, financiamentos e projeção do sonho', 'Menu → Patrimônio', 'no_ar', 'gratis', 'nao', '—', ['menu.patrimonio']),
   sv('backup', 'Backup', 'Baixar e importar todos os dados', 'Menu → Backup', 'no_ar', 'gratis', 'nao', '—', ['menu.backup']),
   sv('faq', 'Dúvidas', 'Perguntas frequentes; o assistente responde o que não está lá', 'Menu → Dúvidas', 'teste', 'gratis', 'sim', 'IA (rápida)', ['duvida.ler', 'duvida.perguntar']),
+  sv('applepay', 'Compras com Apple Pay', 'Cada compra por aproximação no iPhone entra sozinha (atalho do app Atalhos)', 'Menu ☰ → Compras com Apple Pay', 'teste', 'gratis', 'nao', 'App Atalhos do iPhone', ['applepay.codigo', 'menu.applepay']),
   sv('opiniao', 'Dar opinião', 'Erro, ideia ou crítica, falando ou escrevendo', 'Balão no topo; Menu → Dar opinião', 'teste', 'gratis', 'nao', '—', ['opiniao.erro', 'opiniao.ideia', 'opiniao.critica']),
   sv('msgs', 'Novidades e recados', 'Aviso do teste alpha, "O que mudou" e recado pessoal quando o pedido fica pronto', 'Pop-up ao abrir; menu ☰ → Ajuda', 'teste', 'gratis', 'nao', 'Web Push (recado no celular)', []),
   sv('of', 'Open Finance', 'Dados do banco sem mandar PDF', '—', 'planejado', 'pago', 'nao', 'Agregador (R$ 540 a 6.000 por mês)', []),

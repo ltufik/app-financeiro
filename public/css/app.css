@@ -447,3 +447,5 @@ details.more > .stack{padding:0 10px 10px}
 .ann-quote{border-left:3px solid var(--line);padding:4px 0 4px 10px;color:var(--muted);font-style:italic}
 .ann-news h4{margin:4px 0 2px;font-size:14px}
 .ann-bal{display:inline-flex;vertical-align:-4px;width:20px;height:20px}
+.apcopy{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.apcopy code{flex:1 1 200px;min-width:0;overflow-wrap:anywhere;background:var(--sunk);border-radius:8px;padding:6px 8px;font-size:12.5px}

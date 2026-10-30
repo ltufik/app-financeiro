@@ -52,6 +52,9 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
   for (const r of todo) if (r.news && !news.items.some(n => n.id === r.news.id)) news.items.unshift({ ...r.news, at: r.at });
   await db.setBoard('news', news);
   const backlog = await db.board('backlog');
+  // New items written in the release (e.g. ideas from a conversation), added once, if not there yet.
+  const added = backlog?.items ? todo.flatMap(r => r.addBacklog || []).filter(x => !backlog.items.some(i => i.id === x.id)) : [];
+  if (added.length) { backlog.items.unshift(...added); if (!todo.some(r => (r.backlog || []).length)) await db.setBoard('backlog', backlog); }
   if (backlog?.items && todo.some(r => (r.backlog || []).length)) {
     const prev = JSON.parse(JSON.stringify(backlog.items));
     for (const r of todo) for (const b of r.backlog || []) { const it = backlog.items.find(i => i.id === (b.id || b)); if (it) Object.assign(it, { status: 'feito' }, b.where ? { where: b.where } : {}); }

@@ -13,13 +13,14 @@ export const BACKLOG = [
     ['Métricas do produto (funil e retenção)', 'Claude'], ['Início enxuto', 'Claude'], ['Lançar com 4 opções', 'Claude'], ['Orçamento por categoria com aviso', 'Claude'],
     ['Assinaturas e aumentos de preço', 'Claude'], ['Extrato em cartões', 'Claude'], ['Avisos na hora para a família', 'Claude'], ['Modo privacidade', 'Claude'],
     ['Quem paga o quê e acerto do casal', 'Claude'], ['Página Sobre (o que guardamos, créditos)', 'Claude'], ['Pop-ups de confirmação e de resultado', 'Equipe'],
-    ['Central do produto (painel, backlog, preço, desenho)', 'Equipe'], ['Textos mais claros: metas e patrimônio', 'Equipe'], ['Dar opinião (erro, ideia, crítica) por voz ou texto', 'Equipe'], ['Dúvidas com busca e resposta do assistente', 'Equipe'], ['Uso por funcionalidade e mapa de calor', 'Equipe'], ['Documentação e matriz de serviços', 'Equipe'], ['Aviso de teste alpha, novidades e recado personalizado', 'Equipe'],
+    ['Central do produto (painel, backlog, preço, desenho)', 'Equipe'], ['Textos mais claros: metas e patrimônio', 'Equipe'], ['Dar opinião (erro, ideia, crítica) por voz ou texto', 'Equipe'], ['Dúvidas com busca e resposta do assistente', 'Equipe'], ['Uso por funcionalidade e mapa de calor', 'Equipe'], ['Documentação e matriz de serviços', 'Equipe'], ['Aviso de teste alpha, novidades e recado personalizado', 'Equipe'], ['Compras com Apple Pay entram sozinhas (atalho do iPhone)', 'Equipe'],
   ].map(([t, o]) => it(t, 'feito', o, 'M')),
   // later (decided)
   it('E-mail próprio (Resend) e religar confirmação de e-mail', 'depois', 'Claude', 'P', 'Limite de e-mails do Supabase; obrigatório antes de abrir ao público'),
   it('Domínio próprio', 'depois', 'Equipe', 'P', 'Cara de produto; cerca de R$ 40 por ano', { cost: true }),
   it('Encaminhar a fatura por e-mail', 'depois', 'Claude', 'M', 'Conflita com não guardar o PDF e com faturas com senha'),
   it('App nas lojas (Play Store, App Store)', 'depois', 'Equipe', 'M', '', { cost: true }),
+  it('Lançamento automático pelas notificações do banco (Android)', 'proximo', 'Equipe', 'G', 'Todo mundo esquece de lançar; o banco já avisa cada compra, Pix e TED no celular', { cost: true, notes: 'Exige o app na Play Store (US$ 25 uma vez) e a permissão Acesso a notificações.' }),
   it('Open Finance (dados automáticos do banco)', 'depois', 'Mercado', 'G', 'R$ 540 a 6.000 por mês nos agregadores', { cost: true }),
   it('Plano pago / modelo de negócio', 'depois', 'Produto', 'M', 'Definir depois de medir o uso'),
   // benchmarking ideas

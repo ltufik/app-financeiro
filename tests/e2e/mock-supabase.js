@@ -56,6 +56,9 @@ const rpcs = {
     if (!['erro', 'ideia', 'critica', 'duvida'].includes(p_kind)) throw new Error('bad_kind'); if (String(p_text || '').trim().length < 3) throw new Error('too_short');
     const id = T.feedback.length + 1; T.feedback.push({ id, user_id: session.user.id, household_id: p_household, kind: p_kind, text: p_text, answer: p_answer, screen: p_screen, device: p_device, version: p_version, status: 'novo', helpful: null, created_at: now() }); return id;
   },
+  save_quick_token({ p_hash }) { if (!/^[0-9a-f]{64}$/.test(p_hash)) throw new Error('bad_token'); T.quick = { hash: p_hash, created_at: now(), uses: 0, last_used: null }; return null; },
+  quick_token_status() { return T.quick ? { created_at: T.quick.created_at, uses: T.quick.uses, last_used: T.quick.last_used } : null; },
+  delete_quick_token() { T.quick = null; return null; },
   track_nav({ p_data }) { T.nav.push(p_data); return null; },
   log_error(a) { T.errors.push(a); return null; },
   feedback_reply_seen({ p_id }) { const f = T.feedback.find(x => x.id === p_id && x.user_id === session.user.id); if (f) f.reply_seen = true; return null; },

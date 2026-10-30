@@ -11,6 +11,7 @@ export const SECTIONS = [
   { key: 'patrimonio', title: 'Patrimônio e dívidas', desc: 'Investimentos, bens, dívidas e dinheiro a receber', icon: I('<path d="M3 10l9-6 9 6M5 10v9h14v-9M10 19v-5h4v5"/>') },
   { key: 'categorias', title: 'Categorias', desc: 'Criar categorias e decidir como contam', icon: I('<path d="M4 6h16M4 12h10M4 18h7"/>') },
   { key: 'avisos', title: 'Notificações', desc: 'Avisos no celular: fatura, gastos, resumo', icon: I('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>') },
+  { key: 'applepay', title: 'Compras com Apple Pay', desc: 'iPhone: cada compra por aproximação entra sozinha', icon: I('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2M9.5 9.5a3.5 3.5 0 0 1 5 0M8 7a6 6 0 0 1 8 0"/>') },
   { key: 'contexto', title: 'O que o assistente sabe', desc: 'Fatos da família para respostas melhores', icon: I('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>') },
   { key: 'ajuda', title: 'Ajuda', desc: 'Apresentação, tour guiado, instalar, aparência', icon: I('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/>') },
   { key: 'duvidas', title: 'Dúvidas', desc: 'Perguntas frequentes e pergunte o que quiser', icon: I('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.8 9.6a2.3 2.3 0 1 1 3.2 2.1c-.6.3-1 .8-1 1.4M12 15.8h.01"/>') },

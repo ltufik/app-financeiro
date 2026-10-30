@@ -11,6 +11,7 @@ import { SECTIONS, openMenu } from '../menu.js';
 import { renderMetrics } from '../metrics.js';
 import { renderFeedback, renderDuvidas } from '../feedback.js';
 import { showAllNews, welcomeAlpha } from '../messages.js';
+import { renderApplePay } from '../applepay.js';
 import { PHOTOS } from '../photos.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
@@ -126,6 +127,8 @@ export function render(el) {
     <div class="seg" role="radiogroup" aria-label="Aparência" id="themeSeg">${[['light', 'Claro'], ['dark', 'Escuro'], ['auto', 'Igual ao celular']].map(([k, l]) => `<button type="button" class="chip" role="radio" data-theme-opt="${k}" aria-pressed="${theme() === k}" aria-checked="${theme() === k}">${l}</button>`).join('')}</div>
   </div>
 
+  <div class="panel stack" data-sec="applepay"><div id="apBox" class="stack"></div></div>
+
   <div class="panel stack" data-sec="duvidas"><div id="faqBox" class="stack"></div></div>
 
   <div class="panel stack" data-sec="opiniao"><div id="fbBox" class="stack"></div></div>
@@ -152,6 +155,7 @@ export function render(el) {
   if (sec.key === 'divisao') renderSplit($('#splitBox'));
   if (sec.key === 'metricas') renderMetrics($('#metricsBox'));
   if (sec.key === 'duvidas') renderDuvidas($('#faqBox'));
+  if (sec.key === 'applepay') renderApplePay($('#apBox'));
   if (sec.key === 'opiniao') renderFeedback($('#fbBox'));
   // help
   $('#hTour').onclick = () => S.showTour('app');

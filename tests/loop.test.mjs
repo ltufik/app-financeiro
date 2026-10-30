@@ -96,3 +96,38 @@ test('resumo para o Claude: navegação e erros', () => {
   assert.match(t, /tela \| Não foi possível salvar\. → 1×, 1 pessoas \(Mari\); telas: Lançar; celulares: Android; versões: v31/);
   assert.ok(!t.includes('m@x.com'));
 });
+test('versão publicada pode trazer itens novos para o backlog, uma vez só', async () => {
+  const T = { product_board: [{ key: 'backlog', data: { items: [{ id: 'x', title: 'X', status: 'ideia' }] } }], feedback: [], members: [], push_subscriptions: [] };
+  const fetchImpl = async (url, o = {}) => { const u = new URL(url), table = u.pathname.split('/').pop(), q = Object.fromEntries(u.searchParams), m = o.method || 'GET';
+    const json = d => ({ ok: true, status: 200, json: async () => d });
+    if (m === 'GET') return json(T[table].filter(r => !q.key || 'eq.' + r.key === q.key));
+    if (m === 'POST') { const b = JSON.parse(o.body), i = T[table].findIndex(r => r.key === b.key); if (i >= 0) T[table][i] = b; else T[table].push(b); return json([b]); } return json([]); };
+  const db = rest('https://x.supabase.co', 'sb_secret_x', fetchImpl);
+  const rel = [{ id: 'rz', at: '2026-10-30T00:00:00Z', backlog: [], addBacklog: [{ id: 'novo', title: 'Novo', status: 'proximo' }, { id: 'x', title: 'X repetido' }] }];
+  await applyReleases(db, null, { releases: rel });
+  const items = T.product_board.find(r => r.key === 'backlog').data.items;
+  assert.deepEqual(items.map(i => i.id), ['novo', 'x']);
+});
+import quick from '../api/quick.js';
+import crypto from 'crypto';
+test('atalho do iPhone: o servidor confere o código, classifica e lança', async () => {
+  process.env.SUPABASE_URL = 'https://x.supabase.co'; process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_x';
+  const code = 'abcdefghijklmnopqrstuvwxyz012345', hash = crypto.createHash('sha256').update(code).digest('hex'), inserted = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, o = {}) => {
+    const u = new URL(url), t = u.pathname.split('/').pop(), json = d => ({ ok: true, status: 200, json: async () => d });
+    if (t === 'quick_tokens' && (o.method || 'GET') === 'GET') return json(u.searchParams.get('token_hash') === 'eq.' + hash ? [{ user_id: 'u1', household_id: 'h1', uses: 2 }] : []);
+    if (t === 'households') return json([{ settings: { cardCloseDay: 24 } }]);
+    if (t === 'rules') return json([{ source: 'cartao', kind: 'regex', pattern: 'padaria', category: 'Mercado', priority: 1 }]);
+    if (t === 'transactions') { inserted.push(JSON.parse(o.body)); return json([]); }
+    return json([]);
+  };
+  const call = async (auth, body) => { let status, out; await quick({ method: 'POST', headers: { authorization: auth }, body }, { setHeader() {}, status(s) { status = s; return this; }, json(j) { out = j; } }); return { status, out }; };
+  try {
+    let r = await call('Bearer ' + code, { valor: 'R$ 45,90', loja: 'PADARIA PAO QUENTE', cartao: 'Nubank' });
+    assert.equal(r.status, 200); assert.match(r.out.mensagem, /Lançado no Pra Onde Foi: PADARIA PAO QUENTE, R\$\s?45,90 \(Mercado\)/);
+    assert.equal(inserted[0].category, 'Mercado'); assert.equal(inserted[0].created_by, 'u1'); assert.equal(inserted[0].household_id, 'h1');
+    r = await call('Bearer outrocodigoqualquer123456', { valor: '10' }); assert.equal(r.status, 401);
+    r = await call('Bearer ' + code, { valor: 'abc' }); assert.equal(r.status, 400);
+  } finally { globalThis.fetch = realFetch; }
+});

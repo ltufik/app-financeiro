@@ -775,3 +775,39 @@ revoke all on function public.track_nav(uuid, jsonb) from public, anon;
 revoke all on function public.log_error(uuid, text, text, text, text, text, text) from public, anon;
 grant execute on function public.track_nav(uuid, jsonb) to authenticated;
 grant execute on function public.log_error(uuid, text, text, text, text, text, text) to authenticated;
+
+-- Compras com Apple Pay (atalho do iPhone): cada pessoa tem um código; aqui fica só o hash dele.
+create table if not exists public.quick_tokens (
+  token_hash   text primary key check (token_hash ~ '^[0-9a-f]{64}$'),
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  household_id uuid not null references public.households(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  last_used    timestamptz,
+  uses         int not null default 0
+);
+alter table public.quick_tokens enable row level security;
+revoke all on public.quick_tokens from anon, authenticated;
+grant select, insert, update, delete on public.quick_tokens to service_role;
+
+create or replace function public.save_quick_token(p_household uuid, p_hash text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or not public.is_member(p_household) then raise exception 'not_member'; end if;
+  if p_hash !~ '^[0-9a-f]{64}$' then raise exception 'bad_token'; end if;
+  delete from quick_tokens where user_id = auth.uid() and household_id = p_household;
+  insert into quick_tokens(token_hash, user_id, household_id) values (p_hash, auth.uid(), p_household);
+end $$;
+create or replace function public.delete_quick_token(p_household uuid)
+returns void language sql security definer set search_path = public as $$
+  delete from quick_tokens where user_id = auth.uid() and household_id = p_household;
+$$;
+create or replace function public.quick_token_status(p_household uuid)
+returns jsonb language sql security definer set search_path = public as $$
+  select (select jsonb_build_object('created_at', created_at, 'last_used', last_used, 'uses', uses) from quick_tokens where user_id = auth.uid() and household_id = p_household);
+$$;
+revoke all on function public.save_quick_token(uuid, text) from public, anon;
+revoke all on function public.delete_quick_token(uuid) from public, anon;
+revoke all on function public.quick_token_status(uuid) from public, anon;
+grant execute on function public.save_quick_token(uuid, text) to authenticated;
+grant execute on function public.delete_quick_token(uuid) to authenticated;
+grant execute on function public.quick_token_status(uuid) to authenticated;

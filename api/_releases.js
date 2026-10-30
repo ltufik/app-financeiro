@@ -9,4 +9,8 @@ export const RELEASES = [
     'Metas mais claras: limite do cartão, quanto guardar e o sonho de vocês.',
     'Quem paga o quê, assinaturas e modo privacidade (o olho no topo).',
   ] } },
+  { id: 'r33', at: '2026-10-30T22:30:00Z', backlog: [], addBacklog: [
+    { id: 'notificacoes_do_banco_android', title: 'Lançamento automático pelas notificações do banco (Android)', status: 'proximo', origin: 'Equipe', effort: 'G', problem: 'Todo mundo esquece de lançar; o banco já avisa cada compra, Pix e TED no celular', cost: true, notes: 'Exige o app na Play Store (US$ 25 uma vez) e a permissão Acesso a notificações. Pegar prints das notificações dos bancos dos testadores.', from: [], where: '' },
+    { id: 'compras_com_apple_pay_atalho_do_iphone', title: 'Compras com Apple Pay entram sozinhas (atalho do iPhone)', status: 'feito', origin: 'Equipe', effort: 'M', problem: 'iPhone não deixa ler notificações de outros apps', cost: false, notes: '', from: [], where: 'Menu ☰ → Compras com Apple Pay' },
+  ] },
 ];

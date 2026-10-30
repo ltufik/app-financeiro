@@ -228,3 +228,21 @@ set role service_role;
 select public.product_nav(30)->'screens'->0->>'s' as top, jsonb_array_length(public.product_nav(30)->'errors') as perr \gset
 \echo central: tela mais vista :top, erros :perr
 reset role;
+
+-- Código do atalho do iPhone: só o hash, um por pessoa e família
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+\set ON_ERROR_STOP on
+select public.save_quick_token(:'hr', repeat('a', 64));
+select public.save_quick_token(:'hr', repeat('b', 64));
+select (public.quick_token_status(:'hr')->>'uses') as qu \gset
+\echo código do atalho salvo, usos: :qu
+\set ON_ERROR_STOP off
+\echo (os erros a seguir são esperados: código inválido, família de outra pessoa, ninguém logado lê os códigos)
+select public.save_quick_token(:'hr', 'curto');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select public.save_quick_token(:'hr', repeat('c', 64));
+select * from quick_tokens;
+reset role;
+select count(*) as nq from quick_tokens \gset
+\echo códigos guardados (o novo substitui o antigo): :nq

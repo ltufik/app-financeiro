@@ -365,3 +365,14 @@ test('navegação: célula do toque, nome do botão e erro sem dados pessoais', 
   assert.equal(cleanError('Script error.'), '');
   assert.equal(cleanError('x'.repeat(500)).length, 400);
 });
+
+import { parseBRL, quickRow } from '../public/js/lib/quick.js';
+test('atalho do iPhone: valor como o Atalhos manda e a linha do lançamento', () => {
+  assert.equal(parseBRL('R$ 45,90'), 45.9); assert.equal(parseBRL('R$ 1.234,56'), 1234.56); assert.equal(parseBRL('45.9'), 45.9);
+  assert.equal(parseBRL(12.5), 12.5); assert.equal(parseBRL('1.234'), 1234); assert.equal(parseBRL('-R$ 10,00'), 10); assert.ok(isNaN(parseBRL('abc')));
+  const r = quickRow({ valor: 'R$ 45,90', loja: '  PADARIA   PAO QUENTE ', cartao: 'Nubank' }, { household: 'h', user: 'u', today: '2026-10-28', closeDay: 24 });
+  assert.equal(r.month, '2026-11'); assert.equal(r.day, '28/10'); assert.equal(r.description, 'PADARIA PAO QUENTE'); assert.equal(r.amount, 45.9);
+  assert.equal(r.source, 'cartao'); assert.equal(r.manual, true); assert.equal(r.created_by, 'u'); assert.equal(r.category, 'A classificar');
+  assert.equal(quickRow({ valor: '0' }, { household: 'h', user: 'u', today: '2026-10-01' }).error, 'valor');
+  assert.equal(quickRow({ valor: 10 }, { household: 'h', user: 'u', today: '2026-10-01' }).description, 'Compra com Apple Pay');
+});
