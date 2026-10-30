@@ -2,7 +2,8 @@
 // Each photo falls back to the matching SVG scene when it can't load (offline, blocked).
 import { SCENES, HERO } from './art.js';
 
-// Pexels License: free for commercial use; hotlinked from images.pexels.com.
+// Pexels License: free for commercial use, credit not required; hotlinked from images.pexels.com.
+// Credits are kept here (`by`). Before the public launch, decide whether to show them (e.g. on an "Sobre" page).
 const U = id => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&fit=crop`;
 
 // Each photo is used once in the app (no repeats).
@@ -24,7 +25,6 @@ export function photo(key, { w = 900, ratio = '4 / 3', fallback = '', cls = '' }
   return `<figure class="photo ${cls}" style="aspect-ratio:${ratio}">
     <img src="${U(p.id)}&w=${w}" srcset="${U(p.id)}&w=${Math.round(w / 2)} ${Math.round(w / 2)}w, ${U(p.id)}&w=${w} ${w}w" sizes="(max-width:560px) 100vw, 520px"
       alt="${p.alt}" decoding="async" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('off')">
-    <figcaption>Foto: ${p.by} / Pexels</figcaption>
     <div class="photo-fb">${fb}</div>
   </figure>`;
 }

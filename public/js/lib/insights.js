@@ -36,6 +36,9 @@ export function insights(ctx) {
   if (miss.length && months.length) out.push({ id: 'missing', tone: 'warn', title: 'Faltam dados', text: `Ainda não chegou ${miss.join(' nem ')}. Sem isso, a sobra fica incompleta.`, action: { label: 'Enviar PDF', go: ['lancar', '#drop'] } });
   if (lastDay - day <= 5 && !ctx.manualCount(cur) && !ctx.has(cur, 'conta')) out.push({ id: 'ending', tone: 'info', title: `${mName(cur)[0].toUpperCase() + mName(cur).slice(1)} está acabando`, text: `Faltam ${lastDay - day + 1} dia${lastDay - day ? 's' : ''} e nenhum gasto de ${mName(cur)} foi lançado. Que tal lançar os do pix e do dinheiro agora, enquanto lembra?`, action: { label: 'Lançar gasto', go: ['lancar', '#qText'] } });
 
+  // A finished month waiting to be closed.
+  if (ctx.toClose) { const n = mName(ctx.toClose); out.push({ id: 'close', tone: 'info', title: `Hora de fechar ${n}`, text: `Confira se falta algo e veja a retrospectiva de ${n}. Leva poucos minutos.`, action: { label: 'Fechar o mês', go: ['fechar'] } }); }
+
   // The month to talk about: the latest one with the account statement, else the latest with data.
   const closed = months.filter(k => ctx.has(k, 'conta'));
   const m = closed[closed.length - 1] || months[months.length - 1];
@@ -76,7 +79,7 @@ export function insights(ctx) {
 
   // 6. Things to classify
   const pend = ctx.pending(m);
-  if (pend) out.push({ id: 'pending', tone: 'info', title: `${pend} lançamento${pend > 1 ? 's' : ''} sem categoria`, text: 'Classifique para a sobra e os gráficos ficarem certos. O app aprende e não pergunta de novo.', action: { label: 'Classificar', go: ['extrato', '#lPend'] } });
+  if (pend) out.push({ id: 'pending', tone: 'info', title: `${pend} lançamento${pend > 1 ? 's' : ''} para conferir`, text: 'O app sugeriu a categoria, mas não tem certeza. Confira para a sobra e os gráficos ficarem certos; ele aprende e não pergunta de novo.', action: { label: 'Conferir', go: ['extrato', '#lPend'] } });
 
   return out.sort((a, b) => RANK[a.tone] - RANK[b.tone]);
 }

@@ -75,7 +75,7 @@ const shot = async n => { if (shots) await page.screenshot({ path: path.join(sho
 try {
 await page.goto('https://app.test/');
 await page.waitForSelector('#welcome:not([hidden])');
-ok('tela inicial explica o app com foto', (await txt('#welcome')).includes('Para onde foi o seu dinheiro?') && await page.isVisible('#wHero img') && (await txt('#wHero')).includes('Pexels'));
+ok('tela inicial explica o app com foto', (await txt('#welcome')).includes('Para onde foi o seu dinheiro?') && await page.isVisible('#wHero img') && !(await txt('#wHero')).includes('Foto:'));
 await shot('00-inicial');
 await page.click('#wSignup');
 await page.waitForSelector('#auth:not([hidden])');
@@ -201,6 +201,24 @@ if (backup) {
   const ins = await txt('#insights');
   ok('início mostra insights do mês', (await page.$$('#insights .insight')).length >= 1, ins.slice(0, 200));
   await shot('03b-insights');
+  // guided month closing
+  await page.waitForSelector('#goClose');
+  ok('início chama para fechar o mês que terminou', (await txt('#closeCard')).includes('setembro de 2026'), await txt('#closeCard'));
+  await page.click('#goClose'); await page.waitForSelector('#v-fechar .retro');
+  const fv = await txt('#v-fechar');
+  ok('fechamento mostra extrato e fatura, pendências e retrospectiva', fv.includes('Fechar setembro de 2026') && fv.includes('Extrato e fatura') && fv.includes('Retrospectiva de setembro de 2026') && fv.includes('2.658,50'), fv.slice(0, 160));
+  const nPend = (await page.$$('#clPend li')).length;
+  await page.click('#clPend li:first-child .okchip'); await page.waitForTimeout(200);
+  ok('aceitar a sugestão confirma e ensina', (await page.$$('#clPend li')).length === nPend - 1 && await page.evaluate(() => window.__learned > 0));
+  ok('lista para conferir cabe na tela', await page.evaluate(() => document.documentElement.scrollWidth <= 400));
+  await shot('03c-fechar');
+  await page.click('#clClose'); await page.waitForSelector('#v-fechar .cfm [data-y]');
+  ok('fechar o mês pede confirmação', (await txt('#v-fechar .cfm')).includes('setembro de 2026'));
+  await page.click('#v-fechar .cfm [data-y]'); await page.waitForSelector('#clReopen');
+  ok('mês fechado fica registrado', await page.evaluate(() => !!window.__db.households[0].settings.closed?.['2026-09']) && (await txt('#v-fechar')).includes('Mês fechado em'));
+  ok('mês fechado ganha ✓ no seletor', (await page.$eval('#monthSel option[value="2026-09"]', o => o.textContent)).includes('✓'));
+  await page.click('#v-fechar [data-back]'); await page.waitForTimeout(200);
+  ok('depois de fechar, o início chama o mês anterior que falta', !(await txt('#closeCard')).includes('setembro de 2026'));
   await page.selectOption('#monthSel', 'ano:2026');
 }
 

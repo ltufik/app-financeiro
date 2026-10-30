@@ -1,5 +1,7 @@
 import { S, goals, monthKeys, calcMonth, calcMonths, txsOf, manualOf, nextFatura, patrimonio, presets, projectFor, needPmtFor, hasFinancing } from '../state.js';
 import { insights } from '../lib/insights.js';
+import { monthToClose } from '../lib/closing.js';
+import { settings } from '../state.js';
 import { expandSplits } from '../lib/calc.js';
 import { todayISO } from '../lib/format.js';
 import { byCategory } from '../lib/calc.js';
@@ -34,6 +36,7 @@ export function render(el) {
     <div class="chips" style="margin-top:10px">${pill('Poupança', a.tx, G.savings)}${fin ? pill('Sem o financiamento', a.tx2, G.savingsNoFin) : ''}${nMan ? `<span class="pill at">inclui ${nMan} lançamento${nMan > 1 ? 's' : ''} manual${nMan > 1 ? 'is' : ''}</span>` : ''}</div>
     <div class="row" style="margin-top:14px">${[['Receitas', a.E], ['Despesas', a.out], ['Extras (fora da sobra)', a.EX - a.DX]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
   </div>
+  <div id="closeCard"></div>
   <div id="insights" class="insights"></div>
   <div class="panel" id="stepsBox" hidden></div>
   <div class="grid2">
@@ -86,14 +89,19 @@ function renderInsights(box) {
     has: (k, src) => S.txs.some(t => t.month === k && t.source === src && !t.manual),
     manualCount: k => S.txs.filter(t => t.month === k && t.manual).length,
     pending: k => S.txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
-    goals: G, nextFatura: nextFatura(),
+    goals: G, nextFatura: nextFatura(), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
-  }).slice(0, 4);
+  }).filter(x => x.id !== 'close').slice(0, 4);
+  const cc = document.getElementById('closeCard'), m2c = monthToClose(monthKeys(), settings().closed || {}, todayISO());
+  if (cc) {
+    cc.innerHTML = m2c ? `<article class="closecard"><div><span class="tiny">Hora de fechar o mês</span><h3>${esc(mLong(m2c))}</h3><p class="small">Confira se falta algo e veja a retrospectiva. Leva poucos minutos.</p></div><button class="btn primary" type="button" id="goClose">Fechar ${esc(mLong(m2c).split(' ')[0])}</button></article>` : '';
+    const g = document.getElementById('goClose'); if (g) g.onclick = () => { S.closeMonth = m2c; S.go('fechar'); };
+  }
   if (!list.length) { box.hidden = true; return; }
   box.hidden = false;
   box.innerHTML = list.map(x => `<article class="insight ${x.tone}"><span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
     <div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p>${x.action ? `<button class="linkbtn small" type="button" data-go='${esc(JSON.stringify(x.action.go))}'>${esc(x.action.label)} →</button>` : ''}</div></article>`).join('');
-  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); S.go(g[0], g[1], g[2]); });
+  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
 }
 
 function renderGoal(box, G, pr) {

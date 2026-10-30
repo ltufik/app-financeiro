@@ -329,3 +329,23 @@ a.btn,a.chip{text-decoration:none;color:inherit}
 .pushtypes{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .pushtypes legend{margin-bottom:6px}
 .pushtypes input[type=checkbox]{width:18px;height:18px;margin-top:2px;flex:none}
+/* ---- month closing ---- */
+.closestep h3{display:flex;align-items:center;gap:10px;margin:0}
+.closestep .ck{width:26px;height:26px;border-radius:50%;background:var(--sunk);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
+.closestep.done .ck{background:var(--accent);color:var(--accent-ink)}
+.closestep.done{opacity:.85}
+.closestep .list li{align-items:center;gap:8px;flex-wrap:wrap}
+.retro{background:var(--deep);border-color:var(--deep);color:var(--deep-ink);--ink:var(--deep-ink);--muted:var(--deep-soft);--line:color-mix(in srgb,var(--deep-ink) 20%,transparent)}
+.retro-big{display:flex;flex-direction:column;gap:2px}
+.retro-big .num{font-family:var(--display);font-size:clamp(30px,8vw,40px);font-weight:700;line-height:1.1}
+.retro-big.neg .num{color:var(--coral)}
+.retro .btn.primary{background:var(--turq);border-color:var(--turq);color:#04232A}
+.retro .btn{color:var(--deep-ink);border-color:color-mix(in srgb,var(--deep-ink) 40%,transparent);background:transparent}
+.closecard{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:var(--r);padding:14px 16px}
+.closecard h3{margin:2px 0;font-size:19px}
+.closecard .tiny{color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.closecard > div{flex:1 1 200px;min-width:0}
+.pendlist li{display:flex;justify-content:space-between;align-items:center;gap:8px 10px;flex-wrap:wrap}
+.pendlist .pd{display:flex;flex-direction:column;min-width:0;flex:1 1 150px}
+.pendlist .pc{flex:0 1 auto;flex-wrap:nowrap}
+.okchip{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}

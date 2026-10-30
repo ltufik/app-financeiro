@@ -237,3 +237,25 @@ test('grupos: receita e despesa, fixa, variável ou extra', async () => {
   assert.equal(kindOf({ grp: 'fora' }).label, 'Despesa extra');
   assert.deepEqual([kindByKey('dfixa').grp, kindByKey('dfixa').recurring], ['dia', true]);
 });
+
+test('fechamento do mês: o que falta, despesas fixas sumidas e retrospectiva', async () => {
+  const { checklist, retrospective, monthToClose } = await import('../public/js/lib/closing.js');
+  const idx = catIndex([{ name: 'Salário', grp: 'renda' }, { name: 'Mercado', grp: 'dia' }, { name: 'Escola', grp: 'dia', recurring: true }, { name: 'Aluguel', grp: 'dia', recurring: true }]);
+  const T = (month, source, amount, category, extra = {}) => ({ id: Math.random().toString(36).slice(2), month, source, amount, category, date: month + '-10', description: category, manual: false, ...extra });
+  const txs = [
+    ...['2026-06', '2026-07', '2026-08'].flatMap(k => [T(k, 'conta', 10000, 'Salário'), T(k, 'conta', -2000, 'Escola'), T(k, 'conta', -3000, 'Aluguel'), T(k, 'cartao', 1000, 'Mercado')]),
+    T('2026-09', 'conta', 10000, 'Salário'), T('2026-09', 'conta', -3000, 'Aluguel'), T('2026-09', 'conta', -500, 'A classificar'),
+    T('2026-09', 'cartao', 300, 'Mercado', { manual: true }),
+  ];
+  assert.equal(monthToClose(['2026-08', '2026-09', '2026-10'], { '2026-08': {} }, '2026-10-30'), '2026-09');
+  assert.equal(monthToClose(['2026-10'], {}, '2026-10-30'), null);
+  const c = checklist({ month: '2026-09', txs, idx });
+  assert.deepEqual(c.data.map(d => [d.key, d.done]), [['conta', true], ['cartao', false]]);
+  assert.equal(c.manual.length, 1); assert.equal(c.pending.length, 1);
+  assert.deepEqual(c.missing, [{ category: 'Escola', avg: 2000 }]);
+  assert.equal(c.ready, false);
+  assert.equal(checklist({ month: '2026-09', txs, idx, skip: { cartao: true } }).data[1].done, true);
+  const r = retrospective({ month: '2026-08', txs, idx, goals: { savings: 0.3 } });
+  assert.equal(r.res, 4000); assert.equal(r.tx, 0.4); assert.equal(r.hitGoal, true); assert.equal(r.vsAvg, 0);
+  assert.equal(r.top[0].name, 'Aluguel'); assert.equal(Math.round(r.top[0].share * 100), 50);
+});

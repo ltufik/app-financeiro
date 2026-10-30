@@ -10,6 +10,7 @@ import * as perguntar from './views/perguntar.js';
 import * as extrato from './views/extrato.js';
 import * as ajustes from './views/ajustes.js';
 import * as graficos from './views/graficos.js';
+import * as fechar from './views/fechar.js';
 import { openTour } from './tour.js';
 import { initMenu, closeMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
@@ -17,7 +18,7 @@ import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 
-const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes };
+const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
 
@@ -137,11 +138,12 @@ function setTab(t) {
 }
 $$('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 initMenu();
-$('#monthSel').onchange = e => { S.m = e.target.value; S.render(); };
+$('#monthSel').onchange = e => { S.m = e.target.value; if (S.tab === 'fechar' && !S.m.startsWith('ano:')) S.closeMonth = S.m; S.render(); };
 function renderMonthSel() {
   const ks = monthKeys(), years = [...new Set(ks.map(k => k.slice(0, 4)))].sort().reverse();
   if (!S.m || (!S.m.startsWith('ano:') && !ks.includes(S.m))) S.m = latestClosed() || ks[ks.length - 1] || thisMonth();
-  const opts = [...ks].reverse().map(k => `<option value="${k}"${k === S.m ? ' selected' : ''}>${mLong(k)}</option>`);
+  const closed = S.hh?.settings?.closed || {};
+  const opts = [...ks].reverse().map(k => `<option value="${k}"${k === S.m ? ' selected' : ''}>${mLong(k)}${closed[k] ? ' ✓' : ''}</option>`);
   if (!ks.includes(S.m) && !S.m.startsWith('ano:')) opts.unshift(`<option value="${S.m}" selected>${mLong(S.m)}</option>`);
   years.forEach(y => opts.push(`<option value="ano:${y}"${S.m === 'ano:' + y ? ' selected' : ''}>Ano de ${y}</option>`));
   $('#monthSel').innerHTML = opts.join('');
