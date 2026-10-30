@@ -11,12 +11,13 @@ import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
 import { NEWS, replyTemplate, replyTitle } from '../lib/news.js';
 import { SCREENS, FLOWS, flowFunnel } from './flows.js';
 import { buildSummary } from './summary.js';
+import { RELEASES } from '../lib/releases.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS, screenLabel, screenShot } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null };
-const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'fluxos', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -62,7 +63,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, fluxos, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, fluxos, versoes, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   window.scrollTo(0, 0);
 }
 
@@ -70,7 +71,7 @@ function go(t) {
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
   { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades']] },
-  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
+  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
 ];
 const CHEV = IC('<path d="M9 6l6 6-6 6"/>');
@@ -582,4 +583,30 @@ async function erros(el) {
         <div class="tw" style="margin-top:10px"><table class="atable"><thead><tr><th>Quando</th><th>Quem</th><th>Tela</th><th>Celular</th><th>Versão</th><th>Origem</th></tr></thead><tbody>
         ${g.slice(0, 50).map(e => `<tr><td class="num">${new Date(e.at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${esc(e.name || '—')}<br><span class="tiny muted">${esc(e.family || '')}</span></td><td>${esc(e.screen ? screenLabel(e.screen) : '—')}</td><td class="tiny">${esc(e.device || '')}</td><td>${esc(e.version || '')}</td><td class="tiny muted">${esc(e.source || '')}</td></tr>`).join('')}</tbody></table></div></details>`; }).join('') || '<div class="panel"><p class="small">Nenhum erro no período.</p></div>'}</div>`;
   el.querySelectorAll('[data-ef]').forEach(b => b.onclick = () => { errFilter = b.dataset.ef; erros(el); });
+}
+
+// ---------- Versões: o que cada publicação trouxe e a definição de pronto ----------
+export const DONE = [
+  ['Testes automáticos passando', 'Unidade, banco de dados e navegador. Sem isso, nada sobe.'],
+  ['Novidade para todos', 'O pop-up "O que mudou", com o nome da pessoa, em palavras simples. Se não houver nada visível, o motivo fica registrado.'],
+  ['Recado para quem pediu', 'Os itens do backlog concluídos entram na versão; o recado personalizado sai sozinho para quem pediu.'],
+  ['Backlog em dia', 'Itens novos da conversa entram no backlog; os feitos vão para Feito.'],
+  ['Central em dia', 'Telas novas nos Fluxos (fotos refeitas no GitHub), nomes das telas e botões no Uso e na Navegação, matriz de serviços, Dúvidas e documentação.'],
+  ['Privacidade', 'Se mudou o que o app guarda, a página Sobre o app explica.'],
+  ['Banco de dados', 'Se mudou o banco, o schema.sql continua podendo rodar de novo e você recebe o aviso para rodar no Supabase.'],
+  ['Versão do app', 'O número da versão muda, para os celulares buscarem a nova.'],
+];
+async function versoes(el) {
+  let applied = []; try { applied = (await api('GET', 'releases')).data?.applied || []; } catch (e) { /* not applied yet */ }
+  const byId = new Map((D.backlog?.items || []).map(i => [i.id, i]));
+  const list = RELEASES.slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  el.innerHTML = `<div class="ahead"><h1>Versões</h1><span class="tiny muted">Versão no ar: ${esc(list[0]?.version || '—')}</span></div>
+    <details class="panel"><summary><strong>Definição de pronto</strong> <span class="tiny muted">o que toda publicação precisa ter. Os testes automáticos cobram e bloqueiam a publicação se faltar.</span></summary>
+      <ol class="small" style="margin:10px 0 0;display:flex;flex-direction:column;gap:6px">${DONE.map(([t, d]) => `<li><strong>${t}</strong>: ${d}</li>`).join('')}</ol></details>
+    <div class="stack">${list.map(r => { const done = (r.backlog || []).map(b => byId.get(b.id || b)?.title || (b.id || b)), added = (r.addBacklog || []);
+      return `<article class="panel stack"><div class="ahead"><div><span class="tag">${esc(r.version || r.id)}</span> <span class="tiny muted">${new Date(r.at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+        <h2 style="margin:4px 0 0">${esc(r.news?.title || 'Sem novidade para os usuários')}</h2></div><span class="tiny ${applied.includes(r.id) ? 'pos' : 'muted'}">${applied.includes(r.id) ? 'Já chegou para os usuários' : 'Chega na próxima vez que alguém abrir o app'}</span></div>
+        ${r.news ? `<ul class="small" style="margin:0">${r.news.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : `<p class="small muted" style="margin:0">${esc(r.semNovidade || '')}</p>`}
+        ${done.length ? `<p class="small" style="margin:0"><strong>Concluiu (recado automático para quem pediu):</strong> ${done.map(esc).join('; ')}</p>` : ''}
+        ${added.length ? `<p class="small" style="margin:0"><strong>Novo no backlog:</strong> ${added.map(i => esc(i.title) + (i.status === 'feito' ? ' (feito)' : '')).join('; ')}</p>` : ''}</article>`; }).join('')}</div>`;
 }

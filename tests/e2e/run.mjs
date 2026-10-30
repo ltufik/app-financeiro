@@ -600,6 +600,9 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.click('[data-ef="tras"]'); await ap.waitForTimeout(150);
   ok('central: filtro de erros por trás', (await ap.$$('.errgrp')).length === 1);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-12-erros.png'), fullPage: true });
+  await atab('versoes'); await ap.waitForSelector('#aMain article');
+  ok('central: versões com a definição de pronto e a novidade de cada uma', (await ap.textContent('#aMain')).includes('Definição de pronto') && (await ap.textContent('#aMain')).includes('Lançar sem abrir o app') && (await ap.textContent('#aMain')).includes('Novo no backlog'));
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-13-versoes.png'), fullPage: true });
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
   ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
   await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
@@ -622,7 +625,7 @@ await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver 
 await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
 const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
-ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v31', JSON.stringify(fbRow));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v35', JSON.stringify(fbRow));
 ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
 await shot('11-opiniao');
 await sec('duvidas'); await page.waitForSelector('#fqList details');
@@ -700,7 +703,7 @@ const used = await page.evaluate(() => window.__db.usage);
   ok('navegação registrada: telas, tempo e caminho', navRec.screens.some(x => x.s === 'lancar' && x.t >= 1) && navRec.flows.some(f => f.f === 'lancar' && f.t === 'inicio'), JSON.stringify(navRec.screens).slice(0, 160));
   ok('toques registrados com o nome do botão, sem valores', navRec.taps.length > 0 && navRec.targets.some(t => /Falar ou escrever/.test(t.t)) && navRec.targets.every(t => !/\d/.test(t.t)), JSON.stringify(navRec.targets).slice(0, 200));
   const errRec = await page.evaluate(() => window.__db.errors.at(-1));
-  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v31', JSON.stringify(errRec));
+  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v35', JSON.stringify(errRec));
 }
 { // Signing in again: whoever already has a name and a family goes straight to Início.
   await page.click('[data-tab=extrato]'); await page.waitForTimeout(200);

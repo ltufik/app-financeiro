@@ -10,9 +10,9 @@ export const FEATURE_LABELS = {
   'opiniao.erro': 'Mandou erro', 'opiniao.ideia': 'Mandou ideia', 'opiniao.critica': 'Mandou crítica', 'duvida.ler': 'Leu uma dúvida', 'duvida.perguntar': 'Perguntou nas Dúvidas',
   'menu.familia': 'Menu: Família', 'menu.divisao': 'Menu: Quem paga o quê', 'menu.metas': 'Menu: Metas', 'menu.patrimonio': 'Menu: Patrimônio', 'menu.categorias': 'Menu: Categorias',
   'menu.avisos': 'Menu: Notificações', 'menu.contexto': 'Menu: O que o assistente sabe', 'menu.ajuda': 'Menu: Ajuda', 'menu.duvidas': 'Menu: Dúvidas', 'menu.opiniao': 'Menu: Dar opinião',
-  'menu.backup': 'Menu: Backup', 'menu.sobre': 'Menu: Sobre', 'menu.metricas': 'Menu: Métricas', 'menu.conta': 'Menu: Conta',
+  'menu.applepay': 'Menu: Atalhos do iPhone', 'applepay.codigo': 'Gerou código do atalho do iPhone', 'lancar.comprovante': 'Leu comprovante compartilhado', 'atalho.voz': 'Abriu pelo atalho Falar', 'atalho.nota': 'Abriu pelo atalho Nota', 'atalho.pdf': 'Abriu pelo atalho PDF', 'atalho.compartilhar': 'Compartilhou algo com o app', 'menu.backup': 'Menu: Backup', 'menu.sobre': 'Menu: Sobre', 'menu.metricas': 'Menu: Métricas', 'menu.conta': 'Menu: Conta',
 };
-export const AREA_LABELS = { aba: 'Abas', lancar: 'Lançar', perguntar: 'Perguntar', fechar: 'Fechar o mês', graficos: 'Gráficos', privacidade: 'Privacidade', opiniao: 'Opinião', duvida: 'Dúvidas', menu: 'Menu' };
+export const AREA_LABELS = { atalho: 'Atalhos', applepay: 'Atalhos do iPhone', aba: 'Abas', lancar: 'Lançar', perguntar: 'Perguntar', fechar: 'Fechar o mês', graficos: 'Gráficos', privacidade: 'Privacidade', opiniao: 'Opinião', duvida: 'Dúvidas', menu: 'Menu' };
 
 const sv = (id, name, what, where, status, plan, ai, deps, keys) => ({ id, name, what, where, status, plan, ai, deps, keys });
 export const SERVICES = [
@@ -127,6 +127,6 @@ A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e 
 ];
 
 // Screens as recorded by the navigation log, with the matching picture in public/flows.
-const MENU = { familia: 'Família e convites', divisao: 'Quem paga o quê', metas: 'Metas', patrimonio: 'Patrimônio e dívidas', categorias: 'Categorias', avisos: 'Notificações', contexto: 'O que o assistente sabe', ajuda: 'Ajuda', duvidas: 'Dúvidas', opiniao: 'Dar opinião', backup: 'Backup', sobre: 'Sobre o app', metricas: 'Métricas', conta: 'Conta' };
+const MENU = { familia: 'Família e convites', divisao: 'Quem paga o quê', metas: 'Metas', patrimonio: 'Patrimônio e dívidas', categorias: 'Categorias', avisos: 'Notificações', applepay: 'Atalhos do iPhone', contexto: 'O que o assistente sabe', ajuda: 'Ajuda', duvidas: 'Dúvidas', opiniao: 'Dar opinião', backup: 'Backup', sobre: 'Sobre o app', metricas: 'Métricas', conta: 'Conta' };
 export const screenLabel = s => ({ inicio: 'Início', lancar: 'Lançar', graficos: 'Gráficos', perguntar: 'Perguntar', extrato: 'Extrato', fechar: 'Fechar o mês' })[s] || (s.startsWith('menu.') ? 'Menu: ' + (MENU[s.slice(5)] || s.slice(5)) : s);
 export const screenShot = s => s.startsWith('menu.') ? 'menu_' + s.slice(5) : s;

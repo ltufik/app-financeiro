@@ -9,7 +9,8 @@ import { vapidFromEnv } from './push-cron.js';
 import { replyTitle } from '../public/js/lib/news.js';
 import { rest, closeLoop } from './_loop.js';
 
-const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news'];
+const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases'];
+const READ_ONLY = ['releases'];
 const STATUS = ['novo', 'visto', 'backlog', 'resolvido'];
 const MAX = 400_000;
 
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
     }
     if (req.method === 'PUT') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-      if (!KEYS.includes(b.key) || typeof b.data !== 'object' || b.data === null) return res.status(400).json({ error: 'bad_request' });
+      if (!KEYS.includes(b.key) || READ_ONLY.includes(b.key) || typeof b.data !== 'object' || b.data === null) return res.status(400).json({ error: 'bad_request' });
       if (JSON.stringify(b.data).length > MAX) return res.status(413).json({ error: 'too_large' });
       const db = rest(URL_, SERVICE);
       const prev = b.key === 'backlog' ? await db.board('backlog') : null;
