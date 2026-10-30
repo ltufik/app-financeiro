@@ -102,7 +102,7 @@ A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e 
 - Na primeira vez que alguém abre o app depois da publicação, o servidor: publica a novidade, marca os itens como Feito e manda o recado para quem pediu, com o nome da pessoa (no app e no celular).
 - Se você mesmo marcar um item como Feito na Central, o recado também sai sozinho.
 ## O recado
-- "Oi, Luana! Você sugeriu "ver gasto por semana". Ficou pronto: Gráfico por semana. Onde encontrar: Gráficos → por semana. Obrigado por ajudar a melhorar o app!"
+- "Oi, Mari! Você sugeriu "ver gasto por semana". Ficou pronto: Gráfico por semana. Onde encontrar: Gráficos → por semana. Obrigado por ajudar a melhorar o app!"
 - O "Onde encontrar" vem do campo "Onde vai ficar no app" do item.
 - Cada pessoa recebe um recado por pedido, uma vez só.` },
   { id: 'fluxos', title: 'Fluxos e telas', body: `- A aba Fluxos mostra as telas de verdade, com uma família fictícia (Família Souza).

@@ -6,20 +6,20 @@ const it = (title, status, origin, effort, problem = '', extra = {}) => ({ id: s
 export const BACKLOG = [
   // done
   ...[
-    ['Leitura de fatura e extrato de qualquer banco, conferindo totais', 'Luiz'], ['Lançar gasto por voz ou texto', 'Luiz'], ['Nota fiscal por foto ou PDF, item por categoria', 'Luiz'],
-    ['Gráficos do seu jeito (pizza, linha, barras, período)', 'Luiz'], ['Menu ☰ com ajustes organizados', 'Luiz'], ['Apresentação e tour guiado', 'Luiz'],
-    ['Paleta Mar aberto e fotos reais', 'Luiz'], ['Grupos receita e despesa (fixa, variável, extra)', 'Luiz'], ['Início com avisos e régua de preenchimento', 'Luiz'],
-    ['Notificações push diárias', 'Luiz'], ['Convite da família pelo WhatsApp', 'Luiz'], ['Fechamento do mês guiado com retrospectiva', 'Claude'],
+    ['Leitura de fatura e extrato de qualquer banco, conferindo totais', 'Equipe'], ['Lançar gasto por voz ou texto', 'Equipe'], ['Nota fiscal por foto ou PDF, item por categoria', 'Equipe'],
+    ['Gráficos do seu jeito (pizza, linha, barras, período)', 'Equipe'], ['Menu ☰ com ajustes organizados', 'Equipe'], ['Apresentação e tour guiado', 'Equipe'],
+    ['Paleta Mar aberto e fotos reais', 'Equipe'], ['Grupos receita e despesa (fixa, variável, extra)', 'Equipe'], ['Início com avisos e régua de preenchimento', 'Equipe'],
+    ['Notificações push diárias', 'Equipe'], ['Convite da família pelo WhatsApp', 'Equipe'], ['Fechamento do mês guiado com retrospectiva', 'Claude'],
     ['Métricas do produto (funil e retenção)', 'Claude'], ['Início enxuto', 'Claude'], ['Lançar com 4 opções', 'Claude'], ['Orçamento por categoria com aviso', 'Claude'],
     ['Assinaturas e aumentos de preço', 'Claude'], ['Extrato em cartões', 'Claude'], ['Avisos na hora para a família', 'Claude'], ['Modo privacidade', 'Claude'],
-    ['Quem paga o quê e acerto do casal', 'Claude'], ['Página Sobre (o que guardamos, créditos)', 'Claude'], ['Pop-ups de confirmação e de resultado', 'Luiz'],
-    ['Central do produto (painel, backlog, preço, desenho)', 'Luiz'], ['Textos mais claros: metas e patrimônio', 'Luiz'], ['Dar opinião (erro, ideia, crítica) por voz ou texto', 'Luiz'], ['Dúvidas com busca e resposta do assistente', 'Luiz'], ['Uso por funcionalidade e mapa de calor', 'Luiz'], ['Documentação e matriz de serviços', 'Luiz'], ['Aviso de teste alpha, novidades e recado personalizado', 'Luiz'],
+    ['Quem paga o quê e acerto do casal', 'Claude'], ['Página Sobre (o que guardamos, créditos)', 'Claude'], ['Pop-ups de confirmação e de resultado', 'Equipe'],
+    ['Central do produto (painel, backlog, preço, desenho)', 'Equipe'], ['Textos mais claros: metas e patrimônio', 'Equipe'], ['Dar opinião (erro, ideia, crítica) por voz ou texto', 'Equipe'], ['Dúvidas com busca e resposta do assistente', 'Equipe'], ['Uso por funcionalidade e mapa de calor', 'Equipe'], ['Documentação e matriz de serviços', 'Equipe'], ['Aviso de teste alpha, novidades e recado personalizado', 'Equipe'],
   ].map(([t, o]) => it(t, 'feito', o, 'M')),
   // later (decided)
   it('E-mail próprio (Resend) e religar confirmação de e-mail', 'depois', 'Claude', 'P', 'Limite de e-mails do Supabase; obrigatório antes de abrir ao público'),
-  it('Domínio próprio', 'depois', 'Luiz', 'P', 'Cara de produto; cerca de R$ 40 por ano', { cost: true }),
+  it('Domínio próprio', 'depois', 'Equipe', 'P', 'Cara de produto; cerca de R$ 40 por ano', { cost: true }),
   it('Encaminhar a fatura por e-mail', 'depois', 'Claude', 'M', 'Conflita com não guardar o PDF e com faturas com senha'),
-  it('App nas lojas (Play Store, App Store)', 'depois', 'Luiz', 'M', '', { cost: true }),
+  it('App nas lojas (Play Store, App Store)', 'depois', 'Equipe', 'M', '', { cost: true }),
   it('Open Finance (dados automáticos do banco)', 'depois', 'Mercado', 'G', 'R$ 540 a 6.000 por mês nos agregadores', { cost: true }),
   it('Plano pago / modelo de negócio', 'depois', 'Produto', 'M', 'Definir depois de medir o uso'),
   // benchmarking ideas

@@ -90,7 +90,7 @@ function backlog(el) {
     <details class="panel" id="bNew"><summary><strong>Nova ideia</strong></summary>
       <div class="stack" style="margin-top:10px"><label class="f">Ideia<input type="text" id="nTitle" maxlength="120" placeholder="Ex.: Revisão de domingo"></label>
       <label class="f">Problema que resolve<input type="text" id="nProb" maxlength="240"></label>
-      <div class="grid2"><label class="f">De onde veio<input type="text" id="nOrig" maxlength="60" placeholder="Ex.: Cliente, Luiz, Benchmarking"></label>
+      <div class="grid2"><label class="f">De onde veio<input type="text" id="nOrig" maxlength="60" placeholder="Ex.: Testador, Equipe, Benchmarking"></label>
       <label class="f">Esforço<select id="nEff">${Object.entries(EFFORT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
       <label class="f">Status<select id="nStat">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === 'ideia' ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="nCost" style="width:auto"> Tem custo de infraestrutura</label></div>
@@ -122,7 +122,7 @@ function backlog(el) {
     const title = $('#nTitle').value.trim(); const m = checkName(title, 'a ideia', 3, 120); if (m) return invalid($('#nTitle'), m);
     if (items.some(i => i.title.toLowerCase() === title.toLowerCase())) return invalid($('#nTitle'), 'Essa ideia já está no backlog.');
     if (!await confirmInline(e.target, { text: `Adicionar "${esc(title)}" ao backlog como ${STATUS[$('#nStat').value]}?`, yes: 'Sim, adicionar' })) return;
-    items.unshift({ id: uid(), title, problem: $('#nProb').value.trim(), origin: $('#nOrig').value.trim() || 'Luiz', effort: $('#nEff').value, status: $('#nStat').value, cost: $('#nCost').checked, notes: '' });
+    items.unshift({ id: uid(), title, problem: $('#nProb').value.trim(), origin: $('#nOrig').value.trim() || 'Equipe', effort: $('#nEff').value, status: $('#nStat').value, cost: $('#nCost').checked, notes: '' });
     await save('backlog', 'Ideia adicionada.'); backlog(el);
   };
 }
@@ -407,7 +407,7 @@ let newsEdit = null;
 function novidades(el) {
   const items = D.news.items.slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at)); D.news.items = items;
   el.innerHTML = `<div class="ahead"><h1>Novidades</h1><button class="btn primary" type="button" id="nwAdd">Nova novidade</button></div>
-    <p class="small muted">Cada novidade aparece uma vez para quem já usava o app, num pop-up com o nome da pessoa ("Luana, olha o que tem de novo"). Quem cria a conta depois não vê as antigas. Todas ficam em menu ☰ → Ajuda → Ver o que mudou.</p>
+    <p class="small muted">Cada novidade aparece uma vez para quem já usava o app, num pop-up com o nome da pessoa ("Mari, olha o que tem de novo"). Quem cria a conta depois não vê as antigas. Todas ficam em menu ☰ → Ajuda → Ver o que mudou.</p>
     ${newsEdit != null ? `<div class="panel stack"><h2>${newsEdit === -1 ? 'Nova novidade' : 'Editar novidade'}</h2>
       <label class="f">Título<input type="text" id="nwTitle" maxlength="80" placeholder="Ex.: Agora dá para ver o gasto por semana" value="${esc(newsEdit >= 0 ? items[newsEdit].title : '')}"></label>
       <label class="f">O que mudou (uma linha por item, em palavras simples)<textarea id="nwItems" style="min-height:120px">${esc(newsEdit >= 0 ? (items[newsEdit].items || []).join('\n') : '')}</textarea></label>
@@ -425,7 +425,7 @@ function novidades(el) {
   });
   if (newsEdit == null) return;
   const lines = () => $('#nwItems').value.split('\n').map(x => x.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
-  const prev = () => { $('#nwPrev').innerHTML = `<p class="tiny muted">O QUE MUDOU</p><p><strong>Luana, olha o que tem de novo</strong></p><p><strong>${esc($('#nwTitle').value || 'Título')}</strong></p><ul>${lines().map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; };
+  const prev = () => { $('#nwPrev').innerHTML = `<p class="tiny muted">O QUE MUDOU</p><p><strong>Mari, olha o que tem de novo</strong></p><p><strong>${esc($('#nwTitle').value || 'Título')}</strong></p><ul>${lines().map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; };
   $('#nwTitle').oninput = $('#nwItems').oninput = prev; prev();
   $('#nwCancel').onclick = () => { newsEdit = null; novidades(el); };
   $('#nwPub').onclick = async e => {

@@ -127,7 +127,7 @@ await page.evaluate(() => { window.__signupError = null; });
 await page.check('#aConsent'); await page.click('#aGo');
 await page.waitForSelector('#onboard:not([hidden])');
 await page.waitForSelector('#obName');
-ok('onboarding sugere o nome sem precisar apagar', (await page.inputValue('#obName')) === '' && (await page.getAttribute('#obName', 'placeholder')) === 'Luiz');
+ok('onboarding sugere o nome sem precisar apagar', (await page.inputValue('#obName')) === '' && (await page.getAttribute('#obName', 'placeholder')) === 'Ex.: Mari, Beto, Ju' && !(await txt('#obBody')).includes('Luiz'));
 await shot('01b-nome');
 await page.click('#obNext');
 await page.waitForSelector('[data-s="1"]');
@@ -135,7 +135,7 @@ ok('boas-vindas com o nome', (await txt('#obBody')).includes('Boas-vindas, Luiz!
 await shot('01c-divide');
 await page.click('[data-s="1"]');
 await page.waitForSelector('#obFam');
-ok('sugere o nome da família pelo sobrenome, sem precisar apagar', (await page.inputValue('#obFam')) === '' && (await page.getAttribute('#obFam', 'placeholder')) === 'Família Elias');
+ok('exemplo genérico e, em branco, usa o sobrenome', (await page.inputValue('#obFam')) === '' && (await page.getAttribute('#obFam', 'placeholder')) === 'Ex.: Família Silva, Casa da Vila' && !(await txt('#obBody')).includes('Elias'));
 await page.click('#obCreate');
 await page.waitForSelector('#ivName');
 await page.click('#ivGo');
@@ -539,7 +539,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.click('#nwAdd'); await ap.click('#nwPub');
   ok('central: novidade sem título é recusada', (await ap.getAttribute('#nwTitle', 'aria-invalid')) === 'true');
   await ap.fill('#nwTitle', 'Gasto por semana nos gráficos'); await ap.fill('#nwItems', '- Em Gráficos, escolha "por semana"\nNova cor para o cartão');
-  ok('central: prévia com o nome da pessoa', (await ap.textContent('#nwPrev')).includes('Luana, olha o que tem de novo') && (await ap.textContent('#nwPrev')).includes('Nova cor para o cartão'));
+  ok('central: prévia com o nome da pessoa', (await ap.textContent('#nwPrev')).includes('Mari, olha o que tem de novo') && (await ap.textContent('#nwPrev')).includes('Nova cor para o cartão'));
   await ap.click('#nwPub'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
   ok('central: novidade publicada', adminStore.news?.items?.[0]?.title === 'Gasto por semana nos gráficos' && adminStore.news.items[0].items.length === 2 && adminStore.news.items.length === 2);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-9-novidades.png'), fullPage: true });
