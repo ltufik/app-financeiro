@@ -15,7 +15,7 @@ import { openTour } from './tour.js';
 import { initMenu, closeMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
 import { photo } from './photos.js';
-import { askInstall, shouldAskInstall, isIOS } from './install.js';
+import { askInstall, shouldAskInstall, isIOS, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 
 const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
@@ -109,7 +109,12 @@ S.go = (tab, sel, sec) => {
   setTab(tab);
   if (sel) setTimeout(() => { const e = $(sel); if (!e) return; e.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (e.matches('input,textarea,button')) e.focus({ preventScroll: true }); }, 60);
 };
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installEvt = e; });
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); S.installEvt = e;
+  // Only fires when the app is NOT installed: if we thought it was (uninstalled since), ask again.
+  if (markNotInstalled()) setTimeout(() => { if (!$('.tour') && !$('.coach') && shouldAskInstall()) askInstall(); }, 1200);
+});
+checkStillInstalled();
 
 // Welcome tour: once per person (remembered in the account, so it does not repeat on another phone).
 const tourDone = () => S.user?.user_metadata?.tour_done || lsGet('fin.tour.' + S.user?.id) === '1';

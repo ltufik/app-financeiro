@@ -1,33 +1,53 @@
 // Voice input with the browser's speech recognition (Chrome, Edge, Safari). Falls back to keyboard dictation.
+// Android Chrome ends recognition at the first pause, so we keep restarting short sessions until the person
+// taps the mic again, stays silent for a while, or reaches the time limit. Each session's final text is kept.
 import { micSvg, toast } from './ui.js';
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const speechSupported = !!SR;
+const SILENCE_MS = 6000, MAX_MS = 90000;
 
 // Turns `button` into a mic toggle that writes what is said into `field`.
 export function attachMic(button, field, { onFinal } = {}) {
   button.innerHTML = micSvg; button.classList.add('mic'); button.type = 'button';
   if (!SR) { button.hidden = true; return; }
   button.setAttribute('aria-label', 'Falar');
-  let rec = null, base = '';
-  const stop = () => { try { rec && rec.stop(); } catch (e) { /* already stopped */ } };
+  let active = false, rec = null, base = '', kept = '', startedAt = 0, lastVoice = 0, fatal = false;
+  const show = (extra = '') => { field.value = (base + kept + extra).replace(/\s+/g, ' ').replace(/^\s/, ''); field.dispatchEvent(new Event('input')); };
+  const finish = () => {
+    active = false; rec = null;
+    button.classList.remove('rec'); button.setAttribute('aria-label', 'Falar');
+    show(); if (onFinal && field.value.trim()) onFinal(field.value.trim());
+  };
+  const session = () => {
+    const r = new SR(); rec = r;
+    r.lang = 'pt-BR'; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    let fin = '';
+    r.onresult = e => {
+      let tmp = ''; fin = '';
+      for (const x of e.results) (x.isFinal ? (fin += x[0].transcript) : (tmp += x[0].transcript));
+      lastVoice = Date.now(); show(fin + tmp);
+    };
+    r.onerror = e => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { fatal = true; toast('Permita o uso do microfone para falar.'); }
+      else if (e.error === 'network') { fatal = true; toast('O reconhecimento de voz precisa de internet.'); }
+      else if (e.error === 'audio-capture') { fatal = true; toast('Não encontrei o microfone do aparelho.'); }
+      // "no-speech" and "aborted" just end this session; onend decides whether to continue.
+    };
+    r.onend = () => {
+      if (fin.trim()) kept += fin.trim() + ' ';
+      const now = Date.now();
+      if (active && !fatal && now - lastVoice < SILENCE_MS && now - startedAt < MAX_MS) { setTimeout(() => { if (active) try { session(); } catch (x) { finish(); } }, 120); return; }
+      if (active && !kept.trim() && !fatal) toast('Não ouvi nada. Toque e fale de novo.');
+      finish();
+    };
+    r.start();
+  };
   button.onclick = () => {
-    if (rec) { stop(); return; }
-    rec = new SR(); rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = false;
-    base = field.value ? field.value.replace(/\s*$/, ' ') : '';
-    rec.onresult = e => {
-      let fin = '', tmp = '';
-      for (const r of e.results) (r.isFinal ? (fin += r[0].transcript) : (tmp += r[0].transcript));
-      field.value = base + fin + tmp;
-      field.dispatchEvent(new Event('input'));
-    };
-    rec.onerror = e => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('Permita o uso do microfone para falar.');
-      else if (e.error === 'no-speech') toast('Não ouvi nada. Toque e fale de novo.');
-      else if (e.error !== 'aborted') toast('O reconhecimento de voz falhou. Tente o microfone do teclado.');
-    };
-    rec.onend = () => { rec = null; button.classList.remove('rec'); button.setAttribute('aria-label', 'Falar'); if (onFinal && field.value.trim()) onFinal(field.value.trim()); };
-    try { rec.start(); button.classList.add('rec'); button.setAttribute('aria-label', 'Parar'); }
-    catch (e) { rec = null; toast('Não consegui ligar o microfone.'); }
+    if (active) { active = false; try { rec && rec.stop(); } catch (e) { finish(); } return; }
+    base = field.value ? field.value.replace(/\s*$/, ' ') : ''; kept = ''; fatal = false;
+    active = true; startedAt = lastVoice = Date.now();
+    try { session(); button.classList.add('rec'); button.setAttribute('aria-label', 'Parar'); toast('Pode falar. Toque no microfone de novo quando terminar.'); }
+    catch (e) { active = false; rec = null; toast('Não consegui ligar o microfone.'); }
   };
 }

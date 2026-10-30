@@ -36,6 +36,14 @@ async function addRoutes(t) {
   await t.route('https://images.pexels.com/**', r => r.fulfill({ body: fs.readFileSync(path.join(ROOT, 'icons/icon-192.png')), contentType: 'image/png' }));
 }
 await addRoutes(page);
+// Fake speech recognition that behaves like Android Chrome: each session ends at the first pause.
+await page.addInitScript(() => {
+  const words = ['gastei 45', 'na padaria', 'no pix'];
+  window.SpeechRecognition = window.webkitSpeechRecognition = class {
+    start() { const n = window.__srStarts = (window.__srStarts || 0) + 1; setTimeout(() => { if (n <= words.length) { const res = [{ transcript: words[n - 1] }]; res.isFinal = true; this.onresult && this.onresult({ results: [res] }); } setTimeout(() => this.onend && this.onend(), 40); }, 40); }
+    stop() { setTimeout(() => this.onend && this.onend(), 10); }
+  };
+});
 // Fake permission prompt and push service (headless Chromium has no push service).
 await page.addInitScript(() => {
   if (!navigator.serviceWorker || !window.Notification) return;
@@ -224,6 +232,10 @@ if (backup) {
 
 await page.click('[data-tab=lancar]');
 ok('botão de microfone presente (Chrome)', await page.isVisible('#qMic'));
+await page.fill('#qText', ''); await page.click('#qMic'); await page.waitForTimeout(700);
+ok('microfone continua ouvindo depois das pausas da fala', (await page.inputValue('#qText')) === 'gastei 45 na padaria no pix' && await page.evaluate(() => document.querySelector('#qMic').classList.contains('rec') && window.__srStarts > 3), await page.inputValue('#qText'));
+await page.click('#qMic'); await page.waitForTimeout(200);
+ok('tocar de novo no microfone para de ouvir', await page.evaluate(() => !document.querySelector('#qMic').classList.contains('rec')));
 await page.fill('#qText', 'gastei 230 no mercado no cartão e 350 de terapia por pix');
 await page.click('#qGo');
 await page.waitForSelector('#qSave');
@@ -499,7 +511,10 @@ for (const [name, uaStr, expect] of [
   const t2 = (await p2.textContent('.isheet').catch(() => '')) || '';
   ok(`${name}: convite para instalar aparece na primeira visita`, t2.includes(expect), t2.replace(/\s+/g, ' ').slice(0, 140));
   if (shots) await p2.screenshot({ path: path.join(shots, 'install-' + name + '.png') });
-  if (name === 'Android' && await p2.$('[data-install]')) { await p2.click('[data-install]'); await p2.waitForTimeout(200); ok('Android: botão abre a instalação do sistema', await p2.evaluate(() => window.__prompted === true && !document.querySelector('.isheet'))); }
+  if (name === 'Android' && await p2.$('[data-install]')) { await p2.click('[data-install]'); await p2.waitForTimeout(200); ok('Android: botão abre a instalação do sistema', await p2.evaluate(() => window.__prompted === true && !document.querySelector('.isheet')));
+    await p2.evaluate(() => localStorage.setItem('fin.installed', '1'));
+    await p2.reload(); await p2.waitForSelector('.isheet', { timeout: 8000 }).catch(() => {});
+    ok('Android: depois de desinstalar, o convite para instalar volta', !!(await p2.$('.isheet')) && await p2.evaluate(() => localStorage.getItem('fin.installed') === '0')); }
   if (name === 'iPhone') { await p2.click('[data-later]'); await p2.reload(); await p2.waitForTimeout(2000); ok('iPhone: depois de "agora não", não insiste na mesma hora', !(await p2.$('.isheet'))); }
   await ctx.close();
 }

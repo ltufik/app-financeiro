@@ -18,6 +18,19 @@ const iosNotSafari = () => isIOS() && /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//i.test(ua)
 
 if (isStandalone()) lsSet('fin.installed', '1');
 
+// The app was uninstalled: Chrome offers to install it again (beforeinstallprompt), or the installed-apps
+// check comes back empty. Forget the old "installed" mark and start asking again.
+export function markNotInstalled() {
+  if (isStandalone()) return false;
+  const was = lsGet('fin.installed') === '1';
+  if (was) { lsSet('fin.installed', '0'); lsSet('fin.install.n', '0'); lsSet('fin.install.t', '0'); }
+  return was;
+}
+export async function checkStillInstalled() {
+  if (isStandalone() || lsGet('fin.installed') !== '1' || !navigator.getInstalledRelatedApps) return;
+  try { const apps = await navigator.getInstalledRelatedApps(); if (!apps.length) markNotInstalled(); } catch (e) { /* not supported */ }
+}
+
 // Asks again after 3 days, at most 3 times, never once installed.
 export function shouldAskInstall() {
   if (!isMobile() || isStandalone() || lsGet('fin.installed') === '1') return false;
