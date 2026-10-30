@@ -9,3 +9,4 @@
 - A chave da Anthropic só existe em `api/ai.js` (variável de ambiente). O navegador nunca a vê.
 - Ajustes ficam no menu lateral (`menu.js`), uma página por seção (`S.sec`). Gráficos personalizados ficam em `households.settings.charts`; a lógica está em `lib/charts.js`.
 - Fotos: Pexels License (gratuita), carregadas de images.pexels.com (sem crédito na tela por enquanto; rever antes de abrir ao público), cada foto usada uma vez só; se não carregarem, aparece a ilustração SVG equivalente (`photos.js`).
+- Telas da Central (Fluxos) e do convite para instalar: geradas no GitHub Actions (`.github/workflows/telas.yml`) com fotos e fontes reais e a família fictícia de `tests/fixtures/`. Não gerar aqui (sem acesso ao Pexels e ao Google Fonts); depois de publicar, buscar o commit do robô.

@@ -106,7 +106,7 @@ A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e 
 - O "Onde encontrar" vem do campo "Onde vai ficar no app" do item.
 - Cada pessoa recebe um recado por pedido, uma vez só.` },
   { id: 'fluxos', title: 'Fluxos e telas', body: `- A aba Fluxos mostra as telas de verdade, com uma família fictícia (Família Souza).
-- As fotos das telas são refeitas a cada versão que muda tela (script tests/local/flow-screens.mjs).
+- As fotos das telas se refazem sozinhas no GitHub a cada versão que muda o app, com as fotos e fontes reais (.github/workflows/telas.yml). Leva uns 3 minutos depois da publicação.
 - Cada fluxo mostra quantas pessoas chegaram em cada etapa e quantas ficaram pelo caminho: é o funil de cada funcionalidade.` },
   { id: 'glossario', title: 'Glossário da interface', body: `Palavras que o usuário vê e o que elas querem dizer. Usar sempre estas, do mesmo jeito.
 - **Sobra**: o que entrou menos o que saiu no mês.
