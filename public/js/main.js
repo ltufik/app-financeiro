@@ -68,7 +68,7 @@ $('#authForm').onsubmit = async e => {
     }
   } catch (err) {
     msg.className = 'err';
-    msg.textContent = /Invalid login/i.test(err.message || '') ? 'E-mail ou senha incorretos.' : /not confirmed/i.test(err.message || '') ? 'Confirme seu e-mail pelo link que enviamos antes de entrar.' : /already registered/i.test(err.message || '') ? 'Este e-mail já tem conta. Use Entrar.' : (err.message || 'Não foi possível entrar.');
+    msg.textContent = /rate limit|too many|security purposes/i.test(err.message || '') ? 'Muitos cadastros ou e-mails seguidos agora. Espere alguns minutos e tente de novo.' : /Invalid login/i.test(err.message || '') ? 'E-mail ou senha incorretos.' : /not confirmed/i.test(err.message || '') ? 'Confirme seu e-mail pelo link que enviamos antes de entrar.' : /already registered/i.test(err.message || '') ? 'Este e-mail já tem conta. Use Entrar.' : (err.message || 'Não foi possível entrar.');
   } finally { $('#aGo').disabled = false; }
 };
 $('#aForgot').onclick = async () => {
@@ -112,11 +112,13 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
 
 // Welcome tour: once per person (remembered in the account, so it does not repeat on another phone).
 const tourDone = () => S.user?.user_metadata?.tour_done || lsGet('fin.tour.' + S.user?.id) === '1';
-function markTour() { lsSet('fin.tour.' + S.user.id, '1'); db.sb.auth.updateUser({ data: { tour_done: true } }).catch(() => {}); }
+// Saved in the account too, so it holds on another phone and in the installed app (separate storage on iPhone).
+const saveFlag = data => db.sb.auth.updateUser({ data }).then(r => { if (r?.data?.user) S.user = r.data.user; }).catch(() => {});
+function markTour() { lsSet('fin.tour.' + S.user.id, '1'); saveFlag({ tour_done: true }); }
 // Guided walkthrough over the real screen; then (once) the invitation to install.
 S.startCoach = (force = false, after) => startCoach({
   user: S.user, force, go: t => { if (S.tab !== t) setTab(t); },
-  onNever: () => db.sb.auth.updateUser({ data: { coach_done: true } }).catch(() => {}),
+  onNever: () => saveFlag({ coach_done: true }),
   onEnd: () => { if (after) after(); else setTimeout(maybeAskInstall, 600); },
 });
 S.showTour = () => openTour(S.txs.length
@@ -152,6 +154,8 @@ async function doStart() {
   const { data } = await db.sb.auth.getSession();
   S.user = data?.session?.user || null;
   if (!S.user) { showSignedOut(); return; }
+  // The session copy kept on the device can be old: fetch the account so choices like "Não mostrar mais" hold.
+  try { const { data: fresh } = await db.sb.auth.getUser(); if (fresh?.user) S.user = fresh.user; } catch (e) { /* offline: keep the session copy */ }
   const hasFamily = await pickFamily();
   // Onboarding: how to be called, a pending invite (from a WhatsApp link), or creating the family.
   if (!hasFamily || !displayName() || pendingInvite()) {

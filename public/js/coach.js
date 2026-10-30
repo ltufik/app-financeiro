@@ -77,6 +77,8 @@ export function startCoach({ user, go, onEnd, onNever, force = false } = {}) {
   $('#coachNext').onclick = () => i === steps.length - 1 ? end('done') : show(i + 1);
   $('#coachBack').onclick = () => show(i - 1);
   $('#coachSkip').onclick = () => end('skip');
+  // Ticking "Não mostrar mais" closes the walkthrough right away and remembers it.
+  $('#coachNever').onchange = e => { if (e.target.checked) end('skip'); };
   box.addEventListener('keydown', e => { if (e.key === 'Escape') end('skip'); });
   addEventListener('resize', place); addEventListener('scroll', place, true);
   show(0); $('#coachNext').focus();

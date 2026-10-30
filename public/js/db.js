@@ -17,6 +17,7 @@ const must = ({ data, error }) => { if (error) throw error; return data; };
 
 // Human message for a database or network error.
 export function errorText(e) {
+  if (/rate limit|too many|security purposes/i.test(String(e?.message || e || ''))) return 'Muitos pedidos seguidos agora. Espere alguns minutos e tente de novo.';
   const m = String(e?.message || e?.code || e || '');
   if (/could not find the function|does not exist|schema cache|PGRST20/i.test(m)) return 'O banco de dados precisa ser atualizado: rode de novo o arquivo schema.sql no Supabase.';
   if (/not_member/.test(m)) return 'Você não faz parte desta família.';

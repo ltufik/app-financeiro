@@ -89,6 +89,10 @@ ok('senha curta é recusada', (await txt('#authForm')).includes('pelo menos 8 ca
 await page.fill('#aPass', 'senha-forte-123');
 await page.click('#aGo');
 ok('cadastro exige consentimento', (await txt('#aMsg')).includes('concordância'));
+await page.evaluate(() => { window.__signupError = 'email rate limit exceeded'; });
+await page.check('#aConsent'); await page.click('#aGo'); await page.waitForTimeout(200);
+ok('limite de e-mails do Supabase vira mensagem em português', (await txt('#aMsg')).includes('Espere alguns minutos'), await txt('#aMsg'));
+await page.evaluate(() => { window.__signupError = null; });
 await page.check('#aConsent'); await page.click('#aGo');
 await page.waitForSelector('#onboard:not([hidden])');
 await page.waitForSelector('#obName');
@@ -397,7 +401,8 @@ await page.waitForSelector('#app:not([hidden])', { timeout: 5000 });
 ok('senha nova salva e entra no app', (await txt('#brand')) === 'Família Elias');
 await page.waitForSelector('.coach', { timeout: 3000 }).catch(() => {});
 ok('tour guiado aparece de novo nos primeiros acessos', !!(await page.$('.coach')));
-if (await page.$('.coach')) { await page.check('#coachNever'); await page.click('#coachSkip'); }
+if (await page.$('.coach')) { await page.click('#coachNever'); await page.waitForTimeout(150); }
+ok('marcar "Não mostrar mais" fecha o tour na hora', !(await page.$('.coach')));
 ok('"Não mostrar mais" fica guardado', await page.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('fin.coach.done.') && localStorage[k] === '1')));
 await sec('familia');
 await shot('08-ajustes');
@@ -427,11 +432,12 @@ ok('membros mostram nome e parentesco', (await txt('#v-ajustes .list')).includes
 ok('convidado vê os dados da família', await page.evaluate(() => window.__db.transactions.length > 0));
 await sec('conta');
 await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])');
+await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fin.coach.')).forEach(k => localStorage.removeItem(k)));
 await page.click('#wLogin'); await page.fill('#aEmail', 'luiz@test.com'); await page.fill('#aPass', 'senha-forte-123'); await page.click('#aGo');
 await page.waitForSelector('#app:not([hidden])');
 ok('dono volta direto para o app, sem repetir onboarding', (await txt('#brand')) === 'Família Elias');
 await page.waitForTimeout(1200);
-ok('com "Não mostrar mais", o tour guiado não volta', !(await page.$('.coach')));
+ok('com "Não mostrar mais", o tour guiado não volta (mesmo sem a memória do aparelho)', !(await page.$('.coach')));
 await sec('backup');
 
 await page.evaluate(() => { window.__dl = 0; const o = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (this.download) { window.__dl++; return; } return o.call(this); }; });

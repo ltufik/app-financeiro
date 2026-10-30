@@ -90,8 +90,9 @@ export function createClient() {
     rpc: async (name, args) => { try { const d = rpcs[name](args); persist(); return { data: d, error: null }; } catch (e) { return { data: null, error: { message: e.message } }; } },
     auth: {
       getSession: async () => ({ data: { session } }),
+      getUser: async () => ({ data: { user: session ? (T.users.find(x => x.id === session.user.id) ? { ...session.user, user_metadata: { ...session.user.user_metadata, ...(T.users.find(x => x.id === session.user.id).user_metadata || {}) } } : session.user) : null } }),
       onAuthStateChange: f => { listeners.push(f); return { data: { subscription: { unsubscribe() {} } } }; },
-      signUp: async ({ email, options }) => { const u = { id: uid(), email, user_metadata: options?.data || {} }; T.users.push(u); session = { access_token: 'tok', user: u }; window.__redirect = options?.emailRedirectTo; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
+      signUp: async ({ email, options }) => { if (window.__signupError) return { data: {}, error: { message: window.__signupError } }; const u = { id: uid(), email, user_metadata: options?.data || {} }; T.users.push(u); session = { access_token: 'tok', user: u }; window.__redirect = options?.emailRedirectTo; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
       signInWithPassword: async ({ email }) => { const u = T.users.find(x => x.email === email); if (!u) return { data: {}, error: { message: 'Invalid login credentials' } }; session = { access_token: 'tok', user: u }; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
       signOut: async () => { session = null; persist(); emit('SIGNED_OUT'); return { error: null }; },
       resetPasswordForEmail: async () => ({ error: null }),
