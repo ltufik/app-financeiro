@@ -2,12 +2,13 @@
 // one notification per device per day. Pure enough to test with a fake fetch (tests/push.test.mjs).
 import { catIndex, monthCalc, byCategory, expandSplits, schedule, project } from '../public/js/lib/calc.js';
 import { insights } from '../public/js/lib/insights.js';
+import { budgetsOf } from '../public/js/lib/budget.js';
 import { addM } from '../public/js/lib/format.js';
 import { sendPush } from './_webpush.js';
 
 // Which preference turns each message on, and how many days before the same message can repeat.
-export const TYPES = { close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
-const REPEAT = { missing: 7, pending: 7, close: 5, semanal: 6 };
+export const TYPES = { budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
+const REPEAT = { missing: 7, pending: 7, close: 5, budget: 7, semanal: 6 };
 const days = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
 const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
 
@@ -36,7 +37,7 @@ export function familyInsights({ household, categories, txs }, today) {
     has: (k, src) => txs.some(t => t.month === k && t.source === src && !t.manual),
     manualCount: k => txs.filter(t => t.month === k && t.manual).length,
     pending: k => txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
-    goals: g, nextFatura: nf, toClose: (() => { const cur = today.slice(0, 7), cl = st.closed || {}; return months.filter(k => k < cur && !cl[k]).pop() || null; })(),
+    goals: g, nextFatura: nf, budgets: budgetsOf(st), toClose: (() => { const cur = today.slice(0, 7), cl = st.closed || {}; return months.filter(k => k < cur && !cl[k]).pop() || null; })(),
     etaYears: pmt => { if (!(pmt > 0) || !g.patrimonio) return null; const pts = project({ start: +st.invest?.total || 0, pmt, ret: g.ret ?? 0.05, years: 40 }); const i = pts.findIndex(v => v >= g.patrimonio); return i < 0 ? null : i; },
   }).map(x => ({ ...x, url: x.action ? '/?tab=' + x.action.go[0] : '/?tab=resumo' }));
 }

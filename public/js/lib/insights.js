@@ -1,6 +1,7 @@
 // Insights for the home screen: short, actionable messages computed from the family's numbers.
 // Pure function, tested in tests/lib.test.mjs.
 import { addM } from './format.js';
+import { budgetStatus } from './budget.js';
 
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const mName = k => MES[+k.slice(5) - 1];
@@ -35,6 +36,17 @@ export function insights(ctx) {
   if (day >= 12 && !ctx.has(cur, 'cartao') && months.some(k => ctx.has(k, 'cartao'))) miss.push(`a fatura de ${mName(cur)}`);
   if (miss.length && months.length) out.push({ id: 'missing', tone: 'warn', title: 'Faltam dados', text: `Ainda não chegou ${miss.join(' nem ')}. Sem isso, a sobra fica incompleta.`, action: { label: 'Enviar PDF', go: ['lancar', '#drop'] } });
   if (lastDay - day <= 5 && !ctx.manualCount(cur) && !ctx.has(cur, 'conta')) out.push({ id: 'ending', tone: 'info', title: `${mName(cur)[0].toUpperCase() + mName(cur).slice(1)} está acabando`, text: `Faltam ${lastDay - day + 1} dia${lastDay - day ? 's' : ''} e nenhum gasto de ${mName(cur)} foi lançado. Que tal lançar os do pix e do dinheiro agora, enquanto lembra?`, action: { label: 'Lançar gasto', go: ['lancar', '#qText'] } });
+
+  // Budget per category, current month: warn early while there's still time to adjust.
+  if (ctx.budgets && Object.keys(ctx.budgets).length) {
+    const rows = budgetStatus({ budgets: ctx.budgets, spent: ctx.cats(cur), month: cur, today }).filter(r => r.status !== 'ok').slice(0, 2);
+    if (rows.length) {
+      const over = rows.filter(r => r.status === 'over');
+      out.push({ id: 'budget', tone: 'warn', title: over.length ? `Orçamento estourado: ${over.map(r => r.category).join(' e ')}` : `${rows[0].category} perto do limite`,
+        text: rows.map(r => r.status === 'over' ? `${r.category} já passou ${R(r.spent - r.limit)} do limite de ${R(r.limit)}.` : `${r.category} já usou ${P(r.pct)} de ${R(r.limit)}${r.daysLeft ? ` e faltam ${r.daysLeft} dias` : ''}.`).join(' ') + ' Bora segurar até o fim do mês?',
+        action: { label: 'Ver orçamento', go: ['resumo', '#budgetBox'] } });
+    }
+  }
 
   // A finished month waiting to be closed.
   if (ctx.toClose) { const n = mName(ctx.toClose); out.push({ id: 'close', tone: 'info', title: `Hora de fechar ${n}`, text: `Confira se falta algo e veja a retrospectiva de ${n}. Leva poucos minutos.`, action: { label: 'Fechar o mês', go: ['fechar'] } }); }

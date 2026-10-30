@@ -1,6 +1,7 @@
-import { S, settings, goals, reindex } from '../state.js';
+import { S, settings, goals, reindex, monthKeys, txsOf } from '../state.js';
 import * as db from '../db.js';
-import { KINDS, kindOf, kindByKey } from '../lib/calc.js';
+import { KINDS, kindOf, kindByKey, byCategory } from '../lib/calc.js';
+import { suggestBudgets, budgetsOf } from '../lib/budget.js';
 import { esc, todayISO } from '../lib/format.js';
 import { $, toast, validate, invalid, clearInvalid, confirmInline } from '../ui.js';
 import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
@@ -39,6 +40,11 @@ export function render(el) {
       ${num('gRet', 'Retorno real ao ano (%)', (g.ret ?? 0.05) * 100)}${num('gClose', 'Fechamento do cartão (dia)', st.cardCloseDay || 24)}
     </div>
     <div><button class="btn primary" id="gSave" type="button">Salvar metas</button></div>
+    <h3 style="margin-top:10px">Orçamento por categoria</h3>
+    <p class="tiny muted">Um limite por mês para as categorias que mais pesam. O Início mostra quanto já foi usado e o app avisa antes de estourar.</p>
+    <div id="bRows" class="stack"></div>
+    <div class="rowbtn"><button class="chip" type="button" id="bAdd">Adicionar categoria</button><button class="chip" type="button" id="bSuggest">Sugerir pela média dos últimos meses</button></div>
+    <div><button class="btn primary" id="bSave" type="button">Salvar orçamento</button></div>
   </div>
 
   <div class="panel stack" data-sec="patrimonio">
@@ -140,6 +146,45 @@ export function render(el) {
     ]);
     if (!ok) return;
     save({ goals: { ...g, cardMonthly: val('gCard'), savings: val('gSav') / 100, savingsNoFin: val('gSav2') / 100, patrimonio: val('gPat'), ageNow: val('gAge') || null, ageGoal: val('gAgeGoal') || null, ret: val('gRet') / 100 }, goalsSet: true, cardCloseDay: Math.min(31, Math.max(1, val('gClose') || 24)) }, 'Metas salvas');
+  };
+
+  // budget per category
+  const dayCats = S.categories.filter(c => c.grp === 'dia' && c.name !== 'A classificar').map(c => c.name).sort((a, b) => a.localeCompare(b, 'pt'));
+  let bud = Object.entries(budgetsOf(st)).map(([c, v]) => ({ c, v }));
+  const drawBud = () => {
+    $('#bRows').innerHTML = bud.length ? bud.map((r, i) => `<div class="brow" data-i="${i}"><select data-bc aria-label="Categoria">${['', ...dayCats].map(n => `<option value="${esc(n)}"${n === r.c ? ' selected' : ''}>${n ? esc(n) : 'Escolher categoria'}</option>`).join('')}</select>
+      <input type="number" step="50" min="0" data-bv value="${r.v || ''}" placeholder="Limite (R$)" aria-label="Limite por mês"><button class="chip" type="button" data-brm aria-label="Remover">×</button></div>`).join('') : '<p class="small muted">Nenhum limite ainda.</p>';
+    $('#bRows').querySelectorAll('.brow').forEach(row => {
+      const r = bud[+row.dataset.i];
+      row.querySelector('[data-bc]').onchange = e => { r.c = e.target.value; };
+      row.querySelector('[data-bv]').onchange = e => { r.v = +e.target.value || 0; };
+      row.querySelector('[data-brm]').onclick = async e => {
+        if (!await confirmInline(e.target, { text: `Tirar o limite de ${esc(r.c || 'esta linha')}? Vale quando você tocar em Salvar orçamento.`, yes: 'Sim, tirar', danger: true })) return;
+        bud.splice(+row.dataset.i, 1); drawBud();
+      };
+    });
+  };
+  drawBud();
+  $('#bAdd').onclick = () => { bud.push({ c: '', v: 0 }); drawBud(); $('#bRows').lastElementChild.querySelector('select').focus(); };
+  $('#bSuggest').onclick = async e => {
+    const ks = monthKeys().filter(k => S.txs.some(t => t.month === k && !t.manual)).slice(-3);
+    if (!ks.length) { toast('Importe pelo menos um mês para o app sugerir.'); return; }
+    const sug = suggestBudgets(ks.map(k => byCategory(txsOf(k), S.catIdx)));
+    if (!await confirmInline(e.target, { text: `Sugerir limites para ${Object.keys(sug).length} categorias, pela média de ${ks.length > 1 ? 'os últimos ' + ks.length + ' meses' : '1 mês'}? Os limites que você já pôs ficam como estão. Revise antes de salvar.`, yes: 'Sim, sugerir' })) return;
+    for (const [c, v] of Object.entries(sug)) if (!bud.some(r => r.c === c)) bud.push({ c, v });
+    drawBud();
+  };
+  $('#bSave').onclick = () => {
+    clearInvalid(el);
+    const rows = [...$('#bRows').querySelectorAll('.brow')], seen = new Set();
+    for (let i = 0; i < bud.length; i++) {
+      const r = bud[i], row = rows[i];
+      if (!r.c) return invalid(row.querySelector('[data-bc]'), 'Escolha a categoria.');
+      if (seen.has(r.c)) return invalid(row.querySelector('[data-bc]'), 'Essa categoria já tem limite.');
+      seen.add(r.c);
+      const m = checkNumber(r.v, { min: 1, max: 1e7, label: 'Limite' }); if (m) return invalid(row.querySelector('[data-bv]'), m);
+    }
+    save({ budgets: Object.fromEntries(bud.map(r => [r.c, Math.round(r.v * 100) / 100])) }, 'Orçamento salvo');
   };
 
   // lists

@@ -383,3 +383,10 @@ details.more > .stack{padding:0 10px 10px}
 .ltile .lti svg{width:22px;height:22px}
 .ltile[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
 .ltile[aria-pressed="true"] .lti{background:var(--accent);color:var(--accent-ink)}
+/* ---- budget ---- */
+.brow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px;align-items:center}
+.budget{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.brow2{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px}
+.brow2 .b{grid-column:1/-1;height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
+.brow2 .b span{display:block;height:100%;border-radius:4px}
+.brow2 .tiny{grid-column:1/-1}

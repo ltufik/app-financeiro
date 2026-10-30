@@ -384,6 +384,21 @@ ok('idade da meta menor que a atual é recusada', (await txt('#v-ajustes')).incl
 await page.fill('#gAge', '42'); await page.fill('#gAgeGoal', '55');
 await page.fill('#gCard', '17000'); await page.click('#gSave'); await page.waitForTimeout(100);
 ok('metas salvas', await page.evaluate(() => window.__db.households[0].settings.goals.cardMonthly === 17000));
+// budget per category
+await page.click('#bAdd'); await page.click('#bSave');
+ok('orçamento sem categoria é recusado', (await txt('#v-ajustes')).includes('Escolha a categoria'));
+await page.click('#bRows .brow:last-child [data-brm]'); await page.click('#v-ajustes .cfm [data-y]');
+await page.click('#bSuggest'); await page.waitForSelector('#v-ajustes .cfm [data-y]');
+ok('sugerir orçamento pede confirmação', (await txt('#v-ajustes .cfm')).includes('Sugerir limites'));
+await page.click('#v-ajustes .cfm [data-y]');
+const nb = (await page.$$('#bRows .brow')).length;
+ok('orçamento antigo do backup é aproveitado e completado pela média', nb >= 5, nb + ' categorias');
+await page.click('#bSave'); await page.waitForTimeout(150);
+const bud = await page.evaluate(() => window.__db.households[0].settings.budgets || {});
+ok('orçamento salvo', Object.keys(bud).length === nb && Object.values(bud).every(v => v > 0 && v % 50 === 0), JSON.stringify(bud).slice(0, 120));
+await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09');
+ok('início mostra o orçamento do mês', (await txt('#budgetBox')).includes('Orçamento de setembro de 2026') && (await page.$$('#budgetBox .brow2')).length === 5, (await txt('#budgetBox')).slice(0, 120));
+await shot('03d-orcamento');
 await sec('categorias');
 await page.fill('#cNew', 'Mercado'); await page.click('#cAdd');
 ok('categoria repetida é recusada', (await txt('#v-ajustes')).includes('Essa categoria já existe'));

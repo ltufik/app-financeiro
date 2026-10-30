@@ -1,6 +1,7 @@
 import { S, goals, monthKeys, calcMonth, calcMonths, txsOf, manualOf, nextFatura, patrimonio, presets, projectFor, needPmtFor, hasFinancing } from '../state.js';
 import { insights } from '../lib/insights.js';
 import { monthToClose } from '../lib/closing.js';
+import { budgetStatus, budgetsOf } from '../lib/budget.js';
 import { settings } from '../state.js';
 import { expandSplits } from '../lib/calc.js';
 import { todayISO } from '../lib/format.js';
@@ -40,6 +41,7 @@ export function render(el) {
   <div id="closeCard"></div>
   <div id="insights" class="insights"></div>
   <div class="panel" id="stepsBox" hidden></div>
+  <div class="panel" id="budgetBox" hidden></div>
   <div class="panel">
     <h3>Para onde foi o dinheiro${yr ? ' no período' : ''}</h3>
     <p class="muted small">Despesas por categoria, conta e cartão juntos.</p>
@@ -85,6 +87,7 @@ export function render(el) {
   renderGoal(el.querySelector('#goalBox'), G, pr);
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
+  if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);
 }
 
 // Home insights: what happened this month and what to do about it.
@@ -98,7 +101,7 @@ function renderInsights(box) {
     has: (k, src) => S.txs.some(t => t.month === k && t.source === src && !t.manual),
     manualCount: k => S.txs.filter(t => t.month === k && t.manual).length,
     pending: k => S.txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
-    goals: G, nextFatura: nextFatura(), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
+    goals: G, nextFatura: nextFatura(), budgets: budgetsOf(settings()), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
   }).filter(x => x.id !== 'close');
   const cc = document.getElementById('closeCard'), m2c = monthToClose(monthKeys(), settings().closed || {}, todayISO());
@@ -141,4 +144,24 @@ function chart(ks, G, fin) {
     s += `<text x="${cx}" y="${Math.min(y(r.tx), fin ? y(r.tx2) : y(r.tx), y(0)) - 5}" text-anchor="middle" style="${sel ? 'fill:var(--ink);font-weight:700' : ''}">${pct(r.tx)}</text><text x="${cx}" y="${H - 8}" text-anchor="middle" style="${sel ? 'fill:var(--ink);font-weight:700' : ''}">${mShort(k)}</text>`;
   });
   return s;
+}
+
+// Budget per category for the month on screen.
+let showAllBudget = false;
+function renderBudget(box, spent) {
+  const b = budgetsOf(settings());
+  box.hidden = false;
+  if (!Object.keys(b).length) {
+    box.innerHTML = `<h3>Orçamento do mês</h3><p class="small muted">Defina um limite para as categorias que mais pesam e o app avisa antes de estourar.</p><div><button class="chip" type="button" data-bset>Definir orçamento</button></div>`;
+    box.querySelector('[data-bset]').onclick = () => S.go('ajustes', '#bSuggest', 'metas'); return;
+  }
+  const rows = budgetStatus({ budgets: b, spent, month: S.m, today: todayISO() }), shown = showAllBudget ? rows : rows.slice(0, 5);
+  const col = { ok: 'var(--accent)', attention: 'var(--warn)', over: 'var(--coral)' };
+  box.innerHTML = `<h3>Orçamento de ${esc(mLong(S.m))}</h3>
+    <div class="budget">${shown.map(r => `<div class="brow2"><span class="small">${esc(r.category)}</span><span class="small"><strong>${brl0(r.spent)}</strong> <span class="muted">de ${brl0(r.limit)}</span></span>
+      <span class="b"><span style="width:${Math.min(100, r.pct * 100)}%;background:${col[r.status]}"></span></span>
+      ${r.status !== 'ok' ? `<span class="tiny" style="color:${col[r.status]}">${r.status === 'over' ? 'Passou ' + brl0(r.spent - r.limit) : r.projected > r.limit && r.daysLeft ? 'No ritmo atual, fecha o mês em ' + brl0(r.projected) : 'Já usou ' + pct(r.pct)}</span>` : ''}</div>`).join('')}</div>
+    <div class="rowbtn">${rows.length > 5 ? `<button class="linkbtn small" type="button" data-ball>${showAllBudget ? 'Mostrar só 5' : 'Ver todas as ' + rows.length}</button>` : ''}<button class="linkbtn small" type="button" data-bset>Ajustar limites</button></div>`;
+  box.querySelector('[data-bset]').onclick = () => S.go('ajustes', '#bRows', 'metas');
+  const all = box.querySelector('[data-ball]'); if (all) all.onclick = () => { showAllBudget = !showAllBudget; renderBudget(box, spent); };
 }

@@ -259,3 +259,20 @@ test('fechamento do mês: o que falta, despesas fixas sumidas e retrospectiva', 
   assert.equal(r.res, 4000); assert.equal(r.tx, 0.4); assert.equal(r.hitGoal, true); assert.equal(r.vsAvg, 0);
   assert.equal(r.top[0].name, 'Aluguel'); assert.equal(Math.round(r.top[0].share * 100), 50);
 });
+
+test('orçamento por categoria: uso, ritmo, sugestão e aviso', async () => {
+  const { budgetStatus, suggestBudgets, budgetsOf } = await import('../public/js/lib/budget.js');
+  assert.deepEqual(budgetsOf({ budgets: [['Mercado', 1500], ['Lazer', 0], ['x']] }), { Mercado: 1500 });
+  assert.deepEqual(budgetsOf({ budgets: { Mercado: '1200', Zero: 0 } }), { Mercado: 1200 });
+  assert.deepEqual(budgetsOf({}), {});
+  const { insights } = await import('../public/js/lib/insights.js');
+  const rows = budgetStatus({ budgets: { Mercado: 2000, Lazer: 500, Escola: 1000, Zero: 0 }, spent: { Mercado: 1000, Lazer: 600, Escola: 300 }, month: '2026-10', today: '2026-10-10' });
+  assert.deepEqual(rows.map(r => [r.category, r.status]), [['Lazer', 'over'], ['Mercado', 'attention'], ['Escola', 'ok']]);
+  assert.equal(rows[1].projected, 3100); assert.equal(rows[1].daysLeft, 21);
+  const past = budgetStatus({ budgets: { Mercado: 2000 }, spent: { Mercado: 1700 }, month: '2026-09', today: '2026-10-10' });
+  assert.equal(past[0].status, 'attention'); assert.equal(past[0].projected, 1700);
+  assert.deepEqual(suggestBudgets([{ Mercado: 2010, Lazer: 400, 'A classificar': 900 }, { Mercado: 1890, Lazer: 520 }]), { Mercado: 1950, Lazer: 450 });
+  const ins = insights({ today: '2026-10-10', months: ['2026-10'], calc: () => ({ res: 0, renda: 0, E: 0, out: 0, tx: 0 }), cats: () => ({ Mercado: 1700, Lazer: 600 }), has: () => true, manualCount: () => 1, pending: () => 0, goals: {}, nextFatura: null, budgets: { Mercado: 2000, Lazer: 500 } });
+  const b = ins.find(x => x.id === 'budget');
+  assert.equal(b.title, 'Orçamento estourado: Lazer'); assert.match(b.text, /Lazer já passou R\$ 100 do limite de R\$ 500\. Mercado já usou 85% de R\$ 2\.000 e faltam 21 dias\./);
+});
