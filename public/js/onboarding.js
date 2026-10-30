@@ -154,7 +154,7 @@ async function draw() {
     const sug = O.share ? (lastName() ? 'Família ' + lastName() : 'Nossa família') : 'Finanças de ' + firstName(displayName());
     b.innerHTML = `<div class="brandbig">${O.share ? 'Como vamos chamar a família?' : 'Como vamos chamar o seu espaço?'}</div>
       <div class="panel stack"><label class="f">Nome<input type="text" id="obFam" value="${esc(sug)}"></label>
-      <p class="tiny muted">Dá para mudar depois em Ajustes.</p>
+      <p class="tiny muted">Dá para mudar depois no menu ☰.</p>
       <button class="btn primary" type="button" id="obCreate">Criar</button><button class="btn" type="button" id="obBack">Voltar</button><p class="err" id="obErr"></p></div>`;
     $('#obCreate').onclick = async () => {
       const name = $('#obFam').value.trim(); if (!validate([[$('#obFam'), checkName(name, 'um nome para a família', 2, 60)]])) return;
@@ -173,7 +173,7 @@ async function draw() {
       <p class="muted">Crie um convite para cada pessoa e mande pelo WhatsApp. Ela toca no link e já entra na ${esc(S.hh.name)}.</p>
       <div class="panel" id="obInviter"></div>
       <button class="btn primary" type="button" id="obDone">Continuar para o app</button>
-      <p class="tiny muted">Você também pode convidar depois, em Ajustes.</p>`;
+      <p class="tiny muted">Você também pode convidar depois, pelo menu ☰, em Família e convites.</p>`;
     renderInviter($('#obInviter'));
     $('#obDone').onclick = () => O.onDone();
   }

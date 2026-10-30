@@ -61,7 +61,7 @@ export function render(el) {
   <div class="grid2">
     <div class="panel">
       <h3>Patrimônio</h3>
-      ${P0.rows.length ? `<div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(P0.total)}</div><ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos em Ajustes.</p>'}
+      ${P0.rows.length ? `<div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(P0.total)}</div><ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em Patrimônio e dívidas.</p>'}
     </div>
     <div class="panel" id="goalBox"></div>
   </div>`;
@@ -70,7 +70,7 @@ export function render(el) {
 }
 
 function renderGoal(box, G, pr) {
-  if (!G.patrimonio) { box.innerHTML = '<h3>Meta de patrimônio</h3><p class="small muted">Defina em Ajustes quanto quer ter investido e com que idade para ver a projeção.</p>'; return; }
+  if (!G.patrimonio) { box.innerHTML = '<h3>Meta de patrimônio</h3><p class="small muted">Defina no menu ☰, em Metas, quanto quer ter investido e com que idade para ver a projeção.</p>'; return; }
   const p = pr[goalPreset], pts = projectFor(p[1], p[2]), end = pts[pts.length - 1];
   const need = Math.ceil(needPmtFor(p[2], G.patrimonio) / 50) * 50;
   box.innerHTML = `<h3>Meta de ${brl0(G.patrimonio)}${G.ageGoal ? ' aos ' + G.ageGoal : ''}</h3>

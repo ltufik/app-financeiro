@@ -131,3 +131,74 @@ test('validações: e-mail, senha, nome, telefone, números, mês e data', async
   assert.equal(v.checkMonth('2026-11'), ''); assert.notEqual(v.checkMonth('2026-13'), ''); assert.notEqual(v.checkMonth('11/2026'), '');
   assert.equal(v.checkDate('2026-10-06'), ''); assert.notEqual(v.checkDate('2099-01-01'), ''); assert.notEqual(v.checkDate('1990-01-01'), ''); assert.notEqual(v.checkDate('abc'), '');
 });
+
+test('nota fiscal: divisão por categoria entra na sobra e no gasto por categoria', async () => {
+  const { expandSplits } = await import('../public/js/lib/calc.js');
+  const c2 = catIndex([{ name: 'Saúde', grp: 'dia' }, { name: 'Suplementos', grp: 'dia' }, { name: 'Salário', grp: 'renda' }, { name: 'Obra', grp: 'fora' }]);
+  const txs = [
+    { source: 'conta', amount: 5000, category: 'Salário' },
+    { source: 'cartao', amount: 182.4, category: 'Saúde', splits: [{ category: 'Saúde', amount: 62.4 }, { category: 'Suplementos', amount: 120 }] },
+    { source: 'conta', amount: -100, category: 'Saúde', splits: [{ category: 'Suplementos', amount: 70 }, { category: 'Obra', amount: 30 }] },
+  ];
+  assert.equal(expandSplits(txs).length, 5);
+  const by = byCategory(txs, c2);
+  assert.equal(Math.round(by['Suplementos'] * 100) / 100, 190); assert.equal(Math.round(by['Saúde'] * 100) / 100, 62.4); assert.equal(by['Obra'], undefined);
+  const r = monthCalc(txs, c2);
+  assert.equal(Math.round(r.card * 100) / 100, 182.4); assert.equal(r.D, 70); assert.equal(r.DX, 30);
+  assert.equal(Math.round(r.res * 100) / 100, 4747.6);
+});
+
+test('nota fiscal: limpeza da leitura, divisão exata e lançamento correspondente', async () => {
+  const { normalizeReceipt, splitByCategory, findMatches } = await import('../public/js/lib/receipt.js');
+  const r = normalizeReceipt({ loja: ' Drogasil  ', data: '2026-10-12', total: 180, pagamento: 'cartao', itens: [
+    { descricao: 'Dipirona', valor: 12.4, categoria: 'Saúde' }, { descricao: 'Whey 900g', valor: 120, categoria: 'Suplementos' },
+    { descricao: 'Creatina', valor: 50, categoria: 'Suplementos' }, { descricao: '', valor: 3 }, { descricao: 'Brinde', valor: 0 }] }, '2026-10-29');
+  assert.ok(r.ok); assert.equal(r.store, 'Drogasil'); assert.equal(r.items.length, 3); assert.equal(r.diff, -2.4); assert.equal(r.payment, 'cartao');
+  const sp = splitByCategory(r.items, r.total);
+  assert.equal(sp[0].category, 'Suplementos');
+  assert.equal(Math.round(sp.reduce((a, p) => a + p.amount, 0) * 100) / 100, 180);
+  // future date and missing total fall back safely; empty receipt is refused
+  const f = normalizeReceipt({ data: '2027-01-01', itens: [{ descricao: 'X', valor: 10, categoria: 'Mercado' }], desconto: 1 }, '2026-10-29');
+  assert.equal(f.date, '2026-10-29'); assert.equal(f.total, 9); assert.equal(f.store, 'Nota fiscal');
+  assert.equal(normalizeReceipt({ itens: [] }, '2026-10-29').ok, false);
+  const txs = [
+    { id: 'a', source: 'cartao', date: '2026-10-13', amount: 180, description: 'DROGASIL' },
+    { id: 'b', source: 'cartao', date: '2026-10-25', amount: 180, description: 'LONGE' },
+    { id: 'c', source: 'conta', date: '2026-10-12', amount: -180.03, description: 'PIX DROGASIL' },
+    { id: 'd', source: 'cartao', date: '2026-10-12', amount: 180, description: 'JA TEM NOTA', receipt: {} },
+    { id: 'e', source: 'conta', date: '2026-10-12', amount: 180, description: 'ENTRADA' },
+  ];
+  assert.deepEqual(findMatches(txs, { total: 180, date: '2026-10-12' }).map(t => t.id), ['c', 'a']);
+});
+
+test('gráficos: período, validação e dados de cada tipo', async () => {
+  const { periodMonths, checkChart, buildChart, chartSVG, legendHTML } = await import('../public/js/lib/charts.js');
+  const all = ['2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04'];
+  assert.deepEqual(periodMonths({ kind: 'm3' }, all, '2026-03'), ['2026-01', '2026-02', '2026-03']);
+  assert.deepEqual(periodMonths({ kind: 'mes' }, all, 'ano:2026'), ['2026-04']);
+  assert.deepEqual(periodMonths({ kind: 'ano', year: '2025' }, all), ['2025-11', '2025-12']);
+  assert.deepEqual(periodMonths({ kind: 'faixa', from: '2026-03', to: '2025-12' }, all), ['2025-12', '2026-01', '2026-02', '2026-03']);
+  const base = { title: 'Teste', type: 'barra', metric: 'sobra', period: { kind: 'm6' } };
+  assert.equal(checkChart(base), '');
+  assert.match(checkChart({ ...base, title: 'x' }), /nome/);
+  assert.match(checkChart({ ...base, type: 'pizza' }), /Pizza/);
+  assert.match(checkChart({ ...base, metric: 'escolhidas', cats: [] }), /categoria/);
+  assert.match(checkChart({ ...base, period: { kind: 'faixa', from: '2026-05', to: '2026-01' } }), /antes/);
+  const cats = { '2026-01': { Mercado: 1000, Farmácia: 200, Lazer: 0 }, '2026-02': { Mercado: 800, Suplementos: 150 } };
+  const src = { months: ['2026-01', '2026-02'], calc: k => ({ res: k === '2026-01' ? 500 : -200, renda: 5000, E: 0, out: 4000, cardTotal: 3000, tx: 0.1 }), cats: k => cats[k] };
+  const pie = buildChart({ ...base, type: 'pizza', metric: 'categorias' }, src);
+  assert.equal(pie.kind, 'pie'); assert.deepEqual(pie.labels, ['Mercado', 'Farmácia', 'Suplementos']); assert.deepEqual(pie.series[0].values, [1800, 200, 150]);
+  const lines = buildChart({ ...base, type: 'linha', metric: 'escolhidas', cats: ['Suplementos'] }, src);
+  assert.equal(lines.kind, 'lines'); assert.deepEqual(lines.series[0].values, [0, 150]);
+  const bars = buildChart({ ...base, metric: 'rendaGastos' }, src);
+  assert.equal(bars.kind, 'bars'); assert.equal(bars.series.length, 2);
+  const tx = buildChart({ ...base, type: 'linha', metric: 'taxa' }, src);
+  assert.equal(tx.unit, 'pct');
+  assert.ok(buildChart({ ...base, metric: 'escolhidas', cats: ['Nada'], type: 'pizza' }, src).empty);
+  assert.ok(buildChart(base, { ...src, months: [] }).empty);
+  for (const d of [pie, lines, bars, tx, buildChart({ ...base, metric: 'categorias' }, { ...src, months: ['2026-01'] })]) {
+    const svg = chartSVG(d, { title: 'x' });
+    assert.match(svg, /^<svg/); assert.doesNotMatch(svg, /NaN|undefined/);
+    assert.doesNotMatch(legendHTML(d), /NaN|undefined/);
+  }
+});

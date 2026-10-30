@@ -82,7 +82,7 @@ export async function importBackup(hh, b, onStep) {
   const rules = (b.rules || []).map(r => ({ household_id: hh, source: r.source, kind: r.kind, pattern: r.pattern, category: r.category, min_abs: r.min_abs ?? null, max_abs: r.max_abs ?? null, priority: r.priority ?? 100 }));
   for (let i = 0; i < rules.length; i += 500) must(await sb.from('rules').upsert(rules.slice(i, i + 500), { onConflict: 'household_id,source,kind,pattern', ignoreDuplicates: false }));
   onStep && onStep(`Regras: ${rules.length}`);
-  const tx = (b.transactions || []).map(t => ({ household_id: hh, source: t.source, month: t.month, date: t.date || null, day: t.day || null, description: t.description || '', amount: t.amount, category: t.category || null, installment: t.installment || null, card: t.card || null, manual: !!t.manual, pending: !!t.pending }));
+  const tx = (b.transactions || []).map(t => ({ household_id: hh, source: t.source, month: t.month, date: t.date || null, day: t.day || null, description: t.description || '', amount: t.amount, category: t.category || null, installment: t.installment || null, card: t.card || null, manual: !!t.manual, pending: !!t.pending, splits: t.splits || null, receipt: t.receipt || null }));
   for (let i = 0; i < tx.length; i += 500) { must(await sb.from('transactions').insert(tx.slice(i, i + 500))); onStep && onStep(`Lançamentos: ${Math.min(i + 500, tx.length)} de ${tx.length}`); }
   if (b.household?.settings) must(await sb.from('households').update({ settings: b.household.settings }).eq('id', hh));
   must(await sb.from('imports').insert({ household_id: hh, source: 'backup', label: 'Importação de backup', info: { transactions: tx.length } }));

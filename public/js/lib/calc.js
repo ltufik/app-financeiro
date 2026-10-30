@@ -19,10 +19,23 @@ const groupOf = (t, idx) => {
   return { grp: t.source === 'conta' && t.amount > 0 ? 'entrada' : 'dia', financing: false };
 };
 
+// A transaction detailed by a receipt carries splits [{category, amount}] (positive values that add up
+// to |amount|). For every calculation it counts as one transaction per split, same sign as the original.
+export function expandSplits(txs) {
+  const out = [];
+  for (const t of txs || []) {
+    const sp = Array.isArray(t.splits) ? t.splits.filter(x => x && x.category && +x.amount) : [];
+    if (!sp.length) { out.push(t); continue; }
+    const sign = (+t.amount || 0) < 0 ? -1 : 1;
+    for (const x of sp) out.push({ ...t, splits: null, category: x.category, amount: sign * Math.abs(+x.amount) });
+  }
+  return out;
+}
+
 // Monthly totals. sobra (res) = entradas do dia a dia - saídas do dia a dia - cartão do dia a dia.
 export function monthCalc(txs, idx) {
   let E = 0, EX = 0, D = 0, DX = 0, card = 0, cardTotal = 0, cardFora = 0, renda = 0, fin = 0;
-  for (const t of txs || []) {
+  for (const t of expandSplits(txs)) {
     const v = +t.amount || 0, c = groupOf(t, idx);
     if (t.source === 'conta') {
       if (c.grp === 'renda') { E += v; renda += v; }
@@ -50,7 +63,7 @@ export function sumCalcs(list) {
 // Day-to-day spending by category. src: undefined (both) | 'conta' | 'cartao'.
 export function byCategory(txs, idx, src) {
   const g = {};
-  for (const t of txs || []) {
+  for (const t of expandSplits(txs)) {
     if (src && t.source !== src) continue;
     const c = groupOf(t, idx); if (c.grp !== 'dia') continue;
     const v = t.source === 'conta' ? -t.amount : +t.amount;

@@ -1,7 +1,7 @@
 import { S, txsOf, latestClosed, monthKeys } from '../state.js';
 import * as db from '../db.js';
 import { brl, esc, mLong, norm } from '../lib/format.js';
-import { $, toast, catPicker } from '../ui.js';
+import { $, toast, catPicker, confirmInline } from '../ui.js';
 
 let src = 'cartao', pendOnly = false, q = '';
 
@@ -31,7 +31,16 @@ function draw() {
   const tb = $('#lRows'); tb.innerHTML = '';
   for (const t of rows) {
     const tr = document.createElement('tr'); if (t.pending) tr.className = 'pend';
-    tr.innerHTML = `<td>${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}</td><td style="min-width:180px">${esc(t.description)}${t.installment ? ' <span class="tiny muted">' + esc(t.installment) + '</span>' : ''}${t.manual ? ' <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}</td><td></td><td class="r${src === 'conta' && t.amount > 0 ? ' neg' : ''}">${brl(t.amount)}</td>`;
+    tr.innerHTML = `<td>${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}</td><td style="min-width:180px">${esc(t.description)}${t.installment ? ' <span class="tiny muted">' + esc(t.installment) + '</span>' : ''}${t.manual ? ' <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}${t.splits?.length ? `<span class="tiny muted splits">Nota${t.receipt?.store ? ' ' + esc(t.receipt.store) : ''}: ${t.splits.map(x => esc(x.category) + ' ' + brl(x.amount)).join(' · ')}</span>` : ''}</td><td></td><td class="r${src === 'conta' && t.amount > 0 ? ' neg' : ''}">${brl(t.amount)}</td>`;
+    if (t.splits?.length) {
+      tr.dataset.split = '1';
+      tr.children[2].innerHTML = `<span class="tiny">Dividido pela nota</span><br><button class="chip" type="button" style="font-size:12px;margin-top:4px">Desfazer</button>`;
+      tr.children[2].querySelector('button').onclick = async e => {
+        if (!await confirmInline(e.target, { text: `Desfazer a divisão da nota em "${esc(t.description)}"? O lançamento volta para uma categoria só (${esc(t.category || 'A classificar')}).`, yes: 'Sim, desfazer', danger: true })) return;
+        try { await db.updateTransaction(t.id, { splits: null, receipt: null }); t.splits = null; t.receipt = null; toast('Divisão desfeita'); S.render(); } catch (err) { toast('Não foi possível desfazer.'); }
+      };
+      tb.append(tr); continue;
+    }
     tr.children[2].append(catPicker(S.categories, t.category, t.pending, async c => {
       try {
         await db.updateTransaction(t.id, { category: c, pending: false }); t.category = c; t.pending = false;

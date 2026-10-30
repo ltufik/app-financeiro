@@ -137,6 +137,12 @@ alter table public.households   enable row level security;
 alter table public.members      enable row level security;
 alter table public.invites      enable row level security;
 alter table public.categories   enable row level security;
+-- Nota fiscal: um lançamento pode ser dividido em categorias (splits = [{category, amount}])
+-- e guardar o que foi lido da nota (receipt = {store, date, total, items:[{description, amount, category}]}).
+-- O arquivo da nota nunca é guardado.
+alter table public.transactions add column if not exists splits jsonb;
+alter table public.transactions add column if not exists receipt jsonb;
+
 alter table public.transactions enable row level security;
 alter table public.rules        enable row level security;
 alter table public.imports      enable row level security;
@@ -288,21 +294,37 @@ end $$;
 create or replace function public.replace_month(p_household uuid, p_source text, p_month text, p_rows jsonb,
   p_reconcile uuid[] default '{}', p_label text default null, p_file text default null, p_info jsonb default '{}'::jsonb)
 returns uuid language plpgsql security definer set search_path = public as $$
-declare imp uuid;
+declare imp uuid; keep jsonb;
 begin
   if not public.is_member(p_household) then raise exception 'not_member'; end if;
   if p_source not in ('conta', 'cartao') then raise exception 'bad_source'; end if;
   insert into imports(household_id, source, month, label, file_name, info, created_by)
     values (p_household, p_source, p_month, coalesce(p_label, p_source || ' ' || p_month), p_file, coalesce(p_info, '{}'::jsonb), auth.uid())
     returning id into imp;
+  -- Receipts already attached to rows of this month (or to manual rows being reconciled) carry over
+  -- to the re-imported row with the same amount and the same date or description.
+  select coalesce(jsonb_agg(jsonb_build_object('d', t.date::text, 's', t.description, 'a', t.amount, 'sp', t.splits, 'rc', t.receipt)), '[]'::jsonb)
+    into keep
+    from transactions t
+    where t.household_id = p_household and (t.splits is not null or t.receipt is not null)
+      and ((t.source = p_source and t.month = p_month and t.manual = false) or (t.manual = true and t.id = any(coalesce(p_reconcile, '{}'))));
   delete from transactions where household_id = p_household and source = p_source and month = p_month and manual = false;
   delete from transactions where household_id = p_household and manual = true and id = any(coalesce(p_reconcile, '{}'));
-  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by)
+  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt)
   select p_household, p_source, p_month,
          nullif(r->>'date', '')::date, r->>'day', coalesce(r->>'description', ''), (r->>'amount')::numeric,
          r->>'category', nullif(r->>'installment', ''), nullif(r->>'card', ''), false,
-         coalesce((r->>'pending')::boolean, false), imp, auth.uid()
-  from jsonb_array_elements(p_rows) r;
+         coalesce((r->>'pending')::boolean, false), imp, auth.uid(),
+         coalesce(case when jsonb_typeof(r->'splits') = 'array' then r->'splits' end, k.sp),
+         coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc)
+  from jsonb_array_elements(p_rows) r
+  left join lateral (
+    select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc
+    from jsonb_array_elements(keep) x
+    where (x->>'a')::numeric = (r->>'amount')::numeric
+      and (x->>'d' = nullif(r->>'date', '') or x->>'s' = coalesce(r->>'description', ''))
+    order by (x->>'d' = nullif(r->>'date', '') and x->>'s' = coalesce(r->>'description', '')) desc
+    limit 1) k on true;
   return imp;
 end $$;
 

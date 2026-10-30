@@ -37,7 +37,8 @@ export function catPicker(categories, current, pending, onPick) {
       Object.keys(GROUPS).filter(g => byG[g]).map(g => `<optgroup label="${esc(GROUPS[g])}">${byG[g].sort((a, c) => a.localeCompare(c, 'pt')).map(n => `<option${n === current ? ' selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('');
     wrap.replaceChildren(sel); sel.focus();
     sel.onchange = () => onPick(sel.value);
-    sel.onblur = () => { if (!sel.value || sel.value === current) wrap.replaceChildren(b); };
+    // Deferred: the table may be redrawn while the select still has focus.
+    sel.onblur = () => setTimeout(() => { if (sel.isConnected && (!sel.value || sel.value === current)) wrap.replaceChildren(b); });
   };
   wrap.append(b); return wrap;
 }

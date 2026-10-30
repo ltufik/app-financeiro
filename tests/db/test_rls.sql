@@ -47,6 +47,18 @@ select count(*) as n, sum(amount) as s, bool_or(manual) as any_manual from trans
 select public.replace_month(:'ha', 'conta', '2026-10', '[{"day":"25/10","description":"SALARIO","amount":10000,"category":"Salário"}]'::jsonb) \gset
 select count(*) as n2 from transactions where household_id = :'ha' \gset
 \echo reimportar substitui: :n2 lançamento
+-- nota fiscal: a divisão por categoria sobrevive a reimportar a fatura
+select public.replace_month(:'ha', 'cartao', '2026-10', '[{"date":"2026-10-12","day":"12/10","description":"DROGASIL 123","amount":182.4,"category":"Saúde"}]'::jsonb) \gset
+update transactions set splits = '[{"category":"Saúde","amount":62.4},{"category":"Suplementos","amount":120}]', receipt = '{"store":"Drogasil","total":182.4}' where household_id = :'ha' and source = 'cartao';
+select public.replace_month(:'ha', 'cartao', '2026-10', '[{"date":"2026-10-12","day":"12/10","description":"DROGASIL 123","amount":182.4,"category":"Saúde"},{"date":"2026-10-13","day":"13/10","description":"PADARIA","amount":20,"category":"Mercado"}]'::jsonb) \gset
+select count(*) filter (where splits is not null) as with_splits, max(receipt->>'store') as store from transactions where household_id = :'ha' and source = 'cartao' \gset
+\echo nota mantida após reimportar: :with_splits lançamento com divisão, loja :store
+-- um gasto manual vindo da nota, conciliado com a fatura, passa a divisão para o lançamento real
+insert into transactions(household_id, source, month, date, description, amount, category, manual, splits, receipt)
+  values (:'ha', 'cartao', '2026-11', '2026-10-30', 'Nota: Farmácia', 90, 'Saúde', true, '[{"category":"Suplementos","amount":90}]', '{"store":"Farmácia"}') returning id as nman \gset
+select public.replace_month(:'ha', 'cartao', '2026-11', '[{"date":"2026-10-30","day":"30/10","description":"RAIA 55","amount":90,"category":"Saúde"}]'::jsonb, array[:'nman']::uuid[]) \gset
+select count(*) as n3, max(splits->0->>'category') as sc, bool_or(manual) as m3 from transactions where household_id = :'ha' and month = '2026-11' \gset
+\echo conciliado: :n3 lançamento, divisão :sc, manual restante :m3
 select public.learn_rule(:'ha', 'cartao', 'PADARIA X', 'Mercado');
 select public.learn_rule(:'ha', 'cartao', 'PADARIA X', 'Restaurantes e delivery');
 select category from rules where household_id = :'ha' and kind = 'exact' \gset

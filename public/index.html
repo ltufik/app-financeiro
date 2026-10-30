@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Pra Onde Foi</title>
 <meta name="description" content="Pra Onde Foi: descubra para onde vai o dinheiro da família. Pix, cartão e renda num lugar só, com lançamento por voz e leitura de faturas em PDF.">
-<meta name="theme-color" content="#1E6B58">
+<meta name="theme-color" content="#0B3C5D">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -84,14 +84,18 @@
 <!-- APP -->
 <div id="app" hidden>
 <header class="top"><div class="in">
+  <button class="iconbtn" type="button" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   <div class="brand" id="brand">Pra Onde Foi</div>
   <select class="monthsel" id="monthSel" aria-label="Mês"></select>
 </div></header>
+<div class="drawer-bg" id="drawerBg" hidden></div>
+<nav class="drawer" id="drawer" aria-label="Menu" hidden></nav>
 
 <main>
   <div id="sysBanner" class="banner at" hidden></div>
   <section class="view" data-view="resumo" id="v-resumo"></section>
   <section class="view" data-view="lancar" id="v-lancar" hidden></section>
+  <section class="view" data-view="graficos" id="v-graficos" hidden></section>
   <section class="view" data-view="perguntar" id="v-perguntar" hidden></section>
   <section class="view" data-view="extrato" id="v-extrato" hidden></section>
   <section class="view" data-view="ajustes" id="v-ajustes" hidden></section>
@@ -100,9 +104,9 @@
 <nav class="tabs" aria-label="Seções"><div class="in" role="tablist">
   <button class="tab" role="tab" data-tab="resumo" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Resumo</button>
   <button class="tab" role="tab" data-tab="lancar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
+  <button class="tab" role="tab" data-tab="graficos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Gráficos</button>
   <button class="tab" role="tab" data-tab="perguntar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Perguntar</button>
   <button class="tab" role="tab" data-tab="extrato" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Extrato</button>
-  <button class="tab" role="tab" data-tab="ajustes" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
 </div></nav>
 </div>
 <div class="toast" id="toast" hidden></div>

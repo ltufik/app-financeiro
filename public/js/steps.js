@@ -34,8 +34,8 @@ function items() {
     { key: 'fatura', done: t.some(x => x.source === 'cartao' && !x.manual), title: 'Envie a última fatura do cartão', hint: 'Em PDF, baixado no app do banco.', go: ['lancar', '#drop'], btn: 'Enviar' },
     { key: 'extrato', done: t.some(x => x.source === 'conta' && !x.manual), title: 'Envie o extrato da conta do mesmo mês', hint: 'O mês inteiro, do dia 1 ao último dia.', go: ['lancar', '#drop'], btn: 'Enviar' },
     { key: 'falar', done: t.some(x => x.manual), title: 'Lance um gasto falando', hint: 'Ex.: "gastei 45 na padaria no cartão".', go: ['lancar', '#qText'], btn: 'Lançar' },
-    { key: 'metas', done: !!(g.cardMonthly || g.patrimonio), title: 'Defina suas metas', hint: 'Quanto quer gastar no cartão e quanto quer juntar.', go: ['ajustes', '#gCard'], btn: 'Definir' },
-    { key: 'convite', done: S.members.length > 1, title: 'Convide quem divide as contas', hint: 'Mande um link pelo WhatsApp: a pessoa toca e já entra na família.', go: ['ajustes', '#ivName'], btn: 'Convidar' },
+    { key: 'metas', done: !!(g.cardMonthly || g.patrimonio), title: 'Defina suas metas', hint: 'Quanto quer gastar no cartão e quanto quer juntar.', go: ['ajustes', '#gCard', 'metas'], btn: 'Definir' },
+    { key: 'convite', done: S.members.length > 1, title: 'Convide quem divide as contas', hint: 'Mande um link pelo WhatsApp: a pessoa toca e já entra na família.', go: ['ajustes', '#ivName', 'familia'], btn: 'Convidar' },
     { key: 'instalar', done: isStandalone() || lsGet('fin.installed') === '1', title: 'Instale o app no celular', hint: 'Fica com ícone na tela, como os outros apps.', install: true, btn: 'Como?' },
   ];
 }
@@ -57,7 +57,7 @@ export function renderSteps(box) {
   box.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
     const it = list[+b.dataset.k];
     if (it.install) { const h = box.querySelector('#installHelp'); h.hidden = !h.hidden; return; }
-    S.go(it.go[0], it.go[1]);
+    S.go(it.go[0], it.go[1], it.go[2]);
   });
   box.querySelector('[data-hide]').onclick = () => { lsSet('fin.steps.hide.' + S.hh.id, '1'); box.hidden = true; };
   const mark = box.querySelector('[data-mark]'); if (mark) mark.onclick = () => { lsSet('fin.installed', '1'); renderSteps(box); };

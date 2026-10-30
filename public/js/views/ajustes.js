@@ -6,6 +6,7 @@ import { $, toast, validate, invalid, clearInvalid, confirmInline } from '../ui.
 import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
 import { installHelpHTML, wireInstall } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
+import { SECTIONS, openMenu } from '../menu.js';
 
 const LISTS = {
   assets: { title: 'Bens (imóveis, veículos)', hint: 'Valor de mercado e quanto falta pagar.', cols: [['name', 'Nome', 'text'], ['value', 'Valor', 'number'], ['debt', 'Falta pagar', 'number']] },
@@ -17,9 +18,9 @@ const LISTS = {
 
 export function render(el) {
   const st = settings(), g = goals(), owner = S.role === 'owner';
-  el.innerHTML = `
-  <div class="panel stack">
-    <h2>Família</h2>
+  const sec = SECTIONS.find(x => x.key === S.sec) || SECTIONS[0]; S.sec = sec.key;
+  el.innerHTML = `<div class="subhead"><button class="chip" type="button" id="secBack" aria-label="Voltar ao menu">‹ Menu</button><h2>${sec.title}</h2></div>
+  <div class="panel stack" data-sec="familia">
     <label class="f">Nome<input type="text" id="fName" value="${esc(S.hh.name)}"></label>
     <ul class="list small">${S.members.map(m => `<li><span>${esc(m.display_name || 'Membro')}${m.user_id === S.user.id ? ' (você)' : ''}${m.relation ? `<br><span class="tiny muted">${esc(m.relation)}</span>` : ''}</span><span class="tiny muted">${m.role === 'owner' ? 'dono' : 'membro'}</span></li>`).join('')}</ul>
     <label class="f">Como você quer ser chamado<input type="text" id="fMe" value="${esc(S.user.user_metadata?.display_name || '')}"></label>
@@ -28,7 +29,7 @@ export function render(el) {
     <div id="fInviter"></div>
   </div>
 
-  <div class="panel stack">
+  <div class="panel stack" data-sec="metas">
     <h2>Metas</h2>
     <div class="grid3">
       ${num('gCard', 'Cartão por mês (R$)', g.cardMonthly)}${num('gSav', 'Poupança (%)', g.savings * 100)}${num('gSav2', 'Poupança sem financiamento (%)', g.savingsNoFin * 100)}
@@ -38,7 +39,7 @@ export function render(el) {
     <div><button class="btn primary" id="gSave" type="button">Salvar metas</button></div>
   </div>
 
-  <div class="panel stack">
+  <div class="panel stack" data-sec="patrimonio">
     <h2>Patrimônio</h2>
     <div class="grid3">${num('iTotal', 'Investimentos (R$)', st.invest?.total || '')}<label class="f">Data<input type="date" id="iDate" value="${esc(st.invest?.date || '')}"></label></div>
     <p class="tiny muted">O extrato de investimentos em PDF atualiza este valor sozinho.</p>
@@ -46,27 +47,27 @@ export function render(el) {
     <div><button class="btn primary" id="pSave" type="button">Salvar patrimônio</button></div>
   </div>
 
-  <div class="panel stack">
+  <div class="panel stack" data-sec="categorias">
     <h2>Categorias</h2>
     <p class="tiny muted">O grupo decide como a categoria entra na conta da sobra. Marque "financiamento" para a taxa de poupança sem financiamento.</p>
     <div class="tw"><table><thead><tr><th>Categoria</th><th>Grupo</th><th>Financiamento</th></tr></thead><tbody id="catRows"></tbody></table></div>
     <div class="rowbtn"><input type="text" id="cNew" placeholder="Nova categoria" style="flex:1 1 180px"><select id="cNewG" style="flex:0 1 220px">${Object.entries(GROUPS).map(([k, l]) => `<option value="${k}"${k === 'dia' ? ' selected' : ''}>${l}</option>`).join('')}</select><button class="btn" id="cAdd" type="button">Adicionar</button></div>
   </div>
 
-  <div class="panel stack">
+  <div class="panel stack" data-sec="contexto">
     <h2>Contexto para o assistente</h2>
     <p class="tiny muted">Fatos que ajudam o Claude a entender a família, um por linha (ex.: "A renda extra não entra no controle oficial").</p>
     <textarea id="facts" style="min-height:140px">${esc((st.facts || []).join('\n'))}</textarea>
     <div><button class="btn primary" id="factsSave" type="button">Salvar</button></div>
   </div>
 
-  <div class="panel stack">
+  <div class="panel stack" data-sec="ajuda">
     <h2>Ajuda</h2>
-    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Mostrar os primeiros passos</button></div>
+    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Mostrar os primeiros passos</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button></div>
     <details class="help"><summary>Instalar o app no celular</summary>${installHelpHTML()}</details>
   </div>
 
-  <div class="panel stack">
+  <div class="panel stack" data-sec="backup">
     <h2>Backup</h2>
     <p class="small muted">Um arquivo com todos os lançamentos, categorias e ajustes da família. Guarde num lugar seguro: ele tem os seus dados financeiros.</p>
     <div class="rowbtn"><button class="btn" id="dExport" type="button">Baixar backup</button>
@@ -74,7 +75,7 @@ export function render(el) {
     <p class="status" id="bkStatus" role="status" hidden></p>
   </div>
 
-  <div class="panel stack">
+  <div class="panel stack" data-sec="conta">
     <h2>Conta</h2>
     <div class="rowbtn"><button class="btn" id="signOut" type="button">Sair da conta</button>
       ${owner ? '<button class="btn danger" id="delFam" type="button">Apagar os dados da família</button>' : '<button class="btn" id="leave" type="button">Sair desta família</button>'}
@@ -82,8 +83,11 @@ export function render(el) {
     <div id="confirmBox"></div>
   </div>  </div>`;
 
+  el.querySelectorAll('[data-sec]').forEach(p => { p.hidden = p.dataset.sec !== sec.key; });
+  $('#secBack').onclick = () => openMenu();
   // help
   $('#hTour').onclick = () => S.showTour('app');
+  $('#hCoach').onclick = () => S.startCoach(true);
   $('#hSteps').onclick = () => { try { localStorage.removeItem('fin.steps.hide.' + S.hh.id); } catch (e) { /* storage blocked */ } S.go('resumo', '#stepsBox'); };
   wireInstall(el);
 
