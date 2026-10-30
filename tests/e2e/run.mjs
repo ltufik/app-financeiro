@@ -383,6 +383,12 @@ ok('não deixa desmarcar todos os tipos', (await txt('#pMsg')).includes('pelo me
 await page.click('#pOff'); await page.waitForSelector('#pushBox .cfm [data-y]');
 await page.click('#pushBox .cfm [data-y]'); await page.waitForSelector('#pOn');
 ok('desligar avisos pede confirmação e remove o aparelho', await page.evaluate(() => window.__db.push_subscriptions.length === 0));
+// appearance
+ok('app abre no tema claro (Mar aberto) por padrão', await page.evaluate(() => document.documentElement.dataset.theme === 'light' && getComputedStyle(document.body).backgroundColor === 'rgb(244, 238, 227)'));
+await sec('ajuda');
+await page.click('[data-theme-opt="dark"]');
+ok('dá para escolher o tema escuro', await page.evaluate(() => document.documentElement.dataset.theme === 'dark' && localStorage.getItem('fin.theme') === 'dark'));
+await page.click('[data-theme-opt="light"]');
 // forgot password
 await sec('conta');
 await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])'); await page.click('#wLogin');

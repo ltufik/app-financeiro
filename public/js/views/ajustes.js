@@ -76,6 +76,8 @@ export function render(el) {
     <h2>Ajuda</h2>
     <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Ver o que falta preencher</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button></div>
     <details class="help"><summary>Instalar o app no celular</summary>${installHelpHTML()}</details>
+    <h3 style="margin-top:6px">Aparência</h3>
+    <div class="seg" role="radiogroup" aria-label="Aparência" id="themeSeg">${[['light', 'Claro'], ['dark', 'Escuro'], ['auto', 'Igual ao celular']].map(([k, l]) => `<button type="button" class="chip" role="radio" data-theme-opt="${k}" aria-pressed="${theme() === k}" aria-checked="${theme() === k}">${l}</button>`).join('')}</div>
   </div>
 
   <div class="panel stack" data-sec="backup">
@@ -100,6 +102,11 @@ export function render(el) {
   // help
   $('#hTour').onclick = () => S.showTour('app');
   $('#hCoach').onclick = () => S.startCoach(true);
+  el.querySelectorAll('[data-theme-opt]').forEach(b => b.onclick = () => {
+    const t = b.dataset.themeOpt; try { localStorage.setItem('fin.theme', t); } catch (e) { /* storage blocked */ }
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+    el.querySelectorAll('[data-theme-opt]').forEach(x => { x.setAttribute('aria-pressed', x === b); x.setAttribute('aria-checked', x === b); });
+  });
   $('#hSteps').onclick = () => S.go('resumo', '#stepsBox');
   wireInstall(el);
 
@@ -341,3 +348,5 @@ async function renderPush(box) {
     };
   }
 }
+
+function theme() { try { return localStorage.getItem('fin.theme') || 'light'; } catch (e) { return 'light'; } }
