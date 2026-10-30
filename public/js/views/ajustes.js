@@ -94,7 +94,7 @@ export function render(el) {
     <ul class="small">
       <li>Os lançamentos, as categorias, as metas e os ajustes da sua família. Só quem está na família vê.</li>
       <li>De cada nota fiscal, só os itens e valores lidos. A foto não fica guardada.</li>
-      <li>De cada pessoa, os dias em que abriu o app e quais partes usou (por exemplo, "lançou por voz"), para saber o que ajuda e o que melhorar. Nunca valores nem o que foi escrito.</li>
+      <li>De cada pessoa, os dias em que abriu o app e quais telas e botões usou e por quanto tempo (por exemplo, "lançou por voz"), e os erros que aparecerem, para saber o que ajuda e o que melhorar. Nunca valores nem o que foi escrito.</li>
       <li>As opiniões e dúvidas que você mandar, com a tela em que estava e o tipo de celular.</li>
     </ul>
     <h3>O que o app nunca guarda</h3>

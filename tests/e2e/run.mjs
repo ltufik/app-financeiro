@@ -20,6 +20,14 @@ page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const adminStore = {}, adminPuts = [], adminPatches = [];
+const NAV_FIXTURE = { days: 30, at: '2026-10-30T12:00:00Z',
+  screens: [{ s: 'inicio', views: 40, users: 2, seconds: 1200 }, { s: 'lancar', views: 12, users: 2, seconds: 600 }, { s: 'menu.metas', views: 3, users: 1, seconds: 240 }],
+  flows: [{ f: 'inicio', t: 'lancar', n: 9, users: 2 }, { f: 'lancar', t: 'inicio', n: 5, users: 1 }],
+  taps: { inicio: [[3, 10, 4], [10, 20, 9], [15, 30, 2], [10, 90, 3]], lancar: [[5, 12, 3]] },
+  targets: { inicio: [{ t: 'Enviar PDF', n: 7, users: 2 }, { t: 'Fechar setembro', n: 2, users: 1 }], lancar: [{ t: 'Fatura ou extrato', n: 3, users: 2 }] },
+  errors: [{ id: 1, at: new Date().toISOString(), kind: 'tela', message: 'Não foi possível salvar. Verifique a internet.', screen: 'lancar', device: 'Android · app instalado', version: 'v31', name: 'Testador Um', family: 'Família Teste' },
+    { id: 2, at: new Date(Date.now() - 3600e3).toISOString(), kind: 'tela', message: 'Não foi possível salvar. Verifique a internet.', screen: 'lancar', device: 'iPhone · navegador', version: 'v31', name: 'Testador Dois', family: 'Família Teste' },
+    { id: 3, at: '2026-10-20T10:00:00Z', kind: 'js', message: 'TypeError: x is undefined', screen: 'menu.metas', source: 'ajustes.js:120', device: 'Android', version: 'v30', name: 'Testador Um', family: 'Família Teste' }] };
 const FB_FIXTURE = [
   { id: 1, kind: 'erro', text: 'Toquei em salvar a nota e nada aconteceu', status: 'novo', screen: 'lancar', device: 'Android · app instalado', version: 'v26', name: 'Testador Um', email: 'um@test.com', family: 'Família Teste', created_at: '2026-10-29T12:00:00Z' },
   { id: 2, kind: 'duvida', text: 'O que é a régua do início?', answer: 'É o quanto o app está preenchido.', helpful: false, status: 'novo', screen: 'resumo', device: 'iPhone · navegador', version: 'v26', name: 'Testador Dois', email: 'dois@test.com', family: 'Família Teste', created_at: '2026-10-30T09:00:00Z' },
@@ -40,6 +48,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'nav') return r.fulfill({ json: NAV_FIXTURE });
     if (u.pathname === '/api/admin' && r.request().method() === 'PATCH') { const b = JSON.parse(r.request().postData()); adminPatches.push(b); const f = FB_FIXTURE.find(x => x.id === b.feedback); if (f && b.status) f.status = b.status; if (f && b.reply) Object.assign(f, { reply: b.reply, replied_at: '2026-10-30T15:00:00Z', reply_seen: false, status: 'resolvido' }); return r.fulfill({ json: { ok: true, pushed: b.reply ? 1 : 0 } }); }
     if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); const prev = adminStore[b.key]; adminStore[b.key] = b.data; adminPuts.push(b.key); const loop = b.key === 'backlog' ? { replied: newlyDone(prev?.items || [], b.data.items).reduce((a, x) => a + x.ids.length, 0) } : null; if (prev && b.key === 'backlog') adminStore[b.key] = JSON.parse(JSON.stringify(b.data)); return r.fulfill({ json: { ok: true, loop } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
     if (u.pathname === '/api/notify') { notifies.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { sent: 1 } }); }
@@ -576,6 +585,19 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.click('[data-ed="0"]'); await ap.fill('#dcBody', 'Texto novo da visão geral'); await ap.click('#dcSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
   ok('central: seção da documentação salva', adminStore.docs?.items?.[0]?.body === 'Texto novo da visão geral');
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-8-docs.png'), fullPage: true });
+  await atab('navegacao'); await ap.waitForSelector('#hCanvas');
+  const navTxt = await ap.textContent('#aMain');
+  ok('central: navegação com telas, tempo médio e caminhos', navTxt.includes('Início') && navTxt.includes('30s') && navTxt.includes('Menu: Metas') && navTxt.includes('9×'));
+  await ap.waitForTimeout(400);
+  ok('central: mapa de calor dos toques desenhado sobre a tela', await ap.evaluate(() => { const c = document.querySelector('#hCanvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) return true; return false; }));
+  ok('central: botões mais tocados e toques fora da foto', (await ap.textContent('#aMain')).includes('Enviar PDF') && (await ap.textContent('#hBelow')).includes('3 toques mais abaixo'));
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-11-navegacao.png'), fullPage: true });
+  await atab('erros'); await ap.waitForSelector('.errgrp');
+  ok('central: erros agrupados com quantas vezes, quem, tela e celular', (await ap.$$('.errgrp')).length === 2 && (await ap.textContent('.errgrp')).includes('2×') && (await ap.textContent('.errgrp')).includes('Testador Dois') && (await ap.textContent('.errgrp')).includes('Lançar'));
+  ok('central: contador de erros no menu', (await ap.textContent('#aNav [data-t="erros"] .agb')) === '2');
+  await ap.click('[data-ef="tras"]'); await ap.waitForTimeout(150);
+  ok('central: filtro de erros por trás', (await ap.$$('.errgrp')).length === 1);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-12-erros.png'), fullPage: true });
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
   ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
   await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
@@ -598,7 +620,7 @@ await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver 
 await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
 const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
-ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v28', JSON.stringify(fbRow));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v31', JSON.stringify(fbRow));
 ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
 await shot('11-opiniao');
 await sec('duvidas'); await page.waitForSelector('#fqList details');
@@ -638,6 +660,19 @@ const used = await page.evaluate(() => window.__db.usage);
   await mp.click('.ann [data-p]'); await mp.reload(); await mp.waitForTimeout(2500);
   ok('novidade não se repete', !(await mp.$('.ann')));
   await mctx.close();
+}
+{ // Navigation, taps and errors are recorded (names of screens and buttons only).
+  await page.click('[data-tab=lancar]'); await page.waitForTimeout(1200); await page.click('.ltile[data-mode="falar"]');
+  await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
+  await page.evaluate(() => { document.querySelector('#toast'); });
+  await page.evaluate(() => import('/js/ui.js').then(m => m.toast('Não foi possível salvar. Verifique a internet e tente de novo.')));
+  await page.evaluate(() => import('/js/usage.js').then(m => m.flush()));
+  await page.waitForFunction(() => window.__db.nav.length > 0 && window.__db.errors.length > 0, null, { timeout: 5000 }).catch(() => {});
+  const navRec = await page.evaluate(() => window.__db.nav.reduce((a, d) => ({ screens: a.screens.concat(d.screens), flows: a.flows.concat(d.flows), taps: a.taps.concat(d.taps), targets: a.targets.concat(d.targets) }), { screens: [], flows: [], taps: [], targets: [] }));
+  ok('navegação registrada: telas, tempo e caminho', navRec.screens.some(x => x.s === 'lancar' && x.t >= 1) && navRec.flows.some(f => f.f === 'lancar' && f.t === 'inicio'), JSON.stringify(navRec.screens).slice(0, 160));
+  ok('toques registrados com o nome do botão, sem valores', navRec.taps.length > 0 && navRec.targets.some(t => /Falar ou escrever/.test(t.t)) && navRec.targets.every(t => !/\d/.test(t.t)), JSON.stringify(navRec.targets).slice(0, 200));
+  const errRec = await page.evaluate(() => window.__db.errors.at(-1));
+  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v31', JSON.stringify(errRec));
 }
 { // Signing in again: whoever already has a name and a family goes straight to Início.
   await page.click('[data-tab=extrato]'); await page.waitForTimeout(200);

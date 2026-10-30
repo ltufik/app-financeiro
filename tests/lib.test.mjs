@@ -350,3 +350,18 @@ test('mensagens: novidades não vistas, título e recado com o nome', () => {
   assert.equal(firstName('  Luiz Tufik '), 'Luiz');
   assert.ok(NEWS.every(n => n.id && n.at && n.title && n.items.length));
 });
+
+import { tapCell, tapLabel, cleanError } from '../public/js/lib/navlog.js';
+test('navegação: célula do toque, nome do botão e erro sem dados pessoais', () => {
+  assert.deepEqual(tapCell(195, 100, 390), { x: 10, y: 5 });
+  assert.deepEqual(tapCell(389, 10, 390), { x: 19, y: 0 });
+  assert.equal(tapCell(10, 99999, 390), null);
+  const fake = (attrs, text, inField = false) => ({ closest: s => s.includes('input') ? (inField ? {} : null) : fakeEl, getAttribute: k => attrs[k] || null, textContent: text, id: '' });
+  let fakeEl = fake({}, '  Fechar   setembro  '); assert.equal(tapLabel({ closest: () => fakeEl }), 'Fechar setembro');
+  fakeEl = fake({}, 'Pagar R$ 1.234,56 agora'); assert.equal(tapLabel({ closest: () => fakeEl }), 'Pagar # agora');
+  fakeEl = fake({ 'aria-label': 'Abrir menu' }, ''); assert.equal(tapLabel({ closest: () => fakeEl }), 'Abrir menu');
+  assert.equal(tapLabel({ closest: () => null }), '');
+  assert.equal(cleanError('Falhou para ana@x.com no cartão 5502 0912 3456 7788'), 'Falhou para <e-mail> no cartão #');
+  assert.equal(cleanError('Script error.'), '');
+  assert.equal(cleanError('x'.repeat(500)).length, 400);
+});

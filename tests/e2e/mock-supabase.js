@@ -3,7 +3,7 @@
 // State survives page reloads (like a real backend) so invite links can be tested across sessions.
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
 const T = load('mock.db', { users: [], households: [], members: [], invites: [], categories: [], transactions: [], rules: [], imports: [], studies: [], push_subscriptions: [] });
-T.push_subscriptions ||= []; T.feedback ||= []; T.usage ||= [];
+T.push_subscriptions ||= []; T.feedback ||= []; T.usage ||= []; T.nav ||= []; T.errors ||= [];
 window.__db = T;
 let session = load('mock.session', null); const listeners = [];
 const persist = () => { localStorage.setItem('mock.db', JSON.stringify(T)); localStorage.setItem('mock.session', JSON.stringify(session)); };
@@ -56,6 +56,8 @@ const rpcs = {
     if (!['erro', 'ideia', 'critica', 'duvida'].includes(p_kind)) throw new Error('bad_kind'); if (String(p_text || '').trim().length < 3) throw new Error('too_short');
     const id = T.feedback.length + 1; T.feedback.push({ id, user_id: session.user.id, household_id: p_household, kind: p_kind, text: p_text, answer: p_answer, screen: p_screen, device: p_device, version: p_version, status: 'novo', helpful: null, created_at: now() }); return id;
   },
+  track_nav({ p_data }) { T.nav.push(p_data); return null; },
+  log_error(a) { T.errors.push(a); return null; },
   feedback_reply_seen({ p_id }) { const f = T.feedback.find(x => x.id === p_id && x.user_id === session.user.id); if (f) f.reply_seen = true; return null; },
   feedback_helpful({ p_id, p_helpful }) { const f = T.feedback.find(x => x.id === p_id && x.user_id === session.user.id); if (f) f.helpful = p_helpful; return null; },
   track({ p_features }) { (p_features || []).forEach(f => { if (/^[a-z_]{2,20}(\.[a-z_]{2,20})?$/.test(f)) T.usage.push(f); }); return null; },

@@ -1,6 +1,6 @@
 // "Copiar resumo para o Claude": a text summary of the product (usage, opinions, backlog) to paste in the chat.
 // Only first names, never e-mails or any family's money. Pure function, tested in tests/loop.test.mjs.
-import { FEATURE_LABELS } from './content.js';
+import { FEATURE_LABELS, screenLabel } from './content.js';
 import { FLOWS, flowFunnel } from './flows.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'Sem nome';
@@ -10,7 +10,7 @@ const label = k => FEATURE_LABELS[k] || k;
 const KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
 const ST = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 
-export function buildSummary({ metrics: m, usage: u, feedback = [], backlog = [], today = new Date().toISOString().slice(0, 10) }) {
+export function buildSummary({ metrics: m, usage: u, nav = null, feedback = [], backlog = [], today = new Date().toISOString().slice(0, 10) }) {
   const L = [`# Pra Onde Foi: resumo do produto em ${d(today)}`, ''];
   if (m) {
     L.push('## Números gerais',
@@ -37,6 +37,18 @@ export function buildSummary({ metrics: m, usage: u, feedback = [], backlog = []
     const hours = {}; (u.hours || []).forEach(([, h, n]) => { hours[h] = (hours[h] || 0) + n; });
     const peak = Object.entries(hours).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([h]) => h + 'h');
     if (peak.length) L.push('', `Horários de mais uso: ${peak.join(', ')}`);
+    L.push('');
+  }
+  if (nav) {
+    const dur = s => s < 60 ? Math.round(s) + 's' : Math.floor(s / 60) + 'min' + String(Math.round(s % 60)).padStart(2, '0') + 's';
+    L.push('## Navegação', '### Telas (visitas, pessoas, tempo médio por visita)');
+    nav.screens.forEach(x => L.push(`- ${screenLabel(x.s)}: ${x.views} visitas, ${x.users} pessoas, ${dur(x.seconds / Math.max(1, x.views))}`));
+    if (nav.flows.length) { L.push('### Caminhos mais comuns'); nav.flows.slice(0, 12).forEach(f => L.push(`- ${screenLabel(f.f)} → ${screenLabel(f.t)}: ${f.n}×`)); }
+    const tg = Object.entries(nav.targets || {}).flatMap(([sc, l]) => l.map(t => ({ ...t, sc }))).sort((a, b) => b.n - a.n).slice(0, 12);
+    if (tg.length) { L.push('### Botões mais tocados'); tg.forEach(t => L.push(`- ${screenLabel(t.sc)} → "${t.t}": ${t.n}× (${t.users} pessoas)`)); }
+    const groups = [...nav.errors.reduce((mm, e) => { const k = e.kind + ' | ' + e.message; (mm.get(k) || mm.set(k, []).get(k)).push(e); return mm; }, new Map())].sort((a, b) => b[1].length - a[1].length);
+    L.push('', `## Erros (${nav.errors.length} no período)`);
+    groups.slice(0, 25).forEach(([k, g]) => L.push(`- ${k} → ${g.length}×, ${new Set(g.map(e => first(e.name))).size} pessoas (${[...new Set(g.map(e => first(e.name)))].join(', ')}); telas: ${[...new Set(g.map(e => e.screen ? screenLabel(e.screen) : '—'))].join(', ')}; celulares: ${[...new Set(g.map(e => e.device))].join(', ')}; versões: ${[...new Set(g.map(e => e.version))].join(', ')}; última ${d(g[0].at)}`));
     L.push('');
   }
   const open = feedback.filter(f => ['novo', 'visto'].includes(f.status));

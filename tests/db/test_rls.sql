@@ -202,3 +202,29 @@ select public.feedback_reply_seen(:fb1);
 select reply_seen as rs_after from feedback where id = :fb1 \gset
 \echo B marcou como vista: :rs_after
 reset role;
+
+-- Navegação, toques e erros
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+\set ON_ERROR_STOP on
+select public.track_nav(:'hr', '{"screens":[{"s":"resumo","v":2,"t":40},{"s":"menu.metas","v":1,"t":15},{"s":"Ruim!","v":1,"t":5}],"flows":[{"f":"resumo","t":"menu.metas","n":1}],"taps":[{"s":"resumo","x":3,"y":10,"n":2},{"s":"resumo","x":30,"y":1,"n":1}],"targets":[{"s":"resumo","t":"Enviar PDF","n":2}]}'::jsonb);
+select public.track_nav(:'hr', '{"screens":[{"s":"resumo","v":1,"t":99999}],"targets":[{"s":"resumo","t":"Enviar PDF","n":1}]}'::jsonb);
+select public.log_error(:'hr', 'tela', 'Não foi possível salvar.', 'lancar', null, 'Android', 'v31');
+select public.log_error(:'hr', 'hack', 'x');
+\set ON_ERROR_STOP off
+\echo (os erros a seguir são esperados: ninguém logado lê navegação, toques nem erros)
+select * from nav;
+select * from app_errors;
+select public.product_nav(30);
+reset role;
+select views as rv, seconds as rs from nav where screen = 'resumo' \gset
+\echo navegação no início: :rv visitas, :rs segundos (tempo limitado a 2h por envio)
+select count(*) as badnav from nav where screen not in ('resumo', 'menu.metas') \gset
+select count(*) as ntaps from taps \gset
+select n as tn, cardinality(users) as tu from tap_targets where target = 'Enviar PDF' \gset
+select count(*) as nerr from app_errors \gset
+\echo telas inválidas ignoradas: :badnav, toques válidos: :ntaps, botão "Enviar PDF": :tn toques de :tu pessoa, erros: :nerr
+set role service_role;
+select public.product_nav(30)->'screens'->0->>'s' as top, jsonb_array_length(public.product_nav(30)->'errors') as perr \gset
+\echo central: tela mais vista :top, erros :perr
+reset role;

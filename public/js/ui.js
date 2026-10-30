@@ -11,6 +11,7 @@ const ERR = /^(não (foi possível|consegui|deu)|erro|falhou|sem conexão)|não 
 export function toast(t, kind) {
   const el = $('#toast'); if (!el) return;
   kind = kind || (ERR.test(t) ? 'err' : 'ok');
+  if (kind === 'err') window.__onToastErr?.(t);
   clearInterval(toast.h);
   let left = 5;
   const icon = kind === 'err' ? '<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>' : kind === 'info' ? '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>' : '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>';

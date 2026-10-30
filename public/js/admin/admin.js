@@ -11,13 +11,13 @@ import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
 import { NEWS, replyTemplate, replyTitle } from '../lib/news.js';
 import { SCREENS, FLOWS, flowFunnel } from './flows.js';
 import { buildSummary } from './summary.js';
-import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS } from './content.js';
+import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS, screenLabel, screenShot } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null };
-const TABS = ['painel', 'opinioes', 'uso', 'duvidas', 'novidades', 'fluxos', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
-let FB = null, USE = null, useDays = 30;
+const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'fluxos', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -54,7 +54,7 @@ async function save(key, msg) {
     return;
   }
   drawNav(); $('#aNav').hidden = false; $('#aCopy').hidden = false; $('#aCopy').onclick = copySummary;
-  loadFb().then(navBadges).catch(() => {});
+  loadFb().then(navBadges).catch(() => {}); loadNav().then(errBadge).catch(() => {});
   const h = location.hash.slice(1); go(TABS.includes(h) ? h : 'painel');
 })();
 
@@ -62,14 +62,14 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, uso, duvidas, novidades, fluxos, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, fluxos, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   window.scrollTo(0, 0);
 }
 
 // ---------- Side menu: three groups that open on click ----------
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
-  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades']] },
+  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades']] },
   { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
 ];
@@ -103,7 +103,8 @@ async function painel(el) {
     const week = new Date(Date.now() - 7 * 864e5 - 3 * 3600e3).toISOString().slice(0, 10);
     const active = us.people.filter(p => p.last_day >= week).length, fresh = fb.filter(f => f.status === 'novo').length, unans = fb.filter(f => f.kind === 'duvida' && f.helpful === false).length;
     const top = Object.entries(us.features).filter(([k]) => !k.startsWith('aba.') && !k.startsWith('menu.')).sort((a, b) => b[1].users - a[1].users)[0];
-    $('#pTop').innerHTML = [['Opiniões novas', fresh, 'abrir', 'opinioes'], ['Dúvidas sem resposta boa', unans, 'abrir', 'duvidas'], ['Usaram nos últimos 7 dias', active, `de ${us.people.length} pessoas`, 'uso'], ['Mais usado', top ? esc(FEATURE_LABELS[top[0]] || top[0]) : '—', top ? `${top[1].users} pessoas` : '', 'uso']]
+    const nav = await loadNav().catch(() => null), err24 = nav ? nav.errors.filter(e => Date.now() - Date.parse(e.at) < 864e5).length : 0;
+    $('#pTop').innerHTML = [['Opiniões novas', fresh, 'abrir', 'opinioes'], ['Erros em 24 horas', err24, err24 ? 'ver onde e com quem' : 'nenhum', 'erros'], ['Dúvidas sem resposta boa', unans, 'abrir', 'duvidas'], ['Usaram nos últimos 7 dias', active, `de ${us.people.length} pessoas`, 'uso'], ['Mais usado', top ? esc(FEATURE_LABELS[top[0]] || top[0]) : '—', top ? `${top[1].users} pessoas` : '', 'uso']]
       .map(([k, v, s, t]) => `<button type="button" class="mcard mlink" data-go="${t}"><span class="tiny muted">${k}</span><span class="num" style="${typeof v === 'string' ? 'font-size:17px' : ''}">${v}</span><span class="tiny muted">${s}</span></button>`).join('');
     el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   } catch (e) { $('#pTop').innerHTML = '<p class="small muted">Opiniões e uso aparecem depois de rodar o schema.sql novo no Supabase.</p>'; }
@@ -241,6 +242,7 @@ async function getView(name, q = '') {
   if (!r.ok) throw new Error(String(r.status)); return r.json();
 }
 async function loadFb(force) { if (!FB || force) FB = await getView('feedback'); return FB; }
+async function loadNav(force) { if (!NAVD || force) NAVD = await getView('nav', '&days=' + useDays); return NAVD; }
 async function loadUse(force) { if (!USE || force) USE = await getView('usage', '&days=' + useDays); return USE; }
 async function patchFb(id, patch) {
   const r = await fetch('/api/admin', { method: 'PATCH', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ feedback: id, ...patch }) });
@@ -501,8 +503,8 @@ async function copySummary() {
   const b = $('#aCopy'); b.disabled = true; const old = b.textContent; b.textContent = 'Montando o resumo...';
   try {
     const metrics = await fetch('/api/metrics', { headers: { authorization: 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).catch(() => null);
-    const [usage, feedback] = await Promise.all([loadUse(true).catch(() => null), loadFb(true).catch(() => [])]);
-    const text = buildSummary({ metrics, usage, feedback, backlog: D.backlog.items, today: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) });
+    const [usage, feedback, nav] = await Promise.all([loadUse(true).catch(() => null), loadFb(true).catch(() => []), loadNav(true).catch(() => null)]);
+    const text = buildSummary({ metrics, usage, feedback, nav, backlog: D.backlog.items, today: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) });
     try { await navigator.clipboard.writeText(text); toast('Resumo copiado. Cole na conversa com o Claude.'); }
     catch (e) {
       const d = document.createElement('dialog'); d.className = 'flbox';
@@ -511,4 +513,73 @@ async function copySummary() {
       d.showModal(); d.querySelector('textarea').select();
     }
   } finally { b.disabled = false; b.textContent = old; }
+}
+
+// ---------- Navegação: telas, tempo, caminhos e onde tocam ----------
+const dur = s => { s = Math.round(s); return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}min ${String(s % 60).padStart(2, '0')}s` : `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}min`; };
+let heatScreen = null;
+async function navegacao(el) {
+  el.innerHTML = '<div class="ahead"><h1>Navegação</h1></div><p class="small muted">Carregando...</p>';
+  let n; try { n = await loadNav(true); } catch (e) { return fail(el, 'Navegação'); }
+  const sc = n.screens, mxV = Math.max(1, ...sc.map(x => x.views)), totV = sc.reduce((a, x) => a + x.views, 0), totT = sc.reduce((a, x) => a + x.seconds, 0);
+  const tapScreens = Object.keys(n.taps).sort((a, b) => n.taps[b].reduce((s, c) => s + c[2], 0) - n.taps[a].reduce((s, c) => s + c[2], 0));
+  if (!heatScreen || !tapScreens.includes(heatScreen)) heatScreen = tapScreens[0] || null;
+  el.innerHTML = `<div class="ahead"><h1>Navegação</h1><label class="tiny muted">Período <select id="nDays">${[7, 30, 90].map(d => `<option value="${d}"${d === useDays ? ' selected' : ''}>${d} dias</option>`).join('')}</select></label></div>
+    <p class="small muted">Por onde as pessoas passam, quanto tempo ficam e onde tocam. Só nomes de telas e botões; nada do que foi digitado.</p>
+    <div class="mgrid">${[['Visitas a telas', totV], ['Tempo total no app', dur(totT)], ['Tempo médio por tela', totV ? dur(totT / totV) : '—'], ['Telas diferentes', sc.length]].map(([k, v]) => `<div class="mcard"><span class="tiny muted">${k}</span><span class="num">${v}</span></div>`).join('')}</div>
+    <div class="panel stack"><h2>Telas</h2><p class="tiny muted">Tempo médio alto pode ser bom (a pessoa está lendo) ou ruim (está perdida). Compare com as opiniões e os erros da mesma tela.</p>
+      <div class="tw"><table class="atable"><thead><tr><th>Tela</th><th>Visitas</th><th></th><th>Pessoas</th><th>Tempo médio</th><th>Tempo total</th></tr></thead><tbody>
+      ${sc.map(x => `<tr><td><strong>${esc(screenLabel(x.s))}</strong></td><td class="num">${x.views}</td><td style="width:28%"><span class="fbar"><span style="width:${x.views / mxV * 100}%"></span></span></td><td class="num">${x.users}</td><td class="num">${dur(x.seconds / Math.max(1, x.views))}</td><td class="num">${dur(x.seconds)}</td></tr>`).join('') || '<tr><td colspan="6" class="small muted">Sem navegação registrada ainda.</td></tr>'}</tbody></table></div></div>
+    <div class="panel stack"><h2>Caminhos mais comuns</h2><p class="tiny muted">De qual tela para qual tela as pessoas vão.</p>
+      <ul class="list small">${n.flows.slice(0, 20).map(f => `<li><span>${esc(screenLabel(f.f))} <span class="muted">→</span> <strong>${esc(screenLabel(f.t))}</strong></span><span class="amt">${f.n}× <span class="tiny muted">${f.users} ${f.users === 1 ? 'pessoa' : 'pessoas'}</span></span></li>`).join('') || '<li class="muted">Sem caminhos ainda.</li>'}</ul></div>
+    <div class="panel stack"><h2>Onde tocam</h2><p class="tiny muted">Mapa de calor dos toques em cima da tela de verdade. Toques fora de botões podem ser lugares em que a pessoa esperava que algo acontecesse.</p>
+      ${heatScreen ? `<div class="chips">${tapScreens.map(s => `<button class="chip" type="button" data-hs="${esc(s)}" aria-pressed="${s === heatScreen}">${esc(screenLabel(s))}</button>`).join('')}</div>
+      <div class="heatwrap"><div class="heatphone"><img src="/flows/${esc(screenShot(heatScreen))}.jpg" alt="" id="hImg" width="390" height="844"><canvas id="hCanvas" aria-label="Mapa de calor dos toques"></canvas></div>
+        <div class="stack" style="min-width:0"><h3>Botões mais tocados em ${esc(screenLabel(heatScreen))}</h3><ul class="list small">${(n.targets[heatScreen] || []).slice(0, 15).map(t => `<li><span>${esc(t.t)}</span><span class="amt">${t.n}× <span class="tiny muted">${t.users} ${t.users === 1 ? 'pessoa' : 'pessoas'}</span></span></li>`).join('') || '<li class="muted">Nenhum botão tocado.</li>'}</ul><p class="tiny muted" id="hBelow"></p></div></div>` : '<p class="small muted">Sem toques registrados ainda.</p>'}</div>`;
+  $('#nDays').onchange = e => { useDays = +e.target.value; NAVD = null; USE = null; navegacao(el); };
+  el.querySelectorAll('[data-hs]').forEach(b => b.onclick = () => { heatScreen = b.dataset.hs; navegacao(el); });
+  if (heatScreen) drawHeat(n.taps[heatScreen] || []);
+}
+function drawHeat(cells) {
+  const img = $('#hImg'), cv = $('#hCanvas'); if (!img || !cv) return;
+  const go = () => {
+    const w = img.clientWidth, h = img.clientHeight, cell = w / 20, rows = Math.floor(h / cell);
+    cv.width = w * 2; cv.height = h * 2; cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    const g = cv.getContext('2d'); g.scale(2, 2); g.clearRect(0, 0, w, h);
+    const visible = cells.filter(c => c[1] < rows), below = cells.filter(c => c[1] >= rows).reduce((a, c) => a + c[2], 0), mx = Math.max(1, ...visible.map(c => c[2]));
+    for (const [x, y, n] of visible) {
+      const cx = (x + .5) * cell, cy = (y + .5) * cell, r = cell * 1.8, a = .45 + .5 * n / mx;
+      const grad = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0, `rgba(224,107,72,${a})`); grad.addColorStop(1, 'rgba(224,107,72,0)');
+      g.fillStyle = grad; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+    }
+    const hb = $('#hBelow'); if (hb) hb.textContent = below ? `${below} ${below === 1 ? 'toque' : 'toques'} mais abaixo na tela, fora da foto.` : '';
+  };
+  if (img.complete && img.naturalWidth) go(); else img.onload = img.onerror = go;
+}
+
+// ---------- Erros ----------
+const ERR_KIND = { tela: 'Apareceu na tela', js: 'Por trás (código)', promessa: 'Por trás (conexão ou servidor)' };
+let errFilter = '';
+function errBadge(n) {
+  const c = n.errors.filter(e => Date.now() - Date.parse(e.at) < 864e5).length, b = $('#aNav').querySelector('[data-t="erros"] .agb');
+  if (b) { b.hidden = !c; b.textContent = c; }
+  const g = $('#aNav').querySelector('[data-g="acompanhar"] .agh .agb'); if (g && c) { g.hidden = false; g.textContent = (+g.textContent || 0) + c; }
+}
+async function erros(el) {
+  el.innerHTML = '<div class="ahead"><h1>Erros</h1></div><p class="small muted">Carregando...</p>';
+  let n; try { n = await loadNav(true); } catch (e) { return fail(el, 'Erros'); }
+  const all = n.errors, list = all.filter(e => !errFilter || (errFilter === 'tela' ? e.kind === 'tela' : e.kind !== 'tela'));
+  const groups = [...list.reduce((m, e) => { const k = e.kind + '|' + e.message; (m.get(k) || m.set(k, []).get(k)).push(e); return m; }, new Map()).values()]
+    .sort((a, b) => b.length - a.length || Date.parse(b[0].at) - Date.parse(a[0].at));
+  const day = all.filter(e => Date.now() - Date.parse(e.at) < 864e5), people = new Set(all.map(e => e.email || e.name)).size;
+  el.innerHTML = `<div class="ahead"><h1>Erros</h1><span class="tiny muted">Últimos ${useDays} dias</span></div>
+    <div class="mgrid">${[['Nas últimas 24 horas', day.length], ['No período', all.length], ['Tipos de erro', new Set(all.map(e => e.kind + e.message)).size], ['Pessoas afetadas', people]].map(([k, v]) => `<div class="mcard"><span class="tiny muted">${k}</span><span class="num ${k.startsWith('Nas') && v ? 'neg' : ''}">${v}</span></div>`).join('')}</div>
+    <div class="chips">${[['', 'Todos'], ['tela', 'Apareceram na tela'], ['tras', 'Por trás']].map(([k, l]) => `<button class="chip" type="button" data-ef="${k}" aria-pressed="${errFilter === k}">${l}</button>`).join('')}</div>
+    <div class="stack">${groups.map((g, i) => { const e0 = g[0], who = [...new Set(g.map(e => e.name || e.email || 'Sem nome'))], screens = [...new Set(g.map(e => e.screen).filter(Boolean))];
+      return `<details class="panel errgrp"${i === 0 ? ' open' : ''}><summary><span class="tag ${e0.kind === 'tela' ? 'k-critica' : 'k-erro'}">${ERR_KIND[e0.kind]}</span> <strong>${esc(e0.message)}</strong>
+        <span class="tiny muted"> · ${g.length}× · ${who.length} ${who.length === 1 ? 'pessoa' : 'pessoas'} · última ${new Date(e0.at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${screens.length ? ' · telas: ' + esc(screens.map(screenLabel).join(', ')) : ''}</span></summary>
+        <div class="tw" style="margin-top:10px"><table class="atable"><thead><tr><th>Quando</th><th>Quem</th><th>Tela</th><th>Celular</th><th>Versão</th><th>Origem</th></tr></thead><tbody>
+        ${g.slice(0, 50).map(e => `<tr><td class="num">${new Date(e.at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${esc(e.name || '—')}<br><span class="tiny muted">${esc(e.family || '')}</span></td><td>${esc(e.screen ? screenLabel(e.screen) : '—')}</td><td class="tiny">${esc(e.device || '')}</td><td>${esc(e.version || '')}</td><td class="tiny muted">${esc(e.source || '')}</td></tr>`).join('')}</tbody></table></div></details>`; }).join('') || '<div class="panel"><p class="small">Nenhum erro no período.</p></div>'}</div>`;
+  el.querySelectorAll('[data-ef]').forEach(b => b.onclick = () => { errFilter = b.dataset.ef; erros(el); });
 }

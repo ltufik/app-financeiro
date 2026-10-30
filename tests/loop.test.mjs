@@ -88,3 +88,11 @@ test('fluxos: etapa sem medida própria não conta quem só abriu a tela', () =>
   const f = flowFunnel(fat.steps, { 'aba.inicio': { users: 2 }, 'aba.lancar': { users: 0 } });
   assert.equal(f.at(-1).users, null);
 });
+test('resumo para o Claude: navegação e erros', () => {
+  const t = buildSummary({ nav: { screens: [{ s: 'inicio', views: 10, users: 2, seconds: 300 }, { s: 'menu.metas', views: 2, users: 1, seconds: 90 }], flows: [{ f: 'inicio', t: 'lancar', n: 4 }], targets: { inicio: [{ t: 'Enviar PDF', n: 5, users: 2 }] },
+    errors: [{ kind: 'tela', message: 'Não foi possível salvar.', name: 'Mari Souza', email: 'm@x.com', screen: 'lancar', device: 'Android', version: 'v31', at: '2026-10-30T20:00:00Z' }] }, today: '2026-10-30' });
+  assert.match(t, /Início: 10 visitas, 2 pessoas, 30s/); assert.match(t, /Menu: Metas: 2 visitas, 1 pessoas, 45s/);
+  assert.match(t, /Início → Lançar: 4×/); assert.match(t, /Início → "Enviar PDF": 5×/);
+  assert.match(t, /tela \| Não foi possível salvar\. → 1×, 1 pessoas \(Mari\); telas: Lançar; celulares: Android; versões: v31/);
+  assert.ok(!t.includes('m@x.com'));
+});

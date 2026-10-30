@@ -7,7 +7,7 @@ import { $, toast, confirmInline, invalid, clearInvalid, md } from './ui.js';
 import { attachMic } from './speech.js';
 import { chat, aiErrorText } from './ai.js';
 import { FAQ, FAQ_TOPICS, searchFaq, answerPrompt } from './lib/faq.js';
-import { track, APP_VERSION } from './usage.js';
+import { track, APP_VERSION, device } from './usage.js';
 
 export const TEST_PHASE = true;
 export const KINDS = [
@@ -16,7 +16,6 @@ export const KINDS = [
   { key: 'critica', label: 'Crítica', hint: 'Algo confuso, chato ou difícil', ph: 'Ex.: não entendi o que é a régua do Início.' },
 ];
 const STATUS = { novo: 'Recebida', visto: 'Lida pela equipe', backlog: 'Vai entrar no app', resolvido: 'Resolvida' };
-const device = () => { const u = navigator.userAgent; return (/iphone|ipad/i.test(u) ? 'iPhone' : /android/i.test(u) ? 'Android' : /mac/i.test(u) ? 'Mac' : /windows/i.test(u) ? 'Windows' : 'Outro') + (window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone ? ' · app instalado' : ' · navegador'); };
 const screen = () => S.tab === 'ajustes' ? 'menu.' + (S.sec || '') : (S.tab || '');
 const send = (kind, text, answer = null) => db.sb.rpc('send_feedback', { p_household: S.hh?.id || null, p_kind: kind, p_text: text, p_answer: answer, p_screen: screen(), p_device: device(), p_version: APP_VERSION });
 

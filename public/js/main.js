@@ -16,7 +16,7 @@ import { initMenu, closeMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
 import { checkAdmin, touchActivity } from './metrics.js';
 import { initPrivacy } from './privacy.js';
-import { track } from './usage.js';
+import { track, navTo, screenOf } from './usage.js';
 import { TEST_PHASE } from './feedback.js';
 import { showMessages } from './messages.js';
 import { photo } from './photos.js';
@@ -156,6 +156,7 @@ function setTab(t) {
   closeMenu(false);
   track('aba.' + (t === 'resumo' ? 'inicio' : t === 'ajustes' ? 'menu' : t));
   if (t === 'ajustes' && S.sec) track('menu.' + S.sec);
+  navTo(screenOf());
   S.tab = t; lsSet('fin.tab', t);
   $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   $$('.view').forEach(v => v.hidden = v.dataset.view !== t);

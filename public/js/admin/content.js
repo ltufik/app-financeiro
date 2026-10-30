@@ -120,3 +120,8 @@ A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e 
 ## Nunca usar sozinhas
 - meta (dizer qual: limite, quanto guardar ou sonho), aporte, recebível, retorno real, piso da fatura.` },
 ];
+
+// Screens as recorded by the navigation log, with the matching picture in public/flows.
+const MENU = { familia: 'Família e convites', divisao: 'Quem paga o quê', metas: 'Metas', patrimonio: 'Patrimônio e dívidas', categorias: 'Categorias', avisos: 'Notificações', contexto: 'O que o assistente sabe', ajuda: 'Ajuda', duvidas: 'Dúvidas', opiniao: 'Dar opinião', backup: 'Backup', sobre: 'Sobre o app', metricas: 'Métricas', conta: 'Conta' };
+export const screenLabel = s => ({ inicio: 'Início', lancar: 'Lançar', graficos: 'Gráficos', perguntar: 'Perguntar', extrato: 'Extrato', fechar: 'Fechar o mês' })[s] || (s.startsWith('menu.') ? 'Menu: ' + (MENU[s.slice(5)] || s.slice(5)) : s);
+export const screenShot = s => s.startsWith('menu.') ? 'menu_' + s.slice(5) : s;

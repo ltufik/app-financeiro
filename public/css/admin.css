@@ -114,3 +114,11 @@ body.admin{background:var(--paper)}
 .agb{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--coral);color:#fff;font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
 .agb[hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.agc{transition:none}}
+
+.heatwrap{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:700px){.heatwrap{grid-template-columns:1fr}}
+.heatphone{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);max-width:260px}
+.heatphone img{display:block;width:100%;height:auto;filter:saturate(.6) brightness(.97)}
+.heatphone canvas{position:absolute;inset:0;pointer-events:none}
+.errgrp summary{cursor:pointer;line-height:1.6}
+.atable .fbar{display:block;min-width:60px}

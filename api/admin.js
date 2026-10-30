@@ -1,6 +1,6 @@
 // Product console data (/admin): backlog, pricing and product design, for ADMIN_EMAILS only.
 // GET /api/admin?key=backlog  ->  {key, data, updated_at}     PUT /api/admin {key, data}
-// GET /api/admin?view=usage|feedback  ->  usage per person/feature, testers' feedback
+// GET /api/admin?view=usage|feedback|nav  ->  usage per person/feature, testers' feedback
 // PATCH /api/admin {feedback: id, status?, note?, reply?}  (reply: personal message to who sent it, also as a push)
 // Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS.
 import { cleanUrl } from './config.js';
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     const rpc = async (fn, args = {}) => { const r = await fetch(`${URL_}/rest/v1/rpc/${fn}`, { method: 'POST', headers: H, body: JSON.stringify(args) }); if (!r.ok) throw new Error('db'); return r.json(); };
     if (req.method === 'GET' && req.query?.view === 'usage') return res.status(200).json(await rpc('product_usage', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
     if (req.method === 'GET' && req.query?.view === 'feedback') return res.status(200).json(await rpc('product_feedback'));
+    if (req.method === 'GET' && req.query?.view === 'nav') return res.status(200).json(await rpc('product_nav', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
     if (req.method === 'PATCH') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
       const id = Number(b.feedback), patch = {};
