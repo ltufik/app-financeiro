@@ -102,6 +102,12 @@ async function pickFamily() {
   if (!list.length) return false;
   const want = lsGet('fin.hh'); const row = list.find(r => r.household_id === want) || list[0];
   S.hh = row.households; S.role = row.role; lsSet('fin.hh', S.hh.id);
+  // Already a member with a name (e.g. account from before the name step, or another phone): keep it, do not ask again.
+  const known = row.display_name || list.find(r => r.display_name)?.display_name;
+  if (!S.user.user_metadata?.display_name && known) {
+    S.user.user_metadata = { ...S.user.user_metadata, display_name: known };
+    db.sb.auth.updateUser({ data: { display_name: known } }).catch(() => {});
+  }
   return true;
 }
 $('#oOut').onclick = async () => { await db.sb.auth.signOut(); location.reload(); };
@@ -192,9 +198,10 @@ async function doStart() {
   touchActivity(); checkAdmin();
   show('app');
   // A notification opens the app on a given tab (?tab=...).
-  const want = new URLSearchParams(location.search).get('tab'), t = lsGet('fin.tab');
+  // Opens on Início; a notification can open another tab (?tab=...).
+  const want = new URLSearchParams(location.search).get('tab');
   if (VIEWS[want]) history.replaceState(null, '', location.pathname);
-  setTab(VIEWS[want] ? want : VIEWS[t] ? t : 'resumo');
+  setTab(VIEWS[want] ? want : 'resumo');
   if (!tourDone()) S.showTour();
   else if (shouldCoach(S.user)) setTimeout(() => S.startCoach(), 700);
   else { setTimeout(afterIntro, 900); }

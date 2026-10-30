@@ -630,6 +630,19 @@ const used = await page.evaluate(() => window.__db.usage);
   ok('novidade não se repete', !(await mp.$('.ann')));
   await mctx.close();
 }
+{ // Signing in again: whoever already has a name and a family goes straight to Início.
+  await page.click('[data-tab=extrato]'); await page.waitForTimeout(200);
+  await page.reload(); await page.waitForSelector('#app:not([hidden])', { timeout: 10000 });
+  ok('ao abrir de novo vai direto para o Início', (await page.getAttribute('.tab[data-tab="resumo"]', 'aria-selected')) === 'true');
+  await page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('mock.db')), ses = JSON.parse(localStorage.getItem('mock.session'));
+    const u = db.users.find(x => x.id === ses.user.id); delete u.user_metadata.display_name; delete ses.user.user_metadata.display_name;
+    localStorage.setItem('mock.db', JSON.stringify(db)); localStorage.setItem('mock.session', JSON.stringify(ses));
+  });
+  await page.reload(); await page.waitForSelector('#app:not([hidden]), #onboard:not([hidden])', { timeout: 10000 });
+  ok('quem já tem nome e família não refaz o cadastro', await page.isVisible('#app') && !(await page.isVisible('#onboard')) && (await txt('#v-resumo')).includes('Luiz'));
+  await noCoach(); await page.waitForTimeout(1500); await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
+}
 ok('uso registrado só com nomes das partes', used.includes('menu.opiniao') && used.includes('opiniao.ideia') && used.every(f => /^[a-z_]{2,20}(\.[a-z_]{2,20})?$/.test(f)), used.slice(0, 12).join(','));
 // notifications
 await sec('avisos');
