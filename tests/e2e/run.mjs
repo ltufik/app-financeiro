@@ -18,11 +18,13 @@ page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fetching the script/.test(m.text())) errors.push(m.text()); });
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const adminStore = {}, adminPuts = [];
 async function addRoutes(t) {
   await t.route('https://app.test/**', async r => {
     const u = new URL(r.request().url());
     if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
     if (u.pathname === '/api/metrics') return r.fulfill({ json: u.searchParams.get('probe') ? { admin: true } : { users: 12, users_7d: 3, users_30d: 12, in_family: 11, families: 6, families_shared: 4, families_1_month: 5, families_2_months: 3, families_closed: 2, d7_eligible: 8, d7_retained: 5, d30_eligible: 2, d30_retained: 1, wau: 7, mau: 10, daily: Array.from({ length: 14 }, (_, i) => ({ day: '2026-10-' + String(17 + i).padStart(2, '0'), users: i % 5 })), manual_30d: 40, receipts_30d: 6, imports_30d: 15, studies: 4, charts: 3, push_devices: 5, at: '2026-10-30T12:00:00Z' } });
+    if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); adminStore[b.key] = b.data; adminPuts.push(b.key); return r.fulfill({ json: { ok: true } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
     if (u.pathname === '/api/notify') { notifies.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { sent: 1 } }); }
     if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
     if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
@@ -445,6 +447,48 @@ const mt = await txt('#metricsBox');
 ok('métricas mostram funil, retenção e uso', mt.includes('Famílias com 2 meses ou mais') && mt.includes('63%') && mt.includes('Notas fiscais lidas'), mt.slice(0, 160));
 ok('app registra o dia de uso', await page.evaluate(() => (window.__touches || 0) >= 1));
 await shot('08c-metricas');
+ok('métricas: link para a Central do produto', (await page.getAttribute('#adminLink', 'href')) === '/admin.html');
+{ // Product console in a desktop-size tab of the same session.
+  const actx = await browser.newContext({ viewport: { width: 1280, height: 900 }, storageState: await page.context().storageState() }); const ap = await actx.newPage(); await addRoutes(ap);
+  ap.on('pageerror', e => errors.push('admin: ' + e.message));
+  await ap.goto('https://app.test/admin.html');
+  await ap.waitForSelector('#aNav:not([hidden])', { timeout: 10000 });
+  await ap.waitForSelector('#mBox .funnel');
+  ok('central: painel com funil e contagem do backlog', (await ap.textContent('#aMain')).includes('Famílias com 1 mês importado') && (await ap.textContent('#aMain')).includes('Feitos'));
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-1-painel.png'), fullPage: true });
+  await ap.click('[data-t="backlog"]'); await ap.waitForSelector('.kanban');
+  ok('central: backlog em quadro com 5 colunas', (await ap.$$('.kcol')).length === 5);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-2-backlog.png') });
+  await ap.click('#bNew summary'); await ap.click('#nAdd');
+  ok('central: valida a ideia vazia', !!(await ap.$('#nTitle[aria-invalid="true"]')) || !!(await ap.$('.ferr')));
+  await ap.fill('#nTitle', 'Ideia de teste e2e'); await ap.click('#nAdd'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]');
+  await ap.waitForFunction(() => document.querySelector('.kanban')?.textContent.includes('Ideia de teste e2e'));
+  ok('central: nova ideia salva no servidor', adminPuts.includes('backlog') && adminStore.backlog.items[0].title === 'Ideia de teste e2e');
+  await ap.click('[data-v="lista"]'); await ap.waitForSelector('.blist');
+  const id = adminStore.backlog.items[0].id;
+  await ap.selectOption(`[data-st="${id}"]`, 'agora'); await ap.waitForTimeout(200);
+  ok('central: mudar status salva', adminStore.backlog.items[0].status === 'agora');
+  await ap.click(`[data-del="${id}"]`); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(200);
+  ok('central: apagar pede confirmação e remove', !adminStore.backlog.items.some(i => i.id === id));
+  await ap.click('[data-t="bench"]'); await ap.waitForSelector('.atable');
+  ok('central: benchmarking com a tabela de apps', (await ap.$$('.atable tbody tr')).length >= 10);
+  await ap.click('[data-t="preco"]'); await ap.waitForSelector('#pOut .mcard');
+  const before = await ap.textContent('#pOut');
+  await ap.fill('[data-p="families"]', '1000'); await ap.waitForTimeout(100);
+  ok('central: simulador recalcula ao mudar premissa', (await ap.textContent('#pOut')) !== before);
+  await ap.fill('[data-p="payingPct"]', '150'); await ap.click('#pSave');
+  ok('central: valida premissa fora do limite', !adminPuts.includes('pricing'));
+  await ap.fill('[data-p="payingPct"]', '10'); await ap.click('#pSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(200);
+  ok('central: cenário de preço salvo', adminStore.pricing?.families === 1000);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-3-preco.png'), fullPage: true });
+  await ap.click('[data-t="desenho"]'); await ap.waitForSelector('.cgrid textarea');
+  await ap.fill('[data-c="problema"]', 'Problema de teste'); await ap.click('#cSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(200);
+  ok('central: canvas salvo', adminStore.canvas?.problema === 'Problema de teste' && adminStore.canvas.personas.length >= 2);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-4-desenho.png'), fullPage: true });
+  await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('[data-t="backlog"]');
+  ok('central: no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await actx.close();
+}
 // notifications
 await sec('avisos');
 await page.waitForSelector('#pOn');

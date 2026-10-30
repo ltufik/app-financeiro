@@ -435,6 +435,18 @@ $$;
 revoke all on function public.product_metrics() from public, anon, authenticated;
 grant execute on function public.product_metrics() to service_role;
 
+-- Central do produto (página /admin): backlog, precificação e desenho do produto.
+-- Ninguém logado lê ou escreve: só o servidor (service_role), depois de conferir ADMIN_EMAILS.
+create table if not exists public.product_board (
+  key        text primary key check (key ~ '^[a-z_]{2,40}$'),
+  data       jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+alter table public.product_board enable row level security;
+revoke all on public.product_board from anon, authenticated;
+grant select, insert, update, delete on public.product_board to service_role;
+
 -- Renomeia uma categoria e leva o novo nome para lançamentos, divisões de nota e regras.
 create or replace function public.rename_category(p_id uuid, p_name text)
 returns void language plpgsql security definer set search_path = public as $$

@@ -318,3 +318,11 @@ test('divisão do casal: quem pagou o quê e o acerto', async () => {
   const s2 = settle({ txs, idx, members, split: { ...split, share: { a: 0.7, b: 0.3 } } });
   assert.deepEqual(s2.transfers, [{ from: 'b', to: 'a', amount: 270 }]);
 });
+
+import { pricingCalc } from '../public/js/lib/pricing.js';
+test('pricingCalc: receita, custos e ponto de equilíbrio', () => {
+  const r = pricingCalc({ families: 1000, payingPct: 10, priceMonthly: 10, priceYearly: 120, yearlyShare: 50, activePct: 50, aiPerFamily: 1, feePct: 5, fx: 5, supabaseUsd: 25, vercelUsd: 20 });
+  assert.equal(r.payers, 100); assert.equal(r.revenue, 1000); assert.equal(r.fees, 50); assert.equal(r.ai, 500); assert.equal(r.infra, 225);
+  assert.equal(r.result, 225); assert.equal(r.breakEven, 500);
+  assert.equal(pricingCalc({ families: 100, payingPct: 0, priceMonthly: 10, priceYearly: 100, yearlyShare: 0, activePct: 100, aiPerFamily: 2, feePct: 0, fx: 5, supabaseUsd: 0, vercelUsd: 0 }).breakEven, null);
+});

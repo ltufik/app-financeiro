@@ -97,6 +97,8 @@ export function render(el) {
 
   <div class="panel stack" data-sec="metricas">
     <h2>Métricas do produto</h2>
+    <a class="btn primary" href="/admin.html" target="_blank" rel="noopener" id="adminLink">Abrir a Central do produto</a>
+    <p class="tiny muted">Painel, backlog, benchmarking, precificação e desenho do produto, numa página para o computador.</p>
     <div id="metricsBox" class="stack"></div>
   </div>
 

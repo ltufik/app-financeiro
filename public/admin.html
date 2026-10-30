@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Central do produto · Pra Onde Foi</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0B3C5D">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<script>try { var t = localStorage.getItem('fin.theme') || 'light'; if (t !== 'auto') document.documentElement.setAttribute('data-theme', t); } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+<header class="atop"><div class="in">
+  <span class="logo"><img src="/icons/icon.svg" alt="" width="28" height="28">Central do produto</span>
+  <span class="tiny muted" id="aWho"></span>
+  <a class="btn" href="/">Abrir o app</a>
+</div></header>
+<div class="ashell">
+  <nav class="anav" aria-label="Seções da central" id="aNav" hidden>
+    <button type="button" data-t="painel" aria-current="page">Painel</button>
+    <button type="button" data-t="backlog">Backlog</button>
+    <button type="button" data-t="bench">Benchmarking</button>
+    <button type="button" data-t="preco">Precificação</button>
+    <button type="button" data-t="desenho">Desenho do produto</button>
+  </nav>
+  <main id="aMain"><div class="panel"><p class="small muted">Carregando...</p></div></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script type="module" src="/js/admin/admin.js"></script>
+</body>
+</html>

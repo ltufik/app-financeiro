@@ -1,0 +1,45 @@
+/* Product console: desktop-first layout, same tokens as the app. */
+body.admin{background:var(--paper)}
+.atop{position:sticky;top:0;z-index:5;background:var(--deep);color:var(--deep-ink)}
+.atop .in{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.atop .logo{font-family:var(--display);font-weight:700;font-size:18px;display:flex;gap:10px;align-items:center;flex:1;min-width:0}
+.atop .muted{color:var(--deep-soft)}
+.atop .btn{background:transparent;color:var(--deep-ink);border-color:color-mix(in srgb,var(--deep-ink) 35%,transparent);text-decoration:none}
+.ashell{max-width:1240px;margin:0 auto;padding:20px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.ashell{grid-template-columns:1fr;padding:14px 16px}}
+.anav{position:sticky;top:76px;display:flex;flex-direction:column;gap:4px}
+@media (max-width:820px){.anav{position:static;flex-direction:row;overflow-x:auto;gap:6px}}
+.anav button{appearance:none;border:0;background:none;text-align:left;padding:10px 12px;border-radius:10px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.anav button:hover{background:var(--sunk)}
+.anav button[aria-current]{background:var(--accent-soft);color:var(--accent)}
+#aMain{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ahead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.ahead h1{font-size:clamp(22px,3vw,28px);margin:0}
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px}
+.kcol{background:var(--sunk);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:200px}
+.kcol h3{font-size:14px;margin:2px 4px;display:flex;justify-content:space-between}
+.kcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.kcard .tiny{color:var(--muted)}
+.blist{display:flex;flex-direction:column;gap:8px}
+.brow3{display:grid;grid-template-columns:minmax(0,1fr) 150px 70px auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+@media (max-width:700px){.brow3{grid-template-columns:1fr 1fr}.brow3 > :first-child{grid-column:1/-1}}
+.brow3 select{padding:6px 8px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:6px;padding:1px 6px;background:var(--sunk);color:var(--muted)}
+.tag.cost{background:var(--warn-soft);color:var(--warn)}
+.atable{width:100%;border-collapse:collapse;font-size:14px}
+.atable th,.atable td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+.atable th{font-size:12.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.pgrid{grid-template-columns:1fr}}
+.pout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pout .mcard .num{font-size:22px}
+.pos{color:var(--good)} .neg{color:var(--coral)}
+.cgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.cgrid{grid-template-columns:1fr}}
+.cbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.cbox h3{font-size:14px;margin:0;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+.cbox textarea{min-height:110px;font-size:14px}
+.jgrid{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:10px;overflow-x:auto}
+.jstep{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--turq);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.jstep input,.jstep textarea{font-size:13.5px}
+.ashell main{max-width:none;margin:0;padding:0 0 40px}

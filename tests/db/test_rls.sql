@@ -141,3 +141,16 @@ set role authenticated;
 \echo (o erro a seguir é esperado: pessoa logada não lê métricas)
 select public.product_metrics();
 reset role;
+
+-- Central do produto: só o servidor lê e escreve
+set role service_role;
+insert into product_board(key, data) values ('backlog', '{"items":[]}') on conflict (key) do update set data = excluded.data;
+select count(*) as pb from product_board \gset
+\echo central do produto gravada pelo servidor: :pb
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: pessoa logada não lê a central do produto)
+select * from product_board;
+reset role;
