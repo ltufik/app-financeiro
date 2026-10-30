@@ -1,5 +1,7 @@
 // Starting content for the product console. Once saved, the database copy is the one that counts.
-const it = (title, status, origin, effort, problem = '', extra = {}) => ({ id: Math.random().toString(36).slice(2, 10), title, status, origin, effort, problem, cost: false, notes: '', ...extra });
+// Fixed ids (from the title), so a release can mark an item as done and tell who asked for it.
+export const slug = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+const it = (title, status, origin, effort, problem = '', extra = {}) => ({ id: slug(title), title, status, origin, effort, problem, cost: false, notes: '', from: [], where: '', ...extra });
 
 export const BACKLOG = [
   // done

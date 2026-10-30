@@ -9,12 +9,13 @@ import { BACKLOG, BENCH, PRICING, CANVAS } from './seed.js';
 import { pricingCalc } from '../lib/pricing.js';
 import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
 import { NEWS, replyTemplate, replyTitle } from '../lib/news.js';
+import { SCREENS, FLOWS, flowFunnel } from './flows.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null };
-const TABS = ['painel', 'opinioes', 'uso', 'duvidas', 'novidades', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+const TABS = ['painel', 'opinioes', 'uso', 'duvidas', 'novidades', 'fluxos', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
 let FB = null, USE = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -26,7 +27,13 @@ async function api(method, key, data) {
   return r.json();
 }
 async function save(key, msg) {
-  try { await api('PUT', key, D[key]); if (msg) toast(msg); } catch (e) { toast('Não foi possível salvar. Verifique a internet e tente de novo.'); }
+  try {
+    const res = await api('PUT', key, D[key]);
+    const n = res?.loop?.replied || 0;
+    if (n) { toast(`Pronto! Recado automático enviado para ${n} ${n > 1 ? 'pessoas que pediram' : 'pessoa que pediu'}.`); FB = null; }
+    else if (msg) toast(msg);
+    return res;
+  } catch (e) { toast('Não foi possível salvar. Verifique a internet e tente de novo.'); return null; }
 }
 
 (async function boot() {
@@ -53,7 +60,7 @@ async function save(key, msg) {
 function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
-  ({ painel, opinioes, uso, duvidas, novidades, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, duvidas, novidades, fluxos, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   window.scrollTo(0, 0);
 }
 
@@ -95,11 +102,14 @@ function backlog(el) {
   el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; backlog(el); });
   el.querySelectorAll('[data-st]').forEach(s => s.onchange = async e => {
     const i = items.find(x => x.id === s.dataset.st); i.status = s.value; await save('backlog', `"${i.title}" foi para ${STATUS[i.status]}.`);
-    const from = /Opinião #(\d+)/.exec(i.notes || '');
-    if (i.status === 'feito' && from && await confirmInline(e.target, { title: 'Avisar quem pediu?', text: 'Esta ideia veio de uma opinião. Quer mandar um recado para a pessoa dizendo que ficou pronto?', yes: 'Sim, escrever o recado', no: 'Agora não' })) {
-      replyOpen = +from[1]; fbKind = ''; fbStatus = ''; return go('opinioes');
-    }
-    backlog(el);
+    void e; backlog(el);
+  });
+  el.querySelectorAll('[data-where]').forEach(t => t.onchange = async () => { items.find(x => x.id === t.dataset.where).where = t.value.trim(); await save('backlog', 'Salvo.'); });
+  el.querySelectorAll('[data-claude]').forEach(b => b.onclick = async () => {
+    const i = items.find(x => x.id === b.dataset.claude);
+    const t = `Pedido do backlog do Pra Onde Foi\nItem: ${i.id}\nO que fazer: ${i.title}${i.problem ? '\nProblema: ' + i.problem : ''}${i.where ? '\nOnde fica: ' + i.where : ''}\nPedido por: ${askers(i)} pessoa(s)\nQuando publicar, inclua o item ${i.id} na versão, para o recado automático sair para quem pediu.`;
+    try { await navigator.clipboard.writeText(t); toast('Pedido copiado. Cole na conversa com o Claude.'); }
+    catch (e) { const ta = document.createElement('textarea'); ta.value = t; b.after(ta); ta.select(); toast('Selecionei o texto: copie e cole na conversa com o Claude.', 'info'); }
   });
   el.querySelectorAll('[data-ef]').forEach(s => s.onchange = async () => { items.find(x => x.id === s.dataset.ef).effort = s.value; await save('backlog'); });
   el.querySelectorAll('[data-del]').forEach(b => b.onclick = async e => {
@@ -117,9 +127,12 @@ function backlog(el) {
   };
 }
 const statusSel = i => `<select data-st="${i.id}" aria-label="Status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === i.status ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
-const cardHTML = i => `<article class="kcard"><strong>${esc(i.title)}</strong>${i.problem ? `<span class="tiny">${esc(i.problem)}</span>` : ''}
+const askers = i => [...new Set([...(i.from || []), ...[...String(i.notes || '').matchAll(/Opinião #(\d+)/g)].map(m => +m[1])])].length;
+const askTag = i => askers(i) ? `<span class="tag ask" title="Recebem um recado automático quando ficar pronto">pedido por ${askers(i)}</span>` : '';
+const cardHTML = i => `<article class="kcard"><strong>${esc(i.title)}</strong>${i.problem ? `<span class="tiny">${esc(i.problem)}</span>` : ''}${askTag(i) ? `<span>${askTag(i)}</span>` : ''}
   <span><span class="tag">${EFFORT[i.effort] || ''}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''} <span class="tiny">${esc(i.origin || '')}</span></span>${statusSel(i)}</article>`;
-const rowHTML = i => `<div class="brow3"><span><strong>${esc(i.title)}</strong>${i.problem ? `<br><span class="tiny muted">${esc(i.problem)}</span>` : ''}<br><span class="tiny muted">${esc(i.origin || '')}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''}</span>
+const rowHTML = i => `<div class="brow3"><span><strong>${esc(i.title)}</strong>${i.problem ? `<br><span class="tiny muted">${esc(i.problem)}</span>` : ''}<br><span class="tiny muted">${esc(i.origin || '')}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''} ${askTag(i)}
+    ${i.status !== 'feito' ? `<span class="bmore"><input type="text" data-where="${esc(i.id)}" value="${esc(i.where || '')}" placeholder="Onde vai ficar no app (vai no recado)" maxlength="80"><button class="chip" type="button" data-claude="${esc(i.id)}">Pedir ao Claude</button></span>` : ''}</span>
   ${statusSel(i)}<select data-ef="${i.id}" aria-label="Esforço">${Object.entries(EFFORT).map(([k, v]) => `<option value="${k}"${k === i.effort ? ' selected' : ''}>${v}</option>`).join('')}</select>
   <button class="chip" type="button" data-del="${i.id}" aria-label="Apagar">×</button></div>`;
 
@@ -230,7 +243,9 @@ async function opinioes(el) {
       <div class="fbact"><select data-st aria-label="Situação">${Object.entries(FB_STATUS).map(([k, l]) => `<option value="${k}"${k === f.status ? ' selected' : ''}>${l}</option>`).join('')}</select>
         <input type="text" data-note placeholder="Nota interna (só você vê)" value="${esc(f.note || '')}" maxlength="2000">
         ${f.kind === 'duvida' ? '<button class="chip" type="button" data-faq>Responder nas Dúvidas</button>' : `<button class="chip" type="button" data-bl${f.status === 'backlog' ? ' disabled' : ''}>Virar item do backlog</button>`}
-        <button class="chip" type="button" data-rp>${f.reply ? 'Mandar outro recado' : 'Avisar a pessoa'}</button></div>
+        ${f.kind !== 'duvida' && f.status !== 'backlog' ? `<select data-join aria-label="Juntar a um item do backlog"><option value="">Já está no backlog? Juntar a…</option>${D.backlog.items.filter(i => !['feito', 'descartado'].includes(i.status)).map(i => `<option value="${esc(i.id)}">${esc(i.title.length > 60 ? i.title.slice(0, 60) + '…' : i.title)}</option>`).join('')}</select>` : ''}
+        <button class="chip" type="button" data-rp>${f.reply ? 'Mandar outro recado' : 'Escrever recado agora'}</button></div>
+      ${!f.reply && f.status === 'backlog' ? `<p class="tiny muted" style="margin:0">Quando o item do backlog for para Feito, ${esc(f.name ? f.name.split(' ')[0] : 'a pessoa')} recebe um recado automático.</p>` : ''}
       ${f.reply ? `<p class="tiny replied">Recado enviado em ${dt(f.replied_at)} · ${f.reply_seen ? 'a pessoa já viu' : 'ainda não viu'}: "${esc(f.reply)}"</p>` : ''}
       <div class="rpbox stack" hidden><p class="tiny muted">A pessoa vê este recado ao abrir o app, com o título "${esc(replyTitle(f.kind, f.name))}", e recebe no celular se tiver os avisos ligados.</p>
         <textarea data-rptext maxlength="1000" aria-label="Recado para ${who(f)}" style="min-height:80px"></textarea>
@@ -246,10 +261,18 @@ async function opinioes(el) {
     if (bl) bl.onclick = async e => {
       const title = f.text.length > 90 ? f.text.slice(0, 90) + '…' : f.text;
       if (!await confirmInline(e.target, { text: `Adicionar ao backlog como Ideia: "${esc(title)}"?`, yes: 'Sim, adicionar' })) return;
-      D.backlog.items.unshift({ id: uid(), title, problem: f.text, origin: `${FB_KIND[f.kind]} de ${f.name || 'testador'}`, effort: 'M', status: 'ideia', cost: false, notes: `Opinião #${f.id}` });
+      D.backlog.items.unshift({ id: uid(), title, problem: f.text, origin: `${FB_KIND[f.kind]} de ${f.name || 'testador'}`, effort: 'M', status: 'ideia', cost: false, notes: '', from: [f.id], where: '' });
       await save('backlog');
       try { await patchFb(f.id, { status: 'backlog' }); f.status = 'backlog'; } catch (x) { /* backlog already saved */ }
       toast('Foi para o backlog.'); opinioes(el);
+    };
+    const join = card.querySelector('[data-join]');
+    if (join) join.onchange = async e => {
+      const it = D.backlog.items.find(i => i.id === e.target.value); if (!it) return;
+      if (!await confirmInline(e.target, { text: `Juntar esta opinião ao item "${esc(it.title)}"? Quando ele ficar pronto, ${esc(f.name || 'a pessoa')} recebe o recado automático.`, yes: 'Sim, juntar' })) { e.target.value = ''; return; }
+      it.from = [...new Set([...(it.from || []), f.id])]; await save('backlog');
+      try { await patchFb(f.id, { status: 'backlog' }); f.status = 'backlog'; } catch (x) { /* saved in backlog anyway */ }
+      toast('Opinião juntada ao item do backlog.'); opinioes(el);
     };
     const fq = card.querySelector('[data-faq]');
     if (fq) fq.onclick = () => { faqDraft = { q: f.text, a: f.answer || '', from: f.id }; go('duvidas'); };
@@ -415,4 +438,34 @@ function novidades(el) {
     else Object.assign(items[newsEdit], { title, items: lines() });
     newsEdit = null; await save('news', isNew ? 'Novidade publicada.' : 'Novidade salva.'); novidades(el);
   };
+}
+
+// ---------- Fluxos (telas) ----------
+let flowId = 'geral';
+const shot = id => `/flows/${id}.jpg`;
+async function fluxos(el) {
+  let feats = {}; try { feats = (await loadUse()).features; } catch (e) { /* usage appears after the schema update */ }
+  const f = FLOWS.find(x => x.id === flowId) || FLOWS[0];
+  const phone = (id, extra = '') => `<button type="button" class="phone" data-scr="${id}" aria-label="Ampliar ${esc(SCREENS[id]?.title || id)}"><img src="${shot(id)}" alt="" loading="lazy" width="390" height="844"></button>${extra}`;
+  el.innerHTML = `<div class="ahead"><h1>Fluxos</h1><span class="tiny muted">Telas do app de verdade, com uma família fictícia. Toque numa tela para ampliar.</span></div>
+    <div class="chips" id="flList">${FLOWS.map(x => `<button class="chip" type="button" data-fl="${x.id}" aria-pressed="${x.id === f.id}">${esc(x.title)}</button>`).join('')}</div>
+    <p class="small muted" style="margin:0">${esc(f.desc)}</p>
+    ${f.map ? f.map.map(g => `<section class="panel stack"><h2>${esc(g.title)} <span class="tiny muted">${g.screens.length} telas</span></h2>
+        <div class="fmap">${g.screens.map(id => `<figure>${phone(id)}<figcaption><strong>${esc(SCREENS[id].title)}</strong><span class="tiny muted">${esc(SCREENS[id].where)}</span></figcaption></figure>`).join('')}</div></section>`).join('')
+      : `<section class="panel"><div class="fflow">${flowFunnel(f.steps, feats).map((x, i) => `${i ? '<span class="farrow" aria-hidden="true">→</span>' : ''}<figure class="fstep">
+          <span class="fnum">${i + 1}</span>${phone(x.s)}<figcaption><strong>${esc(SCREENS[x.s].title)}</strong><span class="small">${esc(x.action)}</span>
+          ${x.users != null ? `<span class="tiny fuse">${x.users} ${x.users === 1 ? 'pessoa' : 'pessoas'}${x.drop > 0 ? ` <span class="neg">−${x.drop}%</span>` : ''}</span>` : '<span class="tiny muted">não medido</span>'}</figcaption></figure>`).join('')}</div>
+        <p class="tiny muted" style="margin-top:10px">Pessoas que chegaram em cada tela nos últimos ${useDays} dias. Em coral, quantos ficaram pelo caminho desde a tela anterior medida.</p></section>`}
+    <dialog id="flBox" class="flbox"></dialog>`;
+  el.querySelectorAll('[data-fl]').forEach(b => b.onclick = () => { flowId = b.dataset.fl; fluxos(el); });
+  el.querySelectorAll('[data-scr]').forEach(b => b.onclick = () => {
+    const id = b.dataset.scr, sc = SCREENS[id], inFlows = FLOWS.filter(x => x.steps?.some(y => y.s === id)), d = $('#flBox');
+    d.innerHTML = `<div class="flbig"><img src="${shot(id)}" alt="${esc(sc.title)}"><div class="stack"><div class="ahead"><h2 style="margin:0">${esc(sc.title)}</h2><button class="chip" type="button" data-x aria-label="Fechar">×</button></div>
+      <p class="small"><strong>Onde fica:</strong> ${esc(sc.where)}</p>
+      ${inFlows.length ? `<p class="small"><strong>Aparece nos fluxos:</strong></p><div class="chips">${inFlows.map(x => `<button class="chip" type="button" data-go-fl="${x.id}">${esc(x.title)}</button>`).join('')}</div>` : ''}</div></div>`;
+    d.querySelector('[data-x]').onclick = () => d.close();
+    d.querySelectorAll('[data-go-fl]').forEach(x => x.onclick = () => { d.close(); flowId = x.dataset.goFl; fluxos(el); });
+    d.onclick = e => { if (e.target === d) d.close(); };
+    d.showModal();
+  });
 }

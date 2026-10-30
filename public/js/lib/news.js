@@ -28,6 +28,22 @@ export function replyTemplate(kind, name, text) {
   return `Oi, ${firstName(name) || 'tudo bem'}! ${lead}: `;
 }
 
+// Automatic message when the backlog item that came from someone's opinion is done.
+export function autoReply({ kind, name, text }, item = {}) {
+  const what = String(text || '').trim(), short = what.length > 90 ? what.slice(0, 90) + '…' : what;
+  const lead = { erro: `Você avisou que "${short}". Corrigimos`, ideia: `Você sugeriu "${short}". Ficou pronto`, critica: `Você comentou que "${short}". Mudamos`, duvida: `Você perguntou "${short}". Melhoramos` }[kind] || `Você escreveu "${short}". Ficou pronto`;
+  const done = String(item.title || '').trim(), where = String(item.where || '').trim();
+  return `Oi, ${firstName(name) || 'tudo bem'}! ${lead}${done && done.toLowerCase() !== what.toLowerCase() ? `: ${done}` : ''}.${where ? ` Onde encontrar: ${where}.` : ''} Obrigado por ajudar a melhorar o app!`;
+}
+
+// Backlog items that just became "feito" and came from opinions: [{item, ids}].
+export function newlyDone(prev = [], next = []) {
+  const before = new Map((prev || []).map(i => [i.id, i.status]));
+  return (next || []).filter(i => i.status === 'feito' && before.get(i.id) !== 'feito')
+    .map(i => ({ item: i, ids: [...new Set([...(i.from || []), ...[...String(i.notes || '').matchAll(/Opinião #(\d+)/g)].map(m => +m[1])])].filter(n => Number.isInteger(n) && n > 0) }))
+    .filter(x => x.ids.length);
+}
+
 // Notes this person has not seen: newer than what they saw and than their account.
 export function unseenNews(items, { seenAt, createdAt } = {}) {
   const after = Math.max(Date.parse(seenAt || 0) || 0, Date.parse(createdAt || 0) || 0);

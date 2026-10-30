@@ -1,6 +1,6 @@
 // Service worker: caches the app shell so it opens fast and installs as an app.
 // Data and /api calls always go to the network.
-const VERSION = 'v27';
+const VERSION = 'v28';
 const SHELL = ['/', '/index.html', '/css/app.css', '/js/main.js', '/js/db.js', '/js/ai.js', '/js/ui.js', '/js/state.js', '/js/speech.js', '/js/tour.js', '/js/steps.js', '/js/onboarding.js', '/js/art.js', '/js/install.js', '/js/push.js', '/js/metrics.js', '/js/privacy.js', '/js/lib/recurring.js', '/js/lib/settle.js', '/js/photos.js', '/js/menu.js', '/js/coach.js', '/js/views/graficos.js', '/js/views/fechar.js', '/js/lib/closing.js', '/js/lib/charts.js', '/js/lib/receipt.js', '/js/lib/insights.js', '/js/lib/budget.js', '/js/lib/pricing.js', '/js/lib/faq.js', '/js/feedback.js', '/js/usage.js', '/js/messages.js', '/js/lib/news.js',
   '/js/lib/format.js', '/js/lib/calc.js', '/js/lib/categorize.js', '/js/lib/parse.js', '/js/lib/validate.js',
   '/js/views/resumo.js', '/js/views/lancar.js', '/js/views/perguntar.js', '/js/views/extrato.js', '/js/views/ajustes.js',

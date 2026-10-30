@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 
 const arg = k => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : null; };
 const { chromium } = await import(arg('playwright'));
+const { newlyDone } = await import('../../public/js/lib/news.js');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public');
 const MOCK = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'mock-supabase.js'), 'utf8');
 const PDFJS = arg('pdfjs'), shots = arg('shots');
@@ -17,7 +18,7 @@ const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fetching the script/.test(m.text())) errors.push(m.text()); });
 
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const adminStore = {}, adminPuts = [], adminPatches = [];
 const FB_FIXTURE = [
   { id: 1, kind: 'erro', text: 'Toquei em salvar a nota e nada aconteceu', status: 'novo', screen: 'lancar', device: 'Android · app instalado', version: 'v26', name: 'Testador Um', email: 'um@test.com', family: 'Família Teste', created_at: '2026-10-29T12:00:00Z' },
@@ -40,7 +41,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
     if (u.pathname === '/api/admin' && r.request().method() === 'PATCH') { const b = JSON.parse(r.request().postData()); adminPatches.push(b); const f = FB_FIXTURE.find(x => x.id === b.feedback); if (f && b.status) f.status = b.status; if (f && b.reply) Object.assign(f, { reply: b.reply, replied_at: '2026-10-30T15:00:00Z', reply_seen: false, status: 'resolvido' }); return r.fulfill({ json: { ok: true, pushed: b.reply ? 1 : 0 } }); }
-    if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); adminStore[b.key] = b.data; adminPuts.push(b.key); return r.fulfill({ json: { ok: true } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
+    if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); const prev = adminStore[b.key]; adminStore[b.key] = b.data; adminPuts.push(b.key); const loop = b.key === 'backlog' ? { replied: newlyDone(prev?.items || [], b.data.items).reduce((a, x) => a + x.ids.length, 0) } : null; if (prev && b.key === 'backlog') adminStore[b.key] = JSON.parse(JSON.stringify(b.data)); return r.fulfill({ json: { ok: true, loop } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
     if (u.pathname === '/api/notify') { notifies.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { sent: 1 } }); }
     if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
     if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
@@ -525,11 +526,14 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.waitForSelector('.fbcard[data-id="3"] .replied');
   ok('central: recado enviado e marcado como resolvido', adminPatches.some(x => x.feedback === 3 && x.reply.includes('por semana')) && (await ap.textContent('.fbcard[data-id="3"] .replied')).includes('ainda não viu'));
   await ap.click('[data-t="backlog"]'); await ap.waitForSelector('[data-v="lista"]'); await ap.click('[data-v="lista"]'); await ap.waitForSelector('.blist');
-  const fromOp = adminStore.backlog.items.find(i => /Opinião #1/.test(i.notes)).id;
-  await ap.selectOption(`[data-st="${fromOp}"]`, 'feito'); await ap.waitForSelector('.cfm');
-  ok('central: ao concluir uma ideia vinda de opinião, sugere avisar a pessoa', (await ap.textContent('.cfm')).includes('Avisar quem pediu?'));
-  await ap.click('.cfm [data-y]'); await ap.waitForSelector('.fbcard[data-id="1"] .rpbox:not([hidden])');
-  ok('central: abre o recado da opinião certa', (await ap.inputValue('.fbcard[data-id="1"] [data-rptext]')).includes('Toquei em salvar a nota'));
+  const fromOp = adminStore.backlog.items.find(i => (i.from || []).includes(1)).id;
+  ok('central: item mostra quantas pessoas pediram', (await ap.textContent('.blist')).includes('pedido por 1'));
+  await ap.fill(`[data-where="${fromOp}"]`, 'Lançar → Foto da nota'); await ap.press(`[data-where="${fromOp}"]`, 'Tab'); await ap.waitForTimeout(200);
+  ok('central: onde fica no app é salvo no item', adminStore.backlog.items.find(i => i.id === fromOp).where === 'Lançar → Foto da nota');
+  await ap.click(`[data-claude="${fromOp}"]`); await ap.waitForTimeout(200);
+  ok('central: pedir ao Claude copia o pedido com o id do item', /copiado|copie/.test(await ap.textContent('#toast')));
+  await ap.selectOption(`[data-st="${fromOp}"]`, 'feito'); await ap.waitForTimeout(300);
+  ok('central: concluir item vindo de opinião manda o recado sozinho', !(await ap.$('.cfm')) && (await ap.textContent('#toast')).includes('Recado automático enviado para 1 pessoa'), await ap.textContent('#toast'));
   await ap.click('[data-t="novidades"]'); await ap.waitForSelector('#nwAdd');
   ok('central: novidades começam com a desta versão', (await ap.textContent('#aMain')).includes('Sua opinião agora tem lugar no app'));
   await ap.click('#nwAdd'); await ap.click('#nwPub');
@@ -563,6 +567,15 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.click('[data-ed="0"]'); await ap.fill('#dcBody', 'Texto novo da visão geral'); await ap.click('#dcSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
   ok('central: seção da documentação salva', adminStore.docs?.items?.[0]?.body === 'Texto novo da visão geral');
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-8-docs.png'), fullPage: true });
+  await ap.click('[data-t="fluxos"]'); await ap.waitForSelector('.fmap .phone');
+  ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
+  await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
+  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 5 && (await ap.textContent('.fflow')).includes('pessoas'));
+  await ap.click('.fstep .phone'); await ap.waitForSelector('#flBox[open]');
+  ok('central: tela ampliada mostra onde fica e em que fluxos aparece', (await ap.textContent('#flBox')).includes('Aparece nos fluxos'));
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-10-fluxo-zoom.png') });
+  await ap.click('#flBox [data-x]'); await ap.waitForTimeout(150);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-10-fluxos.png'), fullPage: true });
   await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('[data-t="uso"]'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await actx.close();
@@ -576,7 +589,7 @@ await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver 
 await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
 const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
-ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v27', JSON.stringify(fbRow));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v28', JSON.stringify(fbRow));
 ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
 await shot('11-opiniao');
 await sec('duvidas'); await page.waitForSelector('#fqList details');

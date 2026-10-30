@@ -7,6 +7,7 @@ import { cleanUrl } from './config.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
 import { replyTitle } from '../public/js/lib/news.js';
+import { rest, closeLoop } from './_loop.js';
 
 const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news'];
 const STATUS = ['novo', 'visto', 'backlog', 'resolvido'];
@@ -70,10 +71,14 @@ export default async function handler(req, res) {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
       if (!KEYS.includes(b.key) || typeof b.data !== 'object' || b.data === null) return res.status(400).json({ error: 'bad_request' });
       if (JSON.stringify(b.data).length > MAX) return res.status(413).json({ error: 'too_large' });
+      const db = rest(URL_, SERVICE);
+      const prev = b.key === 'backlog' ? await db.board('backlog') : null;
       const r = await fetch(`${URL_}/rest/v1/product_board?on_conflict=key`, { method: 'POST', headers: { ...H, prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify({ key: b.key, data: b.data, updated_at: new Date().toISOString(), updated_by: user.email }) });
       if (!r.ok) return res.status(502).json({ error: 'db' });
       const [row] = await r.json();
-      return res.status(200).json(row);
+      // An item that came from someone's opinion was marked as done: the message goes out by itself.
+      const loop = b.key === 'backlog' ? await closeLoop(db, prev?.items || [], b.data.items || [], vapidFromEnv()).catch(() => ({ replied: 0, pushed: 0 })) : null;
+      return res.status(200).json({ ...row, loop });
     }
     res.status(405).json({ error: 'method_not_allowed' });
   } catch (e) { res.status(500).json({ error: 'failed' }); }

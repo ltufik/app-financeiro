@@ -86,13 +86,28 @@ A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e 
 - No celular, o app novo aparece ao fechar e abrir de novo.` },
   { id: 'rotina', title: 'Rotina da fase de teste', body: `## Toda semana
 - Opiniões: ler as novas, marcar como "Lida", virar item do backlog ou "Resolvida".
-- Algo pedido ficou pronto: mandar o recado para a pessoa (Opiniões → Avisar a pessoa).
-- Publicou uma versão: escrever em Novidades o que mudou, em palavras simples.
+- Opinião que vale fazer: "Virar item do backlog" (ou juntar a um item que já existe).
+- Recado e novidade saem sozinhos quando o item fica pronto (veja "Ciclo com quem testa").
 - Dúvidas com "não resolveu": escrever a resposta e publicar nas Dúvidas.
 - Uso: quem não volta há mais de 7 dias; quais partes ninguém usa.
 ## Todo mês
 - Funil: quantas famílias importaram 1 mês, 2 meses, fecharam um mês.
 - Rever o backlog: o que sobe para Agora.` },
+  { id: 'ciclo', title: 'Ciclo com quem testa', body: `Nada manual entre o pedido e o aviso.
+## Como funciona
+- A pessoa manda uma opinião pelo balão. Ela chega em Opiniões.
+- Você decide: "Virar item do backlog" ou juntar a um item que já existe. O item mostra "pedido por N".
+- Para eu fazer: no Backlog (Lista), "Pedir ao Claude" copia o pedido com o id do item. Cole na conversa.
+- Quando eu publico a versão, o arquivo de versões (api/_releases.js) diz quais itens ficaram prontos e o que mudou.
+- Na primeira vez que alguém abre o app depois da publicação, o servidor: publica a novidade, marca os itens como Feito e manda o recado para quem pediu, com o nome da pessoa (no app e no celular).
+- Se você mesmo marcar um item como Feito na Central, o recado também sai sozinho.
+## O recado
+- "Oi, Luana! Você sugeriu "ver gasto por semana". Ficou pronto: Gráfico por semana. Onde encontrar: Gráficos → por semana. Obrigado por ajudar a melhorar o app!"
+- O "Onde encontrar" vem do campo "Onde vai ficar no app" do item.
+- Cada pessoa recebe um recado por pedido, uma vez só.` },
+  { id: 'fluxos', title: 'Fluxos e telas', body: `- A aba Fluxos mostra as telas de verdade, com uma família fictícia (Família Souza).
+- As fotos das telas são refeitas a cada versão que muda tela (script tests/local/flow-screens.mjs).
+- Cada fluxo mostra quantas pessoas chegaram em cada etapa e quantas ficaram pelo caminho: é o funil de cada funcionalidade.` },
   { id: 'glossario', title: 'Glossário da interface', body: `Palavras que o usuário vê e o que elas querem dizer. Usar sempre estas, do mesmo jeito.
 - **Sobra**: o que entrou menos o que saiu no mês.
 - **Limite do cartão**: até quanto a fatura pode chegar por mês.
