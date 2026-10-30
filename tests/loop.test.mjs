@@ -83,3 +83,8 @@ test('resumo para o Claude: números, uso, opiniões e backlog, sem e-mails', ()
   assert.match(t, /semana: Gasto por semana · pedido por 2/); assert.match(t, /Horários de mais uso: 21h/);
   assert.ok(!t.includes('mari@x.com'));
 });
+test('fluxos: etapa sem medida própria não conta quem só abriu a tela', () => {
+  const fat = FLOWS.find(f => f.id === 'fatura');
+  const f = flowFunnel(fat.steps, { 'aba.inicio': { users: 2 }, 'aba.lancar': { users: 0 } });
+  assert.equal(f.at(-1).users, null);
+});

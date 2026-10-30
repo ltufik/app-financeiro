@@ -43,7 +43,8 @@ export const SCREENS = {
   novidades: { title: 'O que mudou', where: 'Ao abrir o app depois de uma atualização', key: null },
 };
 
-const st = (s, action) => ({ s, action });
+// key: null = not measured at this step (the screen's own key would count everyone who opened it).
+const st = (s, action, key) => key === undefined ? { s, action } : { s, action, key };
 export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'familia', 'apresentacao', 'tour', 'alpha'] },
@@ -59,15 +60,15 @@ export const FLOWS = [
     st('alpha', 'Aviso do teste e do balão de opinião'), st('inicio', 'A régua mostra o próximo passo')] },
   { id: 'fatura', title: 'Importar fatura ou extrato', desc: 'O caminho que faz o app ter valor: o primeiro mês importado.', steps: [
     st('inicio', 'Régua: "Envie a última fatura"'), st('lancar', 'Abre Lançar'), st('lancar_pdf', 'Escolhe o PDF (e a senha, se tiver)'),
-    st('lancar_revisao', 'Confere a soma e as categorias, toca em Salvar'), st('inicio', 'Sobra do mês atualizada')] },
+    st('lancar_revisao', 'Confere a soma e as categorias, toca em Salvar'), st('inicio', 'Sobra do mês atualizada', null)] },
   { id: 'falar', title: 'Lançar falando', desc: 'Pix e dinheiro antes do extrato chegar.', steps: [
     st('lancar', 'Abre Lançar'), st('lancar_falar', 'Fala "gastei 45 na padaria no pix" e toca em Interpretar'), st('lancar_salvo', 'Confere e salva')] },
   { id: 'nota', title: 'Nota fiscal', desc: 'Uma compra com itens de categorias diferentes.', steps: [
     st('lancar', 'Abre Lançar'), st('lancar_nota', 'Envia a foto; cada item ganha a sua categoria'), st('lancar_salvo', 'Salva a nota')] },
   { id: 'fechar', title: 'Fechar o mês', desc: 'O ritual mensal que faz a família voltar.', steps: [
-    st('inicio', 'Cartão "Hora de fechar o mês"'), st('fechar', 'Confere o que falta, vê a retrospectiva e fecha')] },
+    st('inicio', 'Cartão "Hora de fechar o mês"', null), st('fechar', 'Confere o que falta, vê a retrospectiva e fecha')] },
   { id: 'metas', title: 'Metas e sonho', desc: 'Combinados da família e a projeção.', steps: [
-    st('menu', 'Abre o menu'), st('menu_metas', 'Limite do cartão, quanto guardar, sonho'), st('inicio', 'Selos "Guardaram X% · queriam Y%"'), st('inicio_mais', 'Projeção do sonho em Mais detalhes')] },
+    st('menu', 'Abre o menu'), st('menu_metas', 'Limite do cartão, quanto guardar, sonho'), st('inicio', 'Selos "Guardaram X% · queriam Y%"', null), st('inicio_mais', 'Projeção do sonho em Mais detalhes', null)] },
   { id: 'perguntar', title: 'Perguntar ao assistente', desc: 'Perguntas sobre os números da família.', steps: [
     st('perguntar', 'Escolhe uma sugestão ou escreve'), st('perguntar_resposta', 'Resposta com os números da família')] },
   { id: 'opiniao', title: 'Dar opinião e receber o recado', desc: 'O ciclo com quem testa: manda, a equipe faz, a pessoa é avisada.', steps: [
@@ -84,7 +85,7 @@ export function flowFunnel(steps, features = {}) {
   const usersOf = key => { if (!key) return null; const ks = Array.isArray(key) ? key : [key]; return ks.reduce((m, k) => Math.max(m, features[k]?.users || 0), 0); };
   let prev = null;
   return steps.map(x => {
-    const users = usersOf(SCREENS[x.s]?.key);
+    const users = usersOf('key' in x ? x.key : SCREENS[x.s]?.key);
     const drop = users != null && prev != null && prev > 0 ? Math.round((1 - users / prev) * 100) : null;
     if (users != null) prev = users;
     return { ...x, users, drop };
