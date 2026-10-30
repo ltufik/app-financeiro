@@ -10,6 +10,7 @@ import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
 import { renderMetrics } from '../metrics.js';
 import { renderFeedback, renderDuvidas } from '../feedback.js';
+import { showAllNews, welcomeAlpha } from '../messages.js';
 import { PHOTOS } from '../photos.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
@@ -119,7 +120,7 @@ export function render(el) {
 
   <div class="panel stack" data-sec="ajuda">
     <h2>Ajuda</h2>
-    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Ver o que falta preencher</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button></div>
+    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Ver o que falta preencher</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button><button class="btn" id="hNews" type="button">Ver o que mudou</button><button class="btn" id="hAlpha" type="button">Sobre o teste</button></div>
     <details class="help"><summary>Instalar o app no celular</summary>${installHelpHTML()}</details>
     <h3 style="margin-top:6px">Aparência</h3>
     <div class="seg" role="radiogroup" aria-label="Aparência" id="themeSeg">${[['light', 'Claro'], ['dark', 'Escuro'], ['auto', 'Igual ao celular']].map(([k, l]) => `<button type="button" class="chip" role="radio" data-theme-opt="${k}" aria-pressed="${theme() === k}" aria-checked="${theme() === k}">${l}</button>`).join('')}</div>
@@ -155,6 +156,8 @@ export function render(el) {
   // help
   $('#hTour').onclick = () => S.showTour('app');
   $('#hCoach').onclick = () => S.startCoach(true);
+  $('#hNews').onclick = () => showAllNews();
+  $('#hAlpha').onclick = () => welcomeAlpha({ force: true });
   el.querySelectorAll('[data-theme-opt]').forEach(b => b.onclick = () => {
     const t = b.dataset.themeOpt; try { localStorage.setItem('fin.theme', t); } catch (e) { /* storage blocked */ }
     if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
@@ -175,14 +178,14 @@ export function render(el) {
   $('#gSave').onclick = () => {
     clearInvalid(el);
     const ok = validate([
-      [$('#gCard'), checkNumber($('#gCard').value, { min: 0, max: 1e6, label: 'Cartão por mês', allowEmpty: true })],
-      [$('#gSav'), checkNumber($('#gSav').value, { min: 0, max: 100, label: 'Poupança (%)', allowEmpty: true })],
-      [$('#gSav2'), checkNumber($('#gSav2').value, { min: 0, max: 100, label: 'Poupança sem financiamento (%)', allowEmpty: true })],
+      [$('#gCard'), checkNumber($('#gCard').value, { min: 0, max: 1e6, label: 'Limite da fatura', allowEmpty: true })],
+      [$('#gSav'), checkNumber($('#gSav').value, { min: 0, max: 100, label: 'Guardar da renda (%)', allowEmpty: true })],
+      [$('#gSav2'), checkNumber($('#gSav2').value, { min: 0, max: 100, label: 'Guardar sem contar o financiamento (%)', allowEmpty: true })],
       [$('#gPat'), checkNumber($('#gPat').value, { min: 0, max: 1e9, label: 'Quanto querem ter investido', allowEmpty: true })],
-      [$('#gAge'), checkNumber($('#gAge').value, { min: 0, max: 120, integer: true, label: 'Idade hoje', allowEmpty: true })],
+      [$('#gAge'), checkNumber($('#gAge').value, { min: 0, max: 120, integer: true, label: 'Sua idade hoje', allowEmpty: true })],
       [$('#gAgeGoal'), checkNumber($('#gAgeGoal').value, { min: 1, max: 120, integer: true, label: 'Com que idade querem chegar lá', allowEmpty: true }) || ($('#gAge').value && $('#gAgeGoal').value && +$('#gAgeGoal').value <= +$('#gAge').value ? 'A idade da meta precisa ser maior que a idade de hoje.' : '')],
-      [$('#gRet'), checkNumber($('#gRet').value, { min: -10, max: 30, label: 'Retorno real ao ano (%)', allowEmpty: true })],
-      [$('#gClose'), checkNumber($('#gClose').value, { min: 1, max: 31, integer: true, label: 'Fechamento do cartão', allowEmpty: true })],
+      [$('#gRet'), checkNumber($('#gRet').value, { min: -10, max: 30, label: 'Rendimento acima da inflação (%)', allowEmpty: true })],
+      [$('#gClose'), checkNumber($('#gClose').value, { min: 1, max: 31, integer: true, label: 'Dia em que a fatura fecha', allowEmpty: true })],
     ]);
     if (!ok) return;
     save({ goals: { ...g, cardMonthly: val('gCard'), savings: val('gSav') / 100, savingsNoFin: val('gSav2') / 100, patrimonio: val('gPat'), ageNow: val('gAge') || null, ageGoal: val('gAgeGoal') || null, ret: val('gRet') / 100 }, goalsSet: true, cardCloseDay: Math.min(31, Math.max(1, val('gClose') || 24)) }, 'Metas salvas');

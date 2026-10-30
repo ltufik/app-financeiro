@@ -56,6 +56,7 @@ const rpcs = {
     if (!['erro', 'ideia', 'critica', 'duvida'].includes(p_kind)) throw new Error('bad_kind'); if (String(p_text || '').trim().length < 3) throw new Error('too_short');
     const id = T.feedback.length + 1; T.feedback.push({ id, user_id: session.user.id, household_id: p_household, kind: p_kind, text: p_text, answer: p_answer, screen: p_screen, device: p_device, version: p_version, status: 'novo', helpful: null, created_at: now() }); return id;
   },
+  feedback_reply_seen({ p_id }) { const f = T.feedback.find(x => x.id === p_id && x.user_id === session.user.id); if (f) f.reply_seen = true; return null; },
   feedback_helpful({ p_id, p_helpful }) { const f = T.feedback.find(x => x.id === p_id && x.user_id === session.user.id); if (f) f.helpful = p_helpful; return null; },
   track({ p_features }) { (p_features || []).forEach(f => { if (/^[a-z_]{2,20}(\.[a-z_]{2,20})?$/.test(f)) T.usage.push(f); }); return null; },
   touch_activity() { window.__touches = (window.__touches || 0) + 1; return null; },

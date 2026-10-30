@@ -1,11 +1,14 @@
 // Product console data (/admin): backlog, pricing and product design, for ADMIN_EMAILS only.
 // GET /api/admin?key=backlog  ->  {key, data, updated_at}     PUT /api/admin {key, data}
 // GET /api/admin?view=usage|feedback  ->  usage per person/feature, testers' feedback
-// PATCH /api/admin {feedback: id, status?, note?}
+// PATCH /api/admin {feedback: id, status?, note?, reply?}  (reply: personal message to who sent it, also as a push)
 // Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS.
 import { cleanUrl } from './config.js';
+import { sendPush } from './_webpush.js';
+import { vapidFromEnv } from './push-cron.js';
+import { replyTitle } from '../public/js/lib/news.js';
 
-const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs'];
+const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news'];
 const STATUS = ['novo', 'visto', 'backlog', 'resolvido'];
 const MAX = 400_000;
 
@@ -30,10 +33,30 @@ export default async function handler(req, res) {
       if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'bad_request' });
       if (b.status != null) { if (!STATUS.includes(b.status)) return res.status(400).json({ error: 'bad_status' }); patch.status = b.status; }
       if (b.note != null) patch.note = String(b.note).slice(0, 2000);
+      if (b.reply != null) {
+        const reply = String(b.reply).trim().slice(0, 1000);
+        if (reply.length < 5) return res.status(400).json({ error: 'bad_reply' });
+        Object.assign(patch, { reply, replied_at: new Date().toISOString(), reply_seen: false, status: patch.status || 'resolvido' });
+      }
       if (!Object.keys(patch).length) return res.status(400).json({ error: 'bad_request' });
-      const r = await fetch(`${URL_}/rest/v1/feedback?id=eq.${id}`, { method: 'PATCH', headers: H, body: JSON.stringify(patch) });
+      const r = await fetch(`${URL_}/rest/v1/feedback?id=eq.${id}`, { method: 'PATCH', headers: { ...H, prefer: 'return=representation' }, body: JSON.stringify(patch) });
       if (!r.ok) return res.status(502).json({ error: 'db' });
-      return res.status(200).json({ ok: true });
+      const [row] = await r.json();
+      let pushed = 0;
+      // The person also gets it on the phone, if notifications are on.
+      const vapid = vapidFromEnv();
+      if (patch.reply && row?.user_id && vapid.publicKey && vapid.privateKey) {
+        try {
+          const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); return x.ok ? x.json() : []; };
+          const [m] = await q(`members?user_id=eq.${row.user_id}&select=display_name&limit=1`);
+          const subs = await q(`push_subscriptions?user_id=eq.${row.user_id}&select=endpoint,p256dh,auth`);
+          for (const sub of subs) {
+            const out = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title: replyTitle(row.kind, m?.display_name), body: patch.reply.slice(0, 200), url: '/', tag: 'reply-' + id }, vapid).catch(() => ({ ok: false }));
+            if (out.ok) pushed++;
+          }
+        } catch (e) { /* the in-app message still shows */ }
+      }
+      return res.status(200).json({ ok: true, pushed });
     }
     if (req.method === 'GET') {
       const key = String(req.query?.key || '');

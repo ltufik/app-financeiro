@@ -36,6 +36,7 @@ export const SERVICES = [
   sv('backup', 'Backup', 'Baixar e importar todos os dados', 'Menu → Backup', 'no_ar', 'gratis', 'nao', '—', ['menu.backup']),
   sv('faq', 'Dúvidas', 'Perguntas frequentes; o assistente responde o que não está lá', 'Menu → Dúvidas', 'teste', 'gratis', 'sim', 'IA (rápida)', ['duvida.ler', 'duvida.perguntar']),
   sv('opiniao', 'Dar opinião', 'Erro, ideia ou crítica, falando ou escrevendo', 'Balão no topo; Menu → Dar opinião', 'teste', 'gratis', 'nao', '—', ['opiniao.erro', 'opiniao.ideia', 'opiniao.critica']),
+  sv('msgs', 'Novidades e recados', 'Aviso do teste alpha, "O que mudou" e recado pessoal quando o pedido fica pronto', 'Pop-up ao abrir; menu ☰ → Ajuda', 'teste', 'gratis', 'nao', 'Web Push (recado no celular)', []),
   sv('of', 'Open Finance', 'Dados do banco sem mandar PDF', '—', 'planejado', 'pago', 'nao', 'Agregador (R$ 540 a 6.000 por mês)', []),
 ];
 export const SV_STATUS = { no_ar: 'No ar', teste: 'Em teste', planejado: 'Planejado', pausado: 'Pausado' };
@@ -85,6 +86,8 @@ A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e 
 - No celular, o app novo aparece ao fechar e abrir de novo.` },
   { id: 'rotina', title: 'Rotina da fase de teste', body: `## Toda semana
 - Opiniões: ler as novas, marcar como "Lida", virar item do backlog ou "Resolvida".
+- Algo pedido ficou pronto: mandar o recado para a pessoa (Opiniões → Avisar a pessoa).
+- Publicou uma versão: escrever em Novidades o que mudou, em palavras simples.
 - Dúvidas com "não resolveu": escrever a resposta e publicar nas Dúvidas.
 - Uso: quem não volta há mais de 7 dias; quais partes ninguém usa.
 ## Todo mês

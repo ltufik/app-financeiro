@@ -71,3 +71,5 @@ body.admin{background:var(--paper)}
 .docsec .small table{border-collapse:collapse;width:100%}
 .docsec .small th,.docsec .small td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
 .svt select{width:auto;padding:6px 8px;font-size:13px}
+.replied{color:var(--good);margin:0}
+.rpbox{border-top:1px dashed var(--line);padding-top:10px}

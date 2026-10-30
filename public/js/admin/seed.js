@@ -11,7 +11,7 @@ export const BACKLOG = [
     ['Métricas do produto (funil e retenção)', 'Claude'], ['Início enxuto', 'Claude'], ['Lançar com 4 opções', 'Claude'], ['Orçamento por categoria com aviso', 'Claude'],
     ['Assinaturas e aumentos de preço', 'Claude'], ['Extrato em cartões', 'Claude'], ['Avisos na hora para a família', 'Claude'], ['Modo privacidade', 'Claude'],
     ['Quem paga o quê e acerto do casal', 'Claude'], ['Página Sobre (o que guardamos, créditos)', 'Claude'], ['Pop-ups de confirmação e de resultado', 'Luiz'],
-    ['Central do produto (painel, backlog, preço, desenho)', 'Luiz'], ['Textos mais claros: metas e patrimônio', 'Luiz'], ['Dar opinião (erro, ideia, crítica) por voz ou texto', 'Luiz'], ['Dúvidas com busca e resposta do assistente', 'Luiz'], ['Uso por funcionalidade e mapa de calor', 'Luiz'], ['Documentação e matriz de serviços', 'Luiz'],
+    ['Central do produto (painel, backlog, preço, desenho)', 'Luiz'], ['Textos mais claros: metas e patrimônio', 'Luiz'], ['Dar opinião (erro, ideia, crítica) por voz ou texto', 'Luiz'], ['Dúvidas com busca e resposta do assistente', 'Luiz'], ['Uso por funcionalidade e mapa de calor', 'Luiz'], ['Documentação e matriz de serviços', 'Luiz'], ['Aviso de teste alpha, novidades e recado personalizado', 'Luiz'],
   ].map(([t, o]) => it(t, 'feito', o, 'M')),
   // later (decided)
   it('E-mail próprio (Resend) e religar confirmação de e-mail', 'depois', 'Claude', 'P', 'Limite de e-mails do Supabase; obrigatório antes de abrir ao público'),

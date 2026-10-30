@@ -35,7 +35,7 @@ export function meter(v, goal, max) {
 export function pill(label, v, goal) {
   if (!goal) return `<span class="pill ok">${esc(label)} ${pct(v)}</span>`;
   const c = v >= goal ? 'ok' : v >= goal - 0.05 ? 'at' : 'no';
-  return `<span class="pill ${c}">${esc(label)} ${pct(v)} <span style="font-weight:400">meta ${pct(goal)}</span></span>`;
+  return `<span class="pill ${c}">${esc(label)} ${pct(v)} <span style="font-weight:400">· queriam ${pct(goal)}</span></span>`;
 }
 
 // Category chooser: a chip that turns into a grouped <select>.
@@ -117,6 +117,26 @@ export function confirmInline(anchor, { text, yes = 'Sim, confirmar', no = 'Canc
     wrap.onclick = e => { if (e.target === wrap) done(false); };
     wrap.onkeydown = e => { if (e.key === 'Escape') done(false); };
     wrap.querySelector(danger ? '[data-n]' : '[data-y]').focus();
+  });
+}
+
+// Message pop-up (welcome, what's new, a personal reply). Resolves with 'primary', 'secondary' or 'close'.
+// html is trusted markup built by the caller (escape any user text first).
+export function announce({ eyebrow = '', title, html = '', primary = 'Entendi', secondary = '', tone = 'accent' }) {
+  document.querySelectorAll('.cfm-wrap').forEach(x => x.remove());
+  return new Promise(resolve => {
+    const wrap = document.createElement('div'); wrap.className = 'cfm-wrap';
+    wrap.innerHTML = `<div class="cfm ann ann-${tone}" role="dialog" aria-modal="true" aria-labelledby="annT">
+      <div class="ann-top">${eyebrow ? `<span class="ann-eb">${esc(eyebrow)}</span>` : '<span></span>'}<button type="button" class="tx" aria-label="Fechar">×</button></div>
+      <h3 id="annT">${esc(title)}</h3><div class="small ann-body">${html}</div>
+      <div class="rowbtn"><button class="btn primary" type="button" data-p>${esc(primary)}</button>${secondary ? `<button class="btn" type="button" data-s>${esc(secondary)}</button>` : ''}</div></div>`;
+    document.body.append(wrap); document.body.classList.add('cfm-open');
+    const done = v => { wrap.remove(); document.body.classList.remove('cfm-open'); resolve(v); };
+    wrap.querySelector('[data-p]').onclick = () => done('primary');
+    if (secondary) wrap.querySelector('[data-s]').onclick = () => done('secondary');
+    wrap.querySelector('.tx').onclick = () => done('close');
+    wrap.onkeydown = e => { if (e.key === 'Escape') done('close'); };
+    wrap.querySelector('[data-p]').focus();
   });
 }
 

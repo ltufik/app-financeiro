@@ -624,3 +624,29 @@ revoke all on function public.track(uuid, text[]) from public, anon;
 grant execute on function public.send_feedback(uuid, text, text, text, text, text, text) to authenticated;
 grant execute on function public.feedback_helpful(bigint, boolean) to authenticated;
 grant execute on function public.track(uuid, text[]) to authenticated;
+
+-- Resposta personalizada: quando algo que a pessoa pediu fica pronto, ela recebe um recado com o nome dela.
+alter table public.feedback add column if not exists reply text;
+alter table public.feedback add column if not exists replied_at timestamptz;
+alter table public.feedback add column if not exists reply_seen boolean not null default false;
+
+create or replace function public.feedback_reply_seen(p_id bigint)
+returns void language sql security definer set search_path = public as $$
+  update feedback set reply_seen = true where id = p_id and user_id = auth.uid();
+$$;
+revoke all on function public.feedback_reply_seen(bigint) from public, anon;
+grant execute on function public.feedback_reply_seen(bigint) to authenticated;
+
+create or replace function public.product_feedback()
+returns jsonb language sql security definer set search_path = public, auth as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', f.id, 'kind', f.kind, 'text', f.text, 'answer', f.answer, 'helpful', f.helpful, 'screen', f.screen, 'device', f.device,
+    'version', f.version, 'status', f.status, 'note', f.note, 'created_at', f.created_at,
+    'reply', f.reply, 'replied_at', f.replied_at, 'reply_seen', f.reply_seen,
+    'name', (select m.display_name from members m where m.user_id = f.user_id order by m.created_at limit 1),
+    'email', (select u.email from auth.users u where u.id = f.user_id),
+    'family', (select h.name from households h where h.id = f.household_id)) order by f.created_at desc), '[]'::jsonb)
+  from (select * from feedback order by created_at desc limit 1000) f;
+$$;
+revoke all on function public.product_feedback() from public, anon, authenticated;
+grant execute on function public.product_feedback() to service_role;

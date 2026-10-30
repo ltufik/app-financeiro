@@ -37,7 +37,7 @@ export function render(el) {
   <div class="panel hero">
     <p class="muted small">Sobra ${yr ? 'em ' + S.m.slice(4) + ' até agora' : 'em ' + mLong(S.m)}</p>
     <div class="big num" style="color:${a.res < 0 ? 'var(--bad)' : 'var(--ink)'}">${brl(a.res)}</div>
-    <div class="chips" style="margin-top:10px">${pill('Poupança', a.tx, G.savings)}${fin ? pill('Sem o financiamento', a.tx2, G.savingsNoFin) : ''}${nMan ? `<span class="pill at">inclui ${nMan} lançamento${nMan > 1 ? 's' : ''} manual${nMan > 1 ? 'is' : ''}</span>` : ''}</div>
+    <div class="chips" style="margin-top:10px">${pill('Guardaram', a.tx, G.savings)}${fin ? pill('Sem contar o financiamento', a.tx2, G.savingsNoFin) : ''}${nMan ? `<span class="pill at">inclui ${nMan} lançamento${nMan > 1 ? 's' : ''} manual${nMan > 1 ? 'is' : ''}</span>` : ''}</div>
     <div class="row" style="margin-top:14px">${[['Receitas', a.E], ['Despesas', a.out], ['Extras (fora da sobra)', a.EX - a.DX]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
   </div>
   <div id="closeCard"></div>
@@ -71,7 +71,7 @@ export function render(el) {
     <div class="stack">
       <div class="panel">
         <h3>Quanto guardaram, mês a mês</h3>
-        <p class="muted small">Quanto da renda sobrou em cada mês. A linha tracejada é a meta de vocês.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
+        <p class="muted small">Quanto da renda sobrou em cada mês. A linha tracejada é quanto vocês combinaram guardar.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
         <svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg>
       </div>
       <div class="grid2">

@@ -35,10 +35,11 @@ async function addRoutes(t) {
     const u = new URL(r.request().url());
     if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
     if (u.pathname === '/api/metrics') return r.fulfill({ json: u.searchParams.get('probe') ? { admin: true } : { users: 12, users_7d: 3, users_30d: 12, in_family: 11, families: 6, families_shared: 4, families_1_month: 5, families_2_months: 3, families_closed: 2, d7_eligible: 8, d7_retained: 5, d30_eligible: 2, d30_retained: 1, wau: 7, mau: 10, daily: Array.from({ length: 14 }, (_, i) => ({ day: '2026-10-' + String(17 + i).padStart(2, '0'), users: i % 5 })), manual_30d: 40, receipts_30d: 6, imports_30d: 15, studies: 4, charts: 3, push_devices: 5, at: '2026-10-30T12:00:00Z' } });
+    if (u.pathname === '/api/news') return r.fulfill({ json: { items: adminStore.news?.items || null } });
     if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
-    if (u.pathname === '/api/admin' && r.request().method() === 'PATCH') { const b = JSON.parse(r.request().postData()); adminPatches.push(b); const f = FB_FIXTURE.find(x => x.id === b.feedback); if (f && b.status) f.status = b.status; return r.fulfill({ json: { ok: true } }); }
+    if (u.pathname === '/api/admin' && r.request().method() === 'PATCH') { const b = JSON.parse(r.request().postData()); adminPatches.push(b); const f = FB_FIXTURE.find(x => x.id === b.feedback); if (f && b.status) f.status = b.status; if (f && b.reply) Object.assign(f, { reply: b.reply, replied_at: '2026-10-30T15:00:00Z', reply_seen: false, status: 'resolvido' }); return r.fulfill({ json: { ok: true, pushed: b.reply ? 1 : 0 } }); }
     if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); adminStore[b.key] = b.data; adminPuts.push(b.key); return r.fulfill({ json: { ok: true } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
     if (u.pathname === '/api/notify') { notifies.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { sent: 1 } }); }
     if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
@@ -55,6 +56,7 @@ async function addRoutes(t) {
   await t.route('https://images.pexels.com/**', r => r.fulfill({ body: fs.readFileSync(path.join(ROOT, 'icons/icon-192.png')), contentType: 'image/png' }));
 }
 await addRoutes(page);
+await page.addInitScript(() => { window.__noMsgs = true; });
 // Fake speech recognition that behaves like Android Chrome: each session ends at the first pause.
 await page.addInitScript(() => {
   const words = ['gastei 45', 'na padaria', 'no pix'];
@@ -218,7 +220,7 @@ if (backup) {
   const hero = await txt('#v-resumo .big');
   ok('setembro: sobra R$ 2.658,50', hero.includes('2.658,50'), hero);
   const pills = await txt('#v-resumo .hero .chips');
-  ok('setembro: 6% e 18%', pills.includes('Poupança 6%') && pills.includes('Sem o financiamento 18%'), pills);
+  ok('setembro: 6% e 18%', pills.includes('Guardaram 6% · queriam 20%') && pills.includes('Sem contar o financiamento 18%'), pills);
   ok('próxima fatura com parcelas', (await txt('#v-resumo')).includes('Parcelas R$ 8.401'));
   ok('meta e patrimônio aparecem', (await txt('#v-resumo')).includes('Sonho: R$ 3.000.000 investidos aos 55 anos'));
   await shot('03-resumo-setembro');
@@ -410,7 +412,7 @@ if (nrows) {
 await shot('07-extrato');
 await sec('metas');
 await page.fill('#gSav', '150'); await page.click('#gSave');
-ok('meta de poupança acima de 100% é recusada', (await txt('#v-ajustes')).includes('Poupança (%): o máximo é 100'));
+ok('meta de poupança acima de 100% é recusada', (await txt('#v-ajustes')).includes('Guardar da renda (%): o máximo é 100'));
 await page.fill('#gSav', '20');
 await page.fill('#gAge', '50'); await page.fill('#gAgeGoal', '45'); await page.click('#gSave');
 ok('idade da meta menor que a atual é recusada', (await txt('#v-ajustes')).includes('precisa ser maior'));
@@ -513,6 +515,31 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   const nBl = adminStore.backlog.items.length;
   await ap.click('.fbcard [data-bl]'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
   ok('central: opinião vira item do backlog', adminStore.backlog.items.length === nBl + 1 && adminStore.backlog.items[0].origin === 'Erro de Testador Um' && adminPatches.some(x => x.feedback === 1 && x.status === 'backlog'));
+  await ap.click('[data-k=""]'); await ap.click('[data-s=""]'); await ap.waitForSelector('.fbcard [data-rp]');
+  await ap.click('.fbcard[data-id="3"] [data-rp]');
+  ok('central: recado já vem com o nome e o que a pessoa pediu', (await ap.inputValue('.fbcard[data-id="3"] [data-rptext]')).startsWith('Oi, Testador! Você sugeriu "Ver gasto por semana". Já está no app: '));
+  ok('central: mostra o título que a pessoa vai ver', (await ap.textContent('.fbcard[data-id="3"] .rpbox')).includes('Testador, a sua ideia virou realidade!'));
+  await ap.fill('.fbcard[data-id="3"] [data-rptext]', 'curto'); await ap.click('.fbcard[data-id="3"] [data-rpsend]');
+  ok('central: recado curto demais é recusado', !adminPatches.some(x => x.reply));
+  await ap.fill('.fbcard[data-id="3"] [data-rptext]', 'Oi, Testador! Já está no app: em Gráficos, escolha "por semana".'); await ap.click('.fbcard[data-id="3"] [data-rpsend]'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]');
+  await ap.waitForSelector('.fbcard[data-id="3"] .replied');
+  ok('central: recado enviado e marcado como resolvido', adminPatches.some(x => x.feedback === 3 && x.reply.includes('por semana')) && (await ap.textContent('.fbcard[data-id="3"] .replied')).includes('ainda não viu'));
+  await ap.click('[data-t="backlog"]'); await ap.waitForSelector('[data-v="lista"]'); await ap.click('[data-v="lista"]'); await ap.waitForSelector('.blist');
+  const fromOp = adminStore.backlog.items.find(i => /Opinião #1/.test(i.notes)).id;
+  await ap.selectOption(`[data-st="${fromOp}"]`, 'feito'); await ap.waitForSelector('.cfm');
+  ok('central: ao concluir uma ideia vinda de opinião, sugere avisar a pessoa', (await ap.textContent('.cfm')).includes('Avisar quem pediu?'));
+  await ap.click('.cfm [data-y]'); await ap.waitForSelector('.fbcard[data-id="1"] .rpbox:not([hidden])');
+  ok('central: abre o recado da opinião certa', (await ap.inputValue('.fbcard[data-id="1"] [data-rptext]')).includes('Toquei em salvar a nota'));
+  await ap.click('[data-t="novidades"]'); await ap.waitForSelector('#nwAdd');
+  ok('central: novidades começam com a desta versão', (await ap.textContent('#aMain')).includes('Sua opinião agora tem lugar no app'));
+  await ap.click('#nwAdd'); await ap.click('#nwPub');
+  ok('central: novidade sem título é recusada', (await ap.getAttribute('#nwTitle', 'aria-invalid')) === 'true');
+  await ap.fill('#nwTitle', 'Gasto por semana nos gráficos'); await ap.fill('#nwItems', '- Em Gráficos, escolha "por semana"\nNova cor para o cartão');
+  ok('central: prévia com o nome da pessoa', (await ap.textContent('#nwPrev')).includes('Luana, olha o que tem de novo') && (await ap.textContent('#nwPrev')).includes('Nova cor para o cartão'));
+  await ap.click('#nwPub'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
+  ok('central: novidade publicada', adminStore.news?.items?.[0]?.title === 'Gasto por semana nos gráficos' && adminStore.news.items[0].items.length === 2 && adminStore.news.items.length === 2);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-9-novidades.png'), fullPage: true });
+  await ap.click('[data-t="opinioes"]'); await ap.waitForSelector('.fbcard');
   await ap.click('[data-k="duvida"]'); await ap.waitForSelector('.fbcard [data-faq]');
   ok('central: dúvida mostra que não resolveu', (await ap.textContent('.fbcard')).includes('Não resolveu'));
   await ap.click('.fbcard [data-faq]'); await ap.waitForSelector('#fqItems');
@@ -549,7 +576,7 @@ await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver 
 await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
 const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
-ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v26', JSON.stringify(fbRow));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v27', JSON.stringify(fbRow));
 ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
 await shot('11-opiniao');
 await sec('duvidas'); await page.waitForSelector('#fqList details');
@@ -566,6 +593,30 @@ ok('dúvida vai para a equipe com a resposta e "não resolveu"', dq.kind === 'du
 await shot('12-duvidas');
 await page.waitForFunction(() => window.__db.usage.includes('opiniao.ideia'), null, { timeout: 15000 }).catch(() => {});
 const used = await page.evaluate(() => window.__db.usage);
+{ // Tester messages: alpha welcome once, then a personal reply and what's new, with the person's name.
+  await page.evaluate(() => { const f = window.__db.feedback.find(x => x.kind === 'ideia'); Object.assign(f, { reply: 'Já está no app: em Gráficos, escolha "por semana".', reply_seen: false, status: 'resolvido' }); localStorage.setItem('mock.db', JSON.stringify(window.__db)); });
+  const mctx = await browser.newContext({ viewport: { width: 400, height: 860 }, storageState: await page.context().storageState() });
+  const mp = await mctx.newPage(); await addRoutes(mp);
+  const seeAnn = async () => { for (let i = 0; i < 40; i++) { if (await mp.$('.ann')) return true; if (await mp.$('.coach')) await mp.click('#coachSkip').catch(() => {}); await mp.waitForTimeout(250); } return false; };
+  await mp.goto('https://app.test/');
+  ok('aviso de teste alpha aparece com o nome', await seeAnn() && (await mp.textContent('.ann')).includes('Oi, Luiz! Que bom ter você aqui') && (await mp.textContent('.ann')).includes('família e amigos'));
+  if (shots) await mp.screenshot({ path: path.join(shots, '13-alpha.png') });
+  await mp.click('.ann [data-p]'); await mp.waitForTimeout(400);
+  const after1 = await mp.$('.ann') ? await mp.textContent('.ann') : '';
+  ok('depois do aviso vem o recado personalizado', after1.includes('Luiz, a sua ideia virou realidade!') && after1.includes('Queria ver quanto gastei por semana'), after1.slice(0, 120));
+  if (shots) await mp.screenshot({ path: path.join(shots, '14-recado.png') });
+  await mp.click('.ann [data-p]'); await mp.waitForTimeout(400);
+  ok('novidades antigas não aparecem junto com o aviso de boas-vindas', !(await mp.$('.ann')));
+  ok('recado marcado como visto', await mp.evaluate(() => JSON.parse(localStorage.getItem('mock.db')).feedback.find(x => x.kind === 'ideia').reply_seen === true));
+  await mp.reload(); await mp.waitForTimeout(2500);
+  ok('aviso alpha e recado não se repetem', !(await mp.$('.ann')) || !(await mp.textContent('.ann')).includes('Que bom ter você'));
+  adminStore.news.items.unshift({ id: 'n2', at: new Date().toISOString(), title: 'Nova tela de metas', items: ['Ficou mais fácil'] });
+  await mp.reload(); ok('novidade nova aparece com o nome', await seeAnn() && (await mp.textContent('.ann')).includes('Luiz, olha o que tem de novo') && (await mp.textContent('.ann')).includes('Nova tela de metas'));
+  if (shots) await mp.screenshot({ path: path.join(shots, '15-novidades.png') });
+  await mp.click('.ann [data-p]'); await mp.reload(); await mp.waitForTimeout(2500);
+  ok('novidade não se repete', !(await mp.$('.ann')));
+  await mctx.close();
+}
 ok('uso registrado só com nomes das partes', used.includes('menu.opiniao') && used.includes('opiniao.ideia') && used.every(f => /^[a-z_]{2,20}(\.[a-z_]{2,20})?$/.test(f)), used.slice(0, 12).join(','));
 // notifications
 await sec('avisos');

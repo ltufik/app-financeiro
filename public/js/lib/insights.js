@@ -69,10 +69,10 @@ export function insights(ctx) {
     out.push({ id: 'red', tone: 'bad', title: `${name[0].toUpperCase() + name.slice(1)} fechou no vermelho`, text: `Saiu ${R(c.res)} a mais do que entrou. Os maiores gastos foram ${top}. Vale olhar onde dá para cortar.`, action: { label: 'Perguntar onde cortar', go: ['perguntar', '#askText'] } });
   } else if (c.renda > 0 && ctx.goals.savings && c.tx >= ctx.goals.savings) {
     const eta = ctx.goals.patrimonio && ctx.etaYears ? ctx.etaYears(c.res) : null;
-    out.push({ id: 'saved', tone: 'good', title: 'Parabéns, vocês economizaram bem!', text: `Em ${name} guardaram ${P(c.tx)} da renda (meta: ${P(ctx.goals.savings)}).` + (eta != null ? ` Guardando ${R(c.res)} por mês, a meta de ${R(ctx.goals.patrimonio)} chega em ${eta <= 1 ? 'cerca de 1 ano' : 'cerca de ' + Math.round(eta) + ' anos'}.` : ' Nesse ritmo, as metas chegam mais rápido.') });
+    out.push({ id: 'saved', tone: 'good', title: 'Parabéns, vocês economizaram bem!', text: `Em ${name} guardaram ${P(c.tx)} da renda (queriam ${P(ctx.goals.savings)}).` + (eta != null ? ` Guardando ${R(c.res)} por mês, o sonho de ${R(ctx.goals.patrimonio)} investidos chega em ${eta <= 1 ? 'cerca de 1 ano' : 'cerca de ' + Math.round(eta) + ' anos'}.` : ' Nesse ritmo, o sonho de vocês chega mais rápido.') });
   } else if (c.renda > 0 && ctx.goals.savings && c.tx < ctx.goals.savings) {
     const gap = ctx.goals.savings * c.renda - c.res;
-    out.push({ id: 'below', tone: 'warn', title: 'A sobra ficou abaixo da meta', text: `Em ${name} guardaram ${P(c.tx)} da renda; a meta é ${P(ctx.goals.savings)}. Faltaram ${R(gap)}.` });
+    out.push({ id: 'below', tone: 'warn', title: 'Guardaram menos do que queriam', text: `Em ${name} guardaram ${P(c.tx)} da renda; o combinado era ${P(ctx.goals.savings)}. Faltaram ${R(gap)}.` });
   }
 
   // 3. Spending above the recent average, and which categories pushed it

@@ -185,3 +185,20 @@ select jsonb_array_length(public.product_feedback()) as nfb \gset
 select public.product_usage(30)->'features'->'lancar.voz'->>'n' as un \gset
 \echo central lê opiniões: :nfb e uso de voz: :un
 reset role;
+
+-- Resposta personalizada: o servidor responde, só a dona da opinião marca como vista
+set role service_role;
+update feedback set reply = 'Fizemos o que você pediu!', replied_at = now(), status = 'resolvido' where id = :fb1;
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select public.feedback_reply_seen(:fb1);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select reply_seen as rs_before from feedback where id = :fb1 \gset
+\echo resposta vista por outra pessoa não conta: :rs_before
+select reply as myreply from feedback where id = :fb1 \gset
+\echo B lê a resposta da sua opinião: :myreply
+select public.feedback_reply_seen(:fb1);
+select reply_seen as rs_after from feedback where id = :fb1 \gset
+\echo B marcou como vista: :rs_after
+reset role;

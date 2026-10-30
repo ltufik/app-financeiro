@@ -3,7 +3,7 @@
 import * as db from './db.js';
 import { S } from './state.js';
 
-export const APP_VERSION = 'v26';
+export const APP_VERSION = 'v27';
 let buf = [], timer = null;
 const OK = /^[a-z_]{2,20}(\.[a-z_]{2,20})?$/;
 

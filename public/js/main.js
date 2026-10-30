@@ -18,6 +18,7 @@ import { checkAdmin, touchActivity } from './metrics.js';
 import { initPrivacy } from './privacy.js';
 import { track } from './usage.js';
 import { TEST_PHASE } from './feedback.js';
+import { showMessages } from './messages.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
@@ -34,6 +35,8 @@ function showSignedOut() {
   if (shouldAskInstall()) setTimeout(() => { if (!$('#welcome').hidden) askInstall(); }, 1200);
 }
 // After entering the app in the browser: one more invitation to install (iPhone keeps a separate login).
+// Messages for testers (welcome, replies, what's new) come first; then the invitation to install.
+const afterIntro = () => showMessages().then(() => setTimeout(maybeAskInstall, 600));
 const maybeAskInstall = () => { if (shouldAskInstall()) askInstall({ note: isIOS() ? 'Depois de instalar, abra pelo ícone e entre com o mesmo e-mail e senha.' : '' }); };
 $('#wHero').innerHTML = photo('lost', { w: 1100, ratio: '3 / 2', fallback: 'hero', cls: 'land-photo' });
 $('#wSignup').onclick = () => { show('auth'); setMode('signup'); $('#aName').focus(); };
@@ -134,11 +137,11 @@ function markTour() { lsSet('fin.tour.' + S.user.id, '1'); saveFlag({ tour_done:
 S.startCoach = (force = false, after) => startCoach({
   user: S.user, force, go: t => { if (S.tab !== t) setTab(t); },
   onNever: () => saveFlag({ coach_done: true }),
-  onEnd: () => { if (after) after(); else setTimeout(maybeAskInstall, 600); },
+  onEnd: () => { if (after) after(); else afterIntro(); },
 });
 S.showTour = () => openTour(S.txs.length
     ? { finalTitle: 'Tudo pronto', finalText: 'Os primeiros passos ficam no Resumo. Você pode rever esta apresentação no menu ☰, em Ajuda.', finalLabel: 'Ver meu resumo', onClose: () => { markTour(); S.startCoach(); } }
-    : { finalTitle: 'Primeiro passo: a fatura do cartão', finalText: 'Baixe o PDF da última fatura no app do banco e envie aqui. Em poucos segundos você vê para onde foi o dinheiro.', finalLabel: 'Enviar minha fatura', onClose: done => { markTour(); S.startCoach(false, () => { if (done) S.go('lancar', '#drop'); else setTimeout(maybeAskInstall, 600); }); } });
+    : { finalTitle: 'Primeiro passo: a fatura do cartão', finalText: 'Baixe o PDF da última fatura no app do banco e envie aqui. Em poucos segundos você vê para onde foi o dinheiro.', finalLabel: 'Enviar minha fatura', onClose: done => { markTour(); S.startCoach(false, () => { if (done) showMessages().then(() => S.go('lancar', '#drop')); else afterIntro(); }); } });
 S.render = () => {
   reindex(); renderMonthSel();
   const v = VIEWS[S.tab]; v.render($('#v-' + S.tab));
@@ -194,7 +197,7 @@ async function doStart() {
   setTab(VIEWS[want] ? want : VIEWS[t] ? t : 'resumo');
   if (!tourDone()) S.showTour();
   else if (shouldCoach(S.user)) setTimeout(() => S.startCoach(), 700);
-  else { setTimeout(maybeAskInstall, 1500); }
+  else { setTimeout(afterIntro, 900); }
   if (tourDone() && S.justSignedIn) toast(`Que bom ter você de volta, ${displayName().split(" ")[0]}!`);
   S.justSignedIn = false;
 }

@@ -10,6 +10,7 @@ export const COACH_STEPS = [
   { sel: '.tab[data-tab="graficos"]', title: 'Gráficos', text: 'Monte gráficos do seu jeito: pizza, linha ou barra, com o período e as categorias que quiser.' },
   { sel: '.tab[data-tab="perguntar"]', title: 'Perguntar', text: 'Pergunte em português: "quanto gastei com mercado?", "quando chego na meta?".' },
   { sel: '.tab[data-tab="extrato"]', title: 'Extrato', text: 'Todos os lançamentos. Toque na categoria para corrigir: o app aprende para as próximas vezes.' },
+  { sel: '#fbBtn', title: 'Sua opinião', text: 'Viu um erro, algo confuso ou teve uma ideia? Toque aqui, fale e envie. O app está em teste e é a sua opinião que guia as mudanças.' },
   { sel: '#menuBtn', title: 'Menu', text: 'Família e convites, metas, patrimônio, categorias, backup e a sua conta ficam aqui.' },
 ];
 

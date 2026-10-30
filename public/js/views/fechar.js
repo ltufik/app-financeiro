@@ -61,7 +61,7 @@ export function render(el) {
 
   <section class="panel stack retro">
     <h3>Retrospectiva de ${mLong(m)}</h3>
-    <div class="retro-big ${r.res < 0 ? 'neg' : ''}"><span class="tiny">Sobra</span><span class="num">${brl(r.res)}</span><span class="small">${r.renda ? `${pct(r.tx)} da renda${r.meta ? ` · meta ${pct(r.meta)}` : ''}` : ''}</span></div>
+    <div class="retro-big ${r.res < 0 ? 'neg' : ''}"><span class="tiny">Sobra</span><span class="num">${brl(r.res)}</span><span class="small">${r.renda ? `${pct(r.tx)} da renda${r.meta ? ` · queriam ${pct(r.meta)}` : ''}` : ''}</span></div>
     <p class="small">${retroText(r)}</p>
     <div class="row">${[['Receitas', r.receitas], ['Despesas', r.despesas], ['Extras', r.extras]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
     ${r.top.length ? `<h4 class="small" style="margin:6px 0 0">Para onde mais foi</h4><ul class="list small">${r.top.map(t => `<li><span>${esc(t.name)}</span><span class="amt">${brl0(t.value)} <span class="tiny muted">${pct(t.share)}</span></span></li>`).join('')}</ul>` : ''}
@@ -113,7 +113,7 @@ export function render(el) {
     const by = (S.user?.user_metadata?.display_name || '').split(' ')[0];
     await save({ closed: { ...(settings().closed || {}), [m]: { at: todayISO(), by, res: round2(r.res), tx: Math.round(r.tx * 1000) / 1000 } } });
     notifyFamily('closed', { month: m });
-    track('fechar.mes'); toast(r.hitGoal ? 'Mês fechado. Parabéns pela meta!' : 'Mês fechado'); S.closeMonth = m; S.render();
+    track('fechar.mes'); toast(r.hitGoal ? 'Mês fechado. Vocês guardaram o que queriam!' : 'Mês fechado'); S.closeMonth = m; S.render();
   };
   const reopen = $('#clReopen');
   if (reopen) reopen.onclick = async e => {
@@ -125,8 +125,8 @@ export function render(el) {
 function retroText(r) {
   const parts = [];
   if (r.res < 0) parts.push('O mês fechou no vermelho: saiu mais do que entrou.');
-  else if (r.hitGoal) parts.push('Vocês bateram a meta de poupança. Parabéns!');
-  else if (r.meta && r.renda) parts.push(`Ficou ${pct(r.meta - r.tx)} abaixo da meta de poupança.`);
+  else if (r.hitGoal) parts.push('Vocês guardaram o que queriam. Parabéns!');
+  else if (r.meta && r.renda) parts.push(`Guardaram ${pct(r.meta - r.tx)} a menos do que queriam.`);
   if (r.vsAvg != null && Math.abs(r.vsAvg) > 100) parts.push(r.vsAvg > 0 ? `As despesas ficaram ${brl0(r.vsAvg)} acima da média dos meses anteriores.` : `As despesas ficaram ${brl0(-r.vsAvg)} abaixo da média dos meses anteriores.`);
   if (r.top[0]) parts.push(`${r.top[0].name} foi o maior gasto (${pct(r.top[0].share)} das despesas).`);
   return esc(parts.join(' '));

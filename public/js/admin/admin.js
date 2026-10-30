@@ -8,12 +8,13 @@ import { renderMetrics } from '../metrics.js';
 import { BACKLOG, BENCH, PRICING, CANVAS } from './seed.js';
 import { pricingCalc } from '../lib/pricing.js';
 import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
+import { NEWS, replyTemplate, replyTitle } from '../lib/news.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
-const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null };
-const TABS = ['painel', 'opinioes', 'uso', 'duvidas', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null };
+const TABS = ['painel', 'opinioes', 'uso', 'duvidas', 'novidades', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
 let FB = null, USE = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -35,7 +36,8 @@ async function save(key, msg) {
   if (!token) { $('#aMain').innerHTML = '<div class="panel stack"><h2>Entre primeiro</h2><p class="small">Abra o app, entre com o seu e-mail e senha e volte para esta página.</p><div><a class="btn primary" href="/">Abrir o app</a></div></div>'; return; }
   $('#aWho').textContent = data.session.user.email;
   try {
-    const [b, p, c, f, sv, dc] = await Promise.all(['backlog', 'pricing', 'canvas', 'faq', 'services', 'docs'].map(k => api('GET', k)));
+    const [b, p, c, f, sv, dc, nw] = await Promise.all(['backlog', 'pricing', 'canvas', 'faq', 'services', 'docs', 'news'].map(k => api('GET', k)));
+    D.news = nw.data || { items: JSON.parse(JSON.stringify(NEWS)) };
     D.backlog = b.data || { items: BACKLOG }; D.pricing = p.data || { ...PRICING }; D.canvas = c.data || JSON.parse(JSON.stringify(CANVAS));
     D.faq = f.data || { items: JSON.parse(JSON.stringify(FAQ)) }; D.services = sv.data || { items: JSON.parse(JSON.stringify(SERVICES)) }; D.docs = dc.data || { items: JSON.parse(JSON.stringify(DOCS)) };
   } catch (e) {
@@ -51,7 +53,7 @@ async function save(key, msg) {
 function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
-  ({ painel, opinioes, uso, duvidas, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, duvidas, novidades, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   window.scrollTo(0, 0);
 }
 
@@ -91,7 +93,14 @@ function backlog(el) {
     : `<div class="kanban">${['agora', 'proximo', 'ideia', 'depois', 'feito'].map(s => `<section class="kcol"><h3>${STATUS[s]} <span class="tiny muted">${items.filter(i => i.status === s).length}</span></h3>${items.filter(i => i.status === s).map(cardHTML).join('')}</section>`).join('')}</div>`}`;
   el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; backlog(el); });
   el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; backlog(el); });
-  el.querySelectorAll('[data-st]').forEach(s => s.onchange = async () => { const i = items.find(x => x.id === s.dataset.st); i.status = s.value; await save('backlog', `"${i.title}" foi para ${STATUS[i.status]}.`); backlog(el); });
+  el.querySelectorAll('[data-st]').forEach(s => s.onchange = async e => {
+    const i = items.find(x => x.id === s.dataset.st); i.status = s.value; await save('backlog', `"${i.title}" foi para ${STATUS[i.status]}.`);
+    const from = /Opinião #(\d+)/.exec(i.notes || '');
+    if (i.status === 'feito' && from && await confirmInline(e.target, { title: 'Avisar quem pediu?', text: 'Esta ideia veio de uma opinião. Quer mandar um recado para a pessoa dizendo que ficou pronto?', yes: 'Sim, escrever o recado', no: 'Agora não' })) {
+      replyOpen = +from[1]; fbKind = ''; fbStatus = ''; return go('opinioes');
+    }
+    backlog(el);
+  });
   el.querySelectorAll('[data-ef]').forEach(s => s.onchange = async () => { items.find(x => x.id === s.dataset.ef).effort = s.value; await save('backlog'); });
   el.querySelectorAll('[data-del]').forEach(b => b.onclick = async e => {
     const i = items.find(x => x.id === b.dataset.del);
@@ -206,7 +215,7 @@ const fail = (el, title) => { el.innerHTML = `<div class="ahead"><h1>${title}</h
 // ---------- Opiniões ----------
 const FB_KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
 const FB_STATUS = { novo: 'Nova', visto: 'Lida', backlog: 'No backlog', resolvido: 'Resolvida' };
-let fbKind = '', fbStatus = 'aberto';
+let fbKind = '', fbStatus = 'aberto', replyOpen = null;
 async function opinioes(el) {
   el.innerHTML = '<div class="ahead"><h1>Opiniões</h1></div><p class="small muted">Carregando...</p>';
   let list; try { list = await loadFb(true); } catch (e) { return fail(el, 'Opiniões'); }
@@ -220,7 +229,12 @@ async function opinioes(el) {
       ${f.kind === 'duvida' ? `<div class="tiny muted" style="border-left:3px solid var(--line);padding-left:10px">${f.answer ? 'Resposta do assistente: ' + esc(f.answer) : 'Sem resposta do assistente.'}<br><strong>${f.helpful === true ? 'Resolveu' : f.helpful === false ? 'Não resolveu' : 'Não respondeu se resolveu'}</strong></div>` : ''}
       <div class="fbact"><select data-st aria-label="Situação">${Object.entries(FB_STATUS).map(([k, l]) => `<option value="${k}"${k === f.status ? ' selected' : ''}>${l}</option>`).join('')}</select>
         <input type="text" data-note placeholder="Nota interna (só você vê)" value="${esc(f.note || '')}" maxlength="2000">
-        ${f.kind === 'duvida' ? '<button class="chip" type="button" data-faq>Responder nas Dúvidas</button>' : `<button class="chip" type="button" data-bl${f.status === 'backlog' ? ' disabled' : ''}>Virar item do backlog</button>`}</div>
+        ${f.kind === 'duvida' ? '<button class="chip" type="button" data-faq>Responder nas Dúvidas</button>' : `<button class="chip" type="button" data-bl${f.status === 'backlog' ? ' disabled' : ''}>Virar item do backlog</button>`}
+        <button class="chip" type="button" data-rp>${f.reply ? 'Mandar outro recado' : 'Avisar a pessoa'}</button></div>
+      ${f.reply ? `<p class="tiny replied">Recado enviado em ${dt(f.replied_at)} · ${f.reply_seen ? 'a pessoa já viu' : 'ainda não viu'}: "${esc(f.reply)}"</p>` : ''}
+      <div class="rpbox stack" hidden><p class="tiny muted">A pessoa vê este recado ao abrir o app, com o título "${esc(replyTitle(f.kind, f.name))}", e recebe no celular se tiver os avisos ligados.</p>
+        <textarea data-rptext maxlength="1000" aria-label="Recado para ${who(f)}" style="min-height:80px"></textarea>
+        <div class="rowbtn"><button class="btn primary" type="button" data-rpsend>Enviar recado</button><button class="btn" type="button" data-rpcancel>Cancelar</button></div></div>
     </article>`).join('') || '<p class="small muted">Nada aqui.</p>'}</div>`;
   el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { fbKind = b.dataset.k; opinioes(el); });
   el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { fbStatus = b.dataset.s; opinioes(el); });
@@ -239,6 +253,23 @@ async function opinioes(el) {
     };
     const fq = card.querySelector('[data-faq]');
     if (fq) fq.onclick = () => { faqDraft = { q: f.text, a: f.answer || '', from: f.id }; go('duvidas'); };
+    const box = card.querySelector('.rpbox'), ta = card.querySelector('[data-rptext]');
+    const openReply = () => { box.hidden = false; if (!ta.value) ta.value = replyTemplate(f.kind, f.name, f.text); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); };
+    card.querySelector('[data-rp]').onclick = openReply;
+    card.querySelector('[data-rpcancel]').onclick = () => { box.hidden = true; };
+    card.querySelector('[data-rpsend]').onclick = async e => {
+      clearInvalid(card);
+      const t = ta.value.trim(); if (t.length < 20) return invalid(ta, 'Escreva o recado: o que foi feito e onde a pessoa encontra.');
+      if (!await confirmInline(e.target, { text: `Enviar este recado para ${who(f)}?`, yes: 'Sim, enviar' })) return;
+      try {
+        const r = await fetch('/api/admin', { method: 'PATCH', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ feedback: f.id, reply: t }) });
+        if (!r.ok) throw new Error(String(r.status)); const j = await r.json();
+        Object.assign(f, { reply: t, replied_at: new Date().toISOString(), reply_seen: false, status: 'resolvido' });
+        toast(j.pushed ? `Recado enviado e notificação entregue no celular de ${f.name || 'quem mandou'}.` : `Recado enviado. ${f.name || 'A pessoa'} vê ao abrir o app.`);
+        opinioes(el);
+      } catch (x) { toast('Não foi possível enviar o recado. Tente de novo.'); }
+    };
+    if (replyOpen === f.id) { replyOpen = null; openReply(); card.scrollIntoView({ block: 'center' }); }
   });
 }
 
@@ -345,5 +376,43 @@ function docs(el) {
   $('#dcDel').onclick = async e => {
     if (!await confirmInline(e.target, { text: `Apagar a seção "${esc(items[docEdit].title)}"?`, yes: 'Sim, apagar', danger: true })) return;
     items.splice(docEdit, 1); docEdit = null; await save('docs', 'Seção apagada.'); docs(el);
+  };
+}
+
+// ---------- Novidades ("O que mudou") ----------
+let newsEdit = null;
+function novidades(el) {
+  const items = D.news.items.slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at)); D.news.items = items;
+  el.innerHTML = `<div class="ahead"><h1>Novidades</h1><button class="btn primary" type="button" id="nwAdd">Nova novidade</button></div>
+    <p class="small muted">Cada novidade aparece uma vez para quem já usava o app, num pop-up com o nome da pessoa ("Luana, olha o que tem de novo"). Quem cria a conta depois não vê as antigas. Todas ficam em menu ☰ → Ajuda → Ver o que mudou.</p>
+    ${newsEdit != null ? `<div class="panel stack"><h2>${newsEdit === -1 ? 'Nova novidade' : 'Editar novidade'}</h2>
+      <label class="f">Título<input type="text" id="nwTitle" maxlength="80" placeholder="Ex.: Agora dá para ver o gasto por semana" value="${esc(newsEdit >= 0 ? items[newsEdit].title : '')}"></label>
+      <label class="f">O que mudou (uma linha por item, em palavras simples)<textarea id="nwItems" style="min-height:120px">${esc(newsEdit >= 0 ? (items[newsEdit].items || []).join('\n') : '')}</textarea></label>
+      <div class="cbox"><h3>Prévia</h3><div id="nwPrev" class="small"></div></div>
+      <div class="rowbtn"><button class="btn primary" type="button" id="nwPub">${newsEdit === -1 ? 'Publicar para todos' : 'Salvar'}</button><button class="btn" type="button" id="nwCancel">Cancelar</button></div></div>` : ''}
+    <div class="stack">${items.map((n, i) => `<article class="panel stack"><div class="ahead"><div><span class="tiny muted">${dt(n.at)}</span><h2 style="margin:0">${esc(n.title)}</h2></div>
+      <div class="rowbtn"><button class="chip" type="button" data-ned="${i}">Editar</button><button class="chip" type="button" data-ndel="${i}" aria-label="Apagar">×</button></div></div>
+      <ul class="small" style="margin:0">${(n.items || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></article>`).join('') || '<p class="small muted">Nenhuma novidade publicada.</p>'}</div>`;
+  $('#nwAdd').onclick = () => { newsEdit = -1; novidades(el); $('#nwTitle').focus(); };
+  el.querySelectorAll('[data-ned]').forEach(b => b.onclick = () => { newsEdit = +b.dataset.ned; novidades(el); });
+  el.querySelectorAll('[data-ndel]').forEach(b => b.onclick = async e => {
+    const i = +b.dataset.ndel;
+    if (!await confirmInline(e.target, { text: `Apagar "${esc(items[i].title)}"? Quem ainda não viu não vai ver.`, yes: 'Sim, apagar', danger: true })) return;
+    items.splice(i, 1); await save('news', 'Novidade apagada.'); novidades(el);
+  });
+  if (newsEdit == null) return;
+  const lines = () => $('#nwItems').value.split('\n').map(x => x.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+  const prev = () => { $('#nwPrev').innerHTML = `<p class="tiny muted">O QUE MUDOU</p><p><strong>Luana, olha o que tem de novo</strong></p><p><strong>${esc($('#nwTitle').value || 'Título')}</strong></p><ul>${lines().map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; };
+  $('#nwTitle').oninput = $('#nwItems').oninput = prev; prev();
+  $('#nwCancel').onclick = () => { newsEdit = null; novidades(el); };
+  $('#nwPub').onclick = async e => {
+    clearInvalid(el);
+    const title = $('#nwTitle').value.trim(), m = checkName(title, 'o título', 5, 80); if (m) return invalid($('#nwTitle'), m);
+    if (!lines().length) return invalid($('#nwItems'), 'Escreva pelo menos uma linha com o que mudou.');
+    const isNew = newsEdit === -1;
+    if (!await confirmInline(e.target, { text: isNew ? `Publicar "${esc(title)}"? Todos que já usam o app vão ver na próxima vez que abrirem.` : `Salvar as mudanças em "${esc(title)}"?`, yes: isNew ? 'Sim, publicar' : 'Sim, salvar' })) return;
+    if (isNew) items.unshift({ id: 'n' + Date.now(), at: new Date().toISOString(), title, items: lines() });
+    else Object.assign(items[newsEdit], { title, items: lines() });
+    newsEdit = null; await save('news', isNew ? 'Novidade publicada.' : 'Novidade salva.'); novidades(el);
   };
 }

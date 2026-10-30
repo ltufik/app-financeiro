@@ -337,3 +337,16 @@ test('searchFaq: acha pela palavra, sem acento e ignora palavras vazias', () => 
   assert.ok(new Set(FAQ.map(x => x.id)).size === FAQ.length);
   assert.ok(answerPrompt(FAQ).includes('O que são as metas?'));
 });
+
+import { NEWS, unseenNews, replyTitle, replyTemplate, firstName } from '../public/js/lib/news.js';
+test('mensagens: novidades não vistas, título e recado com o nome', () => {
+  const items = [{ id: 'a', at: '2026-10-01T00:00:00Z', title: 'A' }, { id: 'b', at: '2026-10-20T00:00:00Z', title: 'B' }, { id: 'c', at: '2099-01-01T00:00:00Z', title: 'futuro' }];
+  assert.deepEqual(unseenNews(items, {}).map(x => x.id), ['b', 'a']);
+  assert.deepEqual(unseenNews(items, { seenAt: '2026-10-01T00:00:00Z' }).map(x => x.id), ['b']);
+  assert.deepEqual(unseenNews(items, { createdAt: '2026-10-25T00:00:00Z' }).map(x => x.id), []);
+  assert.equal(replyTitle('ideia', 'Luana Souza'), 'Luana, a sua ideia virou realidade!');
+  assert.equal(replyTitle('erro', ''), 'O erro que você mandou foi corrigido!');
+  assert.ok(replyTemplate('critica', 'Ana', 'A régua confunde').startsWith('Oi, Ana! Você comentou que "A régua confunde". Mudamos: '));
+  assert.equal(firstName('  Luiz Tufik '), 'Luiz');
+  assert.ok(NEWS.every(n => n.id && n.at && n.title && n.items.length));
+});
