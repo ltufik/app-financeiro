@@ -448,3 +448,13 @@ test('bloqueio: tempo sem uso, textos de segurança e chave da digital', () => {
   const raw = new Uint8Array([0, 1, 250, 251, 252, 253, 254, 255, 62, 63]);
   assert.deepEqual([...fromB64u(toB64u(raw))], [...raw]); assert.ok(!/[+/=]/.test(toB64u(raw)));
 });
+import { shouldOfferBio } from '../public/js/lib/lock.js';
+test('digital: o app oferece até 3 vezes, uma por semana, só onde o celular tem', () => {
+  const now = Date.parse('2026-10-31T15:00:00Z');
+  assert.equal(shouldOfferBio({ supported: true, on: false, now }), true);
+  assert.equal(shouldOfferBio({ supported: false, on: false, now }), false);
+  assert.equal(shouldOfferBio({ supported: true, on: true, now }), false);
+  assert.equal(shouldOfferBio({ supported: true, on: false, asks: { n: 1, at: now - 2 * 864e5 }, now }), false);
+  assert.equal(shouldOfferBio({ supported: true, on: false, asks: { n: 1, at: now - 8 * 864e5 }, now }), true);
+  assert.equal(shouldOfferBio({ supported: true, on: false, asks: { n: 3, at: now - 30 * 864e5 }, now }), false);
+});

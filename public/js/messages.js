@@ -110,11 +110,11 @@ export async function showMessages() {
   if (ran || !S.user) return; ran = true;
   if (window.__noMsgs) { refreshBell(); return; }
   try {
-    if (await welcomeAlpha()) { markNewsSeen(await unseenNotes()); return; }
+    if (await welcomeAlpha()) { markNewsSeen(await unseenNotes()); return true; }
     const reply = (await myReplies()).find(f => f.reply && !f.reply_seen);
-    if (reply) { await replyPopup(reply); return; }
+    if (reply) { await replyPopup(reply); return true; }
     const list = await unseenNotes();
-    if (list.length) { markNewsSeen(list); await newsPopup(list); }
+    if (list.length) { markNewsSeen(list); await newsPopup(list); return true; }
   } catch (e) { /* messages never block the app */ }
   finally { feedCache = null; refreshBell(); }
 }

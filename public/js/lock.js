@@ -2,7 +2,7 @@
 // (passkey on this device, WebAuthn) or the password. Also the "Segurança" block in menu ☰ → Conta,
 // and the goodbye message after signing out. Used by the app and by the product console.
 // The fingerprint or face never leaves the phone: the app keeps only the id of the device key, on this device.
-import { LOCK_OPTIONS, lockMinutes, isExpired, lockText, byeMessage, minutesLabel, toB64u, fromB64u } from './lib/lock.js';
+import { LOCK_OPTIONS, lockMinutes, isExpired, lockText, byeMessage, minutesLabel, toB64u, fromB64u, shouldOfferBio } from './lib/lock.js';
 import { esc } from './lib/format.js';
 import { $, toast, announce, confirmInline } from './ui.js';
 import { track } from './usage.js';
@@ -10,7 +10,7 @@ import { track } from './usage.js';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
 let L = null; // { sb, user, name, email }
-const K = { min: () => 'fin.lock.min', last: () => 'fin.lock.last.' + L.user, bio: () => 'fin.bio.' + L.user };
+const K = { min: () => 'fin.lock.min', last: () => 'fin.lock.last.' + L.user, bio: () => 'fin.bio.' + L.user, ask: () => 'fin.bio.ask.' + L.user };
 export const lockMinutesNow = () => lockMinutes(lsGet(K.min()));
 const touch = () => { if (L && !isLocked()) lsSet(K.last(), String(Date.now())); };
 export const isLocked = () => document.body.classList.contains('locked');
@@ -79,7 +79,7 @@ export async function lock(reason = 'parado') {
     $('#lkGo').disabled = false;
     if (error) return msg(/invalid/i.test(error.message || '') ? 'Senha incorreta. Tente de novo.' : 'Não consegui conferir agora. Confira a internet e tente de novo.', true);
     track('seguranca.desbloqueio_senha'); done();
-    if (!lsGet(K.bio()) && await bioSupported()) toast('Dica: dá para desbloquear com a digital ou o rosto. Ligue em menu ☰ → Conta.', 'info');
+    offerBio();
   };
   $('#lkOut').onclick = () => signOutSafely();
 }
@@ -98,6 +98,34 @@ export function showBye() {
   if (name == null) return;
   const m = byeMessage(name);
   announce({ eyebrow: 'Segurança', title: m.title, html: `<ul>${m.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`, primary: 'Entendi' });
+}
+
+// Creates the device key (the phone asks for the fingerprint or face). Must run from a tap.
+export async function registerBio() {
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: challenge(), rp: { name: 'Pra Onde Foi', id: location.hostname },
+      user: { id: new TextEncoder().encode(String(L.user).slice(0, 64)), name: L.email || 'conta', displayName: L.name || L.email || 'Pra Onde Foi' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000, attestation: 'none' } });
+    lsSet(K.bio(), toB64u(cred.rawId)); track('seguranca.biometria');
+    toast('Da próxima vez, desbloqueie com a digital ou o rosto. Para desligar: menu ☰ → Conta → Segurança.');
+    return true;
+  } catch (err) { toast('Não foi possível ligar agora. Dá para tentar de novo em menu ☰ → Conta → Segurança.', 'info'); return false; }
+}
+// The app offers the fingerprint/face itself (the phone does not allow turning it on without the person).
+// Returns true when the offer was shown.
+export async function offerBio() {
+  if (!L || window.__noMsgs || isLocked()) return false;
+  let asks = {}; try { asks = JSON.parse(lsGet(K.ask()) || '{}'); } catch (e) { asks = {}; }
+  if (!shouldOfferBio({ supported: await bioSupported(), on: !!lsGet(K.bio()), asks, now: Date.now() })) return false;
+  const first = String(L.name || '').trim().split(/\s+/)[0];
+  const r = await announce({ eyebrow: 'Segurança', title: `${first ? first + ', quer' : 'Quer'} desbloquear com a digital ou o rosto?`,
+    html: `<ul><li>Quando o app se bloquear, é só encostar o dedo ou olhar para o celular, sem digitar a senha.</li><li>A digital e o rosto ficam no seu celular: o app nunca recebe.</li><li>Dá para desligar quando quiser em menu ☰ → Conta → Segurança.</li></ul>`,
+    primary: 'Sim, usar', secondary: 'Agora não' });
+  if (r === 'primary') { if (await registerBio()) return true; }
+  lsSet(K.ask(), JSON.stringify({ n: (+asks.n || 0) + 1, at: Date.now() }));
+  return true;
 }
 
 // "Segurança" in menu ☰ → Conta.
@@ -120,15 +148,6 @@ export async function renderSecurity(box) {
       lsSet(K.bio(), null); toast('O desbloqueio agora é pela senha.'); return renderSecurity(box);
     }
     if (!await confirmInline(e.target, { text: 'Usar a digital ou o rosto deste aparelho para desbloquear o app? O celular vai pedir para você confirmar.', yes: 'Sim, usar' })) return;
-    try {
-      const cred = await navigator.credentials.create({ publicKey: {
-        challenge: challenge(), rp: { name: 'Pra Onde Foi', id: location.hostname },
-        user: { id: new TextEncoder().encode(String(L.user).slice(0, 64)), name: L.email || 'conta', displayName: L.name || L.email || 'Pra Onde Foi' },
-        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000, attestation: 'none' } });
-      lsSet(K.bio(), toB64u(cred.rawId)); track('seguranca.biometria');
-      toast('Da próxima vez, desbloqueie com a digital ou o rosto.');
-    } catch (err) { toast('Não foi possível ligar agora. Tente de novo e confirme no celular.'); }
-    renderSecurity(box);
+    await registerBio(); renderSecurity(box);
   };
 }

@@ -35,6 +35,12 @@ export function byeMessage(name = '') {
   };
 }
 
+// Offer the fingerprint/face: only where the phone has it, while it is off, at most 3 times, a week apart.
+export function shouldOfferBio({ supported, on, asks = {}, now }) {
+  const n = +asks.n || 0, at = +asks.at || 0;
+  return !!supported && !on && n < 3 && (!at || now - at >= 7 * 864e5);
+}
+
 // WebAuthn ids travel as base64url.
 export const toB64u = bytes => { let s = ''; new Uint8Array(bytes).forEach(b => { s += String.fromCharCode(b); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 export const fromB64u = t => Uint8Array.from(atob(String(t).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((String(t).length + 3) % 4)), c => c.charCodeAt(0));

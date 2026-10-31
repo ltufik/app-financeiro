@@ -64,4 +64,5 @@ export const RELEASES = [
     'Melhor ainda: em menu ☰ → Conta → Segurança, ligue a digital ou o rosto e desbloqueie com um toque. A digital fica no seu celular; o app nunca recebe.',
     'Lá também dá para escolher o tempo (de 1 a 30 minutos) e bloquear na hora.',
   ] } },
+  { id: 'r47', version: 'v47', at: '2026-10-31T16:37:00Z', backlog: [], semNovidade: 'O próprio app passa a oferecer a digital ou o rosto, num pop-up que já explica e diz como desligar (até 3 vezes, uma por semana). Uma novidade a mais seria um segundo aviso sobre o mesmo assunto da v46.' },
 ];

@@ -835,9 +835,17 @@ const used = await page.evaluate(() => window.__db.usage);
   await page.evaluate(() => { window.__badPass = 'errada-123'; }); await page.fill('#lkPass', 'errada-123'); await page.click('#lkGo');
   await page.waitForFunction(() => /Senha incorreta/.test(document.querySelector('#lkMsg')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});
   ok('senha errada não desbloqueia', (await txt('#lkMsg')).includes('Senha incorreta') && await page.isVisible('#lockScreen'));
+  await page.evaluate(() => { window.__noMsgs = false; });
   await page.fill('#lkPass', 'senha-forte-123'); await page.click('#lkGo');
   await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 5000 }).catch(() => {});
   ok('senha certa desbloqueia', !(await page.$('#lockScreen')));
+  await page.waitForSelector('.ann', { timeout: 5000 }).catch(() => {});
+  ok('depois da senha, o app oferece a digital e diz que dá para desligar', /desbloquear com a digital ou o rosto/.test(await page.textContent('.ann').catch(() => '')) && /desligar quando quiser/.test(await page.textContent('.ann').catch(() => '')));
+  if (shots) await page.screenshot({ path: path.join(shots, '19b-oferta-digital.png') });
+  await page.click('.ann [data-p]').catch(() => {});
+  await page.waitForFunction(u => !!localStorage.getItem('fin.bio.' + u), uid, { timeout: 8000 }).catch(() => {});
+  ok('"Sim, usar" liga a digital na hora', !!(await page.evaluate(u => localStorage.getItem('fin.bio.' + u), uid)));
+  await page.evaluate(u => { window.__noMsgs = true; localStorage.removeItem('fin.bio.' + u); }, uid);
   // Opening the app after the time: locks before the numbers show.
   // Leaving the app records the time it was left; so the old time is set as the page loads again.
   await page.addInitScript(() => { try { const u = sessionStorage.getItem('e2e.oldLock'); if (u) { sessionStorage.removeItem('e2e.oldLock'); localStorage.setItem('fin.lock.last.' + u, String(Date.now() - 10 * 60e3)); } } catch (e) { /* page without storage */ } });

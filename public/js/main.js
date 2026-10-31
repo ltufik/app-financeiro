@@ -22,7 +22,7 @@ import { showMessages, openBell, refreshBell } from './messages.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, isAndroid, isMobile, isStandalone, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
-import { initLock, freshSignIn, signOutSafely, showBye } from './lock.js';
+import { initLock, freshSignIn, signOutSafely, showBye, offerBio } from './lock.js';
 
 const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -38,7 +38,8 @@ function showSignedOut() {
 }
 // After entering the app in the browser: one more invitation to install (iPhone keeps a separate login).
 // Messages for testers (welcome, replies, what's new) come first; then the invitation to install.
-const afterIntro = () => showMessages().then(() => setTimeout(maybeAskInstall, 600));
+// Nothing else to say this time: offer the fingerprint/face (once a week, up to 3 times); then the install invitation.
+const afterIntro = () => showMessages().then(shown => shown ? null : offerBio()).then(() => setTimeout(maybeAskInstall, 600));
 const maybeAskInstall = () => { if (shouldAskInstall()) askInstall({ note: isIOS() ? 'Depois de instalar, abra pelo ícone e entre com o mesmo e-mail e senha.' : '' }); };
 $('#wHero').innerHTML = photo('lost', { w: 1100, ratio: '3 / 2', fallback: 'hero', cls: 'land-photo' });
 // Always available on the phone: the automatic invitation only comes back after a few days.
