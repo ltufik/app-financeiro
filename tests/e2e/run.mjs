@@ -961,6 +961,8 @@ for (const [name, uaStr, expect] of [
 }
 await browser.close();
 for (const r of results) console.log(r[0], r[1], r[2] ? '— ' + String(r[2]).slice(0, 160) : '');
+// On GitHub, each failure also becomes an annotation, readable from the API without the full log.
+if (process.env.GITHUB_ACTIONS) for (const r of results.filter(x => x[0] === 'FAIL').slice(0, 10)) console.log(`::error title=${ENGINE}: ${String(r[1]).replace(/[\r\n:,]/g, ' ').slice(0, 120)}::${String(r[2] || '').replace(/[\r\n]/g, ' ').slice(0, 400)}`);
 const fails = results.filter(r => r[0] === 'FAIL').length;
 console.log(`\n${results.length - fails}/${results.length} ok`);
 process.exit(fails ? 1 : 0);
