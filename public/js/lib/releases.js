@@ -55,4 +55,8 @@ export const RELEASES = [
     'Vale PDF, print ou foto. Se for fatura, extrato ou nota fiscal, o atalho avisa para enviar pelo app.',
     'Dica: o atalho da Siri pode virar um ícone na tela de início que já abre o ditado.',
   ] } },
+  { id: 'r45', version: 'v45', at: '2026-10-31T15:05:00Z', backlog: [], semNovidade: 'Só itens novos no backlog (biometria e bloqueio por tempo); nada muda no app.', addBacklog: [
+    { id: 'entrar_com_biometria', title: 'Entrar com a digital ou o rosto (biometria)', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Digitar e-mail e senha toda vez é chato, e o app lida com os números da família', cost: false, notes: 'Chaves de acesso (passkeys/WebAuthn): Face ID e Touch ID no iPhone, digital no Android. O Supabase já tem suporte a MFA/WebAuthn; ver se dá para usar como login principal ou como desbloqueio rápido. Junto com o bloqueio por tempo, o desbloqueio vira a biometria.', from: [], where: 'Tela de entrada; menu ☰ → Conta' },
+    { id: 'bloqueio_por_tempo', title: 'Bloquear o app depois de um tempo parado (timeout)', status: 'proximo', origin: 'Luiz', effort: 'P', problem: 'O app mostra números da família e não pode ficar aberto se o celular ficar largado', cost: false, notes: 'Depois de X minutos sem uso (ou ao voltar para o app depois de X minutos), cobre a tela e pede biometria ou senha para continuar. Tempo ajustável em menu ☰ → Conta (ex.: 1, 5, 15 min). A Central do produto também.', from: [], where: 'Todo o app; menu ☰ → Conta' },
+  ] },
 ];
