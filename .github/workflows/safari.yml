@@ -1,5 +1,6 @@
 # Tests that run on GitHub at every change: the business rules, and the app in the iPhone browser
-# engine (WebKit, the engine of Safari), emulating an iPhone 13. Only fictional data.
+# engine (WebKit, the engine of Safari), emulating an iPhone 13, with the same PDF reader as production
+# (pdf.js 3.11.174). Only fictional data.
 name: Testes (regras e Safari do iPhone)
 on:
   push:
@@ -25,8 +26,9 @@ jobs:
           mkdir -p /tmp/tools && cd /tmp/tools && npm init -y >/dev/null
           npm i playwright@1.56.0 pdfjs-dist@6.2.108 >/dev/null
           npx playwright install --with-deps webkit
+          mkdir -p /tmp/pdf3 && cd /tmp/pdf3 && npm init -y >/dev/null && npm i pdfjs-dist@3.11.174 >/dev/null
       - name: App no Safari do iPhone (WebKit)
-        run: node tests/e2e/run.mjs --browser webkit --smoke --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --outra tests/fixtures/fatura-ficticia.pdf --shots /tmp/safari
+        run: node tests/e2e/run.mjs --browser webkit --smoke --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --pdfjs3 /tmp/pdf3/node_modules/pdfjs-dist --outra tests/fixtures/fatura-ficticia.pdf --shots /tmp/safari
       - name: Prints do teste
         if: always()
         uses: actions/upload-artifact@v4

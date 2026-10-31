@@ -62,6 +62,12 @@ async function addRoutes(t) {
     r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
   });
   await t.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
+  // --pdfjs3 <pdfjs-dist@3.11.174 dir>: the same PDF reader the app loads in production (used on GitHub).
+  const PDF3 = arg('pdfjs3'), pick = (...fs_) => fs_.map(f => path.join(PDF3, 'build', f)).find(f => fs.existsSync(f));
+  if (PDF3) {
+    await t.route('https://cdnjs.cloudflare.com/**/pdf.min.js', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(pick('pdf.min.js', 'pdf.js')) }));
+    await t.route('https://cdnjs.cloudflare.com/**/pdf.worker.min.js', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(pick('pdf.worker.min.js', 'pdf.worker.js')) }));
+  } else
   await t.route('https://cdnjs.cloudflare.com/**/pdf.min.js', r => r.fulfill({ contentType: 'text/javascript', body: `Promise.all([import('https://pdfjs.test/pdf.mjs'),import('https://pdfjs.test/pdf.worker.mjs')]).then(([m,w])=>{globalThis.pdfjsWorker=w;m.GlobalWorkerOptions.workerSrc='https://pdfjs.test/pdf.worker.mjs';window.pdfjsLib=m;});` }));
   await t.route('https://cdnjs.cloudflare.com/**/pdf.worker.min.js', r => r.fulfill({ contentType: 'text/javascript', body: '' }));
   await t.route('https://pdfjs.test/*', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(PDFJS, new URL(r.request().url()).pathname.slice(1))) }));
