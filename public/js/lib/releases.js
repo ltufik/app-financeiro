@@ -49,4 +49,5 @@ export const RELEASES = [
     'Foto ou print da fatura agora também é importado, com a soma conferida.',
     'Enviou pelo botão errado? Sem problema: um comprovante em "Fatura ou extrato" vira um lançamento, e uma fatura em "Foto da nota" vai para a importação.',
   ] } },
+  { id: 'r43', version: 'v43', at: '2026-10-31T02:45:00Z', backlog: [], semNovidade: 'Central do produto boa de usar no celular e no tablet (menu no botão ☰, tabelas em cartões); só o dono do produto vê, então não vale pop-up para as famílias.' },
 ];

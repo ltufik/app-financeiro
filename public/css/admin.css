@@ -6,9 +6,7 @@ body.admin{background:var(--paper)}
 .atop .muted{color:var(--deep-soft)}
 .atop .btn{background:transparent;color:var(--deep-ink);border-color:color-mix(in srgb,var(--deep-ink) 35%,transparent);text-decoration:none}
 .ashell{max-width:1240px;margin:0 auto;padding:20px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;align-items:start}
-@media (max-width:820px){.ashell{grid-template-columns:1fr;padding:14px 16px}}
 .anav{position:sticky;top:76px;display:flex;flex-direction:column;gap:6px}
-@media (max-width:820px){.anav{position:static}}
 .anav button{appearance:none;border:0;background:none;text-align:left;padding:10px 12px;border-radius:10px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
 .anav button:hover{background:var(--sunk)}
 .anav button[aria-current]{background:var(--accent-soft);color:var(--accent)}
@@ -46,7 +44,6 @@ body.admin{background:var(--paper)}
 
 .agrp{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 12px 2px}
 .agrp:first-child{padding-top:0}
-@media (max-width:820px){.agrp{display:none}}
 .mlink{appearance:none;text-align:left;cursor:pointer;font:inherit;color:inherit}
 .mlink:hover{outline:2px solid var(--accent-soft)}
 .fbmeta{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
@@ -122,3 +119,48 @@ body.admin{background:var(--paper)}
 .heatphone canvas{position:absolute;inset:0;pointer-events:none}
 .errgrp summary{cursor:pointer;line-height:1.6}
 .atable .fbar{display:block;min-width:60px}
+
+/* ---------- Tablet and phone ----------
+   Wide screens (computer, tablet lying down): side menu. Up to 1023px (tablet standing, phone):
+   the menu is a drawer opened by ☰, the content uses the whole width. Up to 640px: tables become cards. */
+.amenu{display:none;appearance:none;border:0;background:transparent;color:var(--deep-ink);align-items:center;gap:8px;font:inherit;font-weight:700;padding:8px 10px 8px 4px;margin-left:-4px;border-radius:10px;cursor:pointer;min-height:44px}
+.amenu:hover{background:color-mix(in srgb,var(--deep-ink) 12%,transparent)}
+.atop .btn span.short{display:none}
+.anavbg{position:fixed;inset:0;background:rgba(6,30,46,.45);z-index:20}
+.anavbg[hidden]{display:none}
+@media (max-width:1023px){
+  .amenu:not([hidden]){display:inline-flex}
+  .atop .logo{display:none}
+  .atop .in{padding:8px 16px;gap:10px}
+  .atop .in > .tiny{flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .ashell{grid-template-columns:minmax(0,1fr);padding:16px}
+  .anav{position:fixed;top:0;bottom:0;left:0;z-index:21;width:min(320px,86vw);background:var(--paper);padding:calc(16px + env(safe-area-inset-top,0px)) 12px 24px;overflow-y:auto;transform:translateX(-105%);transition:transform .22s ease;box-shadow:0 0 40px rgba(6,30,46,.25)}
+  body.navopen .anav{transform:none}
+  body.navopen{overflow:hidden}
+  .anav .agl button,.anav .agh{min-height:44px}
+  .kanban{grid-template-columns:repeat(5,minmax(220px,1fr))}
+  .jgrid{grid-template-columns:repeat(5,minmax(170px,1fr))}
+}
+@media (max-width:1023px) and (prefers-reduced-motion:reduce){.anav{transition:none}}
+@media (max-width:640px){
+  .atop .in > .tiny{display:none}
+  .atop .in{justify-content:space-between}
+  .amenu{flex:1}
+  .atop .btn{padding:8px 12px}
+  .atop .btn span.long{display:none}
+  .atop .btn span.short{display:inline}
+  .ashell{padding:12px}
+  .ahead{align-items:flex-start}
+  .ahead .rowbtn,.ahead > div:last-child{flex-wrap:wrap}
+  .pout{grid-template-columns:1fr}
+  /* Tables become cards: one card per row, the column name before each value. */
+  .tw:has(> table.atable){overflow:visible}
+  table.atable,table.atable tbody,table.atable tr,table.atable td{display:block;width:100%}
+  table.atable thead{display:none}
+  table.atable tr{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:10px}
+  table.atable td{border:0;padding:5px 0;display:flex;justify-content:space-between;align-items:baseline;gap:12px;text-align:right;overflow-wrap:anywhere}
+  table.atable td[data-label]::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;text-align:left;flex:none;max-width:45%}
+  table.atable td:first-child{font-weight:700;font-size:15px;text-align:left;justify-content:flex-start}
+  table.atable td:first-child::before{display:none}
+  table.atable td:empty{display:none}
+}

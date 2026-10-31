@@ -88,6 +88,7 @@ await page.addInitScript(() => {
   Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve({ pushManager: pm }), configurable: true });
 });
 
+const txt2 = (p, sel) => p.textContent(sel).then(t => (t || '').trim());
 let chatCalls = 0, window_pushTests = 0, AI_DOC = null; const notifies = [];
 function aiMock(b) {
   const text = JSON.stringify(b.messages);
@@ -486,7 +487,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ap.on('pageerror', e => errors.push('admin: ' + e.message));
   await ap.goto('https://app.test/admin.html');
   await ap.waitForSelector('#aNav:not([hidden])', { timeout: 10000 });
-  const atab = async t => { const g = await ap.$(`#aNav [data-t="${t}"]`); if (!(await g.isVisible())) await ap.click(`#aNav .agroup:has([data-t="${t}"]) .agh`); await ap.click(`#aNav [data-t="${t}"]`); };
+  const atab = async t => { if (await ap.isVisible('#aMenu')) { await ap.click('#aMenu'); await ap.waitForTimeout(300); } const g = await ap.$(`#aNav [data-t="${t}"]`); if (!(await g.isVisible())) await ap.click(`#aNav .agroup:has([data-t="${t}"]) .agh`); await ap.click(`#aNav [data-t="${t}"]`); };
   ok('central: menu com 3 grupos e só o grupo atual aberto', (await ap.$$('#aNav .agroup')).length === 3 && (await ap.$$('#aNav .agl:not([hidden])')).length === 1 && await ap.isVisible('#aNav [data-t="painel"]') && !(await ap.isVisible('#aNav [data-t="bench"]')));
   await ap.click('#aNav [data-g="estrategia"] .agh');
   ok('central: tocar no grupo abre e fecha o outro', await ap.isVisible('#aNav [data-t="bench"]') && !(await ap.isVisible('#aNav [data-t="painel"]')));
@@ -617,6 +618,25 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-10-fluxos.png'), fullPage: true });
   await ap.setViewportSize({ width: 390, height: 844 }); await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
+  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+  for (const [w, h, name] of [[390, 844, 'celular'], [800, 1334, 'tablet em pé'], [1334, 800, 'tablet deitado']]) {
+    await ap.setViewportSize({ width: w, height: h }); await ap.waitForTimeout(250);
+    const wide = [];
+    for (const t of TABS) { await atab(t); await ap.waitForTimeout(250); if (!(await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))) wide.push(t); }
+    ok(`central (${name}): nenhuma página rola para o lado`, !wide.length, wide.join(', '));
+    const drawerMode = await ap.isVisible('#aMenu');
+    ok(`central (${name}): menu ${w < 1024 ? 'no botão ☰' : 'na lateral'}`, w < 1024 ? drawerMode && (await txt2(ap, '#aCur')) === 'Desenho do produto' : !drawerMode && await ap.isVisible('#aNav [data-t="desenho"]'));
+    if (shots) { await atab('uso'); await ap.waitForTimeout(300); await ap.screenshot({ path: path.join(shots, `admin-resp-${w}-uso.png`), fullPage: true }); }
+  }
+  await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('#aMenu'); await ap.waitForTimeout(300);
+  ok('central no celular: ☰ abre o menu com os três grupos e fecha ao tocar fora', await ap.evaluate(() => document.body.classList.contains('navopen') && document.querySelector('#aNav').getBoundingClientRect().left >= 0) && (await ap.$$('#aNav .agroup')).length === 3);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-resp-390-menu.png') });
+  await ap.mouse.click(380, 400); await ap.waitForTimeout(300);
+  ok('central no celular: topo cabe numa linha, com botões curtos', (await ap.innerText('#aCopy')).trim() === 'Resumo' && await ap.evaluate(() => document.querySelector('.atop').offsetHeight < 80), await ap.innerText('#aCopy'));
+  ok('central no celular: menu fecha ao tocar fora', !(await ap.evaluate(() => document.body.classList.contains('navopen'))));
+  await atab('uso'); await ap.waitForSelector('.prow');
+  ok('central no celular: tabela vira cartões com o nome de cada coluna', await ap.evaluate(() => { const td = document.querySelector('table.atable tbody td:nth-child(2)'); return getComputedStyle(td).display === 'flex' && !!td.dataset.label && getComputedStyle(document.querySelector('table.atable thead')).display === 'none'; }));
   await actx.close();
 }
 // Test phase: feedback and FAQ in the app.

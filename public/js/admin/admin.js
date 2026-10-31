@@ -55,6 +55,9 @@ async function save(key, msg) {
     return;
   }
   drawNav(); $('#aNav').hidden = false; $('#aCopy').hidden = false; $('#aCopy').onclick = copySummary;
+  $('#aMenu').hidden = false; $('#aMenu').onclick = () => drawer(!document.body.classList.contains('navopen')); $('#aNavBg').onclick = () => drawer(false);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') drawer(false); });
+  new MutationObserver(() => labelTables($('#aMain'))).observe($('#aMain'), { childList: true, subtree: true });
   loadFb().then(navBadges).catch(() => {}); loadNav().then(errBadge).catch(() => {});
   const h = location.hash.slice(1); go(TABS.includes(h) ? h : 'painel');
 })();
@@ -64,7 +67,22 @@ function go(t) {
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
   ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, fluxos, versoes, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
-  window.scrollTo(0, 0);
+  $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
+  drawer(false); window.scrollTo(0, 0);
+}
+
+// Tablet (portrait) and phone: the sections live in a drawer opened by the ☰ button.
+function drawer(open) {
+  document.body.classList.toggle('navopen', open);
+  $('#aMenu').setAttribute('aria-expanded', open); $('#aNavBg').hidden = !open;
+  if (open) ($('#aNav [aria-current]') || $('#aNav button')).focus({ preventScroll: true });
+}
+// Phone: each table row becomes a card, so every cell needs the name of its column.
+function labelTables(root) {
+  root.querySelectorAll('table.atable').forEach(t => {
+    const hs = [...t.querySelectorAll('thead th')].map(th => th.textContent.trim());
+    t.querySelectorAll('tbody tr').forEach(tr => [...tr.children].forEach((td, i) => { if (!td.dataset.label && hs[i]) td.dataset.label = hs[i]; }));
+  });
 }
 
 // ---------- Side menu: three groups that open on click ----------
@@ -501,7 +519,7 @@ async function fluxos(el) {
 
 // ---------- Resumo para o Claude ----------
 async function copySummary() {
-  const b = $('#aCopy'); b.disabled = true; const old = b.textContent; b.textContent = 'Montando o resumo...';
+  const b = $('#aCopy'); b.disabled = true; const old = b.innerHTML; b.textContent = 'Montando...';
   try {
     const metrics = await fetch('/api/metrics', { headers: { authorization: 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).catch(() => null);
     const [usage, feedback, nav] = await Promise.all([loadUse(true).catch(() => null), loadFb(true).catch(() => []), loadNav(true).catch(() => null)]);
@@ -513,7 +531,7 @@ async function copySummary() {
       document.body.append(d); d.querySelector('textarea').value = text; d.querySelector('[data-x]').onclick = () => { d.close(); d.remove(); };
       d.showModal(); d.querySelector('textarea').select();
     }
-  } finally { b.disabled = false; b.textContent = old; }
+  } finally { b.disabled = false; b.innerHTML = old; }
 }
 
 // ---------- Navegação: telas, tempo, caminhos e onde tocam ----------
