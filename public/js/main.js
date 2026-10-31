@@ -18,7 +18,7 @@ import { checkAdmin, touchActivity } from './metrics.js';
 import { initPrivacy } from './privacy.js';
 import { track, navTo, screenOf } from './usage.js';
 import { TEST_PHASE } from './feedback.js';
-import { showMessages } from './messages.js';
+import { showMessages, openBell, refreshBell } from './messages.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, isAndroid, isMobile, isStandalone, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
@@ -168,6 +168,7 @@ function setTab(t) {
 }
 $$('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 initMenu();
+$('#bellBtn').onclick = () => { track('sininho'); openBell(); };
 $('#fbBtn').hidden = !TEST_PHASE; $('#fbBtn').onclick = () => S.go('ajustes', null, 'opiniao');
 $('#privBtn').addEventListener('click', () => track('privacidade'));
 initPrivacy($('#privBtn'), () => { $$('.view[data-built]').forEach(v => { delete v.dataset.built; }); S.render(); });
@@ -222,7 +223,7 @@ async function doStart() {
   setTab(VIEWS[want] ? want : 'resumo');
   // Shortcut on the icon, the evening reminder or something shared with the app: go straight there.
   const acao = (() => { try { const a = sessionStorage.getItem('fin.acao'); sessionStorage.removeItem('fin.acao'); return a; } catch (e) { return null; } })();
-  if (acao && tourDone()) { runAcao(acao); S.justSignedIn = false; return; }
+  if (acao && tourDone()) { runAcao(acao); S.justSignedIn = false; refreshBell(); return; }
   if (!tourDone()) S.showTour();
   else if (shouldCoach(S.user)) setTimeout(() => S.startCoach(), 700);
   else { setTimeout(afterIntro, 900); }

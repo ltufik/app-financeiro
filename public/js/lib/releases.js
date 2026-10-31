@@ -39,4 +39,9 @@ export const RELEASES = [
   { id: 'r38', version: 'v38', at: '2026-10-31T00:45:00Z', backlog: [], semNovidade: 'Ajuste no passo a passo de instalação no Android (aba anônima, ícone de download, "Instalar" em vez de "Criar atalho"); não muda o uso do app.' },
   { id: 'r39', version: 'v39', at: '2026-10-31T00:50:00Z', backlog: [], semNovidade: 'Botão "Instalar o app no celular" na tela de entrada, para quem não está logado; quem já usa não vê diferença.' },
   { id: 'r40', version: 'v40', at: '2026-10-31T00:55:00Z', backlog: [], semNovidade: 'O convite para instalar volta a cada visita até a pessoa instalar, com a opção "Não mostrar mais"; muda só para quem ainda não instalou, então não vale pop-up para todos.' },
+  { id: 'r41', version: 'v41', at: '2026-10-31T00:40:00Z', backlog: [], news: { id: 'n20261031b', title: 'Sininho de novidades', items: [
+    'Toque no sino no topo para ver tudo o que mudou no app, os recados para você e o que a família fez nos últimos 30 dias.',
+    'O número no sino mostra o que você ainda não viu. Ao abrir o app aparece no máximo um aviso; o resto fica no sininho.',
+    'Comprovante em PDF compartilhado pelo banco agora entra como um lançamento só, sem os avisos de extrato.',
+  ] } },
 ];

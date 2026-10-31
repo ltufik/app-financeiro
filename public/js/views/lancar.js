@@ -184,7 +184,8 @@ export async function handleShared() {
     let pages = 0, text = '';
     try { const doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise; pages = doc.numPages; const tc = await (await doc.getPage(1)).getTextContent(); text = tc.items.map(i => i.str).join(' '); }
     catch (e) { pages = 0; }
-    if (!pages || pages > 1 || /fatura|extrato|saldo anterior|total desta fatura/i.test(text)) { openMode('pdf', true); return withBusy('Lendo ' + file.name + '...', () => startPdf(file), pdfResult); }
+    const dated = (text.match(/\b\d{2}\/\d{2}(\/\d{2,4})?\b/g) || []).length;
+    if (!pages || pages > 1 || dated > 4 || /saldo anterior|total desta fatura|lançamentos futuros/i.test(text)) { openMode('pdf', true); return withBusy('Lendo ' + file.name + '...', () => startPdf(file), pdfResult); }
     return withBusy('Lendo o comprovante...', () => readProof({ text }), () => $('#qPreview'));
   }
   if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) { toast('Esse tipo de arquivo não dá para ler. Compartilhe a imagem ou o PDF do comprovante.', 'info'); return; }

@@ -376,3 +376,17 @@ test('atalho do iPhone: valor como o Atalhos manda e a linha do lançamento', ()
   assert.equal(quickRow({ valor: '0' }, { household: 'h', user: 'u', today: '2026-10-01' }).error, 'valor');
   assert.equal(quickRow({ valor: 10 }, { household: 'h', user: 'u', today: '2026-10-01' }).description, 'Compra com Apple Pay');
 });
+
+import { buildFeed, unread } from '../public/js/lib/feed.js';
+test('sininho: novidades, recados e família dos últimos 30 dias, mais novo primeiro', () => {
+  const now = Date.parse('2026-10-31T12:00:00Z');
+  const f = buildFeed({ now, me: 'u1', myName: 'Luiz Elias',
+    news: [{ id: 'a', at: '2026-10-30T10:00:00Z', title: 'Novo', items: ['x'] }, { id: 'velha', at: '2026-08-01T00:00:00Z', title: 'Velha' }],
+    replies: [{ id: 7, kind: 'ideia', text: 'ver por semana', reply: 'Oi! Ficou pronto.', replied_at: '2026-10-31T09:00:00Z' }, { id: 8, text: 'x', reply: null }],
+    imports: [{ id: 'i1', source: 'cartao', month: '2026-10', created_by: 'u2', created_at: '2026-10-29T10:00:00Z' }, { id: 'i2', source: 'conta', month: '2026-10', created_by: 'u1', created_at: '2026-10-29T11:00:00Z' }, { id: 'i3', source: 'backup', created_by: 'u2', created_at: '2026-10-29T11:00:00Z' }],
+    closed: { '2026-09': { at: '2026-10-02T10:00:00Z', by: 'Luana' }, '2026-08': { at: '2026-10-01T10:00:00Z', by: 'Luiz' } },
+    members: [{ user_id: 'u2', display_name: 'Luana Elias' }] });
+  assert.deepEqual(f.map(x => x.id), ['r:7', 'n:a', 'i:i1', 'c:2026-09']);
+  assert.equal(f[2].title, 'Luana importou a fatura de outubro'); assert.equal(f[3].title, 'Luana fechou setembro');
+  assert.deepEqual(unread(f, { seenAt: '2026-10-30T00:00:00Z', shown: ['r:7'] }).map(x => x.id), ['n:a']);
+});

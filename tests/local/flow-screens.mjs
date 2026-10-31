@@ -113,6 +113,7 @@ await msg('recado', async () => { await page.evaluate(() => { const f = window._
 await page.click('.ann [data-p]').catch(() => {});
 news = [{ id: 'nx', at: new Date().toISOString(), title: 'Gasto por semana nos gráficos', items: ['Em Gráficos, escolha "por semana".', 'O resumo de domingo mostra a semana inteira.'] }];
 await msg('novidades', async () => {});
+await step('sininho', async () => { await page.click('.ann [data-p]').catch(() => {}); await page.click('#bellBtn'); await page.waitForSelector('.bellbox'); });
 await browser.close();
 console.log('telas:', done.length, done.join(' '));
 if (failed.length) console.log('falharam:', failed.join(' | '));

@@ -44,6 +44,7 @@ export const SCREENS = {
   opiniao_enviada: { title: 'Opinião enviada', where: 'Depois de confirmar', key: ['opiniao.erro', 'opiniao.ideia', 'opiniao.critica'] },
   recado: { title: 'Recado personalizado', where: 'Ao abrir o app, quando o pedido fica pronto', key: null },
   novidades: { title: 'O que mudou', where: 'Ao abrir o app depois de uma atualização', key: null },
+  sininho: { title: 'Sininho de novidades', where: 'Sino no topo: últimos 30 dias', key: 'sininho' },
 };
 
 // key: null = not measured at this step (the screen's own key would count everyone who opened it).
@@ -56,7 +57,7 @@ export const FLOWS = [
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
-    { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades'] },
+    { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'sininho'] },
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
     st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'),
@@ -79,7 +80,7 @@ export const FLOWS = [
     st('perguntar', 'Escolhe uma sugestão ou escreve'), st('perguntar_resposta', 'Resposta com os números da família')] },
   { id: 'opiniao', title: 'Dar opinião e receber o recado', desc: 'O ciclo com quem testa: manda, a equipe faz, a pessoa é avisada.', steps: [
     st('menu_opiniao', 'Toca no balão, escolhe o tipo e fala'), st('opiniao_confirmar', 'Confirma o envio'), st('opiniao_enviada', 'Vê "Recebida" na lista'),
-    st('recado', 'Quando fica pronto: recado com o nome dela'), st('novidades', 'E a novidade para todos')] },
+    st('recado', 'Quando fica pronto: recado com o nome dela'), st('novidades', 'E a novidade para todos'), st('sininho', 'Tudo fica no sininho por 30 dias', 'sininho')] },
   { id: 'duvidas', title: 'Tirar uma dúvida', desc: 'Achar a resposta sozinho, sem perguntar no WhatsApp.', steps: [
     st('menu', 'Abre o menu'), st('menu_duvidas', 'Procura a dúvida'), st('duvidas_resposta', 'Não achou: o assistente responde; diz se resolveu')] },
   { id: 'convite', title: 'Convidar a família', desc: 'Duas pessoas na mesma família ficam mais tempo no app.', steps: [

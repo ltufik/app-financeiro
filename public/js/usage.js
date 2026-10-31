@@ -5,7 +5,7 @@ import * as db from './db.js';
 import { S } from './state.js';
 import { tapCell, tapLabel, cleanError } from './lib/navlog.js';
 
-export const APP_VERSION = 'v40';
+export const APP_VERSION = 'v41';
 const OK = /^[a-z_]{2,20}(\.[a-z_]{2,20})?$/;
 export const device = () => { const u = navigator.userAgent; return (/iphone|ipad/i.test(u) ? 'iPhone' : /android/i.test(u) ? 'Android' : /mac/i.test(u) ? 'Mac' : /windows/i.test(u) ? 'Windows' : 'Outro') + (window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone ? ' · app instalado' : ' · navegador'); };
 export const screenOf = () => S.tab === 'ajustes' ? 'menu.' + (S.sec || 'familia') : S.tab === 'resumo' ? 'inicio' : (S.tab || '');

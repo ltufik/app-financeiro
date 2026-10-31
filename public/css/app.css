@@ -451,3 +451,16 @@ details.more > .stack{padding:0 10px 10px}
 .apcopy code{flex:1 1 200px;min-width:0;overflow-wrap:anywhere;background:var(--sunk);border-radius:8px;padding:6px 8px;font-size:12.5px}
 #wInstall{display:block;margin:6px auto 0;font-size:15px;padding:8px}
 .ilater{display:flex;justify-content:center;gap:18px;flex-wrap:wrap}
+
+/* Bell (🔔): count of what was not seen, and the list of the last 30 days */
+#bellBtn{position:relative;margin-left:0;width:36px}
+#bellBtn .bdg{position:absolute;top:3px;right:1px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--paper)}
+#bellBtn .bdg[hidden]{display:none}
+.bellbox{max-height:calc(100dvh - 32px);overflow:auto;gap:10px}
+.bell-list{display:flex;flex-direction:column;gap:8px}
+.bell-item{display:flex;gap:10px;padding:10px;border-radius:12px;background:var(--sunk)}
+.bell-item.new{background:var(--accent-soft)}
+.bell-item ul{margin:4px 0 0;padding-left:18px}
+.bi{font-size:18px;line-height:1.4}
+.bnew{color:var(--coral)}
+@media (max-width:440px){.top .in{gap:4px}.brand{font-size:15px}}
