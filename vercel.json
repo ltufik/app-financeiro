@@ -41,5 +41,18 @@
       "path": "/api/push-cron?tipo=lembrete",
       "schedule": "0 0 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "app-praondefoi.vercel.app"
+        }
+      ],
+      "destination": "https://praondefoi.app.br/:path",
+      "permanent": false
+    }
   ]
 }

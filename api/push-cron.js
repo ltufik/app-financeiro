@@ -4,7 +4,7 @@ import { cleanUrl } from './config.js';
 import { runDaily, runReminder } from './_daily.js';
 import { rest, applyReleases } from './_loop.js';
 
-export const vapidFromEnv = () => ({ publicKey: String(process.env.VAPID_PUBLIC_KEY || '').trim(), privateKey: String(process.env.VAPID_PRIVATE_KEY || '').trim(), subject: String(process.env.VAPID_SUBJECT || 'https://app-praondefoi.vercel.app').trim() });
+export const vapidFromEnv = () => ({ publicKey: String(process.env.VAPID_PUBLIC_KEY || '').trim(), privateKey: String(process.env.VAPID_PRIVATE_KEY || '').trim(), subject: String(process.env.VAPID_SUBJECT || 'https://praondefoi.app.br').trim() });
 
 export default async function handler(req, res) {
   const secret = String(process.env.CRON_SECRET || '').trim();

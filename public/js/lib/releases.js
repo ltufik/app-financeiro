@@ -31,4 +31,9 @@ export const RELEASES = [
     'Às 21h, se você não lançou nada no dia, o app lembra. Dá para desligar em Notificações.',
   ] } },
   { id: 'r36', version: 'v36', at: '2026-10-31T00:00:00Z', backlog: [], semNovidade: 'Ajuste técnico: o app passa a aparecer no Compartilhar de bancos que mandam o comprovante em formato genérico (ex.: Santander). A novidade do compartilhamento já saiu na v35.' },
+  { id: 'r37', version: 'v37', at: '2026-10-31T00:30:00Z', backlog: [], news: { id: 'n20261031', title: 'Endereço novo: praondefoi.app.br', items: [
+    'O app agora tem endereço próprio: praondefoi.app.br. O link antigo continua funcionando e leva para o novo.',
+    'Se o app pedir, entre de novo com o seu e-mail e senha. Seus dados continuam todos lá.',
+    'Instalou o app no celular? Apague o ícone antigo e instale de novo pelo endereço novo. As notificações e os atalhos do iPhone continuam funcionando.',
+  ] } },
 ];
