@@ -299,10 +299,18 @@ async function startPdf(file) {
   plog('Lendo ' + file.name + '...');
   return openPdf();
 }
+// The PDF reader (pdf.js, loaded from the CDN in index.html). Waits for it when the app has just opened
+// (a share) and says where its worker is: Safari on iPhone does not find it by itself.
+const PDF_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+async function pdfReady() {
+  for (let i = 0; i < 40 && !window.pdfjsLib; i++) await new Promise(r => setTimeout(r, 250));
+  const lib = window.pdfjsLib; if (!lib) return false;
+  if (lib.GlobalWorkerOptions && !lib.GlobalWorkerOptions.workerSrc && !globalThis.pdfjsWorker) lib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+  return true;
+}
 async function openPdf(password) {
   // Opened from a share right at start, the PDF reader may still be loading.
-  for (let i = 0; i < 40 && !window.pdfjsLib; i++) await new Promise(r => setTimeout(r, 250));
-  if (!window.pdfjsLib) { plog('O leitor de PDF ainda não carregou. Espere um instante e tente de novo.', 'var(--bad)'); return; }
+  if (!await pdfReady()) { plog('O leitor de PDF ainda não carregou. Espere um instante e tente de novo.', 'var(--bad)'); return; }
   let doc;
   const open = () => window.pdfjsLib.getDocument({ data: PDF.bytes.slice(), password: password || undefined, isEvalSupported: false }).promise;
   // Right after the app opens (a share), the reader can fail once while it starts: try again before giving up.
@@ -548,7 +556,7 @@ async function readReceipt(file, pre = null) {
   let images = [], text = pre?.text || '';
   try {
     if (isPdf) {
-      if (!window.pdfjsLib) { rlog('O leitor de PDF ainda não carregou. Espere um instante e tente de novo.', 'var(--bad)'); return; }
+      if (!await pdfReady()) { rlog('O leitor de PDF ainda não carregou. Espere um instante e tente de novo.', 'var(--bad)'); return; }
       rlog('Lendo o PDF da nota...');
       let doc;
       try { doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise; }
