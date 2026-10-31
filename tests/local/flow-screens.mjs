@@ -114,6 +114,10 @@ await page.click('.ann [data-p]').catch(() => {});
 news = [{ id: 'nx', at: new Date().toISOString(), title: 'Gasto por semana nos gráficos', items: ['Em Gráficos, escolha "por semana".', 'O resumo de domingo mostra a semana inteira.'] }];
 await msg('novidades', async () => {});
 await step('sininho', async () => { await page.click('.ann [data-p]').catch(() => {}); await page.click('#bellBtn'); await page.waitForSelector('.bellbox'); });
+// Security: the lock screen (left alone longer than the chosen time) and the message after signing out.
+await page.evaluate(() => { localStorage.setItem('shots.msgs', ''); document.querySelectorAll('.bellbox, .cfm-wrap').forEach(x => x.remove()); });
+await step('bloqueio', async () => { await page.keyboard.press('Escape').catch(() => {}); await sec('conta'); await page.click('#lkNow'); await page.waitForSelector('#lockScreen'); });
+await step('saiu', async () => { await page.click('#lkOut'); await page.waitForSelector('#welcome:not([hidden])'); await page.waitForSelector('.ann'); await page.waitForTimeout(400); });
 await browser.close();
 console.log('telas:', done.length, done.join(' '));
 if (failed.length) console.log('falharam:', failed.join(' | '));

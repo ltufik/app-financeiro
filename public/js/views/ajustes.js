@@ -12,6 +12,7 @@ import { renderMetrics } from '../metrics.js';
 import { renderFeedback, renderDuvidas } from '../feedback.js';
 import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
+import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
@@ -99,7 +100,7 @@ export function render(el) {
       <li>As opiniões e dúvidas que você mandar, com a tela em que estava e o tipo de celular.</li>
     </ul>
     <h3>O que o app nunca guarda</h3>
-    <ul class="small"><li>O arquivo do PDF, da foto ou do print, inclusive o que chega pelos atalhos do iPhone: é lido e descartado.</li><li>A senha do PDF.</li><li>Senhas de banco: o app não se conecta ao seu banco.</li></ul>
+    <ul class="small"><li>O arquivo do PDF, da foto ou do print, inclusive o que chega pelos atalhos do iPhone: é lido e descartado.</li><li>A sua digital ou o seu rosto: ficam no próprio celular. O app guarda só, neste aparelho, o número da chave que o celular criou.</li><li>A senha do PDF.</li><li>Senhas de banco: o app não se conecta ao seu banco.</li></ul>
     <p class="small">Você pode baixar uma cópia de tudo em Backup e apagar tudo em Conta, quando quiser.</p>
     <h3>Créditos das fotos</h3>
     <p class="small muted">Fotos do Pexels, de uso gratuito: ${[...new Set(Object.values(PHOTOS).map(p => p.by))].map(esc).join(', ')}.</p>
@@ -143,6 +144,8 @@ export function render(el) {
 
   <div class="panel stack" data-sec="conta">
     <h2>Conta</h2>
+    <div id="secBox" class="stack"></div>
+    <h3>Sair ou apagar</h3>
     <div class="rowbtn"><button class="btn" id="signOut" type="button">Sair da conta</button>
       ${owner ? '<button class="btn danger" id="delFam" type="button">Apagar os dados da família</button>' : '<button class="btn" id="leave" type="button">Sair desta família</button>'}
       <button class="btn danger" id="delAcc" type="button">Excluir minha conta</button></div>
@@ -156,6 +159,7 @@ export function render(el) {
   if (sec.key === 'metricas') renderMetrics($('#metricsBox'));
   if (sec.key === 'duvidas') renderDuvidas($('#faqBox'));
   if (sec.key === 'applepay') renderApplePay($('#apBox'));
+  if (sec.key === 'conta') renderSecurity($('#secBox'));
   if (sec.key === 'opiniao') renderFeedback($('#fbBox'));
   // help
   $('#hTour').onclick = () => S.showTour('app');
@@ -382,7 +386,7 @@ export function render(el) {
     };
     box.querySelector('[data-n]').focus();
   };
-  $('#signOut').onclick = async () => { await db.sb.auth.signOut(); location.reload(); };
+  $('#signOut').onclick = () => signOutSafely(db.sb);
   $('#delAcc').onclick = () => ask({
     title: 'Excluir minha conta?',
     text: `Seu login será apagado. ${S.members.length > 1 ? 'A família tem outras pessoas, então os dados dela continuam com elas.' : 'Você é a única pessoa da família, então todos os dados dela também serão apagados.'} Isso não pode ser desfeito.`,

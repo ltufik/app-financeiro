@@ -59,4 +59,9 @@ export const RELEASES = [
     { id: 'entrar_com_biometria', title: 'Entrar com a digital ou o rosto (biometria)', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Digitar e-mail e senha toda vez é chato, e o app lida com os números da família', cost: false, notes: 'Chaves de acesso (passkeys/WebAuthn): Face ID e Touch ID no iPhone, digital no Android. O Supabase já tem suporte a MFA/WebAuthn; ver se dá para usar como login principal ou como desbloqueio rápido. Junto com o bloqueio por tempo, o desbloqueio vira a biometria.', from: [], where: 'Tela de entrada; menu ☰ → Conta' },
     { id: 'bloqueio_por_tempo', title: 'Bloquear o app depois de um tempo parado (timeout)', status: 'proximo', origin: 'Luiz', effort: 'P', problem: 'O app mostra números da família e não pode ficar aberto se o celular ficar largado', cost: false, notes: 'Depois de X minutos sem uso (ou ao voltar para o app depois de X minutos), cobre a tela e pede biometria ou senha para continuar. Tempo ajustável em menu ☰ → Conta (ex.: 1, 5, 15 min). A Central do produto também.', from: [], where: 'Todo o app; menu ☰ → Conta' },
   ] },
+  { id: 'r46', version: 'v46', at: '2026-10-31T16:00:00Z', backlog: ['entrar_com_biometria', 'bloqueio_por_tempo'], news: { id: 'n20261031e', title: 'Mais segurança: bloqueio automático e digital', items: [
+    'Depois de 5 minutos sem uso, o app se bloqueia sozinho e esconde os números da família. Para voltar, use a senha.',
+    'Melhor ainda: em menu ☰ → Conta → Segurança, ligue a digital ou o rosto e desbloqueie com um toque. A digital fica no seu celular; o app nunca recebe.',
+    'Lá também dá para escolher o tempo (de 1 a 30 minutos) e bloquear na hora.',
+  ] } },
 ];

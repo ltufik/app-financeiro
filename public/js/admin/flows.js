@@ -45,6 +45,8 @@ export const SCREENS = {
   recado: { title: 'Recado personalizado', where: 'Ao abrir o app, quando o pedido fica pronto', key: null },
   novidades: { title: 'O que mudou', where: 'Ao abrir o app depois de uma atualização', key: null },
   sininho: { title: 'Sininho de novidades', where: 'Sino no topo: últimos 30 dias', key: 'sininho' },
+  bloqueio: { title: 'App bloqueado', where: 'Depois de alguns minutos sem uso, ou menu ☰ → Conta → Bloquear agora', key: ['seguranca.desbloqueio_bio', 'seguranca.desbloqueio_senha'] },
+  saiu: { title: 'Mensagem de segurança ao sair', where: 'Depois de Sair da conta', key: null },
 };
 
 // key: null = not measured at this step (the screen's own key would count everyone who opened it).
@@ -58,6 +60,7 @@ export const FLOWS = [
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
     { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'sininho'] },
+    { title: 'Segurança', screens: ['menu_conta', 'bloqueio', 'saiu'] },
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
     st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'),
@@ -76,6 +79,8 @@ export const FLOWS = [
     st('menu', 'Abre o menu'), st('menu_metas', 'Limite do cartão, quanto guardar, sonho'), st('inicio', 'Selos "Guardaram X% · queriam Y%"', null), st('inicio_mais', 'Projeção do sonho em Mais detalhes', null)] },
   { id: 'semabrir', title: 'Lançar sem abrir o app', desc: 'iPhone: Apple Pay, Siri e Compartilhar pelo app Atalhos. Android: Compartilhar e segurar o ícone.', steps: [
     st('menu', 'Abre o menu'), st('menu_applepay', 'Gera o código e monta os atalhos no app Atalhos', 'applepay.codigo'), st('lancar_comprovante', 'Android: compartilha o comprovante, a fatura ou a nota do banco; o app vê o que é e leva para o lugar certo', 'atalho.compartilhar')] },
+  { id: 'seguranca', title: 'Segurança: bloqueio e biometria', desc: 'O app não fica aberto com os números da família à vista.', steps: [
+    st('menu_conta', 'Escolhe o tempo do bloqueio e liga a digital ou o rosto', 'seguranca.biometria'), st('bloqueio', 'Depois do tempo sem uso, o app cobre a tela'), st('inicio', 'Desbloqueia com a digital, o rosto ou a senha', null), st('saiu', 'Ao sair da conta, a mensagem de segurança')] },
   { id: 'perguntar', title: 'Perguntar ao assistente', desc: 'Perguntas sobre os números da família.', steps: [
     st('perguntar', 'Escolhe uma sugestão ou escreve'), st('perguntar_resposta', 'Resposta com os números da família')] },
   { id: 'opiniao', title: 'Dar opinião e receber o recado', desc: 'O ciclo com quem testa: manda, a equipe faz, a pessoa é avisada.', steps: [

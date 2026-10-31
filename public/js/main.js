@@ -22,6 +22,7 @@ import { showMessages, openBell, refreshBell } from './messages.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, isAndroid, isMobile, isStandalone, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
+import { initLock, freshSignIn, signOutSafely, showBye } from './lock.js';
 
 const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -32,6 +33,7 @@ function show(id) { for (const s of ['boot', 'welcome', 'auth', 'reset', 'onboar
 function showSignedOut() {
   if (pendingInvite()) { show('auth'); showInviteBanner(); return; }
   show('welcome');
+  showBye();
   if (shouldAskInstall()) setTimeout(() => { if (!$('#welcome').hidden) askInstall(); }, 1200);
 }
 // After entering the app in the browser: one more invitation to install (iPhone keeps a separate login).
@@ -112,7 +114,7 @@ async function pickFamily() {
   }
   return true;
 }
-$('#oOut').onclick = async () => { await db.sb.auth.signOut(); location.reload(); };
+$('#oOut').onclick = () => signOutSafely(db.sb);
 
 // ---------- app ----------
 S.reload = async (all = false) => {
@@ -213,6 +215,9 @@ async function doStart() {
     startOnboarding(hasFamily ? 'existing' : 'full', () => { starting = null; start(); });
     return;
   }
+  // Locks before the numbers show when the app was left alone for longer than the chosen minutes.
+  if (S.justSignedIn) freshSignIn(S.user.id);
+  initLock({ sb: db.sb, user: S.user.id, name: displayName(), email: S.user.email });
   setFamily(await db.loadFamily(S.hh.id));
   $('#brand').textContent = S.hh.name;
   touchActivity(); checkAdmin();

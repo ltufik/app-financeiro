@@ -464,3 +464,14 @@ details.more > .stack{padding:0 10px 10px}
 .bi{font-size:18px;line-height:1.4}
 .bnew{color:var(--coral)}
 @media (max-width:440px){.top .in{gap:4px}.brand{font-size:15px}}
+
+/* ---------- Automatic lock (lock.js) ---------- */
+#lockScreen{position:fixed;inset:0;z-index:90;background:var(--deep);color:var(--deep-ink);display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px));overflow-y:auto}
+#lockScreen .lk-card{width:min(420px,100%);background:var(--card);color:var(--ink);border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;gap:12px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+#lockScreen .lk-ico{width:60px;height:60px;border-radius:18px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto}
+#lockScreen h2{margin:0;font-size:22px;text-wrap:balance}
+#lockScreen form{text-align:left}
+#lockScreen .lk-big{width:100%;min-height:48px;font-size:16px}
+#lockScreen .lk-links{justify-content:center;gap:20px}
+body.locked{overflow:hidden}
+body.locked > :not(#lockScreen):not(.toast){visibility:hidden}

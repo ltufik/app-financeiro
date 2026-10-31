@@ -433,3 +433,18 @@ test('compartilhar no iPhone: o arquivo é reconhecido pelos primeiros bytes, n�
   assert.match(docMessage('outro'), /Não achei um comprovante/);
   assert.match(docPrompt({ family: 'Família Souza', today: '2026-10-31', categories: [{ name: 'Mercado', grp: 'dia' }] }), /Mercado \[dia\]/);
 });
+
+import { lockMinutes, isExpired, lockText, byeMessage, toB64u, fromB64u, LOCK_OPTIONS } from '../public/js/lib/lock.js';
+test('bloqueio: tempo sem uso, textos de segurança e chave da digital', () => {
+  assert.equal(lockMinutes('15'), 15); assert.equal(lockMinutes('0'), 5); assert.equal(lockMinutes(undefined), 5); assert.ok(!LOCK_OPTIONS.includes(0));
+  const now = Date.parse('2026-10-31T15:00:00Z');
+  assert.equal(isExpired(now - 4 * 60e3, now, 5), false); assert.equal(isExpired(now - 5 * 60e3, now, 5), true);
+  assert.equal(isExpired(null, now, 1), false, 'acabou de entrar: não bloqueia');
+  assert.equal(isExpired(now + 60e3, now, 1), false, 'relógio adiantado não bloqueia em loop');
+  assert.equal(lockText({ name: 'Ana Souza', minutes: 1 }).title, 'Ana, o app foi bloqueado'); assert.match(lockText({ minutes: 1 }).text, /Ficou 1 minuto sem uso/);
+  assert.match(lockText({ reason: 'manual' }).text, /Você bloqueou/);
+  const b = byeMessage('Beto Lima'); assert.equal(b.title, 'Até logo, Beto!'); assert.ok(b.items.some(i => /nunca pede a senha do banco/.test(i)));
+  assert.equal(byeMessage('').title, 'Até logo!');
+  const raw = new Uint8Array([0, 1, 250, 251, 252, 253, 254, 255, 62, 63]);
+  assert.deepEqual([...fromB64u(toB64u(raw))], [...raw]); assert.ok(!/[+/=]/.test(toB64u(raw)));
+});

@@ -123,6 +123,8 @@ function aiMock(b) {
   return reply('{}');
 }
 let window_tool = null;
+// Signing out shows the security message on the front door: close it before going on.
+const dismissBye = async (pg = page) => { await pg.waitForSelector('.ann', { timeout: 3000 }).catch(() => {}); await pg.click('.ann [data-p]').catch(() => {}); };
 const txt = async s => (await page.textContent(s)).replace(/\s+/g, ' ').trim();
 // Settings now live in the side menu (hamburger), one page per subject.
 const sec = async k => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open [data-sec="' + k + '"]'); await page.click('#drawer [data-sec="' + k + '"]'); await page.waitForSelector('#v-ajustes [data-sec="' + k + '"]:not([hidden])'); await page.waitForTimeout(250); };
@@ -269,6 +271,11 @@ if (SMOKE) { // The rest needs real family data: in the smoke run, check the mai
   await sec('applepay');
   ok('safari: página dos atalhos do iPhone abre', (await txt('#v-ajustes')).includes('Apple Pay'));
   ok('safari: nenhuma tela rola para o lado', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await sec('conta'); await page.waitForSelector('#lkNow'); await page.click('#lkNow'); await page.waitForSelector('#lockScreen');
+  ok('safari: bloquear cobre a tela', await page.isVisible('#lkPass') && !(await page.isVisible('#brand')));
+  await shot('safari-bloqueio');
+  await page.fill('#lkPass', 'senha-forte-123'); await page.click('#lkGo'); await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 8000 }).catch(() => {});
+  ok('safari: senha desbloqueia', !(await page.$('#lockScreen')));
   throw SMOKE_DONE;
 }
 
@@ -800,6 +807,56 @@ const used = await page.evaluate(() => window.__db.usage);
   await noCoach(); await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
   await page.click('[data-tab=resumo]');
 }
+{ // Automatic lock: digital or face (virtual authenticator), password, lock at start, goodbye message on signing out.
+  const uid = await page.evaluate(() => window.__db.users.find(u => u.email === 'luiz@test.com').id);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('WebAuthn.enable');
+  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+  await sec('conta'); await page.waitForSelector('#secBox #lkMin');
+  ok('conta: bloqueio automático com 5 minutos de fábrica e sem opção "nunca"', (await page.inputValue('#lkMin')) === '5' && !(await page.$('#lkMin option[value="0"]')));
+  await page.selectOption('#lkMin', '1');
+  ok('conta: tempo do bloqueio escolhido fica no aparelho', await page.evaluate(() => localStorage.getItem('fin.lock.min')) === '1');
+  await page.click('#lkBioTgl'); await page.click('.cfm [data-y]');
+  await page.waitForFunction(u => !!localStorage.getItem('fin.bio.' + u), uid, { timeout: 8000 }).catch(() => {});
+  ok('conta: liga a digital ou o rosto (só a chave do aparelho fica guardada)', !!(await page.evaluate(u => localStorage.getItem('fin.bio.' + u), uid)) && (await txt('#secBox')).includes('Parar de usar'));
+  if (shots) await page.screenshot({ path: path.join(shots, '18-seguranca.png'), fullPage: true });
+  await page.evaluate(() => { window.__sawLock = false; new MutationObserver(() => { if (document.querySelector('#lockScreen')) window.__sawLock = true; }).observe(document.body, { childList: true }); });
+  await page.click('#lkNow');
+  await page.waitForFunction(() => window.__sawLock, null, { timeout: 5000 }).catch(() => {});
+  const lockedNow = await page.evaluate(() => window.__sawLock);
+  await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 8000 }).catch(() => {});
+  ok('bloquear agora cobre a tela e a digital desbloqueia', lockedNow && !(await page.$('#lockScreen')) && !(await page.evaluate(() => document.body.classList.contains('locked'))));
+  // Left alone longer than the chosen time, then back to the app: locked, numbers hidden.
+  await page.evaluate(u => { localStorage.setItem('fin.lock.last.' + u, String(Date.now() - 2 * 60e3)); localStorage.removeItem('fin.bio.' + u); }, uid);
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await page.waitForSelector('#lockScreen', { timeout: 5000 }).catch(() => {});
+  ok('parado mais que o tempo escolhido: bloqueia e esconde os números', await page.isVisible('#lockScreen') && (await txt('#lockScreen')).includes('Ficou 1 minuto sem uso') && !(await page.isVisible('#brand')));
+  if (shots) await page.screenshot({ path: path.join(shots, '19-bloqueio.png') });
+  await page.evaluate(() => { window.__badPass = 'errada-123'; }); await page.fill('#lkPass', 'errada-123'); await page.click('#lkGo');
+  await page.waitForFunction(() => /Senha incorreta/.test(document.querySelector('#lkMsg')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});
+  ok('senha errada não desbloqueia', (await txt('#lkMsg')).includes('Senha incorreta') && await page.isVisible('#lockScreen'));
+  await page.fill('#lkPass', 'senha-forte-123'); await page.click('#lkGo');
+  await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 5000 }).catch(() => {});
+  ok('senha certa desbloqueia', !(await page.$('#lockScreen')));
+  // Opening the app after the time: locks before the numbers show.
+  // Leaving the app records the time it was left; so the old time is set as the page loads again.
+  await page.addInitScript(() => { try { const u = sessionStorage.getItem('e2e.oldLock'); if (u) { sessionStorage.removeItem('e2e.oldLock'); localStorage.setItem('fin.lock.last.' + u, String(Date.now() - 10 * 60e3)); } } catch (e) { /* page without storage */ } });
+  await page.evaluate(u => sessionStorage.setItem('e2e.oldLock', u), uid);
+  await page.reload(); await page.waitForSelector('#lockScreen', { timeout: 10000 }).catch(() => {});
+  ok('abrir o app depois do tempo já abre bloqueado', await page.isVisible('#lockScreen') && !(await page.isVisible('#v-resumo')));
+  const coachKeys = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('fin.coach')).map(k => [k, localStorage[k]])));
+  await page.click('#lkOut'); await page.waitForSelector('#welcome:not([hidden])', { timeout: 10000 }); await page.waitForSelector('.ann', { timeout: 5000 }).catch(() => {});
+  ok('sair mostra a mensagem de segurança com o nome', (await txt('.ann')).includes('Até logo, Luiz!') && (await txt('.ann')).includes('nunca pede a senha do banco'), await page.evaluate(() => document.querySelector('.ann')?.textContent || '').then(t => t.slice(0, 120)));
+  if (shots) await page.screenshot({ path: path.join(shots, '20-saiu.png') });
+  await page.click('.ann [data-p]');
+  await page.evaluate(u => localStorage.removeItem('fin.lock.min'), uid);
+  await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId }); await cdp.send('WebAuthn.disable');
+  await page.click('#wLogin'); await page.fill('#aEmail', 'luiz@test.com'); await page.fill('#aPass', 'senha-forte-123'); await page.click('#aGo');
+  await page.waitForSelector('#app:not([hidden])', { timeout: 10000 });
+  ok('entrar de novo não abre bloqueado', !(await page.$('#lockScreen')));
+  await noCoach(); await page.evaluate(ks => { Object.keys(localStorage).filter(k => k.startsWith('fin.coach')).forEach(k => localStorage.removeItem(k)); Object.entries(ks).forEach(([k, v]) => localStorage.setItem(k, v)); }, coachKeys); await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
+  await page.click('[data-tab=resumo]');
+}
 { // Navigation, taps and errors are recorded (names of screens and buttons only).
   await page.click('[data-tab=lancar]'); await page.waitForTimeout(1200); await page.click('.ltile[data-mode="falar"]');
   await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
@@ -860,7 +917,9 @@ ok('dá para escolher o tema escuro', await page.evaluate(() => document.documen
 await page.click('[data-theme-opt="light"]');
 // forgot password
 await sec('conta');
-await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])'); await page.click('#wLogin');
+await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])'); await page.waitForSelector('.ann', { timeout: 5000 }).catch(() => {});
+ok('sair pela Conta também mostra a mensagem de segurança', (await page.textContent('.ann').catch(() => '')).includes('Até logo'));
+await page.click('.ann [data-p]').catch(() => {}); await page.click('#wLogin');
 await page.click('#aForgot');
 ok('esqueci a senha sem e-mail pede o e-mail', (await txt('#authForm')).includes('digite seu e-mail acima'));
 await page.fill('#aEmail', 'luiz@test.com'); await page.click('#aForgot');
@@ -885,7 +944,7 @@ ok('sem rolagem horizontal', await page.evaluate(() => document.documentElement.
 // The invited person opens the WhatsApp link, creates an account and lands in the family.
 await sec('conta');
 await page.click('#signOut');
-await page.waitForSelector('#welcome:not([hidden])');
+await page.waitForSelector('#welcome:not([hidden])'); await dismissBye();
 await page.goto(inviteUrl.replace(/^https:\/\/[^/]+/, 'https://app.test'));
 await page.waitForSelector('#aInvite:not([hidden])');
 ok('quem recebe o link vê quem convidou', (await txt('#aInvite')).includes('Luiz convidou você para participar da Família Elias'), await txt('#aInvite'));
@@ -921,7 +980,7 @@ ok('divisão salva', spl && spl.conta === memberOpt && Object.keys(spl.cards).le
 await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09');
 ok('início mostra quem pagou o quê e o acerto', (await txt('#settleBox')).includes('Quem pagou o quê em setembro de 2026') && /passa R\$|equilibrado/.test(await txt('#settleBox')), (await txt('#settleBox')).slice(0, 160));
 await sec('conta');
-await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])');
+await page.click('#signOut'); await page.waitForSelector('#welcome:not([hidden])'); await dismissBye();
 await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fin.coach.')).forEach(k => localStorage.removeItem(k)));
 await page.click('#wLogin'); await page.fill('#aEmail', 'luiz@test.com'); await page.fill('#aPass', 'senha-forte-123'); await page.click('#aGo');
 await page.waitForSelector('#app:not([hidden])');
