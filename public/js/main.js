@@ -20,7 +20,7 @@ import { track, navTo, screenOf } from './usage.js';
 import { TEST_PHASE } from './feedback.js';
 import { showMessages } from './messages.js';
 import { photo } from './photos.js';
-import { askInstall, shouldAskInstall, isIOS, markNotInstalled, checkStillInstalled } from './install.js';
+import { askInstall, shouldAskInstall, isIOS, isAndroid, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 
 const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
@@ -127,6 +127,8 @@ const onInstallable = e => {
   e.preventDefault && e.preventDefault(); S.installEvt = e;
   // Only fires when the app is NOT installed: if we thought it was (uninstalled since), ask again.
   if (markNotInstalled()) askAgainSoon();
+  // The steps were on screen and Chrome is ready now: switch to the one-tap button.
+  const sheet = $('.isheet'); if (sheet && !sheet.querySelector('[data-install]') && isAndroid()) { sheet.remove(); askInstall(); }
 };
 // The app was uninstalled since the last visit: invite to install again (once the screen is free).
 const askAgainSoon = () => setTimeout(() => { if (!$('.tour') && !$('.coach') && !$('.cfm-wrap') && shouldAskInstall()) askInstall(); }, 1200);

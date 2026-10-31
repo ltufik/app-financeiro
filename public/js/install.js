@@ -57,10 +57,10 @@ export function askInstall({ note = '' } = {}) {
     body = `<button class="btn primary" type="button" data-install style="width:100%;padding:14px">Instalar agora</button>
       <p class="tiny muted" style="text-align:center">O Android vai pedir para confirmar.</p>`;
   } else if (isAndroid()) {
-    body = `<ol class="isteps"><li><span class="sn">1</span><span>Toque no menu <span class="ico">${ICON_MENU}</span> no canto de cima do Chrome.</span></li>
-      <li><span class="sn">2</span><span>Escolha <strong>Instalar app</strong> (ou <strong>Adicionar à tela inicial</strong>).</span></li>
-      <li><span class="sn">3</span><span>Confirme em <strong>Instalar</strong>.</span></li></ol>
-      <p class="tiny muted">Se no menu só aparecer "Adicionar à tela inicial", espere alguns segundos com o app aberto e abra o menu de novo: assim o ícone fica com o nosso logo, e não com o do Chrome.</p>`;
+    body = `<ol class="isteps"><li><span class="sn">1</span><span>Toque no menu <span class="ico">${ICON_MENU}</span> no canto de cima do Chrome. Não use o ícone de download: ele só salva a página.</span></li>
+      <li><span class="sn">2</span><span>Role a lista e toque em <strong>Adicionar à tela inicial</strong> (em alguns celulares aparece <strong>Instalar app</strong>).</span></li>
+      <li><span class="sn">3</span><span>Escolha <strong>Instalar</strong> (não "Criar atalho") e confirme.</span></li></ol>
+      <p class="tiny muted"><strong>Não aparece a opção?</strong> Se estiver numa aba anônima, abra o endereço numa aba normal: a aba anônima não deixa instalar. Precisa ser o Chrome.</p>`;
   } else {
     body = `<ol class="isteps"><li><span class="sn">1</span><span>Toque em <span class="ico">${ICON_SHARE}</span> <strong>Compartilhar</strong>, na barra de baixo do Safari.</span></li>
       <li><span class="sn">2</span><span>Role e toque em <span class="ico">${ICON_ADD}</span> <strong>Adicionar à Tela de Início</strong>.</span></li>

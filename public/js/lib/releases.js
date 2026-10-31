@@ -36,4 +36,5 @@ export const RELEASES = [
     'Se o app pedir, entre de novo com o seu e-mail e senha. Seus dados continuam todos lá.',
     'Instalou o app no celular? Apague o ícone antigo e instale de novo pelo endereço novo. As notificações e os atalhos do iPhone continuam funcionando.',
   ] } },
+  { id: 'r38', version: 'v38', at: '2026-10-31T00:45:00Z', backlog: [], semNovidade: 'Ajuste no passo a passo de instalação no Android (aba anônima, ícone de download, "Instalar" em vez de "Criar atalho"); não muda o uso do app.' },
 ];
