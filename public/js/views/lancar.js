@@ -10,6 +10,7 @@ import { $, toast, catPicker, confirmInline, invalid, clearInvalid, busy } from 
 import { checkDate, checkNumber, checkName } from '../lib/validate.js';
 import { notifyFamily } from '../push.js';
 import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '../lib/receipt.js';
+import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
 let Q = null;          // quick-entry preview items
@@ -67,13 +68,13 @@ function build(el) {
     <div id="rcReview" hidden style="margin-top:14px"></div>
   </div>
   <div class="panel" data-panel="pdf" hidden>
-    <h2>Enviar PDF</h2>
-    <p class="muted small">Fatura do cartão, extrato da conta ou extrato de investimentos. O app lê, confere os totais e mostra tudo para você revisar antes de salvar. O arquivo não fica guardado.</p>
+    <h2>Enviar fatura ou extrato</h2>
+    <p class="muted small">Fatura do cartão, extrato da conta ou de investimentos, em PDF, foto ou print. O app descobre o que é pelo conteúdo, lê, confere os totais e mostra tudo para você revisar antes de salvar. O arquivo não fica guardado.</p>
     <div class="drop" id="drop" style="margin-top:12px">
       <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
-      <strong>Escolher PDF</strong>
+      <strong>Escolher PDF, foto ou print</strong>
       <span class="small muted">PDF com senha também funciona: o app pede a senha e não a guarda.</span>
-      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf" aria-label="Escolher PDF">
+      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf,image/*" aria-label="Escolher PDF, foto ou print">
     </div>
     <details class="help" style="margin-top:10px"><summary>Onde encontro o PDF?</summary><ol>
       <li><strong>Fatura do cartão:</strong> no app do banco, abra Cartões → Fatura e procure <em>Baixar PDF</em>, <em>Compartilhar</em> ou <em>Enviar por e-mail</em>.</li>
@@ -103,13 +104,13 @@ function build(el) {
   el.querySelectorAll('#qExamples .chip').forEach(b => b.onclick = () => { $('#qText').value = b.textContent; $('#qText').focus(); });
   $('#qGo').onclick = interpret;
   $('#qManual').onclick = () => { Q = [{ source: 'conta', date: todayISO(), description: '', amount: 0, category: 'A classificar' }]; renderQ(); $('#qStatus').textContent = 'Preencha e salve.'; };
-  $('#pdfIn').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => startPdf(f), pdfResult).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')).finally(() => { e.target.value = ''; }); };
+  $('#pdfIn').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => routeFile(f, 'pdf'), resultArea).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')).finally(() => { e.target.value = ''; }); };
   const drop = $('#drop');
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
   drop.ondragleave = () => drop.classList.remove('over');
-  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => startPdf(f), pdfResult).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')); };
-  $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), pdfResult);
-  for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => readReceipt(f), () => !$('#rcReview').hidden ? $('#rcReview') : $('#rcLog')); };
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => routeFile(f, 'pdf'), resultArea).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')); };
+  $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), resultArea);
+  for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => routeFile(f, 'nota'), resultArea); };
 }
 
 // ---------- manual entries ----------
@@ -174,37 +175,67 @@ export async function handleShared() {
   } catch (e) { /* no cache: nothing shared */ }
   if (!meta || (!file && !meta.text)) { toast('Não recebi nada do compartilhamento. Tente de novo pelo botão Compartilhar do banco.', 'info'); return; }
   if (!file) { openMode('falar', true); $('#qText').value = meta.text.slice(0, 500); return interpret(); }
-  // Some banks share with a generic type: look at the first bytes to know if it is a PDF or an image.
+  return withBusy('Lendo o que você compartilhou...', () => routeFile(file, 'share'), resultArea);
+}
+
+// ---------- what is this document? ----------
+// Decided by the content, never by the extension: a photo, a print or a PDF of a bill goes to the
+// bill import; of a Pix receipt, to a single entry; of a store receipt, to "Foto da nota".
+// Text documents are classified by the rules in lib/classify.js; images (and PDFs without text)
+// by the reading assistant, in the same call that reads them. A document is sent to another
+// path at most once (HOP), so two opinions that disagree can never loop.
+let HOP = 0;
+const canHop = () => HOP++ < 1;
+async function sniffFile(file) {
+  // Some banks share with a generic type or no name: look at the first bytes.
   const head = new Uint8Array(await file.slice(0, 12).arrayBuffer()), sig = String.fromCharCode(...head);
-  const sniff = sig.startsWith('%PDF') ? 'application/pdf' : head[0] === 0xFF && head[1] === 0xD8 ? 'image/jpeg' : sig.slice(1, 4) === 'PNG' ? 'image/png' : sig.slice(8, 12) === 'WEBP' ? 'image/webp' : '';
-  if (sniff && sniff !== file.type) file = new File([file], file.name || 'comprovante', { type: sniff });
-  const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
-  if (isPdf) {
-    // Statements and bills have several pages or a known layout; a receipt is a single short page.
-    let pages = 0, text = '';
-    try { const doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise; pages = doc.numPages; const tc = await (await doc.getPage(1)).getTextContent(); text = tc.items.map(i => i.str).join(' '); }
-    catch (e) { pages = 0; }
-    const dated = (text.match(/\b\d{2}\/\d{2}(\/\d{2,4})?\b/g) || []).length;
-    if (!pages || pages > 1 || dated > 4 || /saldo anterior|total desta fatura|lançamentos futuros/i.test(text)) { openMode('pdf', true); return withBusy('Lendo ' + file.name + '...', () => startPdf(file), pdfResult); }
-    return withBusy('Lendo o comprovante...', () => readProof({ text }), () => $('#qPreview'));
-  }
-  if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) { toast('Esse tipo de arquivo não dá para ler. Compartilhe a imagem ou o PDF do comprovante.', 'info'); return; }
-  return withBusy('Lendo o que você compartilhou...', () => readProof({ file }), () => (!$('#qPreview').hidden ? $('#qPreview') : !$('#rcReview').hidden ? $('#rcReview') : null));
+  const type = sig.startsWith('%PDF') ? 'application/pdf' : head[0] === 0xFF && head[1] === 0xD8 ? 'image/jpeg' : sig.slice(1, 4) === 'PNG' ? 'image/png' : sig.slice(8, 12) === 'WEBP' ? 'image/webp' : sig.slice(4, 8) === 'ftyp' ? 'image/heic' : '';
+  return type && type !== file.type ? new File([file], file.name || 'documento', { type }) : file;
+}
+const isPdfFile = f => f.type === 'application/pdf';
+const isImageFile = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name || '');
+// The part of Lançar that ended up with something to show.
+const resultArea = () => ['#qPreview', '#rcReview', '#review', '#pwBox'].map(s => $(s)).find(el => el && !el.hidden) || (mode === 'nota' ? $('#rcLog') : mode === 'pdf' ? $('#pdfLog') : null);
+async function routeFile(file, from) {
+  HOP = 0;
+  file = await sniffFile(file);
+  if (file.size > 25 * 1024 * 1024) { toast('O arquivo é grande demais (máximo 25 MB).', 'info'); return; }
+  if (isPdfFile(file)) { if (mode !== 'pdf') openMode('pdf', from === 'share'); return startPdf(file); }
+  if (!isImageFile(file)) { toast('Esse tipo de arquivo não dá para ler. Envie um PDF, uma foto ou um print.', 'info'); return; }
+  if (from === 'nota') return readReceipt(file);
+  return readProof({ file });
+}
+// A photo or print of a bill, statement or investments goes to the bill import, read from the image.
+async function statementFromImage(file, kind) {
+  openMode('pdf', false);
+  $('#pdfLog').innerHTML = ''; $('#review').hidden = true; $('#pwBox').hidden = true;
+  PDF.bytes = null; PDF.name = file.name || 'imagem'; PDF.bank = null;
+  plog(`É ${kind === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[kind]}. Lendo a imagem...`);
+  let blob;
+  try { blob = await shrink(file, 2400); } catch (e) { plog('Não consegui abrir a imagem. Se for do iPhone (HEIC), tire um print e envie o print.', 'var(--bad)'); return; }
+  return viaClaude(null, [], '', kind, [blob]);
 }
 async function readProof({ file, text = '' }) {
   openMode('falar', false);
-  const images = file ? [await shrink(file)] : [];
+  let images = [];
+  if (file) { try { images = [await shrink(file)]; } catch (e) { toast('Não consegui abrir a imagem. Se for do iPhone (HEIC), tire um print e envie o print.', 'info'); return; } }
   const doc = text ? '\nTexto do documento:\n"""' + text.slice(0, 8000) + '"""' : '';
   const prompt = `Você recebeu ${file ? 'a imagem' : 'o texto'} de um documento compartilhado por uma família brasileira (${S.hh.name}). Hoje é ${todayISO()}.
 Diga o que é e extraia os lançamentos. Responda só com JSON:
-{"tipo":"comprovante"|"nota"|"outro","itens":[{"descricao":"texto curto: para quem ou de quem e o motivo, se houver","valor":123.45,"sentido":"saida"|"entrada","data":"AAAA-MM-DD","meio":"cartao"|"conta","categoria":"<nome exato de uma categoria da lista>"}]}
-"comprovante" = comprovante de Pix, TED, transferência, pagamento de boleto ou compra no débito/crédito (um lançamento). "nota" = nota fiscal ou cupom com vários itens de compra. "outro" = nada disso (deixe itens vazio).
+{"tipo":"comprovante"|"nota"|"fatura"|"extrato"|"investimentos"|"outro","itens":[{"descricao":"texto curto: para quem ou de quem e o motivo, se houver","valor":123.45,"sentido":"saida"|"entrada","data":"AAAA-MM-DD","meio":"cartao"|"conta","categoria":"<nome exato de uma categoria da lista>"}]}
+${KIND_RULES}
+Só preencha "itens" para "comprovante" (um lançamento); para os outros tipos deixe itens vazio.
 Regras: valor sempre positivo; Pix e transferência enviados, boleto e débito são "conta" e "saida"; recebidos são "entrada"; compra no crédito é "cartao". Não invente: se não achar o valor, deixe itens vazio.
 Categorias: ${catList()}${doc}`;
   let r;
   try { r = await askJSON(prompt, { tier: 'quick', images, maxTokens: 1500 }); }
   catch (e) { toast(aiErrorText(e)); return; }
-  if (r?.tipo === 'nota' && file) { openMode('nota', true); return readReceipt(file); }
+  const kind = aiKind(r?.tipo);
+  if (kind === 'nota' && canHop()) { openMode('nota', false); return file ? readReceipt(file) : readReceipt(null, { text }); }
+  if (['fatura', 'extrato', 'investimentos'].includes(kind) && canHop()) {
+    if (file) return statementFromImage(file, kind);
+    openMode('pdf', false); return viaClaude(null, [], text, kind);
+  }
   const its = (r?.itens || []).filter(x => x && +x.valor > 0);
   if (r?.tipo === 'outro' || !its.length) { toast('Não achei um valor nesse arquivo. Confira se é um comprovante ou lance falando.', 'info'); openMode('falar', true); return; }
   Q = itemsToQ(its, 'Comprovante'); renderQ(); $('#qStatus').textContent = 'Lido do comprovante. Confira e salve.'; track('lancar.comprovante');
@@ -269,9 +300,13 @@ async function startPdf(file) {
   return openPdf();
 }
 async function openPdf(password) {
+  // Opened from a share right at start, the PDF reader may still be loading.
+  for (let i = 0; i < 40 && !window.pdfjsLib; i++) await new Promise(r => setTimeout(r, 250));
   if (!window.pdfjsLib) { plog('O leitor de PDF ainda não carregou. Espere um instante e tente de novo.', 'var(--bad)'); return; }
   let doc;
-  try { doc = await window.pdfjsLib.getDocument({ data: PDF.bytes.slice(), password: password || undefined, isEvalSupported: false }).promise; }
+  const open = () => window.pdfjsLib.getDocument({ data: PDF.bytes.slice(), password: password || undefined, isEvalSupported: false }).promise;
+  // Right after the app opens (a share), the reader can fail once while it starts: try again before giving up.
+  try { doc = await open().catch(e => e?.name === 'PasswordException' ? Promise.reject(e) : new Promise(r => setTimeout(r, 800)).then(open)); }
   catch (e) {
     if (e?.name === 'PasswordException') { $('#pwBox').hidden = false; $('#pwIn').value = ''; $('#pwIn').focus(); plog(e.code === 2 ? 'Senha incorreta. Tente de novo.' : 'Este PDF tem senha. Digite abaixo; ela não é guardada.', e.code === 2 ? 'var(--bad)' : null); return; }
     plog('Não consegui abrir este PDF.', 'var(--bad)'); return;
@@ -284,6 +319,11 @@ async function openPdf(password) {
   }
   const lines1 = pages.flatMap(p => lineify(p.items, p.w, 1)), text = lines1.join('\n'), type = detect(text);
   PDF.bank = detectBank(text);
+  // What the text says it is decides the path, whatever button was used.
+  const cls = classifyText(text, { pages: doc.numPages });
+  if (cls.kind === 'comprovante' && canHop()) { plog('É um comprovante: vira um lançamento para você conferir.'); return readProof({ text }); }
+  if (cls.kind === 'nota' && canHop()) { plog('É uma nota fiscal: vou separar os itens por categoria.'); openMode('nota', false); return readReceipt(null, { text }); }
+  if (!cls.kind && !cls.many && !cls.empty && canHop()) return readProof({ text });
   if (type === 'fatura-santander') {
     const r = parseFaturaSantander(pages.flatMap((p, i) => lineify(p.items, p.w, i === 0 ? 1 : 2)));
     if (r.ok) { plog(`Fatura lida: ${r.items.length} lançamentos. Totais por cartão conferem.`, 'var(--good)'); return reviewRows('cartao', r.items, faturaMonth(r.vencimento), { total: r.net, venc: r.vencimento, checks: r.checks }); }
@@ -295,14 +335,28 @@ async function openPdf(password) {
     if (ex.ok) { plog(`Extrato lido: ${ex.rows.length} movimentos. Saldo de ${brl(ex.saldoIni)} para ${brl(ex.saldoFim)} confere.`, 'var(--good)'); return reviewRows('conta', ex.rows, ex.month, { saldoIni: ex.saldoIni, saldoFim: ex.saldoFim }); }
   }
   if (type === 'imagem') {
-    plog('Este PDF é uma imagem (sem texto). Diga o que ele é:');
+    // A scanned PDF or a photo saved as PDF: the assistant looks at the first page and says what it is.
+    let first = null, kind = null;
+    try {
+      plog('Este PDF é uma imagem. Vendo o que ele é...');
+      const vp = pages[0].pg.getViewport({ scale: 2 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+      await pages[0].pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      first = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
+      const r = await askJSON(`A imagem é a primeira página de um documento financeiro brasileiro. Diga o que é. Responda só com JSON {"tipo":"comprovante"|"nota"|"fatura"|"extrato"|"investimentos"|"outro"}.\n${KIND_RULES}`, { tier: 'quick', images: [first], maxTokens: 100 });
+      kind = aiKind(r?.tipo);
+    } catch (e) { kind = null; }
+    const img = first && new File([first], 'pagina1.jpg', { type: 'image/jpeg' });
+    if (kind === 'comprovante' && img && canHop()) return readProof({ file: img });
+    if (kind === 'nota' && img && canHop()) { openMode('nota', false); return readReceipt(img); }
+    if (kind === 'fatura' || kind === 'extrato' || kind === 'investimentos') { plog(`É ${kind === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[kind]}.`); return viaClaude(doc, pages, '', kind); }
+    plog('Não consegui ver o que é. Diga o que ele é:');
     const box = document.createElement('div'); box.className = 'chips';
     box.innerHTML = [['fatura', 'Fatura do cartão'], ['extrato', 'Extrato da conta'], ['investimentos', 'Investimentos']].map(([k, l]) => `<button class="chip" type="button" data-k="${k}">${l}</button>`).join('');
     $('#pdfLog').append(box);
     box.querySelectorAll('.chip').forEach(b => b.onclick = () => { box.remove(); viaClaude(doc, pages, '', b.dataset.k); });
     return;
   }
-  const kind = type.startsWith('fatura') ? 'fatura' : type.startsWith('extrato') ? 'extrato' : type === 'investimentos' ? 'investimentos' : 'auto';
+  const kind = ['fatura', 'extrato', 'investimentos'].includes(cls.kind) ? cls.kind : type.startsWith('fatura') ? 'fatura' : type.startsWith('extrato') ? 'extrato' : type === 'investimentos' ? 'investimentos' : 'auto';
   return viaClaude(doc, pages, text, kind);
 }
 
@@ -314,7 +368,7 @@ Extrato: só a movimentação da conta, na ordem, débitos com valor negativo e 
 Fatura: um item por lançamento da fatura atual, de todos os cartões (titular, adicionais e virtuais), com o final do cartão de cada um; compras e parcelas positivas; créditos, estornos e cashback negativos; inclua anuidade, IOF, juros e encargos como itens. Não inclua o pagamento da fatura anterior, saldo anterior, limite, pagamento mínimo nem simulações de parcelamento. Parcela no formato 02/10 quando houver. Se a fatura mostrar o total de cada cartão, informe em cartoes; informe sempre o valor total da fatura em valorTotalFatura.
 Investimentos: use o resumo por classe de ativo e o total da carteira.`;
 
-async function viaClaude(doc, pages, text, kind) {
+async function viaClaude(doc, pages, text, kind, blobs = null) {
   const fmt = kind === 'investimentos' ? JSON_INVEST : kind === 'extrato' ? JSON_EXTRATO : kind === 'fatura' ? JSON_FATURA : `um destes formatos, conforme o documento: ${JSON_EXTRATO} ou ${JSON_FATURA} ou ${JSON_INVEST}`;
   try {
     if (text && (text.match(MONEY) || []).length > 5) {
@@ -323,12 +377,16 @@ async function viaClaude(doc, pages, text, kind) {
       return handleExtracted(r);
     }
     const parts = [];
-    for (let i = 0; i < pages.length; i++) {
-      plog(`Lendo a página ${i + 1} de ${pages.length}...`);
-      const vp = pages[i].pg.getViewport({ scale: 2 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
-      await pages[i].pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
-      try { parts.push(await askJSON(`A imagem é a página ${i + 1} de ${pages.length} de um documento financeiro brasileiro (${kind}). Extraia só o que aparece nesta página. Responda só com JSON em ${fmt}. Se a página não tiver lançamentos, devolva as listas vazias.\n${RULES_TXT}`, { images: [blob], maxTokens: 8000 })); }
+    const n = blobs ? blobs.length : pages.length;
+    for (let i = 0; i < n; i++) {
+      let blob = blobs?.[i];
+      if (!blob) {
+        plog(`Lendo a página ${i + 1} de ${n}...`);
+        const vp = pages[i].pg.getViewport({ scale: 2 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+        await pages[i].pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+        blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
+      }
+      try { parts.push(await askJSON(`A imagem é ${blobs ? 'uma foto ou um print' : `a página ${i + 1} de ${n}`} de um documento financeiro brasileiro (${kind}). Extraia só o que aparece nesta página. Responda só com JSON em ${fmt}. Se a página não tiver lançamentos, devolva as listas vazias.\n${RULES_TXT}`, { images: [blob], maxTokens: 8000 })); }
       catch (e) { plog(`A página ${i + 1} não pôde ser lida (${aiErrorText(e)})`, 'var(--warn)'); if (['not_configured', 'not_allowed', 'not_signed_in'].includes(e.code)) return; }
     }
     const m = { tipo: kind === 'auto' ? parts.find(p => p?.tipo)?.tipo : kind };
@@ -470,23 +528,24 @@ function reviewInvest(r) {
 let RC = null; // receipt being reviewed
 const rlog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#rcLog').append(p); if (BUSY) BUSY.set(t); };
 // Phone photos are big: shrink to at most 1600 px and JPEG before sending.
-async function shrink(file) {
+async function shrink(file, max = 1600) {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; });
-    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
     const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
     cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
     return await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
   } finally { URL.revokeObjectURL(url); }
 }
-async function readReceipt(file) {
+// `pre.text`: the text of a PDF already opened elsewhere (it may have had a password).
+async function readReceipt(file, pre = null) {
   $('#rcLog').innerHTML = ''; $('#rcReview').hidden = true; RC = null;
-  const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
-  if (!isPdf && !/^image\//.test(file.type) && !/\.(jpe?g|png|heic|heif|webp)$/i.test(file.name)) { rlog('Este arquivo não é foto nem PDF.', 'var(--bad)'); return; }
-  if (file.size > 25 * 1024 * 1024) { rlog('O arquivo é grande demais (máximo 25 MB).', 'var(--bad)'); return; }
+  const isPdf = !pre && (/\.pdf$/i.test(file.name) || file.type === 'application/pdf');
+  if (!pre && !isPdf && !isImageFile(file)) { rlog('Este arquivo não é foto nem PDF.', 'var(--bad)'); return; }
+  if (file && file.size > 25 * 1024 * 1024) { rlog('O arquivo é grande demais (máximo 25 MB).', 'var(--bad)'); return; }
   const cats = S.categories.filter(c => c.grp === 'dia').map(c => c.name);
-  let images = [], text = '';
+  let images = [], text = pre?.text || '';
   try {
     if (isPdf) {
       if (!window.pdfjsLib) { rlog('O leitor de PDF ainda não carregou. Espere um instante e tente de novo.', 'var(--bad)'); return; }
@@ -504,13 +563,28 @@ async function readReceipt(file) {
         }
       }
       if ((text.match(MONEY) || []).length >= 3) images = [];
-    } else {
+      // Sent as a receipt but the text says otherwise: take it where it belongs.
+      const cls = images.length ? { kind: null } : classifyText(text, { pages: doc.numPages });
+      if (cls.kind && cls.kind !== 'nota' && canHop()) {
+        rlog(`Isto é ${cls.kind === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[cls.kind]}, não uma nota fiscal.`);
+        if (cls.kind === 'comprovante') return readProof({ text });
+        openMode('pdf', false); return startPdf(file);
+      }
+    } else if (!pre) {
       rlog('Preparando a foto...');
       try { images = [await shrink(file)]; } catch (e) { rlog('Não consegui abrir a foto. Se for do iPhone (HEIC), tire de novo pelo botão Tirar foto.', 'var(--bad)'); return; }
     }
     rlog('Lendo os itens da nota...');
-    const prompt = receiptPrompt(cats, todayISO()) + (images.length ? '' : `\nTexto da nota:\n"""${text.slice(0, 60000)}"""`);
+    const check = images.length ? `\nAntes, confira pelo conteúdo o que é o documento e informe em "tipo": "nota", "comprovante", "fatura", "extrato", "investimentos" ou "outro". ${KIND_RULES} Se não for "nota", responda só {"tipo":"..."}.` : '';
+    const prompt = receiptPrompt(cats, todayISO()) + check + (images.length ? '' : `\nTexto da nota:\n"""${text.slice(0, 60000)}"""`);
     const raw = await askJSON(prompt, { images, maxTokens: 6000 });
+    const kind = aiKind(raw?.tipo);
+    if (kind && kind !== 'nota' && file && canHop()) {
+      rlog(`Isto é ${kind === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[kind]}, não uma nota fiscal.`);
+      if (kind === 'comprovante') return readProof({ file: isPdf ? new File([images[0]], 'pagina1.jpg', { type: 'image/jpeg' }) : file });
+      if (isPdf) { openMode('pdf', false); return startPdf(file); }
+      return statementFromImage(file, kind);
+    }
     const r = normalizeReceipt(raw, todayISO());
     if (!r.ok) { rlog(r.msg, 'var(--bad)'); return; }
     rlog(`Nota lida: ${r.items.length} ${r.items.length > 1 ? 'itens' : 'item'}, total ${brl(r.total)}.`, 'var(--good)');

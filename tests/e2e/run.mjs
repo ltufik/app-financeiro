@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { APP_VERSION } from '../helpers/app-version.mjs';
 
 const arg = k => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : null; };
 const { chromium } = await import(arg('playwright'));
@@ -87,16 +88,18 @@ await page.addInitScript(() => {
   Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve({ pushManager: pm }), configurable: true });
 });
 
-let chatCalls = 0, window_pushTests = 0; const notifies = [];
+let chatCalls = 0, window_pushTests = 0, AI_DOC = null; const notifies = [];
 function aiMock(b) {
   const text = JSON.stringify(b.messages);
   const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
   if (text.includes('Transforme a frase')) return reply(JSON.stringify({ itens: [{ descricao: 'Mercado', valor: 230, sentido: 'saida', data: '2026-10-06', meio: 'cartao', categoria: 'Mercado' }, { descricao: 'Terapia', valor: 350, sentido: 'saida', data: '2026-10-06', meio: 'conta', categoria: 'Saúde' }] }));
+  if (text.includes('documento compartilhado') && AI_DOC && AI_DOC !== 'comprovante') return reply(JSON.stringify({ tipo: AI_DOC, itens: [] }));
+  if (text.includes('Antes, confira pelo conteúdo') && AI_DOC && AI_DOC !== 'nota') return reply(JSON.stringify({ tipo: AI_DOC }));
   if (text.includes('documento compartilhado')) return reply(JSON.stringify({ tipo: 'comprovante', itens: [{ descricao: 'Pix para João Encanador', valor: 180, sentido: 'saida', data: '2026-10-29', meio: 'conta', categoria: 'Casa' }] }));
   if (text.includes('Classifique lançamentos')) return reply('[]');
   if (text.includes('nota fiscal ou cupom')) return reply(JSON.stringify({ loja: 'Drogaria Mar', data: '2026-10-06', total: 230, pagamento: 'cartao', itens: [
     { descricao: 'Arroz 5 kg', valor: 30, categoria: 'Mercado' }, { descricao: 'Whey protein 900 g', valor: 150, categoria: 'Suplementos' }, { descricao: 'Dipirona', valor: 50, categoria: 'Saúde' }] }));
-  if (text.includes('Extraia os dados') && text.includes('Nu Pagamentos')) return reply(JSON.stringify({ tipo: 'fatura', banco: 'Nubank', vencimento: '15/11/2026', valorTotalFatura: 1234.5, cartoes: [], itens: [
+  if ((text.includes('Extraia os dados') && text.includes('Nu Pagamentos')) || text.includes('uma foto ou um print')) return reply(JSON.stringify({ tipo: 'fatura', banco: 'Nubank', vencimento: '15/11/2026', valorTotalFatura: 1234.5, cartoes: [], itens: [
     { cartao: '', data: '09/10', descricao: 'Padaria Pao Quente', parcela: '', valor: 45.9 }, { cartao: '', data: '12/10', descricao: 'Posto Shell Av Brasil', parcela: '', valor: 250 },
     { cartao: '', data: '15/10', descricao: 'iFood *Restaurante Sabor', parcela: '', valor: 89.6 }, { cartao: '', data: '20/10', descricao: 'Loja Movel Casa', parcela: '02/06', valor: 400 },
     { cartao: '', data: '25/10', descricao: 'Netflix.com', parcela: '', valor: 55.9 }, { cartao: '', data: '28/10', descricao: 'Supermercado Dia', parcela: '', valor: 413.1 },
@@ -625,7 +628,7 @@ await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver 
 await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
 const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
-ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v41', JSON.stringify(fbRow));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === APP_VERSION, JSON.stringify(fbRow));
 ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
 await shot('11-opiniao');
 await sec('duvidas'); await page.waitForSelector('#fqList details');
@@ -698,6 +701,28 @@ const used = await page.evaluate(() => window.__db.usage);
   await page.goto('https://app.test/?acao=compartilhar'); await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ') + document.querySelector('#qPreview')?.textContent), null, { timeout: 15000 }).catch(() => {});
   ok('comprovante em formato genérico (como o do Santander) também é lido', /João Encanador/.test(await page.evaluate(() => [...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ') + document.querySelector('#qPreview').textContent)));
   ok('nada sobra guardado depois de ler', await page.evaluate(async () => !(await (await caches.open('share')).match('/shared/file'))));
+  // The content decides where a document goes, not the button nor the file type.
+  await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
+  const qVals = () => page.evaluate(() => (document.querySelector('#qPreview')?.hidden ? '' : document.querySelector('#qPreview').textContent + [...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')));
+  const clean = () => page.evaluate(() => { const q = document.querySelector('#qPreview'); q.innerHTML = ''; q.hidden = true; document.querySelector('#pdfLog').innerHTML = ''; document.querySelector('#review').hidden = true; document.querySelector('#rcLog').innerHTML = ''; });
+  await clean();
+  await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/comprovante-ficticio.pdf'));
+  await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 15000 }).catch(() => {});
+  ok('PDF de comprovante enviado em "Fatura ou extrato" vira um lançamento', /João Encanador/.test(await qVals()) && !(await page.isVisible('#review')), await txt('#pdfLog'));
+  await page.click('#qCancel').catch(() => {});
+  const fat = fs.readFileSync(path.join(ROOT, '../tests/fixtures/fatura-ficticia.pdf')).toString('base64');
+  await page.evaluate(async b64 => { const bin = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0)); const c = await caches.open('share'); await c.put('/shared/meta', new Response(JSON.stringify({ text: '', name: 'documento', type: 'application/octet-stream' }))); await c.put('/shared/file', new Response(new Blob([bin]))); }, fat);
+  await page.goto('https://app.test/?acao=compartilhar'); await page.waitForSelector('#rvSave', { timeout: 30000 }).catch(() => {});
+  ok('fatura em PDF compartilhada vai para a importação da fatura', (await txt('#pdfLog')).includes('Fatura do Nubank lida') && await page.isVisible('#review'), await txt('#pdfLog'));
+  AI_DOC = 'fatura'; await clean();
+  await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, 'icons/icon-512.png'));
+  await page.waitForFunction(() => /Fatura do Nubank lida/.test(document.querySelector('#pdfLog').textContent) && !document.querySelector('#review').hidden, null, { timeout: 20000 }).catch(() => {});
+  ok('foto ou print de fatura também é importado como fatura', (await txt('#pdfLog')).includes('fatura do cartão. Lendo a imagem') && await page.isVisible('#review'), await txt('#pdfLog'));
+  AI_DOC = 'comprovante'; await clean();
+  await page.click('.ltile[data-mode="nota"]'); await page.setInputFiles('#rcFile', path.join(ROOT, 'icons/icon-512.png'));
+  await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 15000 }).catch(() => {});
+  ok('comprovante enviado em "Foto da nota" vira um lançamento, não uma nota', /João Encanador/.test(await qVals()) && (await page.getAttribute('.ltile[data-mode="falar"]', 'aria-pressed')) === 'true');
+  AI_DOC = null; await page.click('#qCancel').catch(() => {});
   await noCoach(); await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
   await page.click('[data-tab=resumo]');
 }
@@ -712,7 +737,7 @@ const used = await page.evaluate(() => window.__db.usage);
   ok('navegação registrada: telas, tempo e caminho', navRec.screens.some(x => x.s === 'lancar' && x.t >= 1) && navRec.flows.some(f => f.f === 'lancar' && f.t === 'inicio'), JSON.stringify(navRec.screens).slice(0, 160));
   ok('toques registrados com o nome do botão, sem valores', navRec.taps.length > 0 && navRec.targets.some(t => /Falar ou escrever/.test(t.t)) && navRec.targets.every(t => !/\d/.test(t.t)), JSON.stringify(navRec.targets).slice(0, 200));
   const errRec = await page.evaluate(() => window.__db.errors.at(-1));
-  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v41', JSON.stringify(errRec));
+  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === APP_VERSION, JSON.stringify(errRec));
 }
 { // Signing in again: whoever already has a name and a family goes straight to Início.
   await page.click('[data-tab=extrato]'); await page.waitForTimeout(200);

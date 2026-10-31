@@ -44,4 +44,9 @@ export const RELEASES = [
     'O número no sino mostra o que você ainda não viu. Ao abrir o app aparece no máximo um aviso; o resto fica no sininho.',
     'Comprovante em PDF compartilhado pelo banco agora entra como um lançamento só, sem os avisos de extrato.',
   ] } },
+  { id: 'r42', version: 'v42', at: '2026-10-31T01:15:00Z', backlog: [], news: { id: 'n20261031c', title: 'O app entende o que você enviou', items: [
+    'Pode mandar PDF, foto ou print: o app lê o que está escrito e descobre sozinho se é fatura, extrato, comprovante ou nota fiscal.',
+    'Foto ou print da fatura agora também é importado, com a soma conferida.',
+    'Enviou pelo botão errado? Sem problema: um comprovante em "Fatura ou extrato" vira um lançamento, e uma fatura em "Foto da nota" vai para a importação.',
+  ] } },
 ];

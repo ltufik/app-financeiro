@@ -390,3 +390,28 @@ test('sininho: novidades, recados e família dos últimos 30 dias, mais novo pri
   assert.equal(f[2].title, 'Luana importou a fatura de outubro'); assert.equal(f[3].title, 'Luana fechou setembro');
   assert.deepEqual(unread(f, { seenAt: '2026-10-30T00:00:00Z', shown: ['r:7'] }).map(x => x.id), ['n:a']);
 });
+
+// ---------- what kind of document (by content, not by extension) ----------
+import { classifyText, aiKind } from '../public/js/lib/classify.js';
+const many = (n, f) => Array.from({ length: n }, (_, i) => f(i)).join(' ');
+test('classifyText: lê o conteúdo para saber o tipo do documento', () => {
+  const k = (t, o) => classifyText(t, o).kind;
+  assert.equal(k('Comprovante de transferência Pix enviado R$ 150,00 Data 12/10/2026 Quem recebeu Maria Instituição Banco X Quem pagou João ID da transação E123 Chave Pix: celular'), 'comprovante');
+  // Paying the card bill is a receipt, even though it says "fatura".
+  assert.equal(k('Comprovante de pagamento Pagamento realizado Fatura cartão de crédito Valor R$ 3.210,55 Data 10/10/2026 Autenticação ABC123 Vencimento 10/10/2026'), 'comprovante');
+  assert.equal(k('Comprovante de pagamento de boleto Beneficiário Energia Valor pago R$ 245,10 Linha digitável 8360 Autenticação 9988'), 'comprovante');
+  assert.equal(k('Fatura do cartão Vencimento 10/11/2026 Total desta fatura R$ 2.345,67 Pagamento mínimo R$ 234,56 Limite disponível 5.000,00 ' + many(15, i => `${String(i + 1).padStart(2, '0')}/10 LOJA ${i} ${i + 10},90`)), 'fatura');
+  assert.equal(k('Extrato de conta corrente Agência 1234 Saldo anterior 1.000,00 ' + many(15, i => `${String(i + 1).padStart(2, '0')}/09 PIX ENVIADO FULANO -${i + 10},00`) + ' Saldo final 500,00'), 'extrato');
+  assert.equal(k('MERCADO BOM PRECO CNPJ 12.345.678/0001-90 DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRONICA Qtde Un Vl Unit ARROZ 1 UN 25,90 Valor a pagar R$ 30,88 Consulte pela chave de acesso'), 'nota');
+  assert.equal(k('Extrato de investimentos Fundos de investimento saldo bruto 10.000,00 saldo líquido 9.900,00 CDB Tesouro Direto Rentabilidade', { pages: 4 }), 'investimentos');
+  // Many dated amounts are a list of transactions, never a single receipt, even if "Pix" shows up a lot.
+  assert.notEqual(k(many(20, i => `${String(i + 1).padStart(2, '0')}/09 PIX ENVIADO comprovante ${i},00`), { pages: 3 }), 'comprovante');
+  // When the words do not say, nobody guesses: the reading assistant looks at the document.
+  assert.equal(k('Obrigado pela preferência, volte sempre ao nosso estabelecimento.'), null);
+  assert.equal(classifyText('').empty, true);
+});
+test('aiKind: a resposta da leitura vira um tipo que o app conhece', () => {
+  assert.equal(aiKind('comprovante'), 'comprovante'); assert.equal(aiKind('Comprovante de pagamento da fatura'), 'comprovante');
+  assert.equal(aiKind('fatura'), 'fatura'); assert.equal(aiKind('extrato'), 'extrato'); assert.equal(aiKind('nota'), 'nota');
+  assert.equal(aiKind('investimentos'), 'investimentos'); assert.equal(aiKind('outro'), null); assert.equal(aiKind(undefined), null);
+});

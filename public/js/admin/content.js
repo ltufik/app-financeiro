@@ -16,7 +16,8 @@ export const AREA_LABELS = { atalho: 'Atalhos', applepay: 'Atalhos do iPhone', a
 
 const sv = (id, name, what, where, status, plan, ai, deps, keys) => ({ id, name, what, where, status, plan, ai, deps, keys });
 export const SERVICES = [
-  sv('pdf', 'Leitura de fatura e extrato', 'Lê o PDF de qualquer banco, confere com o total e separa em lançamentos', 'Lançar → Fatura ou extrato', 'no_ar', 'gratis', 'as_vezes', 'pdf.js; IA quando o layout é novo', ['lancar.pdf_ok']),
+  sv('pdf', 'Leitura de fatura e extrato', 'Lê PDF, foto ou print de qualquer banco, confere com o total e separa em lançamentos', 'Lançar → Fatura ou extrato', 'no_ar', 'gratis', 'as_vezes', 'pdf.js; IA quando o layout é novo ou é foto', ['lancar.pdf_ok']),
+  sv('tipo', 'Reconhecer o documento', 'Lê o conteúdo e decide se é fatura, extrato, comprovante, nota ou investimentos, qualquer que seja o arquivo ou o botão', 'Lançar e Compartilhar', 'no_ar', 'gratis', 'as_vezes', 'Regras de palavras (lib/classify.js); IA para foto e print', ['lancar.pdf_ok', 'lancar.comprovante', 'lancar.nota_ok']),
   sv('cat', 'Categorias que aprendem', 'Sugere a categoria e aprende com cada correção', 'Revisão do PDF e Extrato', 'no_ar', 'gratis', 'sim', 'IA (rápida); regras salvas', ['lancar.pdf_ok']),
   sv('voz', 'Lançar falando ou escrevendo', '"Gastei 45 na padaria no pix" vira um lançamento', 'Lançar → Falar ou escrever', 'no_ar', 'a_definir', 'sim', 'Reconhecimento de voz do celular; IA', ['lancar.salvar', 'lancar.falar']),
   sv('nota', 'Nota fiscal por foto', 'Lê a nota e separa cada item na sua categoria', 'Lançar → Foto da nota', 'no_ar', 'pago', 'sim', 'IA com imagem', ['lancar.nota_ok', 'lancar.nota']),

@@ -17,7 +17,7 @@ export const SCREENS = {
   lancar_falar: { title: 'Falar ou escrever', where: 'Lançar → Falar ou escrever', key: 'lancar.falar' },
   lancar_salvo: { title: 'Lançamento salvo', where: 'Depois de Salvar', key: 'lancar.salvar' },
   lancar_nota: { title: 'Nota fiscal lida', where: 'Lançar → Foto da nota', key: 'lancar.nota' },
-  lancar_pdf: { title: 'Enviar PDF', where: 'Lançar → Fatura ou extrato', key: 'lancar.pdf' },
+  lancar_pdf: { title: 'Enviar fatura ou extrato', where: 'Lançar → Fatura ou extrato', key: 'lancar.pdf' },
   lancar_revisao: { title: 'Revisão da fatura', where: 'Depois de enviar o PDF', key: 'lancar.pdf_ok' },
   graficos: { title: 'Gráficos', where: 'Aba Gráficos', key: 'aba.graficos' },
   perguntar: { title: 'Perguntar', where: 'Aba Perguntar', key: 'aba.perguntar' },
@@ -64,7 +64,7 @@ export const FLOWS = [
     st('familia', 'Cria a família (ou entra pelo convite)'), st('apresentacao', '7 slides, pode pular'), st('tour', 'Balões nos botões de verdade'),
     st('alpha', 'Aviso do teste e do balão de opinião'), st('inicio', 'A régua mostra o próximo passo')] },
   { id: 'fatura', title: 'Importar fatura ou extrato', desc: 'O caminho que faz o app ter valor: o primeiro mês importado.', steps: [
-    st('inicio', 'Régua: "Envie a última fatura"'), st('lancar', 'Abre Lançar'), st('lancar_pdf', 'Escolhe o PDF (e a senha, se tiver)'),
+    st('inicio', 'Régua: "Envie a última fatura"'), st('lancar', 'Abre Lançar'), st('lancar_pdf', 'Escolhe o PDF, a foto ou o print (e a senha, se tiver); o app vê pelo conteúdo o que é'),
     st('lancar_revisao', 'Confere a soma e as categorias, toca em Salvar'), st('inicio', 'Sobra do mês atualizada', null)] },
   { id: 'falar', title: 'Lançar falando', desc: 'Pix e dinheiro antes do extrato chegar.', steps: [
     st('lancar', 'Abre Lançar'), st('lancar_falar', 'Fala "gastei 45 na padaria no pix" e toca em Interpretar'), st('lancar_salvo', 'Confere e salva')] },
@@ -75,7 +75,7 @@ export const FLOWS = [
   { id: 'metas', title: 'Metas e sonho', desc: 'Combinados da família e a projeção.', steps: [
     st('menu', 'Abre o menu'), st('menu_metas', 'Limite do cartão, quanto guardar, sonho'), st('inicio', 'Selos "Guardaram X% · queriam Y%"', null), st('inicio_mais', 'Projeção do sonho em Mais detalhes', null)] },
   { id: 'semabrir', title: 'Lançar sem abrir o app', desc: 'Apple Pay e Siri no iPhone; comprovante compartilhado no Android.', steps: [
-    st('menu', 'Abre o menu'), st('menu_applepay', 'Gera o código e monta os atalhos no app Atalhos', 'applepay.codigo'), st('lancar_comprovante', 'Android: compartilha o comprovante do banco e confere', 'atalho.compartilhar')] },
+    st('menu', 'Abre o menu'), st('menu_applepay', 'Gera o código e monta os atalhos no app Atalhos', 'applepay.codigo'), st('lancar_comprovante', 'Android: compartilha o comprovante, a fatura ou a nota do banco; o app vê o que é e leva para o lugar certo', 'atalho.compartilhar')] },
   { id: 'perguntar', title: 'Perguntar ao assistente', desc: 'Perguntas sobre os números da família.', steps: [
     st('perguntar', 'Escolhe uma sugestão ou escreve'), st('perguntar_resposta', 'Resposta com os números da família')] },
   { id: 'opiniao', title: 'Dar opinião e receber o recado', desc: 'O ciclo com quem testa: manda, a equipe faz, a pessoa é avisada.', steps: [
