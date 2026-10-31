@@ -145,7 +145,10 @@ body.admin{background:var(--paper)}
 @media (max-width:640px){
   .atop .in > .tiny{display:none}
   .atop .in{justify-content:space-between}
-  .amenu{flex:1}
+  .amenu{flex:1;min-width:0}
+  .amenu #aCur{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .atop .in{flex-wrap:nowrap}
+  .atop .btn{flex:none}
   .atop .btn{padding:8px 12px}
   .atop .btn span.long{display:none}
   .atop .btn span.short{display:inline}

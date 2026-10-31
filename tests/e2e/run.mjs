@@ -687,7 +687,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central no celular: ☰ abre o menu com os três grupos e fecha ao tocar fora', await ap.evaluate(() => document.body.classList.contains('navopen') && document.querySelector('#aNav').getBoundingClientRect().left >= 0) && (await ap.$$('#aNav .agroup')).length === 3);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-resp-390-menu.png') });
   await ap.mouse.click(380, 400); await ap.waitForTimeout(300);
-  ok('central no celular: topo cabe numa linha, com botões curtos', (await ap.innerText('#aCopy')).trim() === 'Resumo' && await ap.evaluate(() => document.querySelector('.atop').offsetHeight < 80), await ap.innerText('#aCopy'));
+  ok('central no celular: topo cabe numa linha, com botões curtos', (await ap.innerText('#aCopy')).trim() === 'Resumo' && await ap.evaluate(() => document.querySelector('.atop').offsetHeight < 80), await ap.evaluate(() => document.querySelector('.atop').offsetHeight + 'px ' + document.querySelector('.atop').innerText.replace(/\s+/g, ' ')));
   ok('central no celular: menu fecha ao tocar fora', !(await ap.evaluate(() => document.body.classList.contains('navopen'))));
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central no celular: tabela vira cartões com o nome de cada coluna', await ap.evaluate(() => { const td = document.querySelector('table.atable tbody td:nth-child(2)'); return getComputedStyle(td).display === 'flex' && !!td.dataset.label && getComputedStyle(document.querySelector('table.atable thead')).display === 'none'; }));

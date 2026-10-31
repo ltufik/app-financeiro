@@ -312,7 +312,9 @@ async function openPdf(password) {
   // Opened from a share right at start, the PDF reader may still be loading.
   if (!await pdfReady()) { plog('O leitor de PDF ainda não carregou. Espere um instante e tente de novo.', 'var(--bad)'); return; }
   let doc;
-  const open = () => window.pdfjsLib.getDocument({ data: PDF.bytes.slice(), password: password || undefined, isEvalSupported: false }).promise;
+  // A reader that has just started can get stuck on the first file: give it 15 s, then try once more.
+  const open = () => { const task = window.pdfjsLib.getDocument({ data: PDF.bytes.slice(), password: password || undefined, isEvalSupported: false });
+    return Promise.race([task.promise, new Promise((_, no) => setTimeout(() => { task.destroy?.(); no(new Error('lento')); }, 15000))]); };
   // Right after the app opens (a share), the reader can fail once while it starts: try again before giving up.
   try { doc = await open().catch(e => e?.name === 'PasswordException' ? Promise.reject(e) : new Promise(r => setTimeout(r, 800)).then(open)); }
   catch (e) {
