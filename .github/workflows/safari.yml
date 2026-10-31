@@ -1,0 +1,36 @@
+# Tests that run on GitHub at every change: the business rules, and the app in the iPhone browser
+# engine (WebKit, the engine of Safari), emulating an iPhone 13. Only fictional data.
+name: Testes (regras e Safari do iPhone)
+on:
+  push:
+    branches: [main]
+    paths: ['public/**', 'api/**', 'tests/**', '.github/workflows/safari.yml', '!public/flows/**', '!public/screenshots/**']
+  workflow_dispatch:
+concurrency:
+  group: safari
+  cancel-in-progress: true
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regras (npm test)
+        run: npm test
+      - name: Ferramentas (só para o teste; o app não usa)
+        run: |
+          mkdir -p /tmp/tools && cd /tmp/tools && npm init -y >/dev/null
+          npm i playwright@1.56.0 pdfjs-dist@6.2.108 >/dev/null
+          npx playwright install --with-deps webkit
+      - name: App no Safari do iPhone (WebKit)
+        run: node tests/e2e/run.mjs --browser webkit --smoke --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --outra tests/fixtures/fatura-ficticia.pdf --shots /tmp/safari
+      - name: Prints do teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safari-prints
+          path: /tmp/safari
+          if-no-files-found: ignore

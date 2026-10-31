@@ -1,23 +1,34 @@
 // iPhone shortcuts, checked by the hash of the person's code ("Authorization: Bearer <code>"):
 // - Apple Pay (Atalhos → Automação → Transação): POST {valor, loja, cartao}
 // - Siri ("E aí Siri, gastei"): POST {texto} with what was said; the assistant turns it into entries.
+// - Compartilhar (share sheet): POST {arquivo: base64 of a PDF, photo or print}. The assistant says what it is
+//   by its content: a receipt becomes an entry; a bill, statement or store receipt is sent to the app.
+//   The file is read and dropped: never stored.
 // ?formato=texto answers with plain text, for Siri to read out loud.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY; ANTHROPIC_API_KEY (and CLAUDE_MODEL_QUICK) for phrases.
 import crypto from 'crypto';
 import { cleanUrl } from './config.js';
-import { quickRow, phrasePrompt, phraseRows } from '../public/js/lib/quick.js';
+import { quickRow, phrasePrompt, phraseRows, sniffBase64, docPrompt, docMessage } from '../public/js/lib/quick.js';
+import { aiKind } from '../public/js/lib/classify.js';
 import { prepareRules, classify } from '../public/js/lib/categorize.js';
 
 const hits = new Map();
-// Asks the assistant to read a phrase; returns the items or [].
-async function readPhrase(prompt, fetchImpl = fetch) {
-  const key = String(process.env.ANTHROPIC_API_KEY || '').trim(); if (!key) return [];
+// Asks the assistant; content is a prompt or a list of blocks (a file and the prompt). Returns the JSON answer or null.
+async function ask(content, fetchImpl = fetch) {
+  const key = String(process.env.ANTHROPIC_API_KEY || '').trim(); if (!key) return null;
   const r = await fetchImpl('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: process.env.CLAUDE_MODEL_QUICK || 'claude-haiku-5-5', max_tokens: 1200, messages: [{ role: 'user', content: prompt }] }) });
-  if (!r.ok) return [];
+    body: JSON.stringify({ model: process.env.CLAUDE_MODEL_QUICK || 'claude-haiku-5-5', max_tokens: 1200, messages: [{ role: 'user', content }] }) });
+  if (!r.ok) return null;
   const t = ((await r.json()).content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-  try { return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)).itens || []; } catch (e) { return []; }
+  try { return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return null; }
 }
+const readPhrase = async prompt => (await ask(prompt))?.itens || [];
+const FILE_ERRORS = {
+  vazio: 'Não recebi o arquivo. No atalho, confira se o Base64 usa a Entrada do Atalho.',
+  formato: 'Esse arquivo não dá para ler. Compartilhe o PDF ou a imagem do comprovante.',
+  heic: 'Foto no formato do iPhone (HEIC) não dá para ler. Tire um print do comprovante e compartilhe o print.',
+  grande: 'O arquivo é grande demais. Tire um print só do comprovante e compartilhe o print.',
+};
 
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
@@ -37,11 +48,26 @@ export default async function handler(req, res) {
   const get = async p => { const r = await fetch(`${URL_}/rest/v1/${p}`, { headers: H }); if (!r.ok) throw new Error('db'); return r.json(); };
   try {
     const [tok] = await get(`quick_tokens?token_hash=eq.${hash}&select=user_id,household_id,uses`);
-    if (!tok) return res.status(401).json({ ok: false, mensagem: 'Código do atalho não reconhecido. Gere um novo no app (menu ☰ → Compras com Apple Pay).' });
+    if (!tok) return res.status(401).json({ ok: false, mensagem: 'Código do atalho não reconhecido. Gere um novo no app (menu ☰ → Atalhos do iPhone).' });
     const [hh] = await get(`households?id=eq.${tok.household_id}&select=settings`);
     const rules = await get(`rules?household_id=eq.${tok.household_id}&source=eq.cartao&select=source,kind,pattern,category,min_abs,max_abs,priority`);
     const today = new Date(now - 3 * 3600e3).toISOString().slice(0, 10);
     const brl = v => Math.abs(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    if (b.arquivo != null) {
+      const f = sniffBase64(b.arquivo);
+      if (f.error) return res.status(400).json({ ok: false, mensagem: FILE_ERRORS[f.error] });
+      const [fam] = await get(`households?id=eq.${tok.household_id}&select=name`);
+      const categories = await get(`categories?household_id=eq.${tok.household_id}&select=name,grp`);
+      const block = f.type === 'application/pdf' ? { type: 'document', source: { type: 'base64', media_type: f.type, data: f.data } } : { type: 'image', source: { type: 'base64', media_type: f.type, data: f.data } };
+      const r = await ask([block, { type: 'text', text: docPrompt({ family: fam?.name || 'família', today, categories }) }]);
+      if (!r) return res.status(502).json({ ok: false, mensagem: 'Não consegui ler o arquivo agora. Tente de novo em instantes ou envie pelo app.' });
+      const rows = aiKind(r.tipo) === 'comprovante' ? phraseRows(r.itens, { household: tok.household_id, user: tok.user_id, today, closeDay: +hh?.settings?.cardCloseDay || 24, categories }) : [];
+      if (!rows.length) return res.status(200).json({ ok: false, tipo: aiKind(r.tipo) || 'outro', mensagem: docMessage(r.tipo) });
+      const ins = await fetch(`${URL_}/rest/v1/transactions`, { method: 'POST', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(rows) });
+      if (!ins.ok) throw new Error('insert');
+      await fetch(`${URL_}/rest/v1/quick_tokens?token_hash=eq.${hash}`, { method: 'PATCH', headers: H, body: JSON.stringify({ last_used: new Date().toISOString(), uses: (tok.uses || 0) + rows.length }) });
+      return res.status(200).json({ ok: true, tipo: 'comprovante', mensagem: 'Lançado no Pra Onde Foi: ' + rows.map(x => `${x.description}, ${brl(x.amount)}${x.category !== 'A classificar' ? ' (' + x.category + ')' : ''}`).join('; ') + '.' });
+    }
     if (b.texto != null && b.valor == null) {
       const text = String(b.texto).trim();
       if (text.length < 3) return res.status(400).json({ ok: false, mensagem: 'Não ouvi nada. Tente de novo, dizendo quanto foi e o que foi.' });

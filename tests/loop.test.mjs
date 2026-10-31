@@ -155,3 +155,37 @@ test('Siri: frase falada vira lançamento, com o sinal certo e resposta em texto
   assert.equal(inserted.length, 2); assert.equal(inserted[0].amount, -45); assert.equal(inserted[0].source, 'conta'); assert.equal(inserted[0].category, 'Mercado');
   assert.equal(inserted[1].amount, 23.5); assert.equal(inserted[1].source, 'cartao'); assert.equal(inserted[1].category, 'A classificar'); assert.equal(inserted[1].created_by, 'u1');
 });
+
+test('Compartilhar no iPhone: comprovante vira lançamento; fatura manda abrir o app; nada é guardado', async () => {
+  process.env.ANTHROPIC_API_KEY = 'k';
+  const code = 'abcdefghijklmnopqrstuvwxyz012345', inserted = [], sent = [];
+  let answer = '';
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, o = {}) => {
+    const json = d => ({ ok: true, status: 200, json: async () => d });
+    if (String(url).includes('anthropic')) { sent.push(JSON.parse(o.body)); return json({ content: [{ type: 'text', text: answer }] }); }
+    const t = new URL(url).pathname.split('/').pop();
+    if (t === 'quick_tokens' && (o.method || 'GET') === 'GET') return json([{ user_id: 'u1', household_id: 'h1', uses: 0 }]);
+    if (t === 'households') return json([{ name: 'Família Souza', settings: { cardCloseDay: 24 } }]);
+    if (t === 'categories') return json([{ name: 'Casa', grp: 'dia' }]);
+    if (t === 'transactions') { inserted.push(...JSON.parse(o.body)); return json([]); }
+    return json([]);
+  };
+  const call = async body => { let status, text; await quick({ method: 'POST', url: '/api/quick?formato=texto', query: { formato: 'texto' }, headers: { authorization: 'Bearer ' + code }, body },
+    { setHeader() {}, status(s) { status = s; return this; }, json() {}, send(t) { text = t; } }); return { status, text }; };
+  const pdf = Buffer.from('%PDF-1.4 comprovante ficticio').toString('base64');
+  try {
+    answer = '{"tipo":"comprovante","itens":[{"descricao":"Pix para João Encanador","valor":180,"sentido":"saida","data":"2026-10-29","meio":"conta","categoria":"Casa"}]}';
+    let r = await call({ arquivo: pdf });
+    assert.equal(r.status, 200); assert.match(r.text, /^Lançado no Pra Onde Foi: Pix para João Encanador, R\$\s?180,00 \(Casa\)\.$/);
+    assert.equal(inserted.length, 1); assert.equal(inserted[0].amount, -180); assert.equal(inserted[0].source, 'conta');
+    assert.equal(sent[0].messages[0].content[0].type, 'document'); assert.equal(sent[0].messages[0].content[0].source.media_type, 'application/pdf');
+    answer = '{"tipo":"fatura","itens":[]}';
+    const png = Buffer.from([0x89, 0x50, 0x4E, 0x47, 13, 10, 26, 10, 0, 0]).toString('base64');
+    r = await call({ arquivo: png });
+    assert.match(r.text, /fatura do cartão\. Abra o app/); assert.equal(inserted.length, 1);
+    assert.equal(sent[1].messages[0].content[0].type, 'image');
+    r = await call({ arquivo: Buffer.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70]).toString('base64') });
+    assert.equal(r.status, 400); assert.match(r.text, /HEIC/); assert.equal(sent.length, 2);
+  } finally { globalThis.fetch = realFetch; }
+});

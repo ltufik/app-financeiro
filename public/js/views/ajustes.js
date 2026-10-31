@@ -99,7 +99,7 @@ export function render(el) {
       <li>As opiniões e dúvidas que você mandar, com a tela em que estava e o tipo de celular.</li>
     </ul>
     <h3>O que o app nunca guarda</h3>
-    <ul class="small"><li>O arquivo do PDF.</li><li>A senha do PDF.</li><li>Senhas de banco: o app não se conecta ao seu banco.</li></ul>
+    <ul class="small"><li>O arquivo do PDF, da foto ou do print, inclusive o que chega pelos atalhos do iPhone: é lido e descartado.</li><li>A senha do PDF.</li><li>Senhas de banco: o app não se conecta ao seu banco.</li></ul>
     <p class="small">Você pode baixar uma cópia de tudo em Backup e apagar tudo em Conta, quando quiser.</p>
     <h3>Créditos das fotos</h3>
     <p class="small muted">Fotos do Pexels, de uso gratuito: ${[...new Set(Object.values(PHOTOS).map(p => p.by))].map(esc).join(', ')}.</p>

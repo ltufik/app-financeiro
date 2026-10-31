@@ -50,4 +50,9 @@ export const RELEASES = [
     'Enviou pelo botão errado? Sem problema: um comprovante em "Fatura ou extrato" vira um lançamento, e uma fatura em "Foto da nota" vai para a importação.',
   ] } },
   { id: 'r43', version: 'v43', at: '2026-10-31T02:45:00Z', backlog: [], semNovidade: 'Central do produto boa de usar no celular e no tablet (menu no botão ☰, tabelas em cartões); só o dono do produto vê, então não vale pop-up para as famílias.' },
+  { id: 'r44', version: 'v44', at: '2026-10-31T12:40:00Z', backlog: [], news: { id: 'n20261031d', title: 'Comprovante pelo Compartilhar, agora no iPhone', items: [
+    'No iPhone, monte o atalho em menu ☰ → Atalhos do iPhone → Atalho 3. Depois é só abrir o comprovante no banco, tocar em Compartilhar e escolher Pra Onde Foi.',
+    'Vale PDF, print ou foto. Se for fatura, extrato ou nota fiscal, o atalho avisa para enviar pelo app.',
+    'Dica: o atalho da Siri pode virar um ícone na tela de início que já abre o ditado.',
+  ] } },
 ];

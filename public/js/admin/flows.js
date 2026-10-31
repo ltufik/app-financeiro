@@ -32,7 +32,7 @@ export const SCREENS = {
   menu_avisos: { title: 'Notificações', where: 'Menu ☰', key: 'menu.avisos' },
   menu_applepay: { title: 'Atalhos do iPhone', where: 'Menu ☰', key: 'menu.applepay' },
   menu_contexto: { title: 'O que o assistente sabe', where: 'Menu ☰', key: 'menu.contexto' },
-  lancar_comprovante: { title: 'Comprovante compartilhado', where: 'Compartilhar → Pra Onde Foi (Android)', key: 'lancar.comprovante' },
+  lancar_comprovante: { title: 'Comprovante compartilhado', where: 'Compartilhar → Pra Onde Foi (Android; no iPhone, pelo atalho 3)', key: 'lancar.comprovante' },
   menu_duvidas: { title: 'Dúvidas', where: 'Menu ☰', key: 'menu.duvidas' },
   menu_opiniao: { title: 'Dar opinião', where: 'Balão no topo; menu ☰', key: 'menu.opiniao' },
   menu_ajuda: { title: 'Ajuda', where: 'Menu ☰', key: 'menu.ajuda' },
@@ -74,7 +74,7 @@ export const FLOWS = [
     st('inicio', 'Cartão "Hora de fechar o mês"', null), st('fechar', 'Confere o que falta, vê a retrospectiva e fecha')] },
   { id: 'metas', title: 'Metas e sonho', desc: 'Combinados da família e a projeção.', steps: [
     st('menu', 'Abre o menu'), st('menu_metas', 'Limite do cartão, quanto guardar, sonho'), st('inicio', 'Selos "Guardaram X% · queriam Y%"', null), st('inicio_mais', 'Projeção do sonho em Mais detalhes', null)] },
-  { id: 'semabrir', title: 'Lançar sem abrir o app', desc: 'Apple Pay e Siri no iPhone; comprovante compartilhado no Android.', steps: [
+  { id: 'semabrir', title: 'Lançar sem abrir o app', desc: 'iPhone: Apple Pay, Siri e Compartilhar pelo app Atalhos. Android: Compartilhar e segurar o ícone.', steps: [
     st('menu', 'Abre o menu'), st('menu_applepay', 'Gera o código e monta os atalhos no app Atalhos', 'applepay.codigo'), st('lancar_comprovante', 'Android: compartilha o comprovante, a fatura ou a nota do banco; o app vê o que é e leva para o lugar certo', 'atalho.compartilhar')] },
   { id: 'perguntar', title: 'Perguntar ao assistente', desc: 'Perguntas sobre os números da família.', steps: [
     st('perguntar', 'Escolhe uma sugestão ou escreve'), st('perguntar_resposta', 'Resposta com os números da família')] },

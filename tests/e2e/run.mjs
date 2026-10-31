@@ -1,20 +1,22 @@
 // Browser test of the whole app with Supabase and Claude mocked.
 // node tests/e2e/run.mjs --playwright <playwright index.mjs> --pdfjs <pdfjs legacy build dir> [--backup file.json] [--fatura file.pdf] [--shots dir]
+// --browser webkit --smoke: the iPhone browser engine (Safari), as an iPhone, only the parts that do not need real family data (GitHub Actions).
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { APP_VERSION } from '../helpers/app-version.mjs';
 
 const arg = k => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : null; };
-const { chromium } = await import(arg('playwright'));
+const PW = await import(arg('playwright'));
+const ENGINE = arg('browser') || 'chromium', SMOKE = process.argv.includes('--smoke'), SMOKE_DONE = new Error('smoke done');
 const { newlyDone } = await import('../../public/js/lib/news.js');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public');
 const MOCK = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'mock-supabase.js'), 'utf8');
 const PDFJS = arg('pdfjs'), shots = arg('shots');
 const results = []; const ok = (name, cond, extra = '') => { results.push([cond ? 'ok  ' : 'FAIL', name, extra]); };
 
-const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 400, height: 860 } });
+const browser = await PW[ENGINE].launch();
+const page = await browser.newPage(ENGINE === 'webkit' ? { ...PW.devices['iPhone 13'] } : { viewport: { width: 400, height: 860 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fetching the script/.test(m.text())) errors.push(m.text()); });
@@ -60,7 +62,7 @@ async function addRoutes(t) {
     r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
   });
   await t.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
-  await t.route('https://cdnjs.cloudflare.com/**/pdf.min.js', r => r.fulfill({ contentType: 'text/javascript', body: `Promise.all([import('https://pdfjs.test/pdf.mjs'),import('https://pdfjs.test/pdf.worker.mjs')]).then(([m,w])=>{globalThis.pdfjsWorker=w;window.pdfjsLib=m;});` }));
+  await t.route('https://cdnjs.cloudflare.com/**/pdf.min.js', r => r.fulfill({ contentType: 'text/javascript', body: `Promise.all([import('https://pdfjs.test/pdf.mjs'),import('https://pdfjs.test/pdf.worker.mjs')]).then(([m,w])=>{globalThis.pdfjsWorker=w;m.GlobalWorkerOptions.workerSrc='https://pdfjs.test/pdf.worker.mjs';window.pdfjsLib=m;});` }));
   await t.route('https://cdnjs.cloudflare.com/**/pdf.worker.min.js', r => r.fulfill({ contentType: 'text/javascript', body: '' }));
   await t.route('https://pdfjs.test/*', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(PDFJS, new URL(r.request().url()).pathname.slice(1))) }));
   await t.route('https://fonts.**', r => r.fulfill({ body: '' }));
@@ -217,6 +219,33 @@ await page.click('#secBack'); await page.waitForSelector('#drawer.open');
 ok('voltar da seção reabre o menu', true);
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 await page.click('[data-tab=resumo]');
+
+if (SMOKE) { // The rest needs real family data: in the smoke run, check the main ways to add entries and stop.
+  await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="falar"]');
+  await page.fill('#qText', 'gastei 230 no mercado hoje no cartão e 350 de terapia por pix'); await page.click('#qGo');
+  await page.waitForSelector('#qPreview:not([hidden])', { timeout: 15000 });
+  ok('safari: frase vira lançamentos para conferir', (await page.$$('#qPreview tbody tr')).length === 2);
+  await page.click('#qCancel');
+  await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
+  const outraS = arg('outra');
+  if (outraS) {
+    await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', outraS);
+    await page.waitForSelector('#rvSave', { timeout: 30000 }).catch(() => {});
+    ok('safari: fatura em PDF lida e conferida', (await txt('#pdfLog')).includes('Fatura do Nubank lida: 7 lançamentos'), await txt('#pdfLog'));
+  }
+  await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/comprovante-ficticio.pdf'));
+  await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 15000 }).catch(() => {});
+  ok('safari: comprovante em PDF vira um lançamento', /João Encanador/.test(await page.evaluate(() => [...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' '))));
+  await page.click('#qCancel').catch(() => {});
+  await page.click('.ltile[data-mode="nota"]'); await page.setInputFiles('#rcFile', path.join(ROOT, 'icons/icon-512.png'));
+  await page.waitForSelector('#rcReview:not([hidden])', { timeout: 15000 }).catch(() => {});
+  ok('safari: foto da nota separa os itens', (await txt('#rcLog')).includes('Nota lida: 3 itens') && await page.isVisible('#rcReview'), await txt('#rcLog'));
+  await shot('safari-nota');
+  await sec('applepay');
+  ok('safari: página dos atalhos do iPhone abre', (await txt('#v-ajustes')).includes('Apple Pay'));
+  ok('safari: nenhuma tela rola para o lado', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  throw SMOKE_DONE;
+}
 
 if (backup) {
   await sec('backup');
@@ -903,7 +932,7 @@ ok('depois de excluir aparece a mensagem na tela de login', (await txt('#aMsg'))
 await shot('10-excluida');
 ok('sem erros no console', !errors.length, errors.join(' | '));
 
-} catch (e) { results.push(['FAIL', 'exceção: ' + e.message.split('\n')[0], errors.join(' | ')]); if (shots) await page.screenshot({ path: path.join(shots, 'erro.png'), fullPage: true }).catch(() => {}); try { results.push(['info', 'log', await txt('#dLog') + ' / ' + await txt('#pdfLog')]); } catch (x) {} }
+} catch (e) { if (e !== SMOKE_DONE) results.push(['FAIL', 'exceção: ' + e.message.split('\n')[0], errors.join(' | ')]); if (shots) await page.screenshot({ path: path.join(shots, 'erro.png'), fullPage: true }).catch(() => {}); try { results.push(['info', 'log', await txt('#dLog') + ' / ' + await txt('#pdfLog')]); } catch (x) {} }
 // Install sheet on phones (separate browser contexts with phone user agents).
 for (const [name, uaStr, expect] of [
   ['iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', 'Adicionar à Tela de Início'],

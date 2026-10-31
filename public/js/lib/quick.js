@@ -41,3 +41,37 @@ export function phraseRows(items, { household, user, today, closeDay = 24, categ
       category: names.has(x.categoria) ? x.categoria : (sign > 0 ? 'Outras entradas' : 'A classificar'), card: null, manual: true, created_by: user };
   });
 }
+
+// ---------- iPhone "Compartilhar" shortcut: a receipt (PDF, photo or print) sent as base64 ----------
+import { KIND_RULES, KIND_LABEL, aiKind } from './classify.js';
+
+// What the file is, by its first bytes (never by its name). heic: iPhone photo format the reader does not take.
+export function sniffBase64(b64) {
+  const s = String(b64 || '').replace(/^data:[^,]*,/, '').replace(/[\s\r\n]+/g, '');
+  if (!s) return { error: 'vazio' };
+  let head = '';
+  try { head = atob(s.slice(0, 24)); } catch (e) { return { error: 'formato' }; }
+  const type = head.startsWith('%PDF') ? 'application/pdf' : head.charCodeAt(0) === 0xFF && head.charCodeAt(1) === 0xD8 ? 'image/jpeg'
+    : head.slice(1, 4) === 'PNG' ? 'image/png' : head.slice(8, 12) === 'WEBP' ? 'image/webp' : head.startsWith('GIF8') ? 'image/gif'
+    : head.slice(4, 8) === 'ftyp' ? 'heic' : null;
+  if (!type) return { error: 'formato' };
+  if (type === 'heic') return { error: 'heic' };
+  const bytes = Math.floor(s.length * 3 / 4);
+  if (bytes > 3.2 * 1024 * 1024) return { error: 'grande' }; // the server takes up to 4.5 MB of request
+  return { type, data: s, bytes };
+}
+
+export const docPrompt = ({ family, today, categories }) => `Você recebeu um documento enviado pelo botão Compartilhar do iPhone por uma família brasileira (${family}). Hoje é ${today}.
+Diga o que é e, se for um comprovante, extraia o lançamento. Responda só com JSON:
+{"tipo":"comprovante"|"nota"|"fatura"|"extrato"|"investimentos"|"outro","itens":[{"descricao":"texto curto: para quem ou de quem e o motivo, se houver","valor":123.45,"sentido":"saida"|"entrada","data":"AAAA-MM-DD","meio":"cartao"|"conta","categoria":"<nome exato de uma categoria da lista>"}]}
+${KIND_RULES}
+Só preencha "itens" para "comprovante". Regras: valor sempre positivo; Pix e transferência enviados, boleto pago e débito são "conta" e "saida"; recebidos são "entrada"; compra no crédito é "cartao". Pagamento da fatura do cartão é "conta" e "saida". Não invente: sem valor claro, deixe itens vazio.
+Categorias: ${categories.map(c => `${c.name} [${c.grp}]`).join(' | ')}`;
+
+// The answer the shortcut shows on the iPhone for each kind that is not a single receipt.
+export function docMessage(tipo) {
+  const k = aiKind(tipo);
+  if (k === 'nota') return 'Isto é uma nota fiscal. Para separar cada item na sua categoria, abra o app e envie em Lançar → Foto da nota.';
+  if (k === 'fatura' || k === 'extrato' || k === 'investimentos') return `Isto é ${k === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[k]}. Abra o app e envie em Lançar → Fatura ou extrato, para conferir tudo antes de salvar.`;
+  return 'Não achei um comprovante com valor nesse arquivo. Confira se é o comprovante certo ou lance pelo app.';
+}

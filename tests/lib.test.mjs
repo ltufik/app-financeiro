@@ -415,3 +415,21 @@ test('aiKind: a resposta da leitura vira um tipo que o app conhece', () => {
   assert.equal(aiKind('fatura'), 'fatura'); assert.equal(aiKind('extrato'), 'extrato'); assert.equal(aiKind('nota'), 'nota');
   assert.equal(aiKind('investimentos'), 'investimentos'); assert.equal(aiKind('outro'), null); assert.equal(aiKind(undefined), null);
 });
+
+import { sniffBase64, docMessage, docPrompt } from '../public/js/lib/quick.js';
+test('compartilhar no iPhone: o arquivo é reconhecido pelos primeiros bytes, não pelo nome', () => {
+  const b64 = bytes => Buffer.from(bytes).toString('base64');
+  assert.equal(sniffBase64(b64('%PDF-1.7 resto')).type, 'application/pdf');
+  assert.equal(sniffBase64('data:application/octet-stream;base64,' + b64([0xFF, 0xD8, 0xFF, 0xE0, 1, 2])).type, 'image/jpeg');
+  assert.equal(sniffBase64(b64([0x89, 0x50, 0x4E, 0x47, 13, 10, 26, 10])).type, 'image/png');
+  // Shortcuts may break the base64 in lines.
+  assert.equal(sniffBase64(b64('%PDF-1.4 ' + 'x'.repeat(100)).replace(/(.{20})/g, '$1\n')).type, 'application/pdf');
+  assert.equal(sniffBase64(b64([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63])).error, 'heic');
+  assert.equal(sniffBase64(b64('olá, não sou arquivo')).error, 'formato');
+  assert.equal(sniffBase64('').error, 'vazio');
+  assert.equal(sniffBase64(b64('%PDF-1.4 ') + 'A'.repeat(4.5 * 1024 * 1024)).error, 'grande');
+  assert.match(docMessage('fatura'), /fatura do cartão.*Fatura ou extrato/);
+  assert.match(docMessage('nota'), /Foto da nota/);
+  assert.match(docMessage('outro'), /Não achei um comprovante/);
+  assert.match(docPrompt({ family: 'Família Souza', today: '2026-10-31', categories: [{ name: 'Mercado', grp: 'dia' }] }), /Mercado \[dia\]/);
+});
