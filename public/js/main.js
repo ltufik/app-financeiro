@@ -40,7 +40,7 @@ const afterIntro = () => showMessages().then(() => setTimeout(maybeAskInstall, 6
 const maybeAskInstall = () => { if (shouldAskInstall()) askInstall({ note: isIOS() ? 'Depois de instalar, abra pelo ícone e entre com o mesmo e-mail e senha.' : '' }); };
 $('#wHero').innerHTML = photo('lost', { w: 1100, ratio: '3 / 2', fallback: 'hero', cls: 'land-photo' });
 // Always available on the phone: the automatic invitation only comes back after a few days.
-$('#wInstall').hidden = !isMobile() || isStandalone(); $('#wInstall').onclick = () => askInstall();
+$('#wInstall').hidden = !isMobile() || isStandalone(); $('#wInstall').onclick = () => { try { localStorage.removeItem('fin.install.never'); } catch (e) { /* storage blocked */ } askInstall(); };
 $('#wSignup').onclick = () => { show('auth'); setMode('signup'); $('#aName').focus(); };
 $('#wLogin').onclick = $('#wLogin2').onclick = () => { show('auth'); setMode('login'); $('#aEmail').focus(); };
 $('#aBack').onclick = () => show('welcome');

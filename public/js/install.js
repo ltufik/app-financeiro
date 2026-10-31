@@ -2,7 +2,7 @@
 // Android gets the native install dialog in one tap; iPhone gets the Safari steps; in-app browsers
 // (Instagram, Facebook...) are told to open the link in Safari or Chrome first.
 import { S } from './state.js';
-import { $ } from './ui.js';
+import { $, toast } from './ui.js';
 import { pendingInvite } from './onboarding.js';
 
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -23,7 +23,7 @@ if (isStandalone()) lsSet('fin.installed', '1');
 export function markNotInstalled() {
   if (isStandalone()) return false;
   const was = lsGet('fin.installed') === '1';
-  if (was) { lsSet('fin.installed', '0'); lsSet('fin.install.n', '0'); lsSet('fin.install.t', '0'); }
+  if (was) { lsSet('fin.installed', '0'); lsSet('fin.install.n', '0'); lsSet('fin.install.t', '0'); lsSet('fin.install.never', '0'); try { sessionStorage.removeItem('fin.install.asked'); } catch (e) { /* storage blocked */ } }
   return was;
 }
 export async function checkStillInstalled() {
@@ -32,11 +32,12 @@ export async function checkStillInstalled() {
   return false;
 }
 
-// Asks again after 3 days, at most 3 times, never once installed.
+// Asks once per visit until the app is installed, unless the person chose "Não mostrar mais".
+const ssGet = k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } };
+const ssSet = (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
 export function shouldAskInstall() {
-  if (!isMobile() || isStandalone() || lsGet('fin.installed') === '1') return false;
-  const n = +(lsGet('fin.install.n') || 0), last = +(lsGet('fin.install.t') || 0);
-  return n < 3 && Date.now() - last > 3 * 864e5;
+  if (!isMobile() || isStandalone() || lsGet('fin.installed') === '1' || lsGet('fin.install.never') === '1') return false;
+  return ssGet('fin.install.asked') !== '1';
 }
 
 const ICON_SHARE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-label="Compartilhar"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>';
@@ -46,7 +47,7 @@ const ICON_MENU = '<svg viewBox="0 0 24 24" width="22" height="22" fill="current
 // note: extra line shown under the steps (e.g. "depois entre com seu e-mail").
 export function askInstall({ note = '' } = {}) {
   if ($('.isheet')) return;
-  lsSet('fin.install.n', String(+(lsGet('fin.install.n') || 0) + 1)); lsSet('fin.install.t', String(Date.now()));
+  lsSet('fin.install.n', String(+(lsGet('fin.install.n') || 0) + 1)); lsSet('fin.install.t', String(Date.now())); ssSet('fin.install.asked', '1');
   let body;
   if (inAppBrowser() || iosNotSafari()) {
     body = `<p>${iosNotSafari() ? 'No iPhone, o app só pode ser instalado pelo <strong>Safari</strong>.' : 'Você abriu o link dentro de outro app.'} Para instalar:</p>
@@ -72,11 +73,15 @@ export function askInstall({ note = '' } = {}) {
   el.innerHTML = `<div class="isheet-card">
     <div class="ihead"><img src="/icons/icon-192.png" alt="" width="52" height="52"><div><h3>Instale o Pra Onde Foi</h3><p class="small muted">Fica com ícone na tela do celular, abre em tela cheia e é mais rápido. Leva 10 segundos.</p></div></div>
     ${body}${note ? `<p class="tiny muted">${note}</p>` : ''}
-    <button class="tour-skip" type="button" data-later style="align-self:center">Agora não, continuar no navegador</button></div>`;
+    <div class="ilater"><button class="tour-skip" type="button" data-later>Agora não</button><button class="tour-skip" type="button" data-never>Não mostrar mais</button></div></div>`;
   document.body.append(el);
   const close = () => el.remove();
   el.addEventListener('click', e => { if (e.target === el) close(); });
   el.querySelector('[data-later]').onclick = close;
+  el.querySelector('[data-never]').onclick = () => {
+    lsSet('fin.install.never', '1'); close();
+    toast('Tudo bem! Quando quiser instalar, toque em "Instalar o app no celular" na tela de entrada ou no menu ☰ → Ajuda.', 'info');
+  };
   const ib = el.querySelector('[data-install]');
   if (ib) ib.onclick = async () => {
     const evt = S.installEvt; if (!evt) return close();

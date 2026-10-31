@@ -625,7 +625,7 @@ await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver 
 await page.click('#fbSend'); await page.waitForSelector('.cfm'); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => document.querySelector('#fbMine')?.textContent.includes('Queria ver'));
 const fbRow = await page.evaluate(() => window.__db.feedback.at(-1));
-ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v39', JSON.stringify(fbRow));
+ok('opinião enviada com tipo, tela e celular', fbRow.kind === 'ideia' && fbRow.screen === 'menu.opiniao' && !!fbRow.device && fbRow.version === 'v40', JSON.stringify(fbRow));
 ok('a pessoa vê o que já mandou e a situação', (await txt('#fbMine')).includes('Recebida'));
 await shot('11-opiniao');
 await sec('duvidas'); await page.waitForSelector('#fqList details');
@@ -706,7 +706,7 @@ const used = await page.evaluate(() => window.__db.usage);
   ok('navegação registrada: telas, tempo e caminho', navRec.screens.some(x => x.s === 'lancar' && x.t >= 1) && navRec.flows.some(f => f.f === 'lancar' && f.t === 'inicio'), JSON.stringify(navRec.screens).slice(0, 160));
   ok('toques registrados com o nome do botão, sem valores', navRec.taps.length > 0 && navRec.targets.some(t => /Falar ou escrever/.test(t.t)) && navRec.targets.every(t => !/\d/.test(t.t)), JSON.stringify(navRec.targets).slice(0, 200));
   const errRec = await page.evaluate(() => window.__db.errors.at(-1));
-  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v39', JSON.stringify(errRec));
+  ok('erro que apareceu na tela é registrado com tela, celular e versão', errRec?.p_kind === 'tela' && /Não foi possível salvar/.test(errRec.p_message) && !!errRec.p_screen && !!errRec.p_device && errRec.p_version === 'v40', JSON.stringify(errRec));
 }
 { // Signing in again: whoever already has a name and a family goes straight to Início.
   await page.click('[data-tab=extrato]'); await page.waitForTimeout(200);
@@ -872,7 +872,11 @@ for (const [name, uaStr, expect] of [
     await p2.reload(); await p2.waitForSelector('.isheet', { timeout: 15000 }).catch(() => {});
     if (!(await p2.$('.isheet'))) console.log('DBG install', await p2.evaluate(() => JSON.stringify({ i: localStorage.getItem('fin.installed'), n: localStorage.getItem('fin.install.n'), bip: !!window.__bip, ev: !!(window.S && 1) })));
     ok('Android: depois de desinstalar, o convite para instalar volta', !!(await p2.$('.isheet')) && await p2.evaluate(() => localStorage.getItem('fin.installed') === '0')); }
-  if (name === 'iPhone') { await p2.click('[data-later]'); await p2.reload(); await p2.waitForTimeout(2000); ok('iPhone: depois de "agora não", não insiste na mesma hora', !(await p2.$('.isheet'))); await p2.click('#wInstall'); await p2.waitForTimeout(200); ok('iPhone: botão Instalar o app na tela de entrada abre o passo a passo na hora', !!(await p2.$('.isheet'))); }
+  if (name === 'iPhone') { await p2.click('[data-later]'); await p2.reload(); await p2.waitForTimeout(2000); ok('iPhone: depois de "agora não", não insiste na mesma hora', !(await p2.$('.isheet'))); await p2.click('#wInstall'); await p2.waitForTimeout(200); ok('iPhone: botão Instalar o app na tela de entrada abre o passo a passo na hora', !!(await p2.$('.isheet')));
+    await p2.click('.isheet [data-never]'); await p2.waitForTimeout(200);
+    ok('iPhone: "Não mostrar mais" fecha e diz onde instalar depois', !(await p2.$('.isheet')) && (await p2.textContent('#toast')).includes('Instalar o app no celular'));
+    await p2.evaluate(() => sessionStorage.clear()); await p2.reload(); await p2.waitForTimeout(2000);
+    ok('iPhone: depois de "Não mostrar mais", não aparece nem em outra visita', !(await p2.$('.isheet')) && await p2.isVisible('#wInstall')); }
   await ctx.close();
 }
 await browser.close();
