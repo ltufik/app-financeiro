@@ -76,6 +76,10 @@ async function addRoutes(t) {
   await t.route('https://images.pexels.com/**', r => r.fulfill({ body: fs.readFileSync(path.join(ROOT, 'icons/icon-192.png')), contentType: 'image/png' }));
 }
 await addRoutes(page);
+// The test PDF reader (pdf.js 6) reads streams with "for await", which WebKit lacks; the app's reader (3.11) does not.
+if (ENGINE === 'webkit') await page.addInitScript(() => {
+  if (window.ReadableStream && !ReadableStream.prototype[Symbol.asyncIterator]) ReadableStream.prototype[Symbol.asyncIterator] = async function* () { const r = this.getReader(); try { for (;;) { const { done, value } = await r.read(); if (done) return; yield value; } } finally { r.releaseLock(); } };
+});
 await page.addInitScript(() => { window.__noMsgs = true; });
 // Fake speech recognition that behaves like Android Chrome: each session ends at the first pause.
 await page.addInitScript(() => {
