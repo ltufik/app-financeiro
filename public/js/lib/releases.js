@@ -37,4 +37,5 @@ export const RELEASES = [
     'Instalou o app no celular? Apague o ícone antigo e instale de novo pelo endereço novo. As notificações e os atalhos do iPhone continuam funcionando.',
   ] } },
   { id: 'r38', version: 'v38', at: '2026-10-31T00:45:00Z', backlog: [], semNovidade: 'Ajuste no passo a passo de instalação no Android (aba anônima, ícone de download, "Instalar" em vez de "Criar atalho"); não muda o uso do app.' },
+  { id: 'r39', version: 'v39', at: '2026-10-31T00:50:00Z', backlog: [], semNovidade: 'Botão "Instalar o app no celular" na tela de entrada, para quem não está logado; quem já usa não vê diferença.' },
 ];

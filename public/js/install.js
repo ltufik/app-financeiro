@@ -12,7 +12,7 @@ const ua = navigator.userAgent;
 export const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
 export const isIOS = () => /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 export const isAndroid = () => /android/i.test(ua);
-const isMobile = () => isIOS() || isAndroid();
+export const isMobile = () => isIOS() || isAndroid();
 const inAppBrowser = () => /FBAN|FBAV|Instagram|Line\/|LinkedInApp|Twitter|TikTok|Snapchat|; wv\)/i.test(ua);
 const iosNotSafari = () => isIOS() && /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//i.test(ua);
 

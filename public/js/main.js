@@ -20,7 +20,7 @@ import { track, navTo, screenOf } from './usage.js';
 import { TEST_PHASE } from './feedback.js';
 import { showMessages } from './messages.js';
 import { photo } from './photos.js';
-import { askInstall, shouldAskInstall, isIOS, isAndroid, markNotInstalled, checkStillInstalled } from './install.js';
+import { askInstall, shouldAskInstall, isIOS, isAndroid, isMobile, isStandalone, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 
 const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
@@ -39,6 +39,8 @@ function showSignedOut() {
 const afterIntro = () => showMessages().then(() => setTimeout(maybeAskInstall, 600));
 const maybeAskInstall = () => { if (shouldAskInstall()) askInstall({ note: isIOS() ? 'Depois de instalar, abra pelo ícone e entre com o mesmo e-mail e senha.' : '' }); };
 $('#wHero').innerHTML = photo('lost', { w: 1100, ratio: '3 / 2', fallback: 'hero', cls: 'land-photo' });
+// Always available on the phone: the automatic invitation only comes back after a few days.
+$('#wInstall').hidden = !isMobile() || isStandalone(); $('#wInstall').onclick = () => askInstall();
 $('#wSignup').onclick = () => { show('auth'); setMode('signup'); $('#aName').focus(); };
 $('#wLogin').onclick = $('#wLogin2').onclick = () => { show('auth'); setMode('login'); $('#aEmail').focus(); };
 $('#aBack').onclick = () => show('welcome');
