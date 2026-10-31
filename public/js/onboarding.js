@@ -5,6 +5,7 @@ import { S } from './state.js';
 import { $, toast, validate, clearInvalid } from './ui.js';
 import { checkName, parsePhoneBR, formatPhoneBR } from './lib/validate.js';
 import { esc } from './lib/format.js';
+import { registerBio, bioSupported, bioOn, noteBioDeclined, setLockName } from './lock.js';
 
 export const RELATIONS = ['Cônjuge ou companheiro(a)', 'Namorado(a)', 'Filho(a)', 'Pai ou mãe', 'Irmão ou irmã', 'Outro parente', 'Amigo(a)'];
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -86,6 +87,8 @@ const WA_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentCo
 
 // ---------- onboarding wizard ----------
 const O = { step: 'name', share: null, onDone: null };
+// Right after the name: protect the app with the fingerprint or face (only where the phone has it).
+const afterName = async () => (!bioOn() && await bioSupported()) ? go('bio') : after();
 export const displayName = () => S.user?.user_metadata?.display_name || '';
 const signupName = () => S.user?.user_metadata?.name || '';
 // Family surname from the full name, skipping Brazilian suffixes (Elias Neto -> Elias).
@@ -116,7 +119,7 @@ async function draw() {
       $('#obNext').disabled = true;
       try { const { data } = await db.sb.auth.updateUser({ data: { display_name: v } }); if (data?.user) S.user = data.user; else S.user.user_metadata = { ...S.user.user_metadata, display_name: v }; } catch (e) { S.user.user_metadata = { ...S.user.user_metadata, display_name: v }; }
       db.updateMyMemberName(S.user.id, v).catch(() => {});
-      after();
+      setLockName(v); afterName();
     };
     $('#obNext').onclick = next; $('#obName').onkeydown = e => { if (e.key === 'Enter') next(); };
     return;
@@ -150,6 +153,15 @@ async function draw() {
       <details class="help"><summary>Recebi um código de convite</summary><div class="rowbtn" style="margin-top:8px"><input type="text" id="obCode" autocomplete="off" style="text-transform:uppercase;flex:1 1 160px" placeholder="Código"><button class="btn" type="button" id="obCodeGo">Usar código</button></div></details>`;
     b.querySelectorAll('[data-s]').forEach(x => x.onclick = () => { O.share = x.dataset.s === '1'; go('famname'); });
     $('#obCodeGo').onclick = () => { const c = $('#obCode').value.replace(/\s/g, '').toUpperCase(); if (!validate([[$('#obCode'), /^[A-Z0-9]{6,12}$/.test(c) ? '' : 'O código tem 8 letras e números, como no convite.']])) return; lsSet('fin.invite', c); go('invited'); };
+    return;
+  }
+  if (O.step === 'bio') {
+    b.innerHTML = `<div class="brandbig">${n ? n + ', proteja' : 'Proteja'} o app com a digital</div>
+      <p class="muted">O app mostra os números da família, então ele se bloqueia sozinho depois de alguns minutos sem uso. Com a digital ou o rosto, você desbloqueia com um toque, sem digitar a senha.</p>
+      <div class="panel stack"><ul class="small" style="margin:0"><li>A digital e o rosto ficam no seu celular: o app nunca recebe.</li><li>Dá para desligar quando quiser em menu ☰ → Conta → Segurança.</li></ul>
+      <button class="btn primary" type="button" id="obBioYes">Usar a digital ou o rosto</button><button class="btn" type="button" id="obBioNo">Agora não</button></div>`;
+    $('#obBioYes').onclick = async () => { $('#obBioYes').disabled = true; if (!await registerBio()) noteBioDeclined(); after(); };
+    $('#obBioNo').onclick = () => { noteBioDeclined(); after(); };
     return;
   }
   if (O.step === 'famname') {

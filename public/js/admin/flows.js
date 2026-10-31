@@ -6,6 +6,7 @@ export const SCREENS = {
   boas_vindas: { title: 'Boas-vindas', where: 'Abrir o link sem estar logado' },
   cadastro: { title: 'Cadastro', where: 'Criar conta grátis' },
   nome: { title: 'Como quer ser chamado', where: 'Depois do cadastro' },
+  biometria: { title: 'Proteger com a digital', where: 'Depois do nome, no celular com digital ou rosto', key: 'seguranca.biometria' },
   familia: { title: 'Criar a família', where: 'Depois do nome (ou entra por convite)' },
   apresentacao: { title: 'Apresentação', where: 'Primeiro acesso; menu ☰ → Ajuda' },
   tour: { title: 'Tour guiado', where: 'Depois da apresentação; menu ☰ → Ajuda' },
@@ -53,17 +54,17 @@ export const SCREENS = {
 const st = (s, action, key) => key === undefined ? { s, action } : { s, action, key };
 export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
-    { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'familia', 'apresentacao', 'tour', 'alpha'] },
+    { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
     { title: 'Dentro das abas', screens: ['inicio_mais', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lancar_revisao', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
     { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'sininho'] },
-    { title: 'Segurança', screens: ['menu_conta', 'bloqueio', 'saiu'] },
+    { title: 'Segurança', screens: ['biometria', 'menu_conta', 'bloqueio', 'saiu'] },
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
-    st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'),
+    st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'), st('biometria', 'Liga a digital ou o rosto (ou "Agora não")'),
     st('familia', 'Cria a família (ou entra pelo convite)'), st('apresentacao', '7 slides, pode pular'), st('tour', 'Balões nos botões de verdade'),
     st('alpha', 'Aviso do teste e do balão de opinião'), st('inicio', 'A régua mostra o próximo passo')] },
   { id: 'fatura', title: 'Importar fatura ou extrato', desc: 'O caminho que faz o app ter valor: o primeiro mês importado.', steps: [

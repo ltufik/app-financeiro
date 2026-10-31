@@ -128,6 +128,11 @@ export async function offerBio() {
   return true;
 }
 
+// Right after creating the account (onboarding): is it worth asking, and remember a "not now".
+export const bioOn = () => !!(L && lsGet(K.bio()));
+export const setLockName = n => { if (L) L.name = n; };
+export function noteBioDeclined() { if (!L) return; let a = {}; try { a = JSON.parse(lsGet(K.ask()) || '{}'); } catch (e) { a = {}; } lsSet(K.ask(), JSON.stringify({ n: (+a.n || 0) + 1, at: Date.now() })); }
+
 // "Segurança" in menu ☰ → Conta.
 export async function renderSecurity(box) {
   if (!L) { box.innerHTML = ''; return; }

@@ -65,4 +65,5 @@ export const RELEASES = [
     'Lá também dá para escolher o tempo (de 1 a 30 minutos) e bloquear na hora.',
   ] } },
   { id: 'r47', version: 'v47', at: '2026-10-31T16:37:00Z', backlog: [], semNovidade: 'O próprio app passa a oferecer a digital ou o rosto, num pop-up que já explica e diz como desligar (até 3 vezes, uma por semana). Uma novidade a mais seria um segundo aviso sobre o mesmo assunto da v46.' },
+  { id: 'r48', version: 'v48', at: '2026-10-31T17:07:00Z', backlog: [], semNovidade: 'A oferta da digital passa a aparecer também logo depois de criar a conta, no cadastro; só quem se cadastra a partir de agora vê, e quem já usa recebe a oferta ao abrir o app (v47).' },
 ];

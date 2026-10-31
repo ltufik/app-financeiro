@@ -209,6 +209,9 @@ async function doStart() {
   if (!S.user) { showSignedOut(); return; }
   // The session copy kept on the device can be old: fetch the account so choices like "Não mostrar mais" hold.
   try { const { data: fresh } = await db.sb.auth.getUser(); if (fresh?.user) S.user = fresh.user; } catch (e) { /* offline: keep the session copy */ }
+  // Locks before the numbers show when the app was left alone for longer than the chosen minutes.
+  if (S.justSignedIn) freshSignIn(S.user.id);
+  initLock({ sb: db.sb, user: S.user.id, name: displayName(), email: S.user.email });
   const hasFamily = await pickFamily();
   // Onboarding: how to be called, a pending invite (from a WhatsApp link), or creating the family.
   if (!hasFamily || !displayName() || pendingInvite()) {
@@ -216,9 +219,7 @@ async function doStart() {
     startOnboarding(hasFamily ? 'existing' : 'full', () => { starting = null; start(); });
     return;
   }
-  // Locks before the numbers show when the app was left alone for longer than the chosen minutes.
-  if (S.justSignedIn) freshSignIn(S.user.id);
-  initLock({ sb: db.sb, user: S.user.id, name: displayName(), email: S.user.email });
+  initLock({ sb: db.sb, user: S.user.id, name: displayName(), email: S.user.email }); // now with the name chosen
   setFamily(await db.loadFamily(S.hh.id));
   $('#brand').textContent = S.hh.name;
   touchActivity(); checkAdmin();

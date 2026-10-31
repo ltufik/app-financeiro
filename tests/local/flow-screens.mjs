@@ -29,6 +29,7 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1.5, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36' });
 await ctx.addInitScript(() => { window.__noMsgs = !localStorage.getItem('shots.msgs'); window.SpeechRecognition = window.webkitSpeechRecognition = class { start() {} stop() {} }; });
 const page = await ctx.newPage();
+{ const cdp = await ctx.newCDPSession(page); await cdp.send('WebAuthn.enable'); await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } }); }
 let news = null;
 await page.route('https://app.test/**', r => {
   const u = new URL(r.request().url());
@@ -64,6 +65,9 @@ await step('cadastro', async () => { await page.click('#wSignup'); await page.fi
 await page.click('#aGo');
 await step('nome', async () => { await page.waitForSelector('#obName'); await page.fill('#obName', 'Ana'); });
 await page.click('#obNext');
+// A phone with fingerprint or face: the app offers it right after the account is created.
+await step('biometria', () => page.waitForSelector('#obBioYes', { timeout: 8000 }));
+await page.click('#obBioNo').catch(() => {});
 await step('familia', async () => { await page.click('[data-s="1"]'); await page.waitForSelector('#obFam'); await page.fill('#obFam', 'Família Souza'); });
 await page.click('#obCreate'); await page.waitForSelector('#obDone'); await page.click('#obDone');
 await step('apresentacao', () => page.waitForSelector('.tour'));
