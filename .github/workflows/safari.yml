@@ -27,6 +27,15 @@ jobs:
           npm i playwright@1.56.0 pdfjs-dist@6.2.108 >/dev/null
           npx playwright install --with-deps webkit
           mkdir -p /tmp/pdf3 && cd /tmp/pdf3 && npm init -y >/dev/null && npm i pdfjs-dist@3.11.174 >/dev/null
+      - name: Diagnóstico do leitor de PDF (temporário)
+        continue-on-error: true
+        run: |
+          f=/tmp/pdf3/node_modules/pdfjs-dist/build/pdf.worker.min.js
+          ls -la /tmp/pdf3/node_modules/pdfjs-dist/build/ | head -20
+          echo "::notice title=worker-head::$(head -c 300 $f | tr -d '\n')"
+          echo "::notice title=worker-global::$(grep -o '.\{60\}pdfjsWorker.\{60\}' $f | head -3 | tr -d '\n')"
+          cd /tmp/tools && npx playwright install chromium >/dev/null
+          node $GITHUB_WORKSPACE/tests/e2e/run.mjs --smoke --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --pdfjs3 /tmp/pdf3/node_modules/pdfjs-dist --outra $GITHUB_WORKSPACE/tests/fixtures/fatura-ficticia.pdf || true
       - name: App no Safari do iPhone (WebKit)
         run: node tests/e2e/run.mjs --browser webkit --smoke --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --pdfjs3 /tmp/pdf3/node_modules/pdfjs-dist --outra tests/fixtures/fatura-ficticia.pdf --shots /tmp/safari
       - name: Prints do teste
