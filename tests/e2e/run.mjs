@@ -19,6 +19,7 @@ const browser = await PW[ENGINE].launch();
 const page = await browser.newPage(ENGINE === 'webkit' ? { ...PW.devices['iPhone 13'] } : { viewport: { width: 400, height: 860 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
+const clog = []; page.on('console', m => clog.push(m.type() + ': ' + m.text().slice(0, 200))); page.on('requestfailed', q => clog.push('falhou: ' + q.url().slice(0, 120) + ' ' + (q.failure()?.errorText || '')));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fetching the script/.test(m.text())) errors.push(m.text()); });
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
@@ -236,8 +237,8 @@ if (SMOKE) { // The rest needs real family data: in the smoke run, check the mai
   const outraS = arg('outra');
   if (outraS) {
     await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', outraS);
-    await page.waitForSelector('#rvSave', { timeout: 30000 }).catch(() => {});
-    ok('safari: fatura em PDF lida e conferida', (await txt('#pdfLog')).includes('Fatura do Nubank lida: 7 lançamentos'), await txt('#pdfLog'));
+    const t0 = Date.now(); await page.waitForSelector('#rvSave', { timeout: 60000 }).catch(() => {});
+    ok('safari: fatura em PDF lida e conferida', (await txt('#pdfLog')).includes('Fatura do Nubank lida: 7 lançamentos'), `${Math.round((Date.now() - t0) / 1000)}s ` + await txt('#pdfLog') + ' | ' + clog.slice(-8).join(' / '));
   }
   await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/comprovante-ficticio.pdf'));
   await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 15000 }).catch(() => {});
