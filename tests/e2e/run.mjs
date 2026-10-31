@@ -238,7 +238,7 @@ if (SMOKE) { // The rest needs real family data: in the smoke run, check the mai
   if (outraS) { // Probe the PDF reader directly, to tell a reader problem from an app problem.
     const b64 = fs.readFileSync(outraS).toString('base64');
     const probe = await page.evaluate(async b64 => {
-      const t0 = performance.now(), out = { worker: typeof globalThis.pdfjsWorker, src: pdfjsLib.GlobalWorkerOptions.workerSrc || '' };
+      const t0 = performance.now(), out = { v: pdfjsLib.version, worker: typeof globalThis.pdfjsWorker, src: pdfjsLib.GlobalWorkerOptions.workerSrc || '', res: performance.getEntriesByType('resource').filter(e => /pdf/.test(e.name)).map(e => e.name.split('/').pop() + ':' + Math.round(e.duration) + 'ms:' + (e.transferSize || e.encodedBodySize || 0)) };
       const step = (k, p) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('demorou: ' + k)), 15000))]);
       try {
         const data = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
