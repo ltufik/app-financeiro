@@ -235,6 +235,20 @@ if (SMOKE) { // The rest needs real family data: in the smoke run, check the mai
   await page.click('#qCancel');
   await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
   const outraS = arg('outra');
+  if (outraS) { // Probe the PDF reader directly, to tell a reader problem from an app problem.
+    const b64 = fs.readFileSync(outraS).toString('base64');
+    const probe = await page.evaluate(async b64 => {
+      const t0 = performance.now(), out = { worker: typeof globalThis.pdfjsWorker, src: pdfjsLib.GlobalWorkerOptions.workerSrc || '' };
+      const step = (k, p) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('demorou: ' + k)), 15000))]);
+      try {
+        const data = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const doc = await step('abrir', pdfjsLib.getDocument({ data, isEvalSupported: false }).promise); out.pages = doc.numPages;
+        const pg = await step('página', doc.getPage(1)); const tc = await step('texto', pg.getTextContent()); out.items = tc.items.length;
+      } catch (e) { out.err = String(e?.message || e); }
+      out.ms = Math.round(performance.now() - t0); return out;
+    }, b64);
+    ok('safari: leitor de PDF abre e lê o texto', probe.pages === 1 && probe.items > 5, JSON.stringify(probe));
+  }
   if (outraS) {
     await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', outraS);
     const t0 = Date.now(); await page.waitForSelector('#rvSave', { timeout: 60000 }).catch(() => {});
