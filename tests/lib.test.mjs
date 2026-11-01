@@ -361,6 +361,8 @@ test('navegação: célula do toque, nome do botão e erro sem dados pessoais', 
   fakeEl = fake({}, 'Pagar R$ 1.234,56 agora'); assert.equal(tapLabel({ closest: () => fakeEl }), 'Pagar # agora');
   fakeEl = fake({ 'aria-label': 'Abrir menu' }, ''); assert.equal(tapLabel({ closest: () => fakeEl }), 'Abrir menu');
   assert.equal(tapLabel({ closest: () => null }), '');
+  fakeEl = { ...fake({}, 'Falar ou escrever"Gastei 45 na padaria"'), querySelector: s => s === 'strong' ? { textContent: 'Falar ou escrever' } : null };
+  assert.equal(tapLabel({ closest: () => fakeEl }), 'Falar ou escrever', 'bloco com título e exemplo: só o título');
   assert.equal(cleanError('Falhou para ana@x.com no cartão 5502 0912 3456 7788'), 'Falhou para <e-mail> no cartão #');
   assert.equal(cleanError('Script error.'), '');
   assert.equal(cleanError('x'.repeat(500)).length, 400);

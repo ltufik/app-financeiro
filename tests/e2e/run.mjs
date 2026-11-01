@@ -873,6 +873,7 @@ const used = await page.evaluate(() => window.__db.usage);
   await page.evaluate(() => import('/js/usage.js').then(m => m.flush()));
   await page.waitForFunction(() => window.__db.nav.length > 0 && window.__db.errors.length > 0, null, { timeout: 5000 }).catch(() => {});
   const navRec = await page.evaluate(() => window.__db.nav.reduce((a, d) => ({ screens: a.screens.concat(d.screens), flows: a.flows.concat(d.flows), taps: a.taps.concat(d.taps), targets: a.targets.concat(d.targets) }), { screens: [], flows: [], taps: [], targets: [] }));
+  ok('toque fica na tela certa e com o nome curto do bloco', navRec.targets.some(x => x.s === 'lancar' && x.t === 'Falar ou escrever') && !navRec.targets.some(x => x.s === 'inicio' && x.t === 'Falar ou escrever'), JSON.stringify(navRec.targets).slice(0, 200));
   ok('navegação registrada: telas, tempo e caminho', navRec.screens.some(x => x.s === 'lancar' && x.t >= 1) && navRec.flows.some(f => f.f === 'lancar' && f.t === 'inicio'), JSON.stringify(navRec.screens).slice(0, 160));
   ok('toques registrados com o nome do botão, sem valores', navRec.taps.length > 0 && navRec.targets.some(t => /Falar ou escrever/.test(t.t)) && navRec.targets.every(t => !/\d/.test(t.t)), JSON.stringify(navRec.targets).slice(0, 200));
   const errRec = await page.evaluate(() => window.__db.errors.at(-1));

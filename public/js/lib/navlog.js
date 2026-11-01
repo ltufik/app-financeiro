@@ -13,7 +13,9 @@ const PICK = 'button, a, summary, [role=button], [role=radio], [role=tab], .tab,
 export function tapLabel(target) {
   const el = target && target.closest ? target.closest(PICK) : null;
   if (!el || el.closest('input, textarea, select')) return '';
-  const raw = el.getAttribute('aria-label') || el.textContent || el.id || '';
+  // A tile with a title and a description (Lançar): only the title.
+  const title = el.querySelector ? el.querySelector('strong') : null;
+  const raw = el.getAttribute('aria-label') || title?.textContent || el.textContent || el.id || '';
   return String(raw).replace(/\s+/g, ' ').trim().replace(/R\$\s*/g, '').replace(/\d[\d.,]*/g, '#').slice(0, 60);
 }
 

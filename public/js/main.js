@@ -163,8 +163,8 @@ function setTab(t) {
   closeMenu(false);
   track('aba.' + (t === 'resumo' ? 'inicio' : t === 'ajustes' ? 'menu' : t));
   if (t === 'ajustes' && S.sec) track('menu.' + S.sec);
-  navTo(screenOf());
   S.tab = t; lsSet('fin.tab', t);
+  navTo(screenOf()); // after S.tab changes: the screen being opened, not the one being left
   $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   $$('.view').forEach(v => v.hidden = v.dataset.view !== t);
   window.scrollTo(0, 0); S.render();
