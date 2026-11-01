@@ -206,6 +206,11 @@ ok('depois do tour, vai para a fatura', await page.isVisible('#v-lancar #drop'))
 await page.click('[data-tab=resumo]');
 ok('resumo cumprimenta pelo nome', (await txt('#v-resumo')).includes('Boas-vindas, Luiz!'));
 ok('início vazio mostra a régua de preenchimento em 0%', (await txt('#stepsBox')).includes('Use o app por completo') && (await txt('#stepsBox .regua-n')) === '0%', await txt('#stepsBox .regua-n'));
+ok('início vazio mostra um mês de exemplo, marcado como fictício, com o caminho para os números de verdade', (await txt('#demoCard')).includes('Família Exemplo (fictícia)') && (await txt('#demoCard')).includes('Agora com os números de vocês') && await page.isVisible('#demoPdf'));
+if (shots) await page.screenshot({ path: path.join(shots, '02a-exemplo.png'), fullPage: true });
+await page.click('#demoPdf'); await page.waitForTimeout(400);
+ok('do exemplo, "Enviar a última fatura" abre o envio', (await page.getAttribute('.tab[data-tab="lancar"]', 'aria-selected')) === 'true' && await page.isVisible('#v-lancar #drop'));
+await page.click('[data-tab=resumo]');
 ok('régua mostra só os próximos 3 passos, com o que cada um libera', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 3 && (await txt('#stepsBox')).includes('Libera a sobra do mês'));
 await page.click('#stepsBox [data-all]');
 ok('régua mostra todos os passos', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 12);
@@ -671,7 +676,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
   ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
   await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
-  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 5 && (await ap.textContent('.fflow')).includes('pessoas'));
+  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 6 && (await ap.textContent('.fflow')).includes('pessoas'));
   await ap.click('.fstep .phone'); await ap.waitForSelector('#flBox[open]');
   ok('central: tela ampliada mostra onde fica e em que fluxos aparece', (await ap.textContent('#flBox')).includes('Aparece nos fluxos'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-10-fluxo-zoom.png') });

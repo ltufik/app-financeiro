@@ -127,4 +127,6 @@ test('lembrete das 21h: só para quem não lançou nada hoje, uma vez por dia', 
   assert.deepEqual(sent, ['/a']); assert.equal(patched[0].last_sent.lembrete, '2026-10-30');
   assert.equal(reminderMessage('Mari Souza').title, 'Mari, gastou algo hoje no pix ou em dinheiro?');
   assert.equal(reminderMessage('').title, 'Gastou algo hoje no pix ou em dinheiro?');
+  const e = reminderMessage('Mari Souza', { empty: true });
+  assert.equal(e.title, 'Mari, o app de vocês ainda está vazio'); assert.equal(e.url, '/?acao=pdf'); assert.match(e.body, /última fatura/);
 });

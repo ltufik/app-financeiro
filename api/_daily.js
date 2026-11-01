@@ -92,21 +92,26 @@ export async function runDaily({ supabaseUrl, serviceKey, vapid, fetchImpl = fet
 }
 
 // Evening reminder (21h in Brazil): only for people who launched nothing today, once a day.
-export const reminderMessage = name => ({ title: `${name ? name.split(' ')[0] + ', g' : 'G'}astou algo hoje no pix ou em dinheiro?`, body: 'Toque e fale em 5 segundos. O app lança para você.', url: '/?acao=voz', tag: 'lembrete' });
+// Families with no data at all get the first step (send the statement) instead of the voice reminder.
+export const reminderMessage = (name, { empty = false } = {}) => empty
+  ? { title: `${name ? name.split(' ')[0] + ', o' : 'O'} app de vocês ainda está vazio`, body: 'Mande a última fatura do cartão, em PDF, foto ou print. Em 2 minutos você vê para onde foi o dinheiro.', url: '/?acao=pdf', tag: 'lembrete' }
+  : ({ title: `${name ? name.split(' ')[0] + ', g' : 'G'}astou algo hoje no pix ou em dinheiro?`, body: 'Toque e fale em 5 segundos. O app lança para você.', url: '/?acao=voz', tag: 'lembrete' });
 export async function runReminder({ supabaseUrl, serviceKey, vapid, fetchImpl = fetch, now = Date.now() }) {
   const H = { apikey: serviceKey, 'content-type': 'application/json', ...(serviceKey.startsWith('sb_') ? {} : { authorization: `Bearer ${serviceKey}` }) };
   const get = async path => { const r = await fetchImpl(`${supabaseUrl}/rest/v1/${path}`, { headers: H }); if (!r.ok) throw new Error(`supabase ${r.status} ${path.split('?')[0]}`); return r.json(); };
   const { iso: today } = brToday(now), start = new Date(Date.parse(today + 'T03:00:00Z')).toISOString();
   const subs = (await get('push_subscriptions?select=*')).filter(s => s.prefs?.lembrete !== false && (s.last_sent || {}).lembrete !== today);
   const out = { sent: 0, skipped: 0, removed: 0, errors: 0 };
-  const did = new Map(), names = new Map();
+  const did = new Map(), names = new Map(), empties = new Map();
   for (const s of subs) {
     try {
       const k = s.user_id + '|' + s.household_id;
       if (!did.has(k)) did.set(k, (await get(`transactions?household_id=eq.${s.household_id}&created_by=eq.${s.user_id}&created_at=gte.${encodeURIComponent(start)}&select=id&limit=1`)).length > 0);
       if (did.get(k)) { out.skipped++; continue; }
+      // A family with nothing yet gets the first step instead: send the card statement.
+      if (!empties.has(s.household_id)) empties.set(s.household_id, (await get(`transactions?household_id=eq.${s.household_id}&select=id&limit=1`)).length === 0);
       if (!names.has(s.user_id)) names.set(s.user_id, (await get(`members?user_id=eq.${s.user_id}&select=display_name&limit=1`))[0]?.display_name || '');
-      const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, reminderMessage(names.get(s.user_id)), vapid, fetchImpl).catch(() => ({ ok: false }));
+      const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, reminderMessage(names.get(s.user_id), { empty: empties.get(s.household_id) }), vapid, fetchImpl).catch(() => ({ ok: false }));
       if (r.gone) { await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H }); out.removed++; continue; }
       if (!r.ok) { out.errors++; continue; }
       out.sent++;

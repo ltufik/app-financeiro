@@ -460,3 +460,12 @@ test('digital: o app oferece até 3 vezes, uma por semana, só onde o celular te
   assert.equal(shouldOfferBio({ supported: true, on: false, asks: { n: 1, at: now - 8 * 864e5 }, now }), true);
   assert.equal(shouldOfferBio({ supported: true, on: false, asks: { n: 3, at: now - 30 * 864e5 }, now }), false);
 });
+
+import { demoSummary } from '../public/js/lib/demo.js';
+test('mês de exemplo: números coerentes com o cálculo de verdade', () => {
+  const d = demoSummary();
+  assert.equal(d.income, 16450); assert.ok(d.res > 0 && d.res < d.income); assert.equal(Math.round(d.res + d.out), 16450);
+  assert.equal(d.top.length, 5); assert.equal(d.top[0].cat, 'Moradia e contas');
+  assert.ok(d.tx > 0.05 && d.tx < 0.4, 'taxa de quem guarda é plausível: ' + d.tx);
+  assert.match(d.findings[0], /Delivery e restaurante somaram R\$ 1\.290/);
+});

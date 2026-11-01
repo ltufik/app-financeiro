@@ -11,6 +11,7 @@ export const SCREENS = {
   apresentacao: { title: 'Apresentação', where: 'Primeiro acesso; menu ☰ → Ajuda' },
   tour: { title: 'Tour guiado', where: 'Depois da apresentação; menu ☰ → Ajuda' },
   alpha: { title: 'Aviso do teste alpha', where: 'Uma vez, depois do tour', key: null },
+  inicio_exemplo: { title: 'Mês de exemplo', where: 'Início, enquanto a família não tem dados', key: null },
   inicio: { title: 'Início', where: 'Aba Início', key: 'aba.inicio' },
   inicio_mais: { title: 'Mais detalhes', where: 'Início → fim da tela', key: 'aba.inicio' },
   fechar: { title: 'Fechar o mês', where: 'Cartão "Hora de fechar o mês" no Início', key: 'aba.fechar' },
@@ -55,7 +56,7 @@ const st = (s, action, key) => key === undefined ? { s, action } : { s, action, 
 export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
-    { title: 'Abas', screens: ['inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
+    { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
     { title: 'Dentro das abas', screens: ['inicio_mais', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lancar_revisao', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
@@ -66,9 +67,9 @@ export const FLOWS = [
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
     st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'), st('biometria', 'Liga a digital ou o rosto (ou "Agora não")'),
     st('familia', 'Cria a família (ou entra pelo convite)'), st('apresentacao', '7 slides, pode pular'), st('tour', 'Balões nos botões de verdade'),
-    st('alpha', 'Aviso do teste e do balão de opinião'), st('inicio', 'A régua mostra o próximo passo')] },
+    st('alpha', 'Aviso do teste e do balão de opinião'), st('inicio_exemplo', 'Vê um mês de exemplo e toca em Enviar a última fatura', ['exemplo.fatura', 'exemplo.falar']), st('inicio', 'A régua mostra o próximo passo')] },
   { id: 'fatura', title: 'Importar fatura ou extrato', desc: 'O caminho que faz o app ter valor: o primeiro mês importado.', steps: [
-    st('inicio', 'Régua: "Envie a última fatura"'), st('lancar', 'Abre Lançar'), st('lancar_pdf', 'Escolhe o PDF, a foto ou o print (e a senha, se tiver); o app vê pelo conteúdo o que é'),
+    st('inicio_exemplo', 'Mês de exemplo: "Enviar a última fatura"', 'exemplo.fatura'), st('inicio', 'Régua: "Envie a última fatura"'), st('lancar', 'Abre Lançar'), st('lancar_pdf', 'Escolhe o PDF, a foto ou o print (e a senha, se tiver); o app vê pelo conteúdo o que é'),
     st('lancar_revisao', 'Confere a soma e as categorias, toca em Salvar'), st('inicio', 'Sobra do mês atualizada', null)] },
   { id: 'falar', title: 'Lançar falando', desc: 'Pix e dinheiro antes do extrato chegar.', steps: [
     st('lancar', 'Abre Lançar'), st('lancar_falar', 'Fala "gastei 45 na padaria no pix" e toca em Interpretar'), st('lancar_salvo', 'Confere e salva')] },

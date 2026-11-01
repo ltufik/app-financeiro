@@ -11,15 +11,36 @@ import { byCategory } from '../lib/calc.js';
 import { brl, brl0, pct, esc, mLong, mShort } from '../lib/format.js';
 import { meter, pill } from '../ui.js';
 import { renderSteps } from '../steps.js';
+import { demoSummary, DEMO_FAMILY, DEMO_MONTH } from '../lib/demo.js';
+import { track } from '../usage.js';
 
 let goalPreset = 0, showAllInsights = false;
 const moreOpen = () => { try { return localStorage.getItem('fin.home.more') === '1'; } catch (e) { return false; } };
 const first = () => (S.user?.user_metadata?.display_name || '').split(' ')[0] || 'você';
 
+// While the family has no data: a fictional month, with the same math as the real summary.
+function demoCard() {
+  const d = demoSummary(), mx = d.top[0]?.v || 1;
+  return `<div class="panel demo" id="demoCard">
+    <div class="demo-tag">Exemplo · ${DEMO_FAMILY} (fictícia) · ${DEMO_MONTH}</div>
+    <p class="muted small">Sobra do mês</p><div class="big num">${brl0(d.res)}</div>
+    <div class="chips" style="margin-top:8px"><span class="pill ok">Guardaram ${pct(d.tx)} do que ganharam</span></div>
+    <h3 style="margin-top:14px">Para onde foi o dinheiro</h3>
+    <div style="margin-top:6px">${d.top.map(x => `<div class="catbar"><span class="small">${esc(x.cat)}</span><span class="small" style="font-weight:600">${brl0(x.v)}</span><span class="b"><span style="width:${x.v / mx * 100}%"></span></span></div>`).join('')}</div>
+    <h3 style="margin-top:14px">O que o app percebeu</h3>
+    <ul class="small" style="margin:6px 0 0">${d.findings.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+    <p class="small" style="margin-top:14px;font-weight:600">Agora com os números de vocês:</p>
+    <div class="rowbtn"><button class="btn primary" type="button" id="demoPdf">Enviar a última fatura</button><button class="btn" type="button" id="demoFalar">Lançar um gasto falando</button></div>
+    <p class="tiny muted">A fatura em PDF, foto ou print, de qualquer banco. Leva 2 minutos.</p>
+  </div>`;
+}
+
 export function render(el) {
   const ks = monthKeys(), G = goals();
   if (!ks.length) {
-    el.innerHTML = `<div class="panel hero"><h2>Boas-vindas, ${esc(first())}!</h2><p class="muted" style="margin-top:6px">O resumo do mês aparece aqui assim que vocês mandarem o primeiro PDF ou lançarem o primeiro gasto. Siga os passos abaixo, um de cada vez.</p></div><div class="panel" id="stepsBox"></div><div id="insights"></div>`;
+    el.innerHTML = `<div class="panel hero"><h2>Boas-vindas, ${esc(first())}!</h2><p class="muted" style="margin-top:6px">O resumo do mês aparece aqui assim que vocês mandarem o primeiro PDF ou lançarem o primeiro gasto. Veja abaixo como fica, com uma família de exemplo.</p></div>${demoCard()}<div class="panel" id="stepsBox"></div><div id="insights"></div>`;
+    el.querySelector('#demoPdf').onclick = () => { track('exemplo.fatura'); S.go('lancar'); import('./lancar.js').then(m => m.openMode('pdf', true)); };
+    el.querySelector('#demoFalar').onclick = () => { track('exemplo.falar'); S.go('lancar'); import('./lancar.js').then(m => m.openMode('falar', true)); };
     renderInsights(el.querySelector('#insights'));
     renderSteps(el.querySelector('#stepsBox'));
     return;
