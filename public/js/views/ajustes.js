@@ -427,6 +427,8 @@ async function save(patch, msg) {
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
 async function renderPush(box) {
   const st = await pushStatus().catch(() => 'unsupported');
+  S.pushStatus = st;
+  const focus = S.pushFocus; S.pushFocus = false;
   const msg = {
     'need-install': `<p class="small">No iPhone, os avisos só funcionam com o app instalado na tela de início. Instale e abra pelo ícone; depois volte aqui.</p><details class="help" open><summary>Como instalar</summary>${installHelpHTML()}</details>`,
     'no-sw': '<p class="small">O app ainda está terminando de instalar neste aparelho. Feche e abra de novo, e volte aqui.</p>',
@@ -434,7 +436,7 @@ async function renderPush(box) {
     'not-configured': '<p class="small">Os avisos ainda não foram ligados no servidor do app. Assim que forem, esta página libera o botão.</p>',
     denied: `<p class="small">Os avisos estão bloqueados para este app no celular. Para liberar:</p><ol class="small">${isIOS() ? '<li>Abra os Ajustes do iPhone → Notificações.</li><li>Toque em Pra Onde Foi e ligue Permitir Notificações.</li>' : '<li>No Chrome, toque no ícone ao lado do endereço (ou segure o ícone do app → Informações do app).</li><li>Toque em Notificações e escolha Permitir.</li>'}<li>Volte aqui e toque em Ativar avisos.</li></ol>`,
   }[st];
-  if (msg) { box.innerHTML = msg; wireInstall(box); return; }
+  if (msg) { box.innerHTML = msg; wireInstall(box); if (focus) box.classList.add('pulse'); return; }
   const prefs = await currentPrefs().catch(() => ({ dados: true, gastos: true, conquistas: true, semanal: true }));
   box.innerHTML = `${st === 'on' ? '<p class="status ok">Avisos ligados neste celular.</p>' : ''}
     <fieldset class="pushtypes"><legend class="small muted">Quero ser avisado sobre</legend>
@@ -447,11 +449,12 @@ async function renderPush(box) {
     if (!Object.values(read()).some(Boolean)) { i.checked = true; say('err', 'Deixe pelo menos um tipo de aviso ligado, ou toque em Desligar avisos.'); return; }
     if (st === 'on') { try { await savePrefs(read()); say('ok', 'Preferências salvas.'); } catch (e) { say('err', 'Não foi possível salvar. Verifique a internet.'); } }
   });
+  if (st !== 'on' && focus) setTimeout(() => { const b = $('#pOn'); if (!b) return; b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.add('pulse'); b.focus({ preventScroll: true }); }, 80);
   if (st !== 'on') $('#pOn').onclick = async () => {
     say('busy', 'O celular vai pedir permissão. Toque em Permitir.');
     try {
       const r = await enablePush(read());
-      if (r === 'on') { lsSet('fin.push.on', '1'); toast('Avisos ligados'); renderPush(box); setTimeout(() => sendTest().catch(() => {}), 400); }
+      if (r === 'on') { lsSet('fin.push.on', '1'); S.pushStatus = 'on'; track('avisos.ligou'); toast('Avisos ligados'); renderPush(box); setTimeout(() => sendTest().catch(() => {}), 400); }
       else if (r === 'denied') renderPush(box);
       else say('err', 'Você não permitiu os avisos. Quando quiser, toque em Ativar de novo.');
     } catch (e) { say('err', 'Não foi possível ligar os avisos. ' + db.errorText(e)); }
@@ -460,7 +463,7 @@ async function renderPush(box) {
     $('#pTest').onclick = async () => { say('busy', 'Enviando...'); try { await sendTest(); say('ok', 'Aviso enviado. Ele chega em alguns segundos.'); } catch (e) { say('err', 'Não foi possível enviar o teste agora.'); } };
     $('#pOff').onclick = async e => {
       if (!await confirmInline(e.target, { text: 'Desligar os avisos neste celular? Dá para ligar de novo quando quiser.', yes: 'Sim, desligar', danger: true })) return;
-      await disablePush(); lsSet('fin.push.on', '0'); toast('Avisos desligados'); renderPush(box);
+      await disablePush(); lsSet('fin.push.on', '0'); S.pushStatus = 'off'; toast('Avisos desligados'); renderPush(box);
     };
   }
 }

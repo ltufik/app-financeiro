@@ -121,4 +121,11 @@ export const RELEASES = [
   { id: 'r60', version: 'v60', at: '2026-11-03T13:40:00Z', backlog: ['push_de_teste_na_central'], semNovidade: 'Central do produto: página "Avisos no celular" com os seus aparelhos, quem recebe push e um botão de push de teste. Só o dono do produto vê.', addBacklog: [
     { id: 'push_de_teste_na_central', title: 'Push de teste e lista de quem recebe avisos na Central', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não dava para saber se o push estava ligado nem testar sem esperar uma versão nova', cost: false, notes: 'Central → Acompanhar → Avisos no celular: seus aparelhos com notificação ligada, quem recebe e botão "Enviar push de teste para mim". Aparelhos que não existem mais saem da lista no teste.', from: [], where: 'Central → Avisos no celular' },
   ] },
+  { id: 'r61', version: 'v61', at: '2026-11-03T14:30:00Z', backlog: ['avisar_notificacao_desligada'], news: { id: 'n20261103e', title: 'Fique sabendo do que importa', items: [
+    'Se as notificações estiverem desligadas no seu celular, o app agora avisa e leva direto para ligar. É só tocar em Ativar e depois em Permitir.',
+    'Com elas ligadas, chegam as novidades do app, a resposta quando o que você pediu ficar pronto e os avisos de fatura e gastos.',
+    'No menu ☰, Notificações mostra se estão desligadas neste celular.',
+  ] }, addBacklog: [
+    { id: 'avisar_notificacao_desligada', title: 'Avisar quando as notificações estão desligadas e levar para ligar', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Ninguém procura ligar as notificações sozinho; sem elas, a pessoa não fica sabendo das novidades nem das respostas', cost: false, notes: 'Não força: o celular só pede permissão depois de um toque. O app avisa (pop-up com o nome, a cada 3 dias, até 4 vezes por celular, só quando não há outro pop-up), leva para menu ☰ → Notificações com o botão em destaque, e o menu mostra "Desligadas neste celular". Bloqueadas nos ajustes: mostra como liberar.', from: [], where: 'Ao abrir o app; menu ☰ → Notificações' },
+  ] },
 ];

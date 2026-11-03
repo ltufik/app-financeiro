@@ -566,3 +566,17 @@ test('central: quem recebe avisos e resultado do teste', () => {
   assert.match(testText([{ ok: true }, { ok: false, gone: true }]).text, /Enviado para 1 aparelho\..*1 aparelho antigo/);
   assert.equal(testText([{ ok: false, gone: true }]).kind, 'err');
 });
+
+import { shouldAskPush, pushAskText, menuNote, pushIsOff } from '../public/js/lib/pushask.js';
+test('notificações desligadas: avisa sem forçar', () => {
+  const now = Date.parse('2026-11-03T12:00:00Z');
+  assert.equal(shouldAskPush({ status: 'off', now }), true);
+  assert.equal(shouldAskPush({ status: 'denied', now }), true);
+  for (const s of ['on', 'need-install', 'unsupported', 'not-configured', 'no-sw']) assert.equal(shouldAskPush({ status: s, now }), false, s);
+  assert.equal(shouldAskPush({ status: 'off', asks: { n: 1, at: now - 2 * 864e5 }, now }), false);
+  assert.equal(shouldAskPush({ status: 'off', asks: { n: 1, at: now - 3 * 864e5 }, now }), true);
+  assert.equal(shouldAskPush({ status: 'off', asks: { n: 4, at: now - 30 * 864e5 }, now }), false);
+  assert.equal(pushAskText('off', 'Ana Souza').title, 'Ana, as notificações estão desligadas neste celular');
+  assert.equal(pushAskText('denied', '').primary, 'Ver como liberar');
+  assert.equal(menuNote('off'), 'Desligadas neste celular'); assert.equal(menuNote('on'), ''); assert.equal(pushIsOff('need-install'), false);
+});

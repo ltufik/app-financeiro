@@ -1,6 +1,9 @@
 // Push notifications on this device: permission, subscription and the kinds of notice the person wants.
 import * as db from './db.js';
 import { S } from './state.js';
+import { announce } from './ui.js';
+import { track } from './usage.js';
+import { shouldAskPush, pushAskText } from './lib/pushask.js';
 
 export const PUSH_TYPES = [
   { key: 'dados', label: 'Falta de dados', hint: 'Quando faltar o extrato ou a fatura, ou o mês estiver acabando sem lançamentos.' },
@@ -70,4 +73,28 @@ export async function notifyFamily(type, extra = {}) {
     const { data } = await db.sb.auth.getSession();
     await fetch('/api/notify', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (data?.session?.access_token || '') }, body: JSON.stringify({ household: S.hh.id, type, ...extra }) });
   } catch (e) { /* best effort */ }
+}
+
+// What the menu and the steps on Início show: the real state of this device, checked at each opening.
+const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; };
+export async function refreshPushState() {
+  S.pushStatus = await pushStatus().catch(() => 'unsupported');
+  if (S.pushStatus === 'on') ls('fin.push.on', '1'); else if (S.pushStatus === 'off' || S.pushStatus === 'denied') ls('fin.push.on', '0');
+  return S.pushStatus;
+}
+
+// Notifications off: say so and take the person to the page that turns them on (the phone only asks
+// after a tap there). Every 3 days, up to 4 times per device. Returns true when the pop-up was shown.
+const ASK = () => 'fin.pushask.' + (S.user?.id || '');
+export async function offerPush() {
+  if (window.__noMsgs || document.body.classList.contains('locked') || !S.user) return false;
+  const status = await refreshPushState();
+  let asks = {}; try { asks = JSON.parse(ls(ASK()) || '{}'); } catch (e) { asks = {}; }
+  if (!shouldAskPush({ status, asks, now: Date.now() })) return false;
+  ls(ASK(), JSON.stringify({ n: (+asks.n || 0) + 1, at: Date.now() }));
+  const t = pushAskText(status, S.user.user_metadata?.display_name || '');
+  const r = await announce({ eyebrow: 'Notificações', title: t.title, html: `<ul>${t.items.map(i => `<li>${i}</li>`).join('')}</ul>`, primary: t.primary, secondary: t.secondary });
+  track(r === 'primary' ? 'avisos.convite_sim' : 'avisos.convite_nao');
+  if (r === 'primary') { S.pushFocus = true; S.go('ajustes', '#pushBox', 'avisos'); }
+  return true;
 }

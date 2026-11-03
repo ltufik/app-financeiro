@@ -2,6 +2,7 @@
 import { S } from './state.js';
 import { $ } from './ui.js';
 import { esc } from './lib/format.js';
+import { menuNote } from './lib/pushask.js';
 
 const I = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 export const SECTIONS = [
@@ -36,7 +37,7 @@ export function openMenu() {
   dr.innerHTML = `<div class="drawer-h"><div><div class="tiny muted">${esc(me)}</div><div class="drawer-fam">${esc(S.hh?.name || 'Pra Onde Foi')}</div></div>
       <button class="iconbtn" type="button" id="drawerX" aria-label="Fechar menu">${I('<path d="M6 6l12 12M18 6L6 18"/>')}</button></div>
     <ul class="drawer-list">${SECTIONS.filter(s => !s.admin || S.isAdmin).map(s => `<li><button type="button" data-sec="${s.key}" ${S.tab === 'ajustes' && S.sec === s.key ? 'aria-current="page"' : ''}>
-      <span class="di">${s.icon}</span><span><strong>${s.title}</strong><br><span class="tiny muted">${s.desc}</span></span></button></li>`).join('')}</ul>
+      <span class="di">${s.icon}</span><span><strong>${s.title}</strong><br><span class="tiny muted">${s.desc}</span>${s.key === 'avisos' && menuNote(S.pushStatus) ? `<br><span class="tiny dnote">${menuNote(S.pushStatus)}: toque para ligar</span>` : ''}</span></button></li>`).join('')}</ul>
     <p class="tiny muted drawer-foot">Pra Onde Foi · versão de teste</p>`;
   lastFocus = document.activeElement;
   dr.hidden = bg.hidden = false; document.body.style.overflow = 'hidden';

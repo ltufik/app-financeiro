@@ -528,3 +528,7 @@ label.consent[hidden]{display:none}
 .chip.notechip{font-size:12px;padding:4px 10px}
 .nt-rem{display:flex;gap:8px;align-items:center;margin-top:10px}
 .nt-rem input{width:20px;height:20px;accent-color:var(--accent)}
+/* Came from the "notificações desligadas" pop-up: the button to tap glows for a moment. */
+.btn.pulse,#pushBox.pulse{animation:glow 1.4s ease-out 3}
+@keyframes glow{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+.dnote{color:var(--coral);font-weight:600}

@@ -27,13 +27,20 @@ function ai(b) {
 }
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1.5, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36' });
+// A phone with notifications never turned on (headless Chromium has no push service).
+await ctx.addInitScript(() => {
+  if (!navigator.serviceWorker || !window.Notification) return;
+  Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true });
+  const pm = { async getSubscription() { return null; }, async subscribe() { throw new Error('no push here'); } };
+  Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve({ pushManager: pm }), configurable: true });
+});
 await ctx.addInitScript(() => { window.__noMsgs = !localStorage.getItem('shots.msgs'); window.SpeechRecognition = window.webkitSpeechRecognition = class { start() {} stop() {} }; });
 const page = await ctx.newPage();
 { const cdp = await ctx.newCDPSession(page); await cdp.send('WebAuthn.enable'); await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } }); }
 let news = null;
 await page.route('https://app.test/**', r => {
   const u = new URL(r.request().url());
-  if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon' } });
+  if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
   if (u.pathname === '/api/ai') return r.fulfill({ json: ai(JSON.parse(r.request().postData())) });
   if (u.pathname === '/api/news') return r.fulfill({ json: { items: news } });
   if (u.pathname.startsWith('/api/')) return r.fulfill({ status: 403, json: {} });
@@ -125,6 +132,9 @@ await page.click('.ann [data-p]').catch(() => {});
 news = [{ id: 'nx', at: new Date().toISOString(), title: 'Gasto por semana nos gráficos', items: ['Em Gráficos, escolha "por semana".', 'O resumo de domingo mostra a semana inteira.'] }];
 await msg('novidades', async () => {});
 await step('sininho', async () => { await page.click('.ann [data-p]').catch(() => {}); await page.click('#bellBtn'); await page.waitForSelector('.bellbox'); });
+await page.evaluate(() => document.querySelectorAll('.bellbox').forEach(x => x.remove()));
+await msg('convite_avisos', async () => {});
+await page.click('.ann [data-s]').catch(() => {});
 // Security: the lock screen (left alone longer than the chosen time) and the message after signing out.
 await page.evaluate(() => { localStorage.setItem('shots.msgs', ''); document.querySelectorAll('.bellbox, .cfm-wrap').forEach(x => x.remove()); });
 await step('bloqueio', async () => { await page.keyboard.press('Escape').catch(() => {}); await sec('conta'); await page.click('#lkNow'); await page.waitForSelector('#lockScreen'); });

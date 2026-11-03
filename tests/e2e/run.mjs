@@ -93,7 +93,7 @@ await page.addInitScript(() => {
   };
 });
 // Fake permission prompt and push service (headless Chromium has no push service).
-await page.addInitScript(() => {
+const fakePush = () => {
   if (!navigator.serviceWorker || !window.Notification) return;
   let perm = 'default', sub = null;
   window.__permAnswer = 'granted';
@@ -102,7 +102,9 @@ await page.addInitScript(() => {
   const fakeSub = () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/e2e', toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'BKey', auth: 'Auth' } }; }, async unsubscribe() { sub = null; return true; } });
   const pm = { async getSubscription() { return sub; }, async subscribe(o) { window.__subOpts = !!o.applicationServerKey && o.userVisibleOnly; sub = fakeSub(); return sub; } };
   Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve({ pushManager: pm }), configurable: true });
-});
+};
+await page.addInitScript(fakePush);
+
 
 const txt2 = (p, sel) => p.textContent(sel).then(t => (t || '').trim());
 let chatCalls = 0, window_pushTests = 0, AI_DOC = null; const notifies = [];
@@ -802,7 +804,7 @@ const used = await page.evaluate(() => window.__db.usage);
 { // Tester messages: alpha welcome once, then a personal reply and what's new, with the person's name.
   await page.evaluate(() => { const f = window.__db.feedback.find(x => x.kind === 'ideia'); Object.assign(f, { reply: 'Já está no app: em Gráficos, escolha "por semana".', reply_seen: false, status: 'resolvido', replied_at: new Date().toISOString() }); localStorage.setItem('mock.db', JSON.stringify(window.__db)); });
   const mctx = await browser.newContext({ viewport: { width: 400, height: 860 }, storageState: await page.context().storageState() });
-  const mp = await mctx.newPage(); await addRoutes(mp);
+  const mp = await mctx.newPage(); await addRoutes(mp); await mp.addInitScript(fakePush);
   const seeAnn = async () => { for (let i = 0; i < 40; i++) { if (await mp.$('.ann')) return true; if (await mp.$('.coach')) await mp.click('#coachSkip').catch(() => {}); await mp.waitForTimeout(250); } return false; };
   await mp.goto('https://app.test/');
   ok('aviso de teste alpha aparece com o nome', await seeAnn() && (await mp.textContent('.ann')).includes('Oi, Luiz! Que bom ter você aqui') && (await mp.textContent('.ann')).includes('família e amigos'));
@@ -815,7 +817,11 @@ const used = await page.evaluate(() => window.__db.usage);
   await mp.click('.ann [data-p]'); await mp.waitForTimeout(400);
   ok('recado marcado como visto', await mp.evaluate(() => JSON.parse(localStorage.getItem('mock.db')).feedback.find(x => x.kind === 'ideia').reply_seen === true));
   await mp.reload(); await mp.waitForTimeout(2500);
-  ok('aviso alpha e recado não se repetem', !(await mp.$('.ann')));
+  const third = await mp.$('.ann') ? await mp.textContent('.ann') : '';
+  ok('aviso alpha e recado não se repetem; sem outra mensagem, vem o das notificações desligadas', !/Que bom ter você aqui|virou realidade/.test(third) && /notificações estão desligadas neste celular/.test(third), third.slice(0, 120));
+  await mp.click('.ann [data-s]').catch(() => {}); await mp.waitForTimeout(300);
+  await mp.reload(); await mp.waitForTimeout(2500);
+  ok('"Agora não": o aviso das notificações não volta na abertura seguinte', !(await mp.$('.ann')));
   adminStore.news.items.unshift({ id: 'n2', at: new Date(Date.now() + 1000).toISOString(), title: 'Nova tela de metas', items: ['Ficou mais fácil'] }, { id: 'n3', at: new Date().toISOString(), title: 'Outra melhoria', items: ['Detalhe'] });
   await mp.reload(); ok('várias novidades viram um pop-up só: a mais nova inteira e as outras pelo título', await seeAnn() && (await mp.textContent('.ann')).includes('Luiz, olha o que tem de novo') && (await mp.textContent('.ann')).includes('Ficou mais fácil') && (await mp.textContent('.ann')).includes('E também') && (await mp.textContent('.ann')).includes('Outra melhoria'));
   if (shots) await mp.screenshot({ path: path.join(shots, '15-novidades.png') });
@@ -967,6 +973,19 @@ const used = await page.evaluate(() => window.__db.usage);
 }
 ok('uso registrado só com nomes das partes', used.includes('menu.opiniao') && used.includes('opiniao.ideia') && used.every(f => /^[a-z_]{2,20}(\.[a-z_]{2,20})?$/.test(f)), used.slice(0, 12).join(','));
 // notifications
+// Notifications off: the app says so (no more than every 3 days) and takes the person to the page, the button glowing.
+await page.evaluate(() => { window.__noMsgs = false; Object.keys(localStorage).filter(k => k.startsWith('fin.pushask.')).forEach(k => localStorage.removeItem(k)); });
+const pushAsk1 = page.evaluate(() => import('/js/push.js').then(m => m.offerPush()));
+await page.waitForSelector('.ann', { timeout: 5000 }).catch(() => {});
+ok('notificações desligadas: o app avisa com o nome e diz que dá para desligar', /desligadas neste celular/.test(await page.textContent('.ann').catch(() => '')) && /desligar quando quiser/.test(await page.textContent('.ann').catch(() => '')));
+await page.click('.ann [data-p]'); await pushAsk1;
+await page.waitForSelector('#pOn.pulse', { timeout: 5000 }).catch(() => {});
+ok('"Ligar agora" leva para Notificações com o botão em destaque', await page.isVisible('#pOn.pulse'));
+ok('o aviso não volta na mesma semana', (await page.evaluate(() => import('/js/push.js').then(m => m.offerPush()))) === false);
+await page.evaluate(() => { window.__noMsgs = true; });
+await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
+ok('menu mostra "Desligadas neste celular" em Notificações', (await txt('#drawer [data-sec="avisos"]')).includes('Desligadas neste celular'));
+await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 await sec('avisos');
 await page.waitForSelector('#pOn');
 ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 7 && (await txt('#pushBox')).includes('Resumo da semana'));
@@ -980,6 +999,9 @@ await page.click('#pOn');
 await page.waitForSelector('#pTest');
 const ps = await page.evaluate(() => window.__db.push_subscriptions);
 ok('ativar avisos salva o aparelho com as preferências', ps.length === 1 && ps[0].prefs.semanal === false && ps[0].prefs.gastos === true && await page.evaluate(() => window.__subOpts === true), JSON.stringify(ps));
+await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
+ok('ligadas: o menu não diz mais "Desligadas"', !(await txt('#drawer [data-sec="avisos"]')).includes('Desligadas'));
+await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 await page.waitForTimeout(600);
 ok('ao ativar, manda um aviso de teste', window_pushTests >= 1);
 await shot('08b-avisos');

@@ -34,6 +34,7 @@ export const SCREENS = {
   menu_patrimonio: { title: 'Patrimônio e dívidas', where: 'Menu ☰', key: 'menu.patrimonio' },
   menu_categorias: { title: 'Categorias', where: 'Menu ☰', key: 'menu.categorias' },
   menu_avisos: { title: 'Notificações', where: 'Menu ☰', key: 'menu.avisos' },
+  convite_avisos: { title: 'Notificações desligadas', where: 'Ao abrir o app, se as notificações estão desligadas (a cada 3 dias, até 4 vezes)', key: 'avisos.convite_sim' },
   menu_applepay: { title: 'Atalhos do iPhone', where: 'Menu ☰', key: 'menu.applepay' },
   menu_contexto: { title: 'O que o assistente sabe', where: 'Menu ☰', key: 'menu.contexto' },
   lancar_comprovante: { title: 'Comprovante compartilhado', where: 'Compartilhar → Pra Onde Foi (Android; no iPhone, pelo atalho 3)', key: 'lancar.comprovante' },
@@ -63,7 +64,7 @@ export const FLOWS = [
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
-    { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'sininho'] },
+    { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'convite_avisos', 'sininho'] },
     { title: 'Segurança', screens: ['biometria', 'menu_conta', 'bloqueio', 'saiu'] },
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
@@ -85,6 +86,8 @@ export const FLOWS = [
     st('menu', 'Abre o menu'), st('menu_applepay', 'Gera o código e monta os atalhos no app Atalhos', 'applepay.codigo'), st('lancar_comprovante', 'Android: compartilha o comprovante, a fatura ou a nota do banco; o app vê o que é e leva para o lugar certo', 'atalho.compartilhar')] },
   { id: 'seguranca', title: 'Segurança: bloqueio e biometria', desc: 'O app não fica aberto com os números da família à vista.', steps: [
     st('menu_conta', 'Escolhe o tempo do bloqueio e liga a digital ou o rosto', 'seguranca.biometria'), st('bloqueio', 'Depois do tempo sem uso, o app cobre a tela'), st('inicio', 'Desbloqueia com a digital, o rosto ou a senha', null), st('saiu', 'Ao sair da conta, a mensagem de segurança')] },
+  { id: 'notificacoes', title: 'Ligar as notificações', desc: 'Sem notificação, a pessoa não fica sabendo das novidades nem das respostas. O app não liga sozinho: avisa e leva até lá.', steps: [
+    st('convite_avisos', 'Ao abrir o app, o aviso de que estão desligadas', 'avisos.convite_sim'), st('menu_avisos', 'Toca em Ativar avisos neste celular e em Permitir', 'avisos.ligou')] },
   { id: 'perguntar', title: 'Perguntar ao assistente', desc: 'Perguntas sobre os números da família.', steps: [
     st('perguntar', 'Escolhe uma sugestão ou escreve'), st('perguntar_resposta', 'Resposta com os números da família')] },
   { id: 'opiniao', title: 'Dar opinião e receber o recado', desc: 'O ciclo com quem testa: manda, a equipe faz, a pessoa é avisada.', steps: [
