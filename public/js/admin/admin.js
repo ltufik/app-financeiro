@@ -12,13 +12,14 @@ import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
 import { NEWS, replyTemplate, replyTitle } from '../lib/news.js';
 import { SCREENS, FLOWS, flowFunnel } from './flows.js';
 import { buildSummary } from './summary.js';
+import { testText } from '../lib/pushinfo.js';
 import { RELEASES } from '../lib/releases.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS, screenLabel, screenShot } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null };
-const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -86,7 +87,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, fluxos, versoes, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -108,7 +109,7 @@ function labelTables(root) {
 // ---------- Side menu: three groups that open on click ----------
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
-  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades']] },
+  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
   { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
 ];
@@ -473,6 +474,45 @@ function docs(el) {
 
 // ---------- Novidades ("O que mudou") ----------
 let newsEdit = null;
+// ---------- Avisos no celular: who can receive notifications, and a test to the owner's own devices ----------
+const dday = d => d ? new Date(d).toLocaleDateString('pt-BR') : '';
+async function avisos(el) {
+  el.innerHTML = `<div class="ahead"><h1>Avisos no celular</h1><button class="btn primary" type="button" id="avTest">Enviar push de teste para mim</button></div>
+    <p class="status" id="avMsg" role="status" hidden></p>
+    <div class="panel stack" id="avMine"><p class="small muted">Carregando...</p></div>
+    <div class="panel stack" id="avAll"></div>`;
+  const say = (k, t) => { const m = $('#avMsg'); m.hidden = false; m.className = 'status ' + k; m.textContent = t; };
+  const draw = async () => {
+    let d; try { d = await getView('push'); } catch (e) { $('#avMine').innerHTML = '<p class="small">Não foi possível carregar. Verifique a internet e tente de novo.</p>'; $('#avAll').hidden = true; return; }
+    const on = k => k !== false;
+    $('#avMine').innerHTML = `<h2>Seus aparelhos</h2>
+      ${!d.configured ? '<p class="status err">As notificações não estão configuradas no servidor (faltam as chaves VAPID na Vercel).</p>' : ''}
+      ${d.mine.length ? `<ul class="avlist">${d.mine.map(m => `<li><strong>${esc(m.kind)}</strong> <span class="tiny muted">ligado em ${dday(m.since)}${on(m.prefs.novidades) ? '' : ' · novidades desligadas'}</span></li>`).join('')}</ul>`
+        : '<p class="small">Nenhum aparelho seu está com as notificações ligadas. Por isso nenhum push chegou até agora.</p>'}
+      <details class="help"${d.mine.length ? '' : ' open'}><summary>Como ligar no seu celular</summary><ol class="small">
+        <li>Abra o Pra Onde Foi pelo ícone na tela do celular (no iPhone, ele precisa estar instalado na tela de início).</li>
+        <li>Toque no menu ☰ e depois em <strong>Notificações</strong>.</li>
+        <li>Toque em <strong>Ativar avisos neste celular</strong> e, quando o celular perguntar, em <strong>Permitir</strong>.</li>
+        <li>Deixe <strong>Novidades do app</strong> marcado. Volte aqui e toque em Enviar push de teste.</li></ol>
+        <p class="tiny muted">Se a página Notificações disser que os avisos estão bloqueados, ela mostra como liberar nos ajustes do celular.</p></details>`;
+    $('#avAll').innerHTML = `<h2>Quem recebe</h2><p class="small muted">${d.people.length} de ${d.users} ${d.users > 1 ? 'pessoas' : 'pessoa'} com notificação ligada em pelo menos um aparelho. Só essas recebem as novidades e os recados no celular; as outras veem tudo no sininho quando abrem o app.</p>
+      ${d.people.length ? `<div class="tw"><table class="atable"><thead><tr><th>Pessoa</th><th>Família</th><th>Aparelhos</th><th>Novidades</th><th>Desde</th></tr></thead><tbody>
+      ${d.people.map(p => `<tr><td>${esc(p.name)}${p.me ? ' <span class="tiny muted">(você)</span>' : ''}</td><td>${esc(p.family)}</td><td>${p.devices} <span class="tiny muted">${esc(p.kinds.join(', '))}</span></td><td>${p.novidades ? 'Ligadas' : 'Desligadas'}</td><td>${dday(p.since)}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
+  };
+  $('#avTest').onclick = async () => {
+    const b = $('#avTest'); b.disabled = true; say('busy', 'Enviando...');
+    try {
+      const r = await fetch('/api/admin', { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'test_push' }) });
+      if (r.status === 503) { say('err', 'As notificações não estão configuradas no servidor (faltam as chaves VAPID na Vercel).'); return; }
+      if (!r.ok) throw new Error(String(r.status));
+      const t = testText((await r.json()).results); say(t.kind, t.text); toast(t.kind === 'ok' ? 'Push de teste enviado' : 'O push de teste não foi enviado');
+      await draw();
+    } catch (e) { say('err', 'Não foi possível enviar agora. Verifique a internet e tente de novo.'); }
+    finally { b.disabled = false; }
+  };
+  await draw();
+}
+
 function novidades(el) {
   const items = D.news.items.slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at)); D.news.items = items;
   el.innerHTML = `<div class="ahead"><h1>Novidades</h1><button class="btn primary" type="button" id="nwAdd">Nova novidade</button></div>

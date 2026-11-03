@@ -118,4 +118,7 @@ export const RELEASES = [
     'O app lembra: na próxima fatura, o mesmo lançamento já chega anotado. A anotação entra na busca e o assistente também vê.',
     'E agora as novidades do app também chegam como notificação no celular (dá para desligar em Notificações).',
   ] } },
+  { id: 'r60', version: 'v60', at: '2026-11-03T13:40:00Z', backlog: ['push_de_teste_na_central'], semNovidade: 'Central do produto: página "Avisos no celular" com os seus aparelhos, quem recebe push e um botão de push de teste. Só o dono do produto vê.', addBacklog: [
+    { id: 'push_de_teste_na_central', title: 'Push de teste e lista de quem recebe avisos na Central', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não dava para saber se o push estava ligado nem testar sem esperar uma versão nova', cost: false, notes: 'Central → Acompanhar → Avisos no celular: seus aparelhos com notificação ligada, quem recebe e botão "Enviar push de teste para mim". Aparelhos que não existem mais saem da lista no teste.', from: [], where: 'Central → Avisos no celular' },
+  ] },
 ];

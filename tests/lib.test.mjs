@@ -547,3 +547,22 @@ test('anotação: o app lembra da anotação para o mesmo lançamento', () => {
   assert.deepEqual(memos, {});
   assert.equal(cleanNote('x'.repeat(300)).length, 120);
 });
+
+import { deviceKind, pushPeople, testText } from '../public/js/lib/pushinfo.js';
+test('central: quem recebe avisos e resultado do teste', () => {
+  assert.equal(deviceKind('https://web.push.apple.com/abc'), 'iPhone ou iPad');
+  assert.equal(deviceKind('https://fcm.googleapis.com/fcm/send/x'), 'Android ou Chrome');
+  assert.equal(deviceKind('nada'), 'Aparelho');
+  const subs = [
+    { user_id: 'a', endpoint: 'https://fcm.googleapis.com/1', prefs: {}, created_at: '2026-10-02' },
+    { user_id: 'a', endpoint: 'https://web.push.apple.com/2', prefs: { novidades: false }, created_at: '2026-10-01' },
+    { user_id: 'b', endpoint: 'https://fcm.googleapis.com/3', prefs: { novidades: false }, created_at: '2026-10-05' },
+  ];
+  const ppl = pushPeople(subs, [{ user_id: 'a', display_name: 'Ana', household_id: 'h' }, { user_id: 'b', display_name: 'Bruno', household_id: 'h' }], { h: 'Família Souza' });
+  assert.equal(ppl[0].name, 'Ana'); assert.equal(ppl[0].devices, 2); assert.equal(ppl[0].since, '2026-10-01');
+  assert.deepEqual(ppl[0].kinds, ['Android ou Chrome', 'iPhone ou iPad']); assert.equal(ppl[0].novidades, true);
+  assert.equal(ppl[1].novidades, false); assert.equal(ppl[1].family, 'Família Souza');
+  assert.equal(testText([]).kind, 'err');
+  assert.match(testText([{ ok: true }, { ok: false, gone: true }]).text, /Enviado para 1 aparelho\..*1 aparelho antigo/);
+  assert.equal(testText([{ ok: false, gone: true }]).kind, 'err');
+});

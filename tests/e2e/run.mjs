@@ -24,6 +24,7 @@ page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const adminStore = {}, adminPuts = [], adminPatches = [], adminPatchesSeen = [];
+let pushTestSent = 0;
 const NAV_FIXTURE = { days: 30, at: '2026-10-30T12:00:00Z',
   screens: [{ s: 'inicio', views: 40, users: 2, seconds: 1200 }, { s: 'lancar', views: 12, users: 2, seconds: 600 }, { s: 'menu.metas', views: 3, users: 1, seconds: 240 }],
   flows: [{ f: 'inicio', t: 'lancar', n: 9, users: 2 }, { f: 'lancar', t: 'inicio', n: 5, users: 1 }],
@@ -50,6 +51,8 @@ async function addRoutes(t) {
     if (u.pathname === '/api/metrics') return r.fulfill({ json: u.searchParams.get('probe') ? { admin: true } : { users: 12, users_7d: 3, users_30d: 12, in_family: 11, families: 6, families_shared: 4, families_1_month: 5, families_2_months: 3, families_closed: 2, d7_eligible: 8, d7_retained: 5, d30_eligible: 2, d30_retained: 1, wau: 7, mau: 10, daily: Array.from({ length: 14 }, (_, i) => ({ day: '2026-10-' + String(17 + i).padStart(2, '0'), users: i % 5 })), manual_30d: 40, receipts_30d: 6, imports_30d: 15, studies: 4, charts: 3, push_devices: 5, at: '2026-10-30T12:00:00Z' } });
     if (u.pathname === '/api/news') return r.fulfill({ json: { items: adminStore.news?.items || null } });
     if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'push') return r.fulfill({ json: { configured: true, mine: pushTestSent ? [] : [{ kind: 'Android ou Chrome', since: '2026-10-20T10:00:00Z', prefs: {} }], people: [{ name: 'Mari', family: 'Família Souza', devices: 1, kinds: ['Android ou Chrome'], novidades: true, since: '2026-10-20T10:00:00Z', me: true }, { name: 'Beto', family: 'Família Souza', devices: 2, kinds: ['iPhone ou iPad'], novidades: false, since: '2026-10-21T10:00:00Z', me: false }], users: 4 } });
+    if (u.pathname === '/api/admin' && r.request().method() === 'POST') { pushTestSent++; return r.fulfill({ json: { results: [{ kind: 'Android ou Chrome', ok: true, gone: false }, { kind: 'iPhone ou iPad', ok: false, gone: true }] } }); }
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'nav') return r.fulfill({ json: NAV_FIXTURE });
@@ -682,6 +685,10 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: pedir ao Claude copia o pedido com o id do item', /copiado|copie/.test(await ap.textContent('#toast')));
   await ap.selectOption(`[data-st="${fromOp}"]`, 'feito'); await ap.waitForTimeout(300);
   ok('central: concluir item vindo de opinião manda o recado sozinho', !(await ap.$('.cfm')) && (await ap.textContent('#toast')).includes('Recado automático enviado para 1 pessoa'), (await ap.textContent('#toast')) + ' | ' + JSON.stringify(adminStore.backlog.items.find(i => i.id === fromOp)) + ' | ' + adminPuts.slice(-3).join(','));
+  await atab('avisos'); await ap.waitForSelector('#avMine h2');
+  ok('central: avisos mostra seus aparelhos e quem recebe', (await ap.textContent('#avMine')).includes('Android ou Chrome') && (await ap.textContent('#avAll')).includes('2 de 4 pessoas') && (await ap.textContent('#avAll')).includes('Desligadas'));
+  await ap.click('#avTest'); await ap.waitForSelector('#avMsg.ok');
+  ok('central: push de teste diz para quantos foi e tira aparelho antigo', pushTestSent === 1 && /Enviado para 1 aparelho\..*1 aparelho antigo/.test(await ap.textContent('#avMsg')) && (await ap.textContent('#avMine')).includes('Nenhum aparelho seu') && (await ap.textContent('#toast')).includes('Push de teste enviado'));
   await atab('novidades'); await ap.waitForSelector('#nwAdd');
   ok('central: novidades começam com a desta versão', (await ap.textContent('#aMain')).includes('Sua opinião agora tem lugar no app'));
   await ap.click('#nwAdd'); await ap.click('#nwPub');
@@ -746,7 +753,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
-  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
   for (const [w, h, name] of [[390, 844, 'celular'], [800, 1334, 'tablet em pé'], [1334, 800, 'tablet deitado']]) {
     await ap.setViewportSize({ width: w, height: h }); await ap.waitForTimeout(250);
     const wide = [];

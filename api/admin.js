@@ -1,6 +1,7 @@
 // Product console data (/admin): backlog, pricing and product design, for ADMIN_EMAILS only.
 // GET /api/admin?key=backlog  ->  {key, data, updated_at}     PUT /api/admin {key, data}
 // GET /api/admin?view=usage|feedback|nav  ->  usage per person/feature, testers' feedback
+// GET /api/admin?view=push -> who can receive notifications (yours first)   POST /api/admin {action:'test_push'} -> test to your devices
 // PATCH /api/admin {feedback: id, status?, note?, reply?}  (reply: personal message to who sent it, also as a push)
 // Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS.
 import { cleanUrl } from './config.js';
@@ -8,6 +9,7 @@ import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
 import { replyTitle } from '../public/js/lib/news.js';
 import { rest, closeLoop } from './_loop.js';
+import { pushPeople, deviceKind } from '../public/js/lib/pushinfo.js';
 
 const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases'];
 const READ_ONLY = ['releases'];
@@ -30,6 +32,34 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && req.query?.view === 'usage') return res.status(200).json(await rpc('product_usage', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
     if (req.method === 'GET' && req.query?.view === 'feedback') return res.status(200).json(await rpc('product_feedback'));
     if (req.method === 'GET' && req.query?.view === 'nav') return res.status(200).json(await rpc('product_nav', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
+    const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); if (!x.ok) throw new Error('db'); return x.json(); };
+    // Notifications: devices and people, never the push keys.
+    if (req.method === 'GET' && req.query?.view === 'push') {
+      const [subs, members, fams] = await Promise.all([q('push_subscriptions?select=user_id,endpoint,prefs,created_at'), q('members?select=user_id,display_name,household_id'), q('households?select=id,name')]);
+      const vapid = vapidFromEnv();
+      return res.status(200).json({
+        configured: !!(vapid.publicKey && vapid.privateKey),
+        mine: subs.filter(s => s.user_id === user.id).map(s => ({ kind: deviceKind(s.endpoint), since: s.created_at, prefs: s.prefs || {} })),
+        people: pushPeople(subs, members, Object.fromEntries(fams.map(f => [f.id, f.name]))).map(({ user_id, ...p }) => ({ ...p, me: user_id === user.id })),
+        users: new Set(members.map(m => m.user_id)).size,
+      });
+    }
+    if (req.method === 'POST') {
+      const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+      if (b.action !== 'test_push') return res.status(400).json({ error: 'bad_request' });
+      const vapid = vapidFromEnv();
+      if (!vapid.publicKey || !vapid.privateKey) return res.status(503).json({ error: 'not_configured' });
+      const subs = await q(`push_subscriptions?user_id=eq.${user.id}&select=id,endpoint,p256dh,auth`);
+      const name = String(user.user_metadata?.display_name || '').trim().split(/\s+/)[0];
+      const results = [];
+      for (const s of subs) {
+        const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title: name ? `${name}, o teste chegou` : 'O teste chegou', body: 'As notificações do Pra Onde Foi estão funcionando neste aparelho.', url: '/', tag: 'teste-central' }, vapid).catch(() => ({ ok: false }));
+        // A device that no longer exists (app removed, notifications reset) leaves the list.
+        if (r.gone) await fetch(`${URL_}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H }).catch(() => {});
+        results.push({ kind: deviceKind(s.endpoint), ok: !!r.ok, gone: !!r.gone });
+      }
+      return res.status(200).json({ results });
+    }
     if (req.method === 'PATCH') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
       const id = Number(b.feedback), patch = {};
