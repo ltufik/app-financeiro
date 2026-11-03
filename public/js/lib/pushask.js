@@ -28,3 +28,29 @@ export function pushAskText(status, name = '') {
 
 // The line under "Notificações" in menu ☰.
 export const menuNote = status => status === 'denied' ? 'Bloqueadas neste celular' : status === 'off' ? 'Desligadas neste celular' : '';
+
+// "Permitir" on the browser's question is not always enough: the phone itself can still hold the
+// notifications (app or Chrome notifications off, Do not disturb, battery saving). A web app cannot open
+// those settings, so it shows the way. platform: 'ios' | 'samsung' | 'android' | 'other'.
+export function platformOf(ua = '') {
+  if (/iphone|ipad|ipod/i.test(ua)) return 'ios';
+  if (/samsung|SM-[A-Z0-9]/i.test(ua)) return 'samsung';
+  if (/android/i.test(ua)) return 'android';
+  return 'other';
+}
+export function phoneSteps(platform) {
+  if (platform === 'ios') return [
+    'Abra os Ajustes do iPhone → Notificações → Pra Onde Foi.',
+    'Ligue Permitir Notificações e marque Tela Bloqueada, Central de Notificações e Faixas.',
+    'Confira se não há um Foco ligado (Não Perturbe, Dormir, Trabalho): ele segura os avisos.',
+  ];
+  const base = [
+    'Abra as Configurações do celular → Aplicativos (ou Apps).',
+    'Toque em Pra Onde Foi (se não aparecer, toque em Chrome) → Notificações e ligue Permitir notificações.',
+    'Se aparecer a lista de sites, deixe praondefoi.app.br ligado.',
+    'Confira se o Não perturbe está desligado.',
+  ];
+  if (platform === 'samsung') return [...base, 'Samsung: Configurações → Cuidados com o aparelho (ou Bateria) → Limites de uso em segundo plano. Se o Chrome estiver em "Apps em suspensão", tire de lá.'];
+  if (platform === 'android') return [...base, 'Se usa economia de bateria, deixe o Chrome sem restrição em Configurações → Bateria.'];
+  return ['Nas configurações do sistema, permita notificações para o navegador e para praondefoi.app.br.', 'Confira se o modo Não perturbe está desligado.'];
+}

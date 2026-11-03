@@ -15,6 +15,7 @@ import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
 import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
+import { platformOf, phoneSteps } from '../lib/pushask.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
@@ -452,7 +453,13 @@ async function renderPush(box) {
     <fieldset class="pushtypes"><legend class="small muted">Quero ser avisado sobre</legend>
     ${PUSH_TYPES.map(t => `<label class="radio"><input type="checkbox" data-pt="${t.key}" ${prefs[t.key] !== false ? 'checked' : ''}><span><strong>${t.label}</strong><br><span class="tiny muted">${t.hint}</span></span></label>`).join('')}</fieldset>
     <div class="rowbtn">${st === 'on' ? '<button class="btn" type="button" id="pTest">Enviar aviso de teste</button><button class="btn danger" type="button" id="pOff">Desligar avisos</button>' : '<button class="btn primary" type="button" id="pOn">Ativar avisos neste celular</button>'}</div>
-    <p class="status" id="pMsg" role="status" hidden></p>`;
+    <p class="status" id="pMsg" role="status" hidden></p>
+    ${st === 'on' ? `<div class="pcheck stack" id="pCheck" hidden><p><strong>Mandamos um aviso de teste.</strong> Ele apareceu na tela do celular?</p>
+      <div class="rowbtn"><button class="btn primary" type="button" id="pYes">Sim, apareceu</button><button class="btn" type="button" id="pNo">Não apareceu</button></div></div>
+    <details class="help" id="pPhone"><summary>O aviso não aparece? Veja os ajustes do celular</summary>
+      <p class="small">Tocar em Permitir libera o app, mas o próprio celular pode continuar segurando os avisos. Confira:</p>
+      <ol class="small">${phoneSteps(platformOf(navigator.userAgent)).map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+      <p class="tiny muted">Depois, volte aqui e toque em Enviar aviso de teste.</p></details>` : ''}`;
   const say = (k, t) => { const p = $('#pMsg'); p.hidden = false; p.className = 'status ' + k; p.textContent = t; };
   const read = () => Object.fromEntries([...box.querySelectorAll('[data-pt]')].map(i => [i.dataset.pt, i.checked]));
   box.querySelectorAll('[data-pt]').forEach(i => i.onchange = async () => {
@@ -464,13 +471,26 @@ async function renderPush(box) {
     say('busy', 'O celular vai pedir permissão. Toque em Permitir.');
     try {
       const r = await enablePush(read());
-      if (r === 'on') { lsSet('fin.push.on', '1'); S.pushStatus = 'on'; track('avisos.ligou'); toast('Avisos ligados'); renderPush(box); setTimeout(() => sendTest().catch(() => {}), 400); }
+      if (r === 'on') { lsSet('fin.push.on', '1'); S.pushStatus = 'on'; track('avisos.ligou'); toast('Avisos ligados'); S.pushAskCheck = true; renderPush(box); }
       else if (r === 'denied') renderPush(box);
       else say('err', 'Você não permitiu os avisos. Quando quiser, toque em Ativar de novo.');
     } catch (e) { say('err', 'Não foi possível ligar os avisos. ' + db.errorText(e)); }
   };
   else {
-    $('#pTest').onclick = async () => { say('busy', 'Enviando...'); try { await sendTest(); say('ok', 'Aviso enviado. Ele chega em alguns segundos.'); } catch (e) { say('err', 'Não foi possível enviar o teste agora.'); } };
+    // Did it really show on the phone? If not, the phone's own settings are holding it: show the way.
+    const test = async () => {
+      say('busy', 'Enviando...');
+      try { await sendTest(); say('ok', 'Aviso enviado. Ele chega em alguns segundos.'); setTimeout(() => { const c = $('#pCheck'); if (c) c.hidden = false; }, 4000); }
+      catch (e) { say('err', 'Não foi possível enviar o teste agora. Verifique a internet e tente de novo.'); }
+    };
+    $('#pTest').onclick = test;
+    $('#pYes').onclick = () => { track('avisos.teste_chegou'); $('#pCheck').hidden = true; say('ok', 'Tudo certo! Os avisos vão chegar assim.'); };
+    $('#pNo').onclick = () => {
+      track('avisos.teste_nao_chegou'); $('#pCheck').hidden = true;
+      const d = $('#pPhone'); d.open = true; d.classList.add('pulse'); d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      say('err', 'Parece que o celular está segurando os avisos. Confira os passos abaixo e mande o teste de novo.');
+    };
+    if (S.pushAskCheck) { S.pushAskCheck = false; setTimeout(test, 400); }
     $('#pOff').onclick = async e => {
       if (!await confirmInline(e.target, { text: 'Desligar os avisos neste celular? Dá para ligar de novo quando quiser.', yes: 'Sim, desligar', danger: true })) return;
       await disablePush(); lsSet('fin.push.on', '0'); S.pushStatus = 'off'; toast('Avisos desligados'); renderPush(box);

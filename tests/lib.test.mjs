@@ -580,3 +580,13 @@ test('notificações desligadas: avisa sem forçar', () => {
   assert.equal(pushAskText('denied', '').primary, 'Ver como liberar');
   assert.equal(menuNote('off'), 'Desligadas neste celular'); assert.equal(menuNote('on'), ''); assert.equal(pushIsOff('need-install'), false);
 });
+
+import { platformOf, phoneSteps } from '../public/js/lib/pushask.js';
+test('notificações: passo a passo dos ajustes do celular', () => {
+  assert.equal(platformOf('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)'), 'ios');
+  assert.equal(platformOf('Mozilla/5.0 (Linux; Android 14; SM-P613) Chrome/120'), 'samsung');
+  assert.equal(platformOf('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/120'), 'android');
+  assert.match(phoneSteps('ios').join(' '), /Ajustes do iPhone → Notificações → Pra Onde Foi/);
+  assert.match(phoneSteps('samsung').join(' '), /Apps em suspensão/);
+  assert.ok(phoneSteps('other').length >= 2);
+});

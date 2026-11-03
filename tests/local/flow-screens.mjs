@@ -30,8 +30,10 @@ const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, de
 // A phone with notifications never turned on (headless Chromium has no push service).
 await ctx.addInitScript(() => {
   if (!navigator.serviceWorker || !window.Notification) return;
-  Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true });
-  const pm = { async getSubscription() { return null; }, async subscribe() { throw new Error('no push here'); } };
+  let perm = 'default', sub = null;
+  Object.defineProperty(Notification, 'permission', { get: () => perm, configurable: true });
+  Notification.requestPermission = async () => { perm = 'granted'; return perm; };
+  const pm = { async getSubscription() { return sub; }, async subscribe() { sub = { endpoint: 'https://fcm.googleapis.com/fcm/send/telas', toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'BKey', auth: 'Auth' } }; }, async unsubscribe() { sub = null; return true; } }; return sub; } };
   Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve({ pushManager: pm }), configurable: true });
 });
 await ctx.addInitScript(() => { window.__noMsgs = !localStorage.getItem('shots.msgs'); window.SpeechRecognition = window.webkitSpeechRecognition = class { start() {} stop() {} }; });
@@ -43,6 +45,7 @@ await page.route('https://app.test/**', r => {
   if (u.pathname === '/api/config') return r.fulfill({ json: { supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'anon', vapidPublicKey: 'BPk1vV0x2Q0cB8o9Yb0n3M6Jq0c2ZQy6k8xQe1o5gq2Wm0yUu3l7nM2kq8VbV6sH3m4u1C9yQ0r2T5w8Z1x4A7c' } });
   if (u.pathname === '/api/ai') return r.fulfill({ json: ai(JSON.parse(r.request().postData())) });
   if (u.pathname === '/api/news') return r.fulfill({ json: { items: news } });
+  if (u.pathname === '/api/push-test') return r.fulfill({ json: { ok: true } });
   if (u.pathname.startsWith('/api/')) return r.fulfill({ status: 403, json: {} });
   const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
   if (!fs.existsSync(p)) return r.fulfill({ status: 404, body: '' });
@@ -134,7 +137,9 @@ await msg('novidades', async () => {});
 await step('sininho', async () => { await page.click('.ann [data-p]').catch(() => {}); await page.click('#bellBtn'); await page.waitForSelector('.bellbox'); });
 await page.evaluate(() => document.querySelectorAll('.bellbox').forEach(x => x.remove()));
 await msg('convite_avisos', async () => {});
-await page.click('.ann [data-s]').catch(() => {});
+// "Quero receber" → Ativar → Permitir; the test notice did not show: the phone's own settings, step by step.
+await page.click('.ann [data-p]').catch(() => {});
+await step('avisos_celular', async () => { await page.click('#pOn'); await page.waitForSelector('#pCheck:not([hidden])', { timeout: 10000 }); await page.click('#pNo'); await page.waitForTimeout(400); }, { scrollTo: '#pMsg' });
 // Security: the lock screen (left alone longer than the chosen time) and the message after signing out.
 await page.evaluate(() => { localStorage.setItem('shots.msgs', ''); document.querySelectorAll('.bellbox, .cfm-wrap').forEach(x => x.remove()); });
 await step('bloqueio', async () => { await page.keyboard.press('Escape').catch(() => {}); await sec('conta'); await page.click('#lkNow'); await page.waitForSelector('#lockScreen'); });
