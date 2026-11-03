@@ -90,7 +90,12 @@ export async function importBackup(hh, b, onStep) {
   onStep && onStep(`Regras: ${rules.length}`);
   const tx = (b.transactions || []).map(t => ({ household_id: hh, source: t.source, month: t.month, date: t.date || null, day: t.day || null, description: t.description || '', amount: t.amount, category: t.category || null, installment: t.installment || null, card: t.card || null, manual: !!t.manual, pending: !!t.pending, splits: t.splits || null, receipt: t.receipt || null }));
   for (let i = 0; i < tx.length; i += 500) { must(await sb.from('transactions').insert(tx.slice(i, i + 500))); onStep && onStep(`Lançamentos: ${Math.min(i + 500, tx.length)} de ${tx.length}`); }
-  if (b.household?.settings) must(await sb.from('households').update({ settings: b.household.settings }).eq('id', hh));
+  // Goals, assets and investments from the file win; everything else already set in the app (who pays what,
+  // closed months, charts...) stays.
+  if (b.household?.settings) {
+    const [cur] = must(await sb.from('households').select('settings').eq('id', hh));
+    must(await sb.from('households').update({ settings: { ...(cur?.settings || {}), ...b.household.settings } }).eq('id', hh));
+  }
   must(await sb.from('imports').insert({ household_id: hh, source: 'backup', label: 'Importação de backup', info: { transactions: tx.length } }));
 }
 

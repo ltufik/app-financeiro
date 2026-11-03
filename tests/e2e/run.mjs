@@ -286,12 +286,14 @@ if (SMOKE) { // The rest needs real family data: in the smoke run, check the mai
 
 if (backup) {
   await sec('backup');
+  await page.evaluate(() => { window.__db.households[0].settings = { ...(window.__db.households[0].settings || {}), keepMe: 1 }; });
   await page.setInputFiles('#dImport', backup);
   await page.waitForSelector('.cfm [data-y]');
   ok('importar backup pede confirmação', (await txt('.cfm')).includes('Importar 2.466 lançamentos'));
   await page.click('.cfm [data-y]');
   await page.waitForFunction(() => /Pronto|parou|não é/.test(document.querySelector('#bkStatus')?.textContent || ''), null, { timeout: 30000 });
   ok('backup importado', (await txt('#bkStatus')).includes('Pronto'), await txt('#bkStatus'));
+  ok('importar backup mantém os outros ajustes da família e traz as metas do arquivo', await page.evaluate(() => window.__db.households[0].settings.keepMe === 1 && !!window.__db.households[0].settings.goals));
   await page.setInputFiles('#dImport', backup);
   await page.waitForSelector('.cfm [data-y]');
   ok('importar o mesmo backup de novo não duplica (pula os meses)', (await txt('.cfm')).includes('Importar 0 lançamentos') && (await txt('.cfm')).includes('serão pulados'), (await txt('.cfm')).slice(0, 120));

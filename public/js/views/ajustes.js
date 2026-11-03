@@ -353,7 +353,7 @@ export function render(el) {
     const skip = [...new Set(b.transactions.filter(t => have.has(t.source + '|' + t.month)).map(t => t.month))].sort();
     const toAdd = b.transactions.filter(t => !have.has(t.source + '|' + t.month));
     const anchor = $('#dExport');
-    const text = `Importar ${toAdd.length.toLocaleString('pt-BR')} lançamentos para a ${esc(S.hh.name)}?` + (skip.length ? ` Os meses ${skip.map(m => m.split('-').reverse().join('/')).join(', ')} já têm dados e serão pulados para não duplicar.` : '') + (b.household?.settings ? ' As metas e o patrimônio do backup substituem os atuais.' : '');
+    const text = `Importar ${toAdd.length.toLocaleString('pt-BR')} lançamentos para a ${esc(S.hh.name)}?` + (skip.length ? ` Os meses ${skip.map(m => m.split('-').reverse().join('/')).join(', ')} já têm dados e serão pulados para não duplicar.` : '') + (b.household?.settings ? ' As metas, o patrimônio e os investimentos do backup substituem os atuais; os outros ajustes continuam.' : '');
     if (!await confirmInline(anchor, { text, yes: 'Sim, importar' })) { statusBk('ok', 'Importação cancelada.'); return; }
     b = { ...b, transactions: toAdd };
     statusBk('busy', `Importando ${b.transactions.length.toLocaleString('pt-BR')} lançamentos...`);
