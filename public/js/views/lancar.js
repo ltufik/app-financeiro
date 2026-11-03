@@ -11,6 +11,7 @@ import { checkDate, checkNumber, checkName } from '../lib/validate.js';
 import { notifyFamily } from '../push.js';
 import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '../lib/receipt.js';
 import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js';
+import { docKeys, compareStatement, docsText } from '../lib/statements.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
 let Q = null;          // quick-entry preview items
@@ -462,7 +463,14 @@ async function reviewRows(source, rows, month, info) {
 function renderReview() {
   const box = $('#review'); box.hidden = false;
   const { source, rows, info } = R;
-  const exist = txsOf(R.month).some(t => t.source === source && !t.manual);
+  // Same document sent again, or another card/account of the same month? Decided by the cards and the rows.
+  const keys = docKeys(source, rows, { bank: info.bank || PDF.bank, checks: info.checks });
+  if (source === 'conta' && keys[0]) rows.forEach(r => { r.card = keys[0]; });
+  const cmp = R.cmp = compareStatement({ keys, rows, existing: txsOf(R.month).filter(t => t.source === source && !t.manual) });
+  const exist = cmp.mode === 'replace';
+  const thisDoc = keys.length ? docsText(source, keys).replace(/^(a fatura|o extrato) d(o|a|os|as) /, '') : '';
+  const otherDocs = docsText(source, cmp.others);
+  const Month = mLong(R.month).charAt(0).toUpperCase() + mLong(R.month).slice(1);
   const pend = txsOf(R.month).filter(t => t.manual && t.source === source);
   pend.forEach(e => { if (e._match == null) e._match = rows.some(r => Math.abs(r.amount - e.amount) < 0.01); });
   const ks = monthKeys(); const months = [...new Set([R.month, ...ks, addM(ks[ks.length - 1] || R.month, 1)])].sort();
@@ -474,7 +482,8 @@ function renderReview() {
   box.innerHTML = `<h3>${esc(head)}</h3><p class="small muted">${esc(sub)}</p>
   <label class="f" style="margin-top:10px;max-width:260px">Salvar no mês<select id="rvMonth">${months.map(k => `<option value="${k}"${k === R.month ? ' selected' : ''}>${mLong(k)}</option>`).join('')}</select></label>
   ${info.ok === false ? `<p class="banner no" style="margin-top:10px">A soma não bateu com o total do documento. Confira os valores com a fatura ou o extrato antes de salvar; se faltar algum lançamento, você pode lançar à mão depois.</p>` : ''}
-  ${exist ? `<p class="banner at" style="margin-top:10px">Este mês já tem ${source === 'cartao' ? 'fatura' : 'extrato'} salvo. Salvar substitui os lançamentos importados antes.</p>` : ''}
+  ${exist ? `<p class="banner at" style="margin-top:10px">${source === 'cartao' ? 'Esta fatura' : 'Este extrato'}${thisDoc ? ` (${esc(thisDoc)})` : ''} já foi ${source === 'cartao' ? 'enviada' : 'enviado'} para ${mLong(R.month)}. Salvar troca ${source === 'cartao' ? 'a anterior' : 'o anterior'} por ${source === 'cartao' ? 'esta' : 'este'}${otherDocs ? `; ${esc(otherDocs)} continua como está` : ''}.</p>` : ''}
+  ${cmp.mode === 'alongside' ? `<p class="banner ok" style="margin-top:10px">${Month} já tem ${esc(otherDocs || docsText(source, ['']))}. ${source === 'cartao' ? 'Esta fatura é de outro cartão' : 'Este extrato é de outra conta'}${thisDoc ? ` (${esc(thisDoc)})` : ''} e entra junto, sem apagar nada.</p>` : ''}
   <p class="small" style="margin-top:10px"><span class="pill at">${rows.filter(r => r.pending).length} a classificar</span> <span class="tiny muted">Toque na categoria para trocar. O app aprende.</span></p>
   <div class="tw" style="margin-top:8px;max-height:520px;overflow:auto"><table class="rvcards"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="rvRows"></tbody></table></div>
   <div id="rvPend" style="margin-top:12px"></div>
@@ -495,7 +504,7 @@ function renderReview() {
   $('#rvSave').onclick = async e => {
     const n = rows.length, nPend = rows.filter(r => r.pending).length;
     const what = source === 'cartao' ? 'a fatura' : 'o extrato';
-    const text = [exist ? `<strong>${mLong(R.month)} já tem ${what} salvo.</strong> Ele será substituído por estes ${n} lançamentos.` : `Salvar ${n} lançamentos em ${mLong(R.month)}?`,
+    const text = [exist ? `<strong>${mLong(R.month)} já tem ${what} salvo${thisDoc ? ` (${esc(thisDoc)})` : ''}.</strong> Ele será substituído por estes ${n} lançamentos.` : cmp.mode === 'alongside' ? `Salvar ${n} lançamentos em ${mLong(R.month)}, junto com ${esc(otherDocs || docsText(source, ['']))}?` : `Salvar ${n} lançamentos em ${mLong(R.month)}?`,
       info.ok === false ? 'Atenção: a soma não bateu com o total do documento.' : '', nPend ? `${nPend} ainda estão "a classificar" e podem ser ajustados depois no Extrato.` : ''].filter(Boolean).join(' ');
     if (!await confirmInline(e.target, { text, yes: exist ? 'Sim, substituir' : 'Sim, salvar', danger: exist })) return;
     saveReview(pend);
@@ -508,7 +517,7 @@ async function saveReview(pend) {
   try {
     const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month);
-    track('lancar.pdf_ok'); await db.replaceMonth(S.hh.id, source, month, payload, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
+    track('lancar.pdf_ok'); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();

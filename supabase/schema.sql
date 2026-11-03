@@ -332,6 +332,47 @@ begin
   return imp;
 end $$;
 
+-- Como replace_month, mas só troca o documento certo: as linhas do mês com os cartões (ou a conta) em
+-- p_cards e, se p_unknown, as linhas antigas sem cartão identificado. Outras faturas do mês continuam.
+create or replace function public.replace_statement(p_household uuid, p_source text, p_month text, p_rows jsonb,
+  p_cards text[] default '{}', p_unknown boolean default false,
+  p_reconcile uuid[] default '{}', p_label text default null, p_file text default null, p_info jsonb default '{}'::jsonb)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare imp uuid; keep jsonb;
+begin
+  if not public.is_member(p_household) then raise exception 'not_member'; end if;
+  if p_source not in ('conta', 'cartao') then raise exception 'bad_source'; end if;
+  insert into imports(household_id, source, month, label, file_name, info, created_by)
+    values (p_household, p_source, p_month, coalesce(p_label, p_source || ' ' || p_month), p_file, coalesce(p_info, '{}'::jsonb), auth.uid())
+    returning id into imp;
+  select coalesce(jsonb_agg(jsonb_build_object('d', t.date::text, 's', t.description, 'a', t.amount, 'sp', t.splits, 'rc', t.receipt)), '[]'::jsonb)
+    into keep
+    from transactions t
+    where t.household_id = p_household and (t.splits is not null or t.receipt is not null)
+      and ((t.source = p_source and t.month = p_month and t.manual = false
+            and (t.card = any(coalesce(p_cards, '{}')) or (p_unknown and t.card is null)))
+        or (t.manual = true and t.id = any(coalesce(p_reconcile, '{}'))));
+  delete from transactions where household_id = p_household and source = p_source and month = p_month and manual = false
+    and (card = any(coalesce(p_cards, '{}')) or (p_unknown and card is null));
+  delete from transactions where household_id = p_household and manual = true and id = any(coalesce(p_reconcile, '{}'));
+  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt)
+  select p_household, p_source, p_month,
+         nullif(r->>'date', '')::date, r->>'day', coalesce(r->>'description', ''), (r->>'amount')::numeric,
+         r->>'category', nullif(r->>'installment', ''), nullif(r->>'card', ''), false,
+         coalesce((r->>'pending')::boolean, false), imp, auth.uid(),
+         coalesce(case when jsonb_typeof(r->'splits') = 'array' then r->'splits' end, k.sp),
+         coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc)
+  from jsonb_array_elements(p_rows) r
+  left join lateral (
+    select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc
+    from jsonb_array_elements(keep) x
+    where (x->>'a')::numeric = (r->>'amount')::numeric
+      and (x->>'d' = nullif(r->>'date', '') or x->>'s' = coalesce(r->>'description', ''))
+    order by (x->>'d' = nullif(r->>'date', '') and x->>'s' = coalesce(r->>'description', '')) desc
+    limit 1) k on true;
+  return imp;
+end $$;
+
 -- Ensina uma regra exata (o mesmo lançamento vem com a mesma categoria da próxima vez).
 create or replace function public.learn_rule(p_household uuid, p_source text, p_pattern text, p_category text)
 returns void language plpgsql security definer set search_path = public as $$
@@ -495,6 +536,7 @@ grant execute on function public.create_invite(uuid, text, text, text) to authen
 grant execute on function public.invite_info(text) to anon, authenticated;
 grant execute on function public.accept_invite(text, text) to authenticated;
 grant execute on function public.replace_month(uuid, text, text, jsonb, uuid[], text, text, jsonb) to authenticated;
+grant execute on function public.replace_statement(uuid, text, text, jsonb, text[], boolean, uuid[], text, text, jsonb) to authenticated;
 grant execute on function public.learn_rule(uuid, text, text, text) to authenticated;
 grant execute on function public.rename_category(uuid, text) to authenticated;
 grant execute on function public.save_push(uuid, text, text, text, jsonb) to authenticated;

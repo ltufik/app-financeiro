@@ -59,6 +59,12 @@ insert into transactions(household_id, source, month, date, description, amount,
 select public.replace_month(:'ha', 'cartao', '2026-11', '[{"date":"2026-10-30","day":"30/10","description":"RAIA 55","amount":90,"category":"Saúde"}]'::jsonb, array[:'nman']::uuid[]) \gset
 select count(*) as n3, max(splits->0->>'category') as sc, bool_or(manual) as m3 from transactions where household_id = :'ha' and month = '2026-11' \gset
 \echo conciliado: :n3 lançamento, divisão :sc, manual restante :m3
+-- duas faturas no mesmo mês (Visa e Mastercard): cada uma troca só a sua
+select public.replace_statement(:'ha', 'cartao', '2026-12', '[{"day":"01/12","description":"MERCADO","amount":300,"category":"Mercado","card":"4388"},{"day":"02/12","description":"POSTO","amount":200,"category":"Transporte","card":"4388"}]'::jsonb, array['4388']) \gset
+select public.replace_statement(:'ha', 'cartao', '2026-12', '[{"day":"05/12","description":"ANUIDADE","amount":45,"category":"Serviços","card":"8514"}]'::jsonb, array['8514']) \gset
+select public.replace_statement(:'ha', 'cartao', '2026-12', '[{"day":"01/12","description":"MERCADO","amount":310,"category":"Mercado","card":"4388"}]'::jsonb, array['4388']) \gset
+select count(*) as nst, sum(amount) as sst from transactions where household_id = :'ha' and month = '2026-12' \gset
+\echo duas faturas no mês: :nst lançamentos, soma :sst (Visa reenviada trocou só a dela)
 select public.learn_rule(:'ha', 'cartao', 'PADARIA X', 'Mercado');
 select public.learn_rule(:'ha', 'cartao', 'PADARIA X', 'Restaurantes e delivery');
 select category from rules where household_id = :'ha' and kind = 'exact' \gset

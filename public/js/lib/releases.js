@@ -84,4 +84,11 @@ export const RELEASES = [
     'Tem busca do jeito que a gente fala: escreva "estacionamento" ou "farmácia" e o app acha a categoria certa. Também aparecem sugestões para aquele lançamento.',
     'Não existe a categoria? Crie ali mesmo. E na revisão da fatura pelo celular, cada lançamento aparece inteiro, sem cortar o nome.',
   ] } },
+  { id: 'r55', version: 'v55', at: '2026-11-03T02:41:00Z', backlog: [], news: { id: 'n20261103b', title: 'Mais de um cartão no mesmo mês', items: [
+    'Mandou a fatura de outro cartão? Ela entra junto com a que já está no mês, sem apagar nada.',
+    'O app só pergunta se pode trocar quando é a mesma fatura enviada de novo, e diz qual é (os números finais do cartão).',
+    'Vale também para extratos de contas de bancos diferentes.',
+  ] }, addBacklog: [
+    { id: 'duas_faturas_no_mesmo_mes', title: 'Duas faturas (ou extratos) no mesmo mês sem uma apagar a outra', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Ao mandar a fatura do Mastercard (só anuidade), o app achou que era a do Visa e perguntou se podia apagar a outra', cost: false, notes: 'Solução: antes de perguntar, o app compara os números finais dos cartões (ou o banco, no extrato) e os lançamentos com o que já está no mês. Mesma fatura reenviada: troca só ela. Outro cartão: entra junto, sem perguntar nada. Faturas antigas sem número do cartão (backup) são reconhecidas pelos lançamentos. No banco: função replace_statement (precisa rodar o schema.sql).', from: [], where: 'Lançar → Fatura ou extrato' },
+  ] },
 ];

@@ -67,6 +67,15 @@ export const deleteTransaction = async id => must(await sb.from('transactions').
 export async function replaceMonth(hh, source, month, rows, reconcileIds, label, file, info) {
   return must(await sb.rpc('replace_month', { p_household: hh, p_source: source, p_month: month, p_rows: rows, p_reconcile: reconcileIds || [], p_label: label, p_file: file || null, p_info: info || {} }));
 }
+// Saves one bill or statement of the month, replacing only the same document (cards or account in `cards`,
+// and rows without a card when `unknown`). Other bills of the month stay.
+export async function replaceStatement(hh, source, month, rows, { cards = [], unknown = false } = {}, reconcileIds, label, file, info) {
+  const r = await sb.rpc('replace_statement', { p_household: hh, p_source: source, p_month: month, p_rows: rows, p_cards: cards, p_unknown: unknown, p_reconcile: reconcileIds || [], p_label: label, p_file: file || null, p_info: info || {} });
+  if (r.error && /replace_statement|PGRST202|function/i.test(r.error.message + ' ' + r.error.code)) {
+    const e = new Error('O banco de dados precisa de uma atualização para guardar duas faturas no mesmo mês. Avise quem cuida do app.'); e.code = 'needs_schema'; throw e;
+  }
+  return must(r);
+}
 export const learnRule = async (hh, source, pattern, category) => must(await sb.rpc('learn_rule', { p_household: hh, p_source: source, p_pattern: pattern, p_category: category }));
 
 export const addCategory = async (hh, c) => must(await sb.from('categories').insert({ household_id: hh, ...c }).select().single());

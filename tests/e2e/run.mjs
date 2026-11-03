@@ -460,6 +460,7 @@ if (fatura && backup) {
   await page.waitForTimeout(200);
   ok('importar avisa o resto da família', notifies.some(n => n.type === 'imported' && n.source === 'cartao' && n.month === '2026-09'));
   ok('fatura salva no mês certo', lr.p_month === '2026-09' && lr.n === 217, JSON.stringify(lr));
+  ok('a mesma fatura reenviada troca só ela (as linhas antigas sem cartão)', lr.unknown === true && !(lr.cards || []).includes('8514'), JSON.stringify(lr));
   await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09');
   // Same statement re-imported: only the Allpark parking (R$ 70, reclassified by hand in the original data) may differ.
   const after = await txt('#v-resumo .big');
@@ -480,6 +481,13 @@ if (outra) {
   ok('outro banco vai para o mês do vencimento', rv.includes('novembro de 2026'), rv.slice(0, 120));
   ok('regras genéricas classificam o básico', (await page.$$eval('#rvRows tr', rs => rs.filter(r => /Combust|Assinatura|Restaurante|Mercado/.test(r.textContent)).length)) >= 3);
   await shot('05b-outro-banco');
+  // Another card's bill in a month that already has one: it goes alongside, nothing to replace, nothing asked.
+  if (backup) {
+    await page.selectOption('#rvMonth', '2026-09'); await page.waitForTimeout(200);
+    ok('fatura de outro cartão no mesmo mês entra junto, sem pedir para apagar a outra', (await txt('#review')).includes('entra junto, sem apagar nada') && !(await txt('#review')).includes('Salvar troca'), (await txt('#review')).slice(0, 260));
+    if (shots) await page.screenshot({ path: path.join(shots, '05c-outro-cartao.png') });
+    await page.selectOption('#rvMonth', '2026-11'); await page.waitForTimeout(200);
+  }
   await page.click('#rvSave'); await page.click('.cfm [data-y]'); await page.waitForFunction(() => window.__lastReplace?.p_month === '2026-11');
   ok('fatura de outro banco salva', true);
 }

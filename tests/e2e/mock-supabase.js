@@ -88,6 +88,13 @@ const rpcs = {
   create_invite({ p_household, p_name, p_relation }) { const c = 'INV' + Math.random().toString(36).slice(2, 7).toUpperCase(); T.invites.push({ code: c, household_id: p_household, created_by: session.user.id, invitee_name: p_name, relation: p_relation, created_at: now(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null }); return c; },
   invite_info({ p_code }) { const i = T.invites.find(x => x.code === p_code); if (!i) return null; const h = T.households.find(x => x.id === i.household_id); return { family: h?.name, inviter: T.members.find(m => m.household_id === i.household_id && m.user_id === i.created_by)?.display_name, invitee: i.invitee_name, relation: i.relation, status: i.used_by ? 'used' : 'ok' }; },
   accept_invite({ p_code, p_display_name }) { const i = T.invites.find(x => x.code === p_code); if (!i) throw new Error('invite_not_found'); if (i.used_by) throw new Error('invite_used'); T.members.push({ household_id: i.household_id, user_id: session.user.id, role: 'member', display_name: p_display_name || i.invitee_name, relation: i.relation, created_at: now() }); i.used_by = session.user.id; return i.household_id; },
+  replace_statement({ p_household, p_source, p_month, p_rows, p_cards, p_unknown, p_reconcile, p_label, p_file, p_info }) {
+    const imp = uid(); T.imports.push({ id: imp, household_id: p_household, source: p_source, month: p_month, label: p_label, file_name: p_file, info: p_info, created_at: now() });
+    const hit = t => (p_cards || []).includes(t.card) || (p_unknown && !t.card);
+    T.transactions = T.transactions.filter(t => !(t.household_id === p_household && t.source === p_source && t.month === p_month && !t.manual && hit(t)) && !(t.manual && (p_reconcile || []).includes(t.id)));
+    p_rows.forEach(r => T.transactions.push({ id: uid(), household_id: p_household, source: p_source, month: p_month, date: r.date || null, day: r.day, description: r.description, amount: r.amount, category: r.category, installment: r.installment, card: r.card, manual: false, pending: !!r.pending, import_id: imp, created_at: now() }));
+    window.__lastReplace = { p_source, p_month, n: p_rows.length, reconcile: p_reconcile, cards: p_cards, unknown: p_unknown }; return imp;
+  },
   replace_month({ p_household, p_source, p_month, p_rows, p_reconcile, p_label, p_file, p_info }) {
     const imp = uid(); T.imports.push({ id: imp, household_id: p_household, source: p_source, month: p_month, label: p_label, file_name: p_file, info: p_info, created_at: now() });
     T.transactions = T.transactions.filter(t => !(t.household_id === p_household && t.source === p_source && t.month === p_month && !t.manual) && !(t.manual && (p_reconcile || []).includes(t.id)));

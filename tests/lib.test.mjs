@@ -502,3 +502,35 @@ test('categoria: busca por palavra do dia a dia e sugestões pela descrição', 
   const g = groupCategories(cats).map(x => x.title);
   assert.equal(g[0], 'Gastos do dia a dia'); assert.ok(g.includes('Gastos fora do comum')); assert.ok(g.some(t => t.startsWith('Não conta')));
 });
+
+import { docKeys, compareStatement } from '../public/js/lib/statements.js';
+test('duas faturas no mesmo mês: o app vê se é a mesma reenviada ou outro cartão antes de perguntar', () => {
+  const visa = [{ description: 'MERCADO', amount: 300, day: '01/09' }, { description: 'POSTO', amount: 200, day: '02/09' }, { description: 'FARMACIA', amount: 50, day: '03/09' }];
+  const legacy = visa.map(r => ({ ...r, card: null }));
+  // Mastercard with only the annual fee, against a Visa bill saved before without card numbers: goes alongside.
+  const mc = [{ description: 'ANUIDADE DIFERENCIADA', amount: 0, day: '23/09', card: '8514' }];
+  let c = compareStatement({ keys: docKeys('cartao', mc), rows: mc, existing: legacy });
+  assert.equal(c.mode, 'alongside'); assert.deepEqual(c.cards, []); assert.equal(c.unknown, false);
+  // The same Visa bill sent again (now with card numbers): replaces the old rows without card.
+  const visa2 = visa.map(r => ({ ...r, card: '4388' }));
+  c = compareStatement({ keys: docKeys('cartao', visa2), rows: visa2, existing: legacy });
+  assert.equal(c.mode, 'replace'); assert.equal(c.unknown, true);
+  // Visa again with Mastercard already there: replaces only the Visa.
+  c = compareStatement({ keys: ['4388'], rows: visa2, existing: [...visa2, ...mc] });
+  assert.equal(c.mode, 'replace'); assert.deepEqual(c.cards, ['4388']); assert.deepEqual(c.others, ['8514']);
+  // A bill from another card, cards known on both sides: alongside.
+  assert.equal(compareStatement({ keys: ['8514'], rows: mc, existing: visa2 }).mode, 'alongside');
+  // Nothing in the month: new.
+  assert.equal(compareStatement({ keys: ['4388'], rows: visa2, existing: [] }).mode, 'new');
+  // Bank statements: the bank names the account.
+  assert.deepEqual(docKeys('conta', [], { bank: 'Nubank' }), ['@nubank']);
+  assert.deepEqual(docKeys('cartao', [{ card: '0947' }], { checks: [{ card: '4388' }, { card: 'total' }] }).sort(), ['0947', '4388']);
+});
+
+import { docsText } from '../public/js/lib/statements.js';
+test('nome dos documentos do mês, em português', () => {
+  assert.equal(docsText('cartao', ['4388', '0947', '0080']), 'a fatura dos cartões finais 4388, 0947 e 0080');
+  assert.equal(docsText('cartao', ['8514']), 'a fatura do cartão final 8514');
+  assert.equal(docsText('cartao', ['4388', '']), 'a fatura do cartão final 4388 e uma fatura enviada antes');
+  assert.equal(docsText('conta', ['@nubank']), 'o extrato da conta Nubank');
+});
