@@ -24,7 +24,7 @@ page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const adminStore = {}, adminPuts = [], adminPatches = [], adminPatchesSeen = [];
-let pushTestSent = 0; const newsPushes = [];
+let pushTestSent = 0, pushTestFail = 0; const newsPushes = [];
 const NAV_FIXTURE = { days: 30, at: '2026-10-30T12:00:00Z',
   screens: [{ s: 'inicio', views: 40, users: 2, seconds: 1200 }, { s: 'lancar', views: 12, users: 2, seconds: 600 }, { s: 'menu.metas', views: 3, users: 1, seconds: 240 }],
   flows: [{ f: 'inicio', t: 'lancar', n: 9, users: 2 }, { f: 'lancar', t: 'inicio', n: 5, users: 1 }],
@@ -53,6 +53,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'push') return r.fulfill({ json: { configured: true, mine: pushTestSent ? [] : [{ kind: 'Android ou Chrome', since: '2026-10-20T10:00:00Z', prefs: {} }], people: [{ name: 'Mari', family: 'Família Souza', devices: 1, kinds: ['Android ou Chrome'], novidades: true, since: '2026-10-20T10:00:00Z', me: true }, { name: 'Beto', family: 'Família Souza', devices: 2, kinds: ['iPhone ou iPad'], novidades: false, since: '2026-10-21T10:00:00Z', me: false }], users: 4 } });
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && JSON.parse(r.request().postData()).action === 'news_push') { newsPushes.push(JSON.parse(r.request().postData()).id); return r.fulfill({ json: { pushed: 3 } }); }
+    if (u.pathname === '/api/admin' && r.request().method() === 'POST' && pushTestFail) return r.fulfill({ status: pushTestFail, json: pushTestFail === 500 ? { error: 'failed', detail: 'db' } : { error: 'not_signed_in' } });
     if (u.pathname === '/api/admin' && r.request().method() === 'POST') { pushTestSent++; return r.fulfill({ json: { results: [{ kind: 'Android ou Chrome', ok: true, gone: false }, { kind: 'iPhone ou iPad', ok: false, gone: true }] } }); }
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
@@ -699,6 +700,11 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: avisos mostra seus aparelhos e quem recebe', (await ap.textContent('#avMine')).includes('Android ou Chrome') && (await ap.textContent('#avAll')).includes('2 de 4 pessoas') && (await ap.textContent('#avAll')).includes('Desligadas'));
   await ap.click('#avTest'); await ap.waitForSelector('#avMsg.ok');
   ok('central: push de teste diz para quantos foi e tira aparelho antigo', pushTestSent === 1 && /Enviado para 1 aparelho\..*1 aparelho antigo/.test(await ap.textContent('#avMsg')) && (await ap.textContent('#avMine')).includes('Nenhum aparelho seu') && (await ap.textContent('#toast')).includes('Push de teste enviado'));
+  pushTestFail = 401; await ap.click('#avTest'); await ap.waitForSelector('#avMsg.err');
+  ok('central: login vencido diz para entrar de novo (não "sem internet")', (await ap.textContent('#avMsg')).includes('Seu login venceu') && !(await ap.textContent('#avMsg')).includes('internet'));
+  pushTestFail = 500; await ap.click('#avTest'); await ap.waitForFunction(() => /erro 500: db/.test(document.querySelector('#avMsg')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});
+  ok('central: erro do servidor mostra o código para mandar ao Claude', (await ap.textContent('#avMsg')).includes('erro 500: db'));
+  pushTestFail = 0;
   await atab('novidades'); await ap.waitForSelector('#nwAdd');
   ok('central: novidades começam com a desta versão', (await ap.textContent('#aMain')).includes('Sua opinião agora tem lugar no app'));
   await ap.click('#nwAdd'); await ap.click('#nwPub');

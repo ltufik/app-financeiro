@@ -136,5 +136,5 @@ export default async function handler(req, res) {
       return res.status(200).json({ ...row, loop });
     }
     res.status(405).json({ error: 'method_not_allowed' });
-  } catch (e) { res.status(500).json({ error: 'failed' }); }
+  } catch (e) { res.status(500).json({ error: 'failed', detail: String(e?.message || e).slice(0, 160) }); }
 }

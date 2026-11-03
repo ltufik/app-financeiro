@@ -25,9 +25,27 @@ let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+// Every call goes with a fresh login (it expires about every hour while the page stays open). If the server
+// says the login expired, it is renewed once and the call repeated. Errors come back with a plain reason.
+async function freshToken() { try { const { data } = await db.sb.auth.getSession(); return data?.session?.access_token || token; } catch (e) { return token; } }
+async function call(url, opts = {}) {
+  const go = async () => fetch(url, { ...opts, headers: { ...(opts.headers || {}), authorization: 'Bearer ' + await freshToken(), ...(opts.body ? { 'content-type': 'application/json' } : {}) } });
+  let r; try { r = await go(); } catch (e) { const x = new Error('offline'); x.status = 0; throw x; }
+  if (r.status === 401) { try { await db.sb.auth.refreshSession(); } catch (e) { /* stays expired */ } r = await go().catch(() => r); }
+  return r;
+}
+async function failWith(r) { let d = {}; try { d = await r.json(); } catch (e) { /* no body */ } const e = new Error(d.detail || d.error || String(r.status)); e.status = r.status; e.code = d.error; throw e; }
+function errText(e) {
+  const st = e?.status;
+  if (st === 0) return 'Sem internet neste aparelho agora. Confira a conexão e tente de novo.';
+  if (st === 401) return 'Seu login venceu. Abra o app, entre de novo e volte para a Central.';
+  if (st === 403) return 'Esta conta não tem acesso à Central (o e-mail precisa estar em ADMIN_EMAILS na Vercel).';
+  if (st === 503) return 'As notificações não estão configuradas no servidor (faltam as chaves VAPID na Vercel).';
+  return `O servidor não conseguiu fazer isso agora (erro ${st || '?'}${e?.message && e.message !== String(st) ? ': ' + e.message : ''}). Tente de novo; se continuar, mande esta mensagem para o Claude.`;
+}
 async function api(method, key, data, patch) {
-  const r = await fetch('/api/admin' + (method === 'GET' ? '?key=' + key : ''), { method, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: method === 'PUT' ? JSON.stringify(patch ? { key, patch } : { key, data }) : undefined });
-  if (!r.ok) { const e = new Error(String(r.status)); e.status = r.status; throw e; }
+  const r = await call('/api/admin' + (method === 'GET' ? '?key=' + key : ''), { method, body: method === 'PUT' ? JSON.stringify(patch ? { key, patch } : { key, data }) : undefined });
+  if (!r.ok) await failWith(r);
   return r.json();
 }
 // Boards made of items with ids (backlog, news, FAQ...) are saved as a patch: only what changed here since
@@ -53,7 +71,7 @@ async function save(key, msg) {
     if (n) { toast(`Pronto! Recado automático enviado para ${n} ${n > 1 ? 'pessoas que pediram' : 'pessoa que pediu'}.`); FB = null; }
     else if (msg) toast(msg);
     return res;
-  } catch (e) { toast('Não foi possível salvar. Verifique a internet e tente de novo.'); return null; }
+  } catch (e) { toast('Não foi possível salvar. ' + errText(e), 'err'); return null; }
 }
 
 (async function boot() {
@@ -72,7 +90,7 @@ async function save(key, msg) {
     for (const [k, r] of [['backlog', b], ['news', nw], ['faq', f], ['services', sv], ['docs', dc]]) if (r.data) snap(k);
   } catch (e) {
     $('#aMain').innerHTML = e.status === 403 ? '<div class="panel"><h2>Só para o dono do produto</h2><p class="small">Esta página aparece só para os e-mails cadastrados em ADMIN_EMAILS.</p></div>'
-      : '<div class="panel"><h2>Não foi possível carregar</h2><p class="small">Confira se o schema.sql foi rodado de novo e se as variáveis do servidor estão certas.</p></div>';
+      : `<div class="panel"><h2>Não foi possível carregar</h2><p class="small">${esc(errText(e))}</p></div>`;
     return;
   }
   drawNav(); $('#aNav').hidden = false; $('#aCopy').hidden = false; $('#aCopy').onclick = copySummary;
@@ -280,20 +298,20 @@ function desenho(el) {
 
 // ---------- shared loaders ----------
 async function getView(name, q = '') {
-  const r = await fetch('/api/admin?view=' + name + q, { headers: { authorization: 'Bearer ' + token } });
-  if (!r.ok) throw new Error(String(r.status)); return r.json();
+  const r = await call('/api/admin?view=' + name + q);
+  if (!r.ok) await failWith(r); return r.json();
 }
 async function loadFb(force) { if (!FB || force) FB = await getView('feedback'); return FB; }
 async function loadNav(force) { if (!NAVD || force) NAVD = await getView('nav', '&days=' + useDays); return NAVD; }
 async function loadUse(force) { if (!USE || force) USE = await getView('usage', '&days=' + useDays); return USE; }
 async function patchFb(id, patch) {
-  const r = await fetch('/api/admin', { method: 'PATCH', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ feedback: id, ...patch }) });
+  const r = await call('/api/admin', { method: 'PATCH', body: JSON.stringify({ feedback: id, ...patch }) });
   if (!r.ok) throw new Error(String(r.status));
 }
 const dt = s => s ? new Date(s).toLocaleDateString('pt-BR') : '—';
 const ago = d => { if (!d) return 'nunca'; const n = Math.round((Date.parse(new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)) - Date.parse(d)) / 864e5); return n <= 0 ? 'hoje' : n === 1 ? 'ontem' : `há ${n} dias`; };
 const who = f => esc(f.name || f.email || 'Pessoa que saiu do app');
-const fail = (el, title) => { el.innerHTML = `<div class="ahead"><h1>${title}</h1></div><div class="panel"><p class="small">Não foi possível carregar. Confira se o schema.sql novo foi rodado no Supabase.</p></div>`; };
+const fail = (el, title, e) => { el.innerHTML = `<div class="ahead"><h1>${title}</h1></div><div class="panel"><p class="small">Não foi possível carregar. ${esc(errText(e))}</p></div>`; };
 
 // ---------- Opiniões ----------
 const FB_KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
@@ -301,7 +319,7 @@ const FB_STATUS = { novo: 'Nova', visto: 'Lida', backlog: 'No backlog', resolvid
 let fbKind = '', fbStatus = 'aberto', replyOpen = null;
 async function opinioes(el) {
   el.innerHTML = '<div class="ahead"><h1>Opiniões</h1></div><p class="small muted">Carregando...</p>';
-  let list; try { list = await loadFb(true); } catch (e) { return fail(el, 'Opiniões'); }
+  let list; try { list = await loadFb(true); } catch (e) { return fail(el, 'Opiniões', e); }
   const shown = list.filter(f => (!fbKind || f.kind === fbKind) && (fbStatus === '' || (fbStatus === 'aberto' ? ['novo', 'visto'].includes(f.status) : f.status === fbStatus)));
   el.innerHTML = `<div class="ahead"><h1>Opiniões</h1><span class="tiny muted">${list.length} recebidas · ${list.filter(f => f.status === 'novo').length} novas</span></div>
     <div class="chips">${[['', 'Todos os tipos'], ...Object.entries(FB_KIND)].map(([k, l]) => `<button class="chip" type="button" data-k="${k}" aria-pressed="${fbKind === k}">${l} <span class="tiny muted">${list.filter(f => !k || f.kind === k).length}</span></button>`).join('')}</div>
@@ -325,8 +343,8 @@ async function opinioes(el) {
   el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { fbStatus = b.dataset.s; opinioes(el); });
   el.querySelectorAll('.fbcard').forEach(card => {
     const f = list.find(x => x.id === +card.dataset.id);
-    card.querySelector('[data-st]').onchange = async e => { try { await patchFb(f.id, { status: e.target.value }); f.status = e.target.value; toast('Situação atualizada.'); } catch (x) { toast('Não foi possível salvar.'); } };
-    card.querySelector('[data-note]').onchange = async e => { try { await patchFb(f.id, { note: e.target.value }); f.note = e.target.value; toast('Nota salva.'); } catch (x) { toast('Não foi possível salvar.'); } };
+    card.querySelector('[data-st]').onchange = async e => { try { await patchFb(f.id, { status: e.target.value }); f.status = e.target.value; toast('Situação atualizada.'); } catch (x) { toast('Não foi possível salvar. ' + errText(x), 'err'); } };
+    card.querySelector('[data-note]').onchange = async e => { try { await patchFb(f.id, { note: e.target.value }); f.note = e.target.value; toast('Nota salva.'); } catch (x) { toast('Não foi possível salvar. ' + errText(x), 'err'); } };
     const bl = card.querySelector('[data-bl]');
     if (bl) bl.onclick = async e => {
       const title = f.text.length > 90 ? f.text.slice(0, 90) + '…' : f.text;
@@ -355,12 +373,12 @@ async function opinioes(el) {
       const t = ta.value.trim(); if (t.length < 20) return invalid(ta, 'Escreva o recado: o que foi feito e onde a pessoa encontra.');
       if (!await confirmInline(e.target, { text: `Enviar este recado para ${who(f)}?`, yes: 'Sim, enviar' })) return;
       try {
-        const r = await fetch('/api/admin', { method: 'PATCH', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ feedback: f.id, reply: t }) });
+        const r = await call('/api/admin', { method: 'PATCH', body: JSON.stringify({ feedback: f.id, reply: t }) });
         if (!r.ok) throw new Error(String(r.status)); const j = await r.json();
         Object.assign(f, { reply: t, replied_at: new Date().toISOString(), reply_seen: false, status: 'resolvido' });
         toast(j.pushed ? `Recado enviado e notificação entregue no celular de ${f.name || 'quem mandou'}.` : `Recado enviado. ${f.name || 'A pessoa'} vê ao abrir o app.`);
         opinioes(el);
-      } catch (x) { toast('Não foi possível enviar o recado. Tente de novo.'); }
+      } catch (x) { toast('Não foi possível enviar o recado. ' + errText(x), 'err'); }
     };
     if (replyOpen === f.id) { replyOpen = null; openReply(); card.scrollIntoView({ block: 'center' }); }
   });
@@ -371,7 +389,7 @@ const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const heat = (v, mx) => v ? `background:color-mix(in srgb,var(--accent) ${Math.round(15 + 85 * v / mx)}%,var(--card))` : '';
 async function uso(el) {
   el.innerHTML = '<div class="ahead"><h1>Uso</h1></div><p class="small muted">Carregando...</p>';
-  let u; try { u = await loadUse(true); } catch (e) { return fail(el, 'Uso'); }
+  let u; try { u = await loadUse(true); } catch (e) { return fail(el, 'Uso', e); }
   const feats = Object.entries(u.features).sort((a, b) => b[1].users - a[1].users || b[1].n - a[1].n), mxU = Math.max(1, ...feats.map(f => f[1].users));
   const hm = Array.from({ length: 7 }, () => Array(24).fill(0)); u.hours.forEach(([d, h, n]) => { hm[d][h] += n; }); const mxH = Math.max(1, ...hm.flat());
   const days = Array.from({ length: 28 }, (_, i) => new Date(Date.now() - 3 * 3600e3 - (27 - i) * 864e5).toISOString().slice(0, 10));
@@ -483,7 +501,7 @@ async function avisos(el) {
     <div class="panel stack" id="avAll"></div>`;
   const say = (k, t) => { const m = $('#avMsg'); m.hidden = false; m.className = 'status ' + k; m.textContent = t; };
   const draw = async () => {
-    let d; try { d = await getView('push'); } catch (e) { $('#avMine').innerHTML = '<p class="small">Não foi possível carregar. Verifique a internet e tente de novo.</p>'; $('#avAll').hidden = true; return; }
+    let d; try { d = await getView('push'); } catch (e) { $('#avMine').innerHTML = `<p class="status err">${esc(errText(e))}</p>`; $('#avAll').hidden = true; return; }
     const on = k => k !== false;
     $('#avMine').innerHTML = `<h2>Seus aparelhos</h2>
       ${!d.configured ? '<p class="status err">As notificações não estão configuradas no servidor (faltam as chaves VAPID na Vercel).</p>' : ''}
@@ -502,12 +520,11 @@ async function avisos(el) {
   $('#avTest').onclick = async () => {
     const b = $('#avTest'); b.disabled = true; say('busy', 'Enviando...');
     try {
-      const r = await fetch('/api/admin', { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'test_push' }) });
-      if (r.status === 503) { say('err', 'As notificações não estão configuradas no servidor (faltam as chaves VAPID na Vercel).'); return; }
-      if (!r.ok) throw new Error(String(r.status));
+      const r = await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'test_push' }) });
+      if (!r.ok) await failWith(r);
       const t = testText((await r.json()).results); say(t.kind, t.text); toast(t.kind === 'ok' ? 'Push de teste enviado' : 'O push de teste não foi enviado');
       await draw();
-    } catch (e) { say('err', 'Não foi possível enviar agora. Verifique a internet e tente de novo.'); }
+    } catch (e) { say('err', errText(e)); toast('O push de teste não saiu'); }
     finally { b.disabled = false; }
   };
   await draw();
@@ -517,15 +534,14 @@ async function avisos(el) {
 async function reach() { try { return (await getView('push')).people.filter(p => p.novidades).length; } catch (e) { return null; } }
 async function sendNewsPush(id, okMsg) {
   try {
-    const r = await fetch('/api/admin', { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'news_push', id }) });
+    const r = await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'news_push', id }) });
     if (r.status === 409) { toast('Esta novidade já foi mandada no celular.'); return; }
-    if (r.status === 503) { toast('As notificações não estão configuradas no servidor.'); return; }
-    if (!r.ok) throw new Error(String(r.status));
+    if (!r.ok) await failWith(r);
     const { pushed } = await r.json();
     // Same mark the server saved, so the next save of the board keeps it.
     const it = D.news.items.find(n => n.id === id); if (it) { it.pushed_at = new Date().toISOString(); snap('news'); }
     toast(`${okMsg}: chegou em ${pushed} ${pushed === 1 ? 'aparelho' : 'aparelhos'}.`);
-  } catch (e) { toast('A novidade foi publicada, mas a notificação não saiu. Tente "Mandar no celular" de novo.'); }
+  } catch (e) { toast('A notificação não saiu. ' + errText(e), 'err'); }
 }
 
 function novidades(el) {
@@ -611,7 +627,7 @@ async function fluxos(el) {
 async function copySummary() {
   const b = $('#aCopy'); b.disabled = true; const old = b.innerHTML; b.textContent = 'Montando...';
   try {
-    const metrics = await fetch('/api/metrics', { headers: { authorization: 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const metrics = await call('/api/metrics').then(r => r.ok ? r.json() : null).catch(() => null);
     const [usage, feedback, nav] = await Promise.all([loadUse(true).catch(() => null), loadFb(true).catch(() => []), loadNav(true).catch(() => null)]);
     const text = buildSummary({ metrics, usage, feedback, nav, backlog: D.backlog.items, today: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) });
     try { await navigator.clipboard.writeText(text); toast('Resumo copiado. Cole na conversa com o Claude.'); }
@@ -629,7 +645,7 @@ const dur = s => { s = Math.round(s); return s < 60 ? `${s}s` : s < 3600 ? `${Ma
 let heatScreen = null;
 async function navegacao(el) {
   el.innerHTML = '<div class="ahead"><h1>Navegação</h1></div><p class="small muted">Carregando...</p>';
-  let n; try { n = await loadNav(true); } catch (e) { return fail(el, 'Navegação'); }
+  let n; try { n = await loadNav(true); } catch (e) { return fail(el, 'Navegação', e); }
   const sc = n.screens, mxV = Math.max(1, ...sc.map(x => x.views)), totV = sc.reduce((a, x) => a + x.views, 0), totT = sc.reduce((a, x) => a + x.seconds, 0);
   const tapScreens = Object.keys(n.taps).sort((a, b) => n.taps[b].reduce((s, c) => s + c[2], 0) - n.taps[a].reduce((s, c) => s + c[2], 0));
   if (!heatScreen || !tapScreens.includes(heatScreen)) heatScreen = tapScreens[0] || null;
@@ -677,7 +693,7 @@ function errBadge(n) {
 }
 async function erros(el) {
   el.innerHTML = '<div class="ahead"><h1>Erros</h1></div><p class="small muted">Carregando...</p>';
-  let n; try { n = await loadNav(true); } catch (e) { return fail(el, 'Erros'); }
+  let n; try { n = await loadNav(true); } catch (e) { return fail(el, 'Erros', e); }
   const all = n.errors, list = all.filter(e => !errFilter || (errFilter === 'tela' ? e.kind === 'tela' : e.kind !== 'tela'));
   const groups = [...list.reduce((m, e) => { const k = e.kind + '|' + e.message; (m.get(k) || m.set(k, []).get(k)).push(e); return m; }, new Map()).values()]
     .sort((a, b) => b.length - a.length || Date.parse(b[0].at) - Date.parse(a[0].at));
