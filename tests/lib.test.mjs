@@ -484,3 +484,21 @@ test('backup: regras repetidas não travam a importação e continuam valendo', 
   assert.equal(cls2({ source: 'conta', description: 'PIX RECEBIDO LUANA F', amount: 9000 }, P)?.category, 'Salário Luana');
   assert.equal(cls2({ source: 'conta', description: 'PIX RECEBIDO LUANA F', amount: 300 }, P)?.category, 'Outras entradas');
 });
+
+import { rankCategories, suggestCategories, groupCategories } from '../public/js/lib/catsearch.js';
+test('categoria: busca por palavra do dia a dia e sugestões pela descrição', () => {
+  const cats = [{ name: 'Transporte', grp: 'dia' }, { name: 'Combustível', grp: 'dia' }, { name: 'Mercado', grp: 'dia' }, { name: 'Restaurantes e delivery', grp: 'dia' },
+    { name: 'Moradia e contas', grp: 'dia', recurring: true }, { name: 'Salário', grp: 'renda', recurring: true }, { name: 'Pagamento da fatura do cartão', grp: 'neutro' }, { name: 'Guaratuba: reforma', grp: 'fora' }];
+  assert.deepEqual(rankCategories('estacionamento', cats), ['Transporte'], 'estacionamento acha Transporte');
+  assert.deepEqual(rankCategories('estacion', cats), ['Transporte'], 'enquanto digita também acha');
+  assert.equal(rankCategories('farma', cats).length, 0, 'sem categoria parecida, nada');
+  assert.equal(rankCategories('merc', cats)[0], 'Mercado');
+  assert.equal(rankCategories('reforma', cats)[0], 'Guaratuba: reforma', 'palavra no meio do nome');
+  assert.equal(rankCategories('', cats).length, cats.length);
+  assert.deepEqual(suggestCategories('ESTAPAR*ZAD SAO PAULO', cats).slice(0, 1), ['Transporte']);
+  assert.equal(suggestCategories('AUTO POSTO ENGENHEIRO', cats)[0], 'Combustível');
+  assert.equal(suggestCategories('IFD*RS DELIVERY', cats)[0], 'Restaurantes e delivery');
+  assert.deepEqual(suggestCategories('XPTO 123', cats, { Mercado: 9, Transporte: 2 }), ['Mercado', 'Transporte'], 'sem pista, as mais usadas');
+  const g = groupCategories(cats).map(x => x.title);
+  assert.equal(g[0], 'Gastos do dia a dia'); assert.ok(g.includes('Gastos fora do comum')); assert.ok(g.some(t => t.startsWith('Não conta')));
+});

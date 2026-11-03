@@ -1,6 +1,7 @@
 // Small DOM helpers shared by the views.
 import { esc, pct } from './lib/format.js';
 import { KINDS, kindOf } from './lib/calc.js';
+import { rankCategories, suggestCategories, groupCategories, plain } from './lib/catsearch.js';
 
 export const $ = (s, root = document) => root.querySelector(s);
 export const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -40,22 +41,56 @@ export function pill(label, v, goal) {
 }
 
 // Category chooser: a chip that turns into a grouped <select>.
-export function catPicker(categories, current, pending, onPick) {
-  const wrap = document.createElement('span');
+// Category picker: a chip that opens a sheet with what is being classified, a search box (also by everyday
+// words: "estacionamento" finds Transporte), suggestions for this entry and the list in plain groups.
+// ctx: { description, amount } of the entry. The app plugs in usage counts and creating a category.
+const PICK = { usage: () => ({}), create: null };
+export function configureCatPicker(o) { Object.assign(PICK, o); }
+export function catPicker(categories, current, pending, onPick, ctx = {}) {
   const b = document.createElement('button');
-  b.type = 'button'; b.className = 'chip'; b.style.fontSize = '13px'; b.textContent = current || 'Escolher';
-  if (pending) b.style.borderColor = 'var(--warn)';
-  b.onclick = () => {
-    const sel = document.createElement('select');
-    const byG = {}; for (const c of categories) (byG[kindOf(c).key] ||= []).push(c.name);
-    sel.innerHTML = (current ? '' : '<option value="" selected disabled>Escolher</option>') +
-      KINDS.map(k => k.key).filter(g => byG[g]).map(g => `<optgroup label="${esc(KINDS.find(k => k.key === g).label)}">${byG[g].sort((a, c) => a.localeCompare(c, 'pt')).map(n => `<option${n === current ? ' selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('');
-    wrap.replaceChildren(sel); sel.focus();
-    sel.onchange = () => onPick(sel.value);
-    // Deferred: the table may be redrawn while the select still has focus.
-    sel.onblur = () => setTimeout(() => { if (sel.isConnected && (!sel.value || sel.value === current)) wrap.replaceChildren(b); });
+  b.type = 'button'; b.className = 'chip catchip' + (pending ? ' pend' : ''); b.textContent = current || 'Escolher';
+  b.onclick = () => openCatSheet(categories, current, ctx, onPick);
+  return b;
+}
+export function openCatSheet(categories, current, ctx, onPick) {
+  document.querySelectorAll('.cps-wrap').forEach(x => x.remove());
+  const wrap = document.createElement('div'); wrap.className = 'cps-wrap';
+  const money = v => (+v < 0 ? '−' : '') + 'R$ ' + Math.abs(+v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  wrap.innerHTML = `<div class="cps" role="dialog" aria-modal="true" aria-labelledby="cpsT">
+    <div class="cps-top"><div class="cps-h"><h3 id="cpsT">Qual a categoria?</h3>${ctx.description ? `<p class="cps-ctx"><strong>${esc(ctx.description)}</strong>${ctx.amount != null ? ` · ${money(ctx.amount)}` : ''}</p>` : ''}</div>
+      <button type="button" class="tx" aria-label="Fechar">×</button></div>
+    <input type="search" class="cps-q" placeholder="Buscar: estacionamento, mercado, farmácia…" aria-label="Buscar categoria" autocomplete="off" enterkeyhint="search">
+    <div class="cps-body"></div></div>`;
+  document.body.append(wrap); document.body.classList.add('cfm-open');
+  const close = () => { wrap.remove(); if (!document.querySelector('.cfm-wrap')) document.body.classList.remove('cfm-open'); };
+  const pick = n => { close(); if (n && n !== current) onPick(n); };
+  const body = wrap.querySelector('.cps-body'), q = wrap.querySelector('.cps-q');
+  const item = n => `<button type="button" class="cps-it${n === current ? ' on' : ''}" data-n="${esc(n)}">${esc(n)}${n === current ? '<span class="cps-ok">atual</span>' : ''}</button>`;
+  const draw = () => {
+    const text = q.value.trim();
+    if (!text) {
+      const sug = suggestCategories(ctx.description || '', categories, PICK.usage());
+      body.innerHTML = (sug.length ? `<p class="cps-sec">Sugestões</p><div class="cps-sug">${sug.map(n => `<button type="button" class="chip" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : '')
+        + groupCategories(categories).map(g => `<p class="cps-sec">${esc(g.title)}</p>${g.names.map(item).join('')}`).join('');
+    } else {
+      const found = rankCategories(text, categories), exact = categories.some(c => plain(c.name) === plain(text));
+      body.innerHTML = (found.length ? found.map(item).join('') : `<p class="small muted cps-none">Nenhuma categoria com "${esc(text)}".</p>`)
+        + (PICK.create && !exact && text.length >= 2 ? `<button type="button" class="cps-new" data-new="${esc(text)}">+ Criar a categoria "${esc(text.charAt(0).toUpperCase() + text.slice(1))}"</button><p class="tiny muted cps-tip">Ela entra como gasto do dia a dia. Dá para mudar em menu ☰ → Categorias.</p>` : '');
+    }
+    body.querySelectorAll('[data-n]').forEach(x => x.onclick = () => pick(x.dataset.n));
+    const nb = body.querySelector('[data-new]');
+    if (nb) nb.onclick = async () => {
+      nb.disabled = true; const name = nb.dataset.new.charAt(0).toUpperCase() + nb.dataset.new.slice(1);
+      try { const n = await PICK.create(name); toast(`Categoria "${n}" criada.`); pick(n); } catch (e) { nb.disabled = false; toast('Não foi possível criar a categoria. Tente de novo.'); }
+    };
   };
-  wrap.append(b); return wrap;
+  q.oninput = draw; draw();
+  q.onkeydown = e => { if (e.key === 'Enter') { const f = body.querySelector('[data-n]'); if (f) pick(f.dataset.n); } };
+  wrap.querySelector('.tx').onclick = close;
+  wrap.onclick = e => { if (e.target === wrap) close(); };
+  wrap.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  // On a phone the keyboard would cover the list: focus the search only on bigger screens.
+  if (matchMedia('(min-width: 700px)').matches) q.focus(); else wrap.querySelector('.cps').focus?.();
 }
 
 // Minimal, safe Markdown for assistant answers: paragraphs, bold, lists, tables, headings.

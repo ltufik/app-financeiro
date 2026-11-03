@@ -51,7 +51,7 @@ function draw() {
         if (!t.manual) { await db.learnRule(S.hh.id, t.source, norm(t.description), c).catch(() => {}); S.rules.push({ source: t.source, kind: 'exact', pattern: norm(t.description), category: c }); }
         toast('Categoria salva'); S.render();
       } catch (e) { toast('Não foi possível salvar.'); draw(); }
-    }));
+    }, { description: t.description, amount: t.amount }));
     tb.append(tr);
   }
   const tot = rows.reduce((a, t) => a + t.amount, 0);

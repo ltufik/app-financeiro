@@ -91,7 +91,7 @@ export function render(el) {
     const li = document.createElement('li'), sug = t.category && t.category !== 'A classificar' ? t.category : '';
     li.innerHTML = `<span class="pd"><span>${esc(t.description)}</span><span class="tiny muted">${esc(t.day || isoToBr(t.date).slice(0, 5))} · ${t.source === 'cartao' ? 'cartão' : 'conta'} · ${brl(t.amount)}</span></span><span class="rowbtn pc"></span>`;
     const pc = li.querySelector('.pc');
-    pc.append(catPicker(S.categories, sug, true, async c => { try { await setCat(t, c); reindex(); toast('Categoria salva'); setTimeout(() => render(el)); } catch (err) { toast('Não foi possível salvar.'); } }));
+    pc.append(catPicker(S.categories, sug, true, async c => { try { await setCat(t, c); reindex(); toast('Categoria salva'); setTimeout(() => render(el)); } catch (err) { toast('Não foi possível salvar.'); } }, { description: t.description, amount: t.amount }));
     if (sug) { const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'chip okchip'; ok.textContent = 'Ok'; ok.setAttribute('aria-label', `Aceitar ${sug} para ${t.description}`); ok.onclick = async () => { try { await setCat(t, sug); reindex(); toast('Categoria confirmada'); render(el); } catch (err) { toast('Não foi possível salvar.'); } }; pc.append(ok); }
     tb.append(li);
   });

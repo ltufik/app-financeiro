@@ -2,7 +2,7 @@
 import * as db from './db.js';
 import { S, setFamily, reindex, monthKeys, latestClosed } from './state.js';
 import { mLong, mShort, thisMonth } from './lib/format.js';
-import { $, $$, toast, validate, clearInvalid } from './ui.js';
+import { $, $$, toast, validate, clearInvalid, configureCatPicker } from './ui.js';
 import { checkEmail, checkPassword, checkName } from './lib/validate.js';
 import * as resumo from './views/resumo.js';
 import * as lancar from './views/lancar.js';
@@ -248,6 +248,12 @@ async function showInviteBanner() {
   setMode('signup');
   if (info.invitee && !$('#aName').value) $('#aName').value = info.invitee;
 }
+
+// Category picker: the family's most used categories come first, and a new one can be created right there.
+configureCatPicker({
+  usage: () => { const u = {}; for (const t of S.txs || []) if (t.category) u[t.category] = (u[t.category] || 0) + 1; return u; },
+  create: async name => { const c = await db.addCategory(S.hh.id, { name, grp: 'dia', recurring: false }); S.categories.push(c); reindex(); return c.name; },
+});
 
 (async function boot() {
   // Registered first thing: Android only offers a real install (our icon and name) once the service worker is active.

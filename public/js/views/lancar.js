@@ -250,7 +250,7 @@ function renderQ() {
   Q.forEach((it, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><input type="date" value="${it.date}" data-f="date" style="min-width:130px"></td><td><input type="text" value="${esc(it.description)}" data-f="description" style="min-width:150px"></td><td><select data-f="source"><option value="cartao"${it.source === 'cartao' ? ' selected' : ''}>Cartão</option><option value="conta"${it.source === 'conta' ? ' selected' : ''}>Conta</option></select></td><td></td><td class="r"><input type="number" step="0.01" value="${it.amount}" data-f="amount" style="width:110px;text-align:right"></td>`;
-    tr.children[3].append(catPicker(S.categories, it.category, 0, c => { it.category = c; renderQ(); }));
+    tr.children[3].append(catPicker(S.categories, it.category, 0, c => { it.category = c; renderQ(); }, { description: it.description, amount: it.amount }));
     tr.querySelectorAll('[data-f]').forEach(inp => inp.onchange = () => {
       const f = inp.dataset.f;
       if (f === 'source') { if (inp.value !== it.source) it.amount = -it.amount; it.source = inp.value; renderQ(); }
@@ -476,14 +476,14 @@ function renderReview() {
   ${info.ok === false ? `<p class="banner no" style="margin-top:10px">A soma não bateu com o total do documento. Confira os valores com a fatura ou o extrato antes de salvar; se faltar algum lançamento, você pode lançar à mão depois.</p>` : ''}
   ${exist ? `<p class="banner at" style="margin-top:10px">Este mês já tem ${source === 'cartao' ? 'fatura' : 'extrato'} salvo. Salvar substitui os lançamentos importados antes.</p>` : ''}
   <p class="small" style="margin-top:10px"><span class="pill at">${rows.filter(r => r.pending).length} a classificar</span> <span class="tiny muted">Toque na categoria para trocar. O app aprende.</span></p>
-  <div class="tw" style="margin-top:8px;max-height:440px;overflow:auto"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="rvRows"></tbody></table></div>
+  <div class="tw" style="margin-top:8px;max-height:520px;overflow:auto"><table class="rvcards"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="rvRows"></tbody></table></div>
   <div id="rvPend" style="margin-top:12px"></div>
   <div class="rowbtn" style="margin-top:12px"><button class="btn primary" id="rvSave" type="button">Salvar</button><button class="btn" id="rvCancel" type="button">Descartar</button></div>`;
   const tb = $('#rvRows');
   rows.map((r, i) => [r, i]).sort((a, b) => (b[0].pending ? 1 : 0) - (a[0].pending ? 1 : 0)).forEach(([r]) => {
     const tr = document.createElement('tr'); if (r.pending) tr.className = 'pend';
-    tr.innerHTML = `<td>${esc(r.day)}</td><td style="min-width:170px">${esc(r.description)}${r.installment ? ' <span class="tiny muted">' + esc(r.installment) + '</span>' : ''}</td><td></td><td class="r${source === 'conta' && r.amount > 0 ? ' neg' : ''}">${brl(r.amount)}</td>`;
-    tr.children[2].append(catPicker(S.categories, r.category, r.pending, c => { if (c !== r.category) r.learn = true; r.category = c; r.pending = false; renderReview(); }));
+    tr.innerHTML = `<td class="rv-d">${esc(r.day)}</td><td class="rv-x" style="min-width:170px">${esc(r.description)}${r.installment ? ' <span class="tiny muted">' + esc(r.installment) + '</span>' : ''}</td><td class="rv-c"></td><td class="r${source === 'conta' && r.amount > 0 ? ' neg' : ''}">${brl(r.amount)}</td>`;
+    tr.children[2].append(catPicker(S.categories, r.category, r.pending, c => { if (c !== r.category) r.learn = true; r.category = c; r.pending = false; renderReview(); }, { description: r.description, amount: r.amount }));
     tb.append(tr);
   });
   if (pend.length) {
@@ -639,7 +639,7 @@ function renderRcItems() {
   RC.items.forEach((it, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><input type="text" value="${esc(it.description)}" data-f="description" style="min-width:150px" maxlength="80"></td><td></td><td class="r"><input type="number" step="0.01" min="0" value="${it.amount}" data-f="amount" style="width:100px;text-align:right"></td><td><button class="chip" type="button" data-rm aria-label="Remover item">×</button></td>`;
-    tr.children[1].append(catPicker(S.categories, it.category, !names.has(it.category), c => { it.category = c; setTimeout(() => { renderRcItems(); refreshReceipt(); }); }));
+    tr.children[1].append(catPicker(S.categories, it.category, !names.has(it.category), c => { it.category = c; setTimeout(() => { renderRcItems(); refreshReceipt(); }); }, { description: it.description, amount: it.amount }));
     tr.querySelectorAll('[data-f]').forEach(inp => inp.onchange = () => { it[inp.dataset.f] = inp.dataset.f === 'amount' ? round2(+String(inp.value).replace(',', '.')) : inp.value.trim(); if (inp.dataset.f === 'amount') refreshReceipt(); });
     tr.querySelector('[data-rm]').onclick = async e => {
       if (RC.items.length === 1) { toast('A nota precisa de pelo menos um item.'); return; }

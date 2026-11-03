@@ -79,4 +79,9 @@ export const RELEASES = [
   { id: 'r51', version: 'v51', at: '2026-11-03T01:11:00Z', backlog: [], semNovidade: 'Importar backup passa a manter os outros ajustes da família (quem paga o quê, meses fechados, gráficos); só metas, patrimônio e investimentos do arquivo substituem os atuais. Muda só para quem importa backup.' },
   { id: 'r52', version: 'v52', at: '2026-11-03T01:24:00Z', backlog: [], semNovidade: 'Correção: importar um backup com duas regras para o mesmo texto (com faixas de valor diferentes) parava no meio. Muda só para quem importa backup.' },
   { id: 'r53', version: 'v53', at: '2026-11-03T01:39:00Z', backlog: [], semNovidade: 'Botão "Zerar os lançamentos" em menu ☰ → Conta, só para quem criou a família, para começar do zero e importar um backup; está nas Dúvidas e não vale pop-up para todos.' },
+  { id: 'r54', version: 'v54', at: '2026-11-03T02:06:00Z', backlog: [], news: { id: 'n20261103a', title: 'Escolher a categoria ficou fácil', items: [
+    'Ao tocar na categoria de um lançamento, abre uma lista com o nome do lançamento e o valor, para você saber o que está classificando.',
+    'Tem busca do jeito que a gente fala: escreva "estacionamento" ou "farmácia" e o app acha a categoria certa. Também aparecem sugestões para aquele lançamento.',
+    'Não existe a categoria? Crie ali mesmo. E na revisão da fatura pelo celular, cada lançamento aparece inteiro, sem cortar o nome.',
+  ] } },
 ];

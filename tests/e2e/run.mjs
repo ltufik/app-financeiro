@@ -498,11 +498,18 @@ const nrows = await page.$$eval('#lRows li', r => r.length);
 ok('extrato lista lançamentos', nrows > 0, nrows + ' linhas');
 if (nrows) {
   await page.click('#lRows li:not([data-split]) .chip');
-  const sel = await page.$('#lRows li:not([data-split]) select');
-  const opt = await sel.evaluate(s => [...s.options].map(o => o.value).find(v => v && v !== s.value));
-  await sel.selectOption(opt);
-  await page.waitForTimeout(200);
+  await page.waitForSelector('.cps');
+  ok('escolher categoria abre a lista com o lançamento, busca e sugestões', (await txt('.cps')).includes('Qual a categoria?') && !!(await page.$('.cps-q')) && (await page.$$('.cps-it')).length > 5, (await txt('.cps')).slice(0, 120));
+  await page.fill('.cps-q', 'estacionamento'); await page.waitForTimeout(100);
+  ok('buscar "estacionamento" acha Transporte e oferece criar a categoria', (await txt('.cps-body')).includes('Transporte') && !!(await page.$('.cps-new')), await txt('.cps-body'));
+  if (shots) await page.screenshot({ path: path.join(shots, '07b-categoria.png') });
+  await page.fill('.cps-q', ''); await page.waitForTimeout(100);
+  await page.click('.cps-it:not(.on)');
+  await page.waitForTimeout(300);
   ok('troca de categoria ensina regra', await page.evaluate(() => window.__learned > 0));
+  await page.click('#lRows li:not([data-split]) .chip'); await page.waitForSelector('.cps');
+  await page.fill('.cps-q', 'Estacionamento'); await page.click('.cps-new'); await page.waitForTimeout(400);
+  ok('dá para criar a categoria na hora e ela já fica escolhida', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Estacionamento' && c.grp === 'dia')) && !(await page.$('.cps')));
 }
 await shot('07-extrato');
 await sec('metas');
@@ -689,7 +696,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
   ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
   await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
-  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 6 && (await ap.textContent('.fflow')).includes('pessoas'));
+  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 7 && (await ap.textContent('.fflow')).includes('pessoas'));
   await ap.click('.fstep .phone'); await ap.waitForSelector('#flBox[open]');
   ok('central: tela ampliada mostra onde fica e em que fluxos aparece', (await ap.textContent('#flBox')).includes('Aparece nos fluxos'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-10-fluxo-zoom.png') });

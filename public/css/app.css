@@ -479,3 +479,39 @@ body.locked > :not(#lockScreen):not(.toast){visibility:hidden}
 /* ---------- Example month on an empty Início (lib/demo.js) ---------- */
 .panel.demo{border:2px dashed color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--accent-soft) 35%,var(--card))}
 .demo-tag{display:inline-block;align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 10px;margin-bottom:10px}
+
+/* ---------- Category picker (ui.js openCatSheet) ---------- */
+.chip.catchip{font-size:13px;max-width:100%;white-space:normal;text-align:left}
+.chip.catchip.pend{border-color:var(--warn);background:var(--warn-soft)}
+.cps-wrap{position:fixed;inset:0;z-index:58;background:color-mix(in srgb,var(--deep) 55%,transparent);display:flex;align-items:flex-end;justify-content:center}
+.cps{background:var(--paper);width:min(560px,100%);max-height:88vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;padding:14px 16px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.2);outline:none}
+@media (min-width:700px){.cps-wrap{align-items:center}.cps{border-radius:20px;max-height:80vh}}
+.cps-top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.cps-top h3{margin:0;font-size:18px}
+.cps-ctx{margin:4px 0 0;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.cps-ctx strong{color:var(--ink)}
+.cps .tx{appearance:none;border:0;background:var(--sunk);color:var(--ink);width:36px;height:36px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer;flex:none}
+.cps-q{margin:12px 0 6px;font-size:16px}
+.cps-body{overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-bottom:8px;min-height:120px}
+.cps-sec{margin:12px 0 4px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cps-sug{display:flex;flex-wrap:wrap;gap:8px}
+.cps-sug .chip{font-size:15px;padding:8px 14px;background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
+.cps-it{appearance:none;border:0;background:none;text-align:left;padding:12px 10px;border-radius:12px;font:inherit;font-size:16px;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:46px}
+.cps-it:hover,.cps-it:focus-visible{background:var(--sunk)}
+.cps-it.on{background:var(--accent-soft);font-weight:600}
+.cps-ok{font-size:12px;color:var(--accent);font-weight:700}
+.cps-new{appearance:none;border:1px dashed var(--accent);background:none;color:var(--accent);font:inherit;font-weight:600;padding:12px;border-radius:12px;margin-top:10px;cursor:pointer;text-align:left}
+.cps-tip{margin:6px 2px 0}
+.cps-none{margin:10px 2px}
+/* Review of a statement on the phone: one card per entry, the description in full. */
+@media (max-width:640px){
+  table.rvcards thead{display:none}
+  table.rvcards,table.rvcards tbody,table.rvcards tr,table.rvcards td{display:block;width:100%}
+  table.rvcards{min-width:0}
+  table.rvcards tr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  table.rvcards td{padding:0;border:0}
+  table.rvcards td.rv-d{grid-column:1;grid-row:2;font-size:12.5px;color:var(--muted)}
+  table.rvcards td.rv-x{grid-column:1/-1;grid-row:1;font-weight:600;min-width:0!important;overflow-wrap:anywhere}
+  table.rvcards td.rv-c{grid-column:1;grid-row:3}
+  table.rvcards td.r{grid-column:2;grid-row:2/4;align-self:center;font-weight:700}
+}

@@ -96,6 +96,9 @@ if (arg('pdf')) await step('lancar_revisao', async () => {
   await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
   await page.setInputFiles('#pdfIn', arg('pdf')); await page.waitForSelector('#rvSave', { timeout: 30000 });
 }, { scrollTo: '#review' });
+// Choosing a category: the sheet with the entry, the search and the suggestions.
+if (arg('pdf')) await step('categoria', async () => { await page.click('#rvRows .catchip'); await page.waitForSelector('.cps'); await page.fill('.cps-q', 'estacion'); await page.waitForTimeout(200); });
+await page.click('.cps .tx').catch(() => {});
 await step('graficos', async () => { await page.click('[data-tab=graficos]'); await page.waitForTimeout(500); });
 await step('perguntar', async () => { await page.click('[data-tab=perguntar]'); await page.waitForTimeout(300); });
 await step('perguntar_resposta', async () => { await page.fill('#askText', 'quanto gastamos com mercado em setembro?'); await page.click('#askGo'); await page.waitForFunction(() => /R\$ 1\.284/.test(document.querySelector('#v-perguntar')?.textContent || ''), null, { timeout: 8000 }); });
