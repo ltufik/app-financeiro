@@ -284,6 +284,17 @@ if (SMOKE) { // The rest needs real family data: in the smoke run, check the mai
   throw SMOKE_DONE;
 }
 
+{ // Starting over: the owner clears every entry (even someone else's); family, people and categories stay.
+  await page.evaluate(() => { const h = window.__db.households[0].id; window.__db.transactions.push({ id: 'tz1', household_id: h, source: 'conta', month: '2026-10', date: '2026-10-20', description: 'Lançado pela Luana', amount: -50, category: 'Mercado', manual: true }); window.__db.imports.push({ id: 'iz1', household_id: h, source: 'conta', label: 'x' }); });
+  await sec('conta'); await page.click('#clearTx'); await page.waitForSelector('#confirmBox [data-y]');
+  ok('zerar os lançamentos pede confirmação e oferece baixar o backup antes', (await txt('#confirmBox')).includes('Zerar os lançamentos?') && (await txt('#confirmBox')).includes('Baixar backup agora'));
+  // The reload must not change what later tests count: the tour counter and the day of use.
+  const keep = await page.evaluate(() => { const o = Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('fin.coach')).map(k => [k, localStorage[k]])); Object.keys(localStorage).filter(k => k.startsWith('fin.act.')).forEach(k => localStorage.removeItem(k)); return o; });
+  await page.click('#confirmBox [data-y]'); await page.waitForSelector('#app:not([hidden])', { timeout: 10000 }); await page.waitForTimeout(500);
+  ok('zerar apaga lançamentos e importações e mantém a família e as categorias', await page.evaluate(() => !window.__db.transactions.length && !window.__db.imports.length && window.__db.households.length === 1 && window.__db.categories.length > 0));
+  await noCoach(); await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
+  await page.evaluate(ks => { Object.keys(localStorage).filter(k => k.startsWith('fin.coach')).forEach(k => localStorage.removeItem(k)); Object.entries(ks).forEach(([k, v]) => localStorage.setItem(k, v)); }, keep);
+}
 if (backup) {
   await sec('backup');
   await page.evaluate(() => { window.__db.households[0].settings = { ...(window.__db.households[0].settings || {}), keepMe: 1 }; });

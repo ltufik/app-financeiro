@@ -1,5 +1,6 @@
 import { S, settings, goals, reindex, monthKeys, txsOf } from '../state.js';
 import * as db from '../db.js';
+import { track } from '../usage.js';
 import { KINDS, kindOf, kindByKey, byCategory } from '../lib/calc.js';
 import { suggestBudgets, budgetsOf } from '../lib/budget.js';
 import { esc, todayISO } from '../lib/format.js';
@@ -147,6 +148,7 @@ export function render(el) {
     <div id="secBox" class="stack"></div>
     <h3>Sair ou apagar</h3>
     <div class="rowbtn"><button class="btn" id="signOut" type="button">Sair da conta</button>
+      ${owner ? '<button class="btn danger" id="clearTx" type="button">Zerar os lançamentos</button>' : ''}
       ${owner ? '<button class="btn danger" id="delFam" type="button">Apagar os dados da família</button>' : '<button class="btn" id="leave" type="button">Sair desta família</button>'}
       <button class="btn danger" id="delAcc" type="button">Excluir minha conta</button></div>
     <div id="confirmBox"></div>
@@ -392,6 +394,12 @@ export function render(el) {
     text: `Seu login será apagado. ${S.members.length > 1 ? 'A família tem outras pessoas, então os dados dela continuam com elas.' : 'Você é a única pessoa da família, então todos os dados dela também serão apagados.'} Isso não pode ser desfeito.`,
     label: 'Sim, excluir minha conta',
     run: async () => { await db.deleteMyAccount(); try { localStorage.clear(); } catch (e) { /* storage blocked */ } await db.sb.auth.signOut().catch(() => {}); flashAndReload('Sua conta foi excluída' + (S.members.length > 1 ? '.' : ', junto com os dados da família.') + ' Obrigado por testar o app.'); },
+  });
+  if (owner) $('#clearTx').onclick = () => ask({
+    title: 'Zerar os lançamentos?',
+    text: `Todos os lançamentos e importações da ${esc(S.hh.name)} serão apagados, inclusive os que ${S.members.length > 1 ? 'as outras pessoas da família fizeram' : 'você fez'}. A família, as pessoas, as categorias, as regras e as metas continuam. Bom para começar do zero e importar um backup. Isso não pode ser desfeito.`,
+    label: 'Sim, zerar os lançamentos',
+    run: async () => { await db.clearEntries(S.hh.id); track('conta.zerar'); flashAndReload('Lançamentos zerados. Agora é só importar o backup ou mandar a primeira fatura.'); },
   });
   if (owner) $('#delFam').onclick = () => ask({
     title: 'Apagar os dados da família?',

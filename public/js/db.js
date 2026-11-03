@@ -106,6 +106,16 @@ export async function exportBackup(hh, household) {
   return { version: 1, exportedAt: new Date().toISOString(), household: { name: household.name, settings: household.settings }, categories: f.categories.map(strip), rules: f.rules.map(strip), transactions: f.transactions.map(strip), studies: f.studies.map(strip) };
 }
 
+// Starting over (owner only): every entry and import of the family goes; the family, its people, categories,
+// rules and goals stay. Closed months are reopened, since there is nothing left in them.
+export async function clearEntries(hh) {
+  must(await sb.from('transactions').delete().eq('household_id', hh));
+  must(await sb.from('imports').delete().eq('household_id', hh));
+  const [cur] = must(await sb.from('households').select('settings').eq('id', hh));
+  const { closed, ...rest } = cur?.settings || {};
+  if (closed) must(await sb.from('households').update({ settings: rest }).eq('id', hh));
+}
+
 // Deletes all of this family's data (owner only). The login account itself stays.
 export const deleteHousehold = async hh => must(await sb.from('households').delete().eq('id', hh));
 export const deleteMyAccount = async () => must(await sb.rpc('delete_my_account'));

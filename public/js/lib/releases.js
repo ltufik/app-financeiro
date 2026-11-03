@@ -78,4 +78,5 @@ export const RELEASES = [
   ] },
   { id: 'r51', version: 'v51', at: '2026-11-03T01:11:00Z', backlog: [], semNovidade: 'Importar backup passa a manter os outros ajustes da família (quem paga o quê, meses fechados, gráficos); só metas, patrimônio e investimentos do arquivo substituem os atuais. Muda só para quem importa backup.' },
   { id: 'r52', version: 'v52', at: '2026-11-03T01:24:00Z', backlog: [], semNovidade: 'Correção: importar um backup com duas regras para o mesmo texto (com faixas de valor diferentes) parava no meio. Muda só para quem importa backup.' },
+  { id: 'r53', version: 'v53', at: '2026-11-03T01:39:00Z', backlog: [], semNovidade: 'Botão "Zerar os lançamentos" em menu ☰ → Conta, só para quem criou a família, para começar do zero e importar um backup; está nas Dúvidas e não vale pop-up para todos.' },
 ];
