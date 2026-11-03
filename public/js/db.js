@@ -1,5 +1,6 @@
 // Data access (Supabase). Row-level security in the database limits every query to the user's family.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+import { uniqueRules } from './lib/categorize.js';
 
 export let sb = null;
 export let config = {};
@@ -85,7 +86,7 @@ export async function importBackup(hh, b, onStep) {
   const newCats = (b.categories || []).filter(c => !cats.includes(c.name)).map(c => ({ household_id: hh, name: c.name, grp: c.grp, financing: !!c.financing }));
   if (newCats.length) must(await sb.from('categories').insert(newCats));
   onStep && onStep(`Categorias: ${newCats.length} novas`);
-  const rules = (b.rules || []).map(r => ({ household_id: hh, source: r.source, kind: r.kind, pattern: r.pattern, category: r.category, min_abs: r.min_abs ?? null, max_abs: r.max_abs ?? null, priority: r.priority ?? 100 }));
+  const rules = uniqueRules(b.rules).map(r => ({ household_id: hh, source: r.source, kind: r.kind, pattern: r.pattern, category: r.category, min_abs: r.min_abs ?? null, max_abs: r.max_abs ?? null, priority: r.priority ?? 100 }));
   for (let i = 0; i < rules.length; i += 500) must(await sb.from('rules').upsert(rules.slice(i, i + 500), { onConflict: 'household_id,source,kind,pattern', ignoreDuplicates: false }));
   onStep && onStep(`Regras: ${rules.length}`);
   const tx = (b.transactions || []).map(t => ({ household_id: hh, source: t.source, month: t.month, date: t.date || null, day: t.day || null, description: t.description || '', amount: t.amount, category: t.category || null, installment: t.installment || null, card: t.card || null, manual: !!t.manual, pending: !!t.pending, splits: t.splits || null, receipt: t.receipt || null }));

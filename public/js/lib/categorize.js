@@ -1,6 +1,22 @@
 // Rule-based categorization. rules: [{source, kind: 'exact'|'regex', pattern, category, min_abs, max_abs, priority}]
 import { norm } from './format.js';
 
+// The database keeps one rule per (source, kind, pattern). Two regex rules with the same pattern but a different
+// value range (e.g. "PIX from Luana" ≥ 5,000 is salary, below is other income) are both kept: the second gets
+// an empty group "(?:)", which matches exactly the same text. Repeated exact rules: the last one wins.
+export function uniqueRules(rules) {
+  const seen = new Map(), out = [];
+  for (const r of rules || []) {
+    let p = r.pattern; const key = () => `${r.source}|${r.kind}|${p}`;
+    if (seen.has(key())) {
+      if (r.kind !== 'regex') { out[seen.get(key())] = { ...r }; continue; }
+      while (seen.has(key())) p += '(?:)';
+    }
+    seen.set(key(), out.length); out.push({ ...r, pattern: p });
+  }
+  return out;
+}
+
 export function prepareRules(rules) {
   const exact = { conta: new Map(), cartao: new Map() }, regex = { conta: [], cartao: [] };
   for (const r of rules || []) {

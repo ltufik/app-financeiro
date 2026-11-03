@@ -77,4 +77,5 @@ export const RELEASES = [
     { id: 'parcerias_e_servicos', title: 'Serviços e parcerias com base nos dados (cross-sell)', status: 'ideia', origin: 'Luiz', effort: 'G', problem: 'Gerar receita ajudando a família com ofertas que fazem sentido para ela', cost: false, notes: 'Ex.: plano de internet mais barato, seguro, portabilidade de crédito. Só com consentimento explícito (LGPD), oferta claramente marcada como parceria, nunca compartilhar dados sem a pessoa pedir. Depende da revisão de custos e de definir o modelo de negócio (preço e canvas na Central).', from: [], where: 'A definir' },
   ] },
   { id: 'r51', version: 'v51', at: '2026-11-03T01:11:00Z', backlog: [], semNovidade: 'Importar backup passa a manter os outros ajustes da família (quem paga o quê, meses fechados, gráficos); só metas, patrimônio e investimentos do arquivo substituem os atuais. Muda só para quem importa backup.' },
+  { id: 'r52', version: 'v52', at: '2026-11-03T01:24:00Z', backlog: [], semNovidade: 'Correção: importar um backup com duas regras para o mesmo texto (com faixas de valor diferentes) parava no meio. Muda só para quem importa backup.' },
 ];

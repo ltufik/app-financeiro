@@ -469,3 +469,18 @@ test('mês de exemplo: números coerentes com o cálculo de verdade', () => {
   assert.ok(d.tx > 0.05 && d.tx < 0.4, 'taxa de quem guarda é plausível: ' + d.tx);
   assert.match(d.findings[0], /Delivery e restaurante somaram R\$ 1\.290/);
 });
+
+import { uniqueRules, prepareRules as prep2, classify as cls2 } from '../public/js/lib/categorize.js';
+test('backup: regras repetidas não travam a importação e continuam valendo', () => {
+  const rules = [
+    { source: 'conta', kind: 'regex', pattern: 'PIX RECEBIDO.*LUANA', category: 'Salário Luana', min_abs: 5000, priority: 108 },
+    { source: 'conta', kind: 'regex', pattern: 'PIX RECEBIDO.*LUANA', category: 'Outras entradas', priority: 109 },
+    { source: 'cartao', kind: 'exact', pattern: 'NETFLIX', category: 'Lazer' }, { source: 'cartao', kind: 'exact', pattern: 'NETFLIX', category: 'Assinaturas' },
+  ];
+  const u = uniqueRules(rules);
+  assert.equal(new Set(u.map(r => r.source + r.kind + r.pattern)).size, u.length);
+  assert.equal(u.length, 3); assert.equal(u.find(r => r.pattern === 'NETFLIX').category, 'Assinaturas');
+  const P = prep2(u);
+  assert.equal(cls2({ source: 'conta', description: 'PIX RECEBIDO LUANA F', amount: 9000 }, P)?.category, 'Salário Luana');
+  assert.equal(cls2({ source: 'conta', description: 'PIX RECEBIDO LUANA F', amount: 300 }, P)?.category, 'Outras entradas');
+});

@@ -33,6 +33,7 @@ class Q {
       tb.push(...out); return { data: this.one ? out[0] : (this.ret ? out : null), error: null };
     }
     if (this.op === 'upsert') {
+      { const ks = this.p.map(r => [r.household_id, r.source, r.kind, r.pattern].join('|')); if (new Set(ks).size < ks.length) return { data: null, error: { message: 'ON CONFLICT DO UPDATE command cannot affect row a second time' } }; }
       for (const r of this.p) { const i = tb.findIndex(x => x.household_id === r.household_id && x.source === r.source && x.kind === r.kind && x.pattern === r.pattern); if (i >= 0) Object.assign(tb[i], r); else tb.push({ id: uid(), ...base, ...r }); }
       return { data: null, error: null };
     }
