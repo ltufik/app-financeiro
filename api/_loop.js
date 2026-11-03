@@ -76,9 +76,22 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
   }
   // Everyone with notifications on hears about what is new; who got a personal message for this release
   // already heard it with their name, so they are skipped.
-  const fresh = todo.filter(r => r.news).map(r => r.news);
-  if (fresh.length && vapid?.publicKey && vapid?.privateKey) pushed = await pushNews(db, fresh, personal, vapid, fetchImpl).catch(() => 0);
-  return { applied: todo.length, replied, pushed };
+  const fresh = todo.filter(r => r.news).map(r => r.news).reverse(); // newest first: it is the one the push talks about
+  let pushErr = null;
+  if (fresh.length) {
+    if (!vapid?.publicKey || !vapid?.privateKey) pushErr = 'notificações sem as chaves VAPID na Vercel';
+    else pushed = await pushNews(db, fresh, personal, vapid, fetchImpl).catch(e => { pushErr = String(e?.message || e).slice(0, 160); return 0; });
+  }
+  // What happened, for Central → Versões: devices reached, personal messages, or why the push did not go.
+  // A note that reached nobody stays free in Central → Novidades ("Mandar no celular") to try again.
+  const at = new Date().toISOString();
+  const log = [...(state.log || []), ...todo.map(r => ({ id: r.id, at, news: !!r.news, pushed: r.news ? pushed : null, replied, err: r.news ? pushErr : null }))].slice(-60);
+  await db.setBoard('releases', { applied: [...state.applied, ...todo.map(r => r.id)], log }).catch(() => {});
+  if (pushed) {
+    const nb = await db.board('news').catch(() => null);
+    if (nb?.items) { const top = fresh[0]; const it = nb.items.find(n => n.id === top.id); if (it && !it.pushed_at) { Object.assign(it, { pushed_at: at, pushed_count: pushed }); await db.setBoard('news', nb).catch(() => {}); } }
+  }
+  return { applied: todo.length, replied, pushed, err: pushErr };
 }
 
 // One push per person (on each of their devices) about the newest note, unless they turned "Novidades" off.
@@ -88,7 +101,7 @@ export const newsPush = (list, name = '') => {
   return { title: (first ? `${first}, novidade no Pra Onde Foi: ` : 'Novidade no Pra Onde Foi: ') + top.title, body: (top.items?.[0] || '') + (rest.length ? ` E mais ${rest.length} ${rest.length > 1 ? 'novidades' : 'novidade'} no sininho.` : ''), url: linkFor('novidade', { id: top.id }), tag: 'news-' + top.id };
 };
 export async function pushNews(db, list, skipUsers, vapid, fetchImpl) {
-  const subs = await db.get('push_subscriptions?select=id,user_id,endpoint,p256dh,auth,prefs').catch(() => []);
+  const subs = await db.get('push_subscriptions?select=id,user_id,endpoint,p256dh,auth,prefs');
   const members = await db.get('members?select=user_id,display_name').catch(() => []);
   const nameOf = id => members.find(m => m.user_id === id)?.display_name || '';
   let n = 0;

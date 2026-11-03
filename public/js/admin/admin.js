@@ -723,7 +723,12 @@ export const DONE = [
   ['Versão do app', 'O número da versão muda, para os celulares buscarem a nova.'],
 ];
 async function versoes(el) {
-  let applied = []; try { applied = (await api('GET', 'releases')).data?.applied || []; } catch (e) { /* not applied yet */ }
+  let applied = [], log = []; try { const d = (await api('GET', 'releases')).data || {}; applied = d.applied || []; log = d.log || []; } catch (e) { /* not applied yet */ }
+  // What each release did when it reached the users: push to everyone and personal messages.
+  const sentTxt = r => { const l = log.filter(x => x.id === r.id).pop(); if (!l) return ''; const parts = [];
+    if (l.news) parts.push(l.err ? `<span class="neg">Push para todos não saiu: ${esc(l.err)}. Mande de novo em Novidades → Mandar no celular.</span>` : l.pushed ? `Push para todos: chegou em ${l.pushed} ${l.pushed === 1 ? 'aparelho' : 'aparelhos'}` : '<span class="neg">Push para todos não chegou a nenhum aparelho. Confira em Avisos no celular e mande de novo em Novidades.</span>');
+    if (l.replied) parts.push(`${l.replied} ${l.replied === 1 ? 'recado personalizado' : 'recados personalizados'} para quem pediu`);
+    return parts.length ? `<p class="small" style="margin:0">${parts.join(' · ')}</p>` : ''; };
   const byId = new Map((D.backlog?.items || []).map(i => [i.id, i]));
   const list = RELEASES.slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   el.innerHTML = `<div class="ahead"><h1>Versões</h1><span class="tiny muted">Versão no ar: ${esc(list[0]?.version || '—')}</span></div>
@@ -734,5 +739,6 @@ async function versoes(el) {
         <h2 style="margin:4px 0 0">${esc(r.news?.title || 'Sem novidade para os usuários')}</h2></div><span class="tiny ${applied.includes(r.id) ? 'pos' : 'muted'}">${applied.includes(r.id) ? 'Já chegou para os usuários' : 'Chega na próxima vez que alguém abrir o app'}</span></div>
         ${r.news ? `<ul class="small" style="margin:0">${r.news.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : `<p class="small muted" style="margin:0">${esc(r.semNovidade || '')}</p>`}
         ${done.length ? `<p class="small" style="margin:0"><strong>Concluiu (recado automático para quem pediu):</strong> ${done.map(esc).join('; ')}</p>` : ''}
+        ${sentTxt(r)}
         ${added.length ? `<p class="small" style="margin:0"><strong>Novo no backlog:</strong> ${added.map(i => esc(i.title) + (i.status === 'feito' ? ' (feito)' : '')).join('; ')}</p>` : ''}</article>`; }).join('')}</div>`;
 }

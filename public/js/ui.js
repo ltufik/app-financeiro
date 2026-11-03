@@ -14,11 +14,11 @@ export function toast(t, kind) {
   kind = kind || (ERR.test(t) ? 'err' : 'ok');
   if (kind === 'err') window.__onToastErr?.(t);
   clearInterval(toast.h);
-  let left = 5;
+  let left = 3;
   const icon = kind === 'err' ? '<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>' : kind === 'info' ? '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>' : '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>';
   el.className = 'toast ' + kind; el.setAttribute('role', kind === 'err' ? 'alert' : 'status');
   el.innerHTML = `<span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></span>
-    <span class="tt"><strong>${kind === 'err' ? 'Algo deu errado' : kind === 'info' ? 'Aviso' : 'Pronto!'}</strong><span>${esc(t)}</span><span class="tc">Fecha em <b>5</b>s</span></span>
+    <span class="tt"><strong>${kind === 'err' ? 'Algo deu errado' : kind === 'info' ? 'Aviso' : 'Pronto!'}</strong><span>${esc(t)}</span><span class="tc">Fecha em <b>3</b>s</span></span>
     <button type="button" class="tx" aria-label="Fechar">×</button>`;
   el.hidden = false;
   const close = () => { clearInterval(toast.h); el.hidden = true; };

@@ -48,7 +48,8 @@ test('applyReleases: publica a novidade, conclui o item e avisa, uma vez só', a
   const { T, db } = fakeDb();
   const releases = [{ id: 'r1', at: '2026-11-01T12:00:00Z', backlog: [{ id: 'semana', where: 'Gráficos → por semana' }], news: { id: 'n1', title: 'Gasto por semana', items: ['Em Gráficos'] } }];
   const first = await applyReleases(db, null, { releases });
-  assert.deepEqual(first, { applied: 1, replied: 1, pushed: 0 });
+  assert.deepEqual(first, { applied: 1, replied: 1, pushed: 0, err: 'notificações sem as chaves VAPID na Vercel' });
+  assert.deepEqual(T.product_board.find(r => r.key === 'releases').data.log.map(l => [l.id, l.news, l.replied, l.err]), [['r1', true, 1, 'notificações sem as chaves VAPID na Vercel']]);
   const board = k => T.product_board.find(r => r.key === k).data;
   assert.equal(board('news').items[0].title, 'Gasto por semana');
   assert.equal(board('backlog').items[0].status, 'feito');
@@ -216,4 +217,25 @@ test('applyReleases: seção nova na Documentação da Central, uma vez só', as
   await applyReleases(db, null, { releases: [...releases, { id: 'r10', at: '2026-11-04T12:00:00Z', backlog: [], semNovidade: 'x' }] });
   const docs = T.product_board.find(r => r.key === 'docs').data.items;
   assert.deepEqual(docs.map(d => d.id), ['visao', 'estudo']);
+});
+
+test('applyReleases: push da versão chega a todos, menos a quem recebeu o recado personalizado, e fica registrado', async () => {
+  const { T, db, fetchImpl } = fakeDb();
+  const { generateVapidKeys } = await import('../api/_webpush.js');
+  const crypto = await import('node:crypto');
+  const sub = id => { const e = crypto.createECDH('prime256v1'); e.generateKeys(); return { id, user_id: id, endpoint: 'https://fcm.googleapis.com/fcm/send/' + id, p256dh: e.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url'), prefs: {} }; };
+  T.push_subscriptions.push(sub('u1'), sub('u2'), { ...sub('u3'), prefs: { novidades: false } });
+  T.product_board.push({ key: 'news', data: { items: [] } });
+  const sent = [];
+  const f = async (url, o) => { if (String(url).startsWith('https://fcm.googleapis.com')) { sent.push(String(url).split('/').pop()); return { ok: true, status: 201 }; } return fetchImpl(url, o); };
+  const { rest } = await import('../api/_loop.js');
+  const db2 = rest('https://x.supabase.co', 'sb_secret_x', f);
+  const releases = [{ id: 'r1', at: '2026-11-01T12:00:00Z', backlog: [{ id: 'semana', where: 'Gráficos' }], news: { id: 'n1', title: 'Gasto por semana', items: ['Em Gráficos'] } }];
+  const out = await applyReleases(db2, { ...generateVapidKeys(), subject: 'mailto:a@b.c' }, { releases, fetchImpl: f });
+  // u1 asked for it: only the personal message; u2 gets the general one; u3 turned "Novidades" off.
+  assert.equal(out.replied, 1); assert.equal(out.pushed, 1); assert.equal(out.err, null);
+  assert.deepEqual(sent.sort(), ['u1', 'u2']);
+  const log = T.product_board.find(r => r.key === 'releases').data.log[0];
+  assert.deepEqual([log.pushed, log.replied, log.err], [1, 1, null]);
+  assert.equal(T.product_board.find(r => r.key === 'news').data.items.find(n => n.id === 'n1').pushed_count, 1);
 });

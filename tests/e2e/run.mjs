@@ -770,7 +770,9 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.click('[data-ef="tras"]'); await ap.waitForTimeout(150);
   ok('central: filtro de erros por trás', (await ap.$$('.errgrp')).length === 1);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-12-erros.png'), fullPage: true });
+  adminStore.releases = { applied: ['r72', 'r71'], log: [{ id: 'r72', news: true, pushed: 5, replied: 2, err: null }, { id: 'r70', news: true, pushed: 0, replied: 0, err: 'sem permissão' }] };
   await atab('versoes'); await ap.waitForSelector('#aMain article');
+  ok('central: versões mostram para quantos aparelhos o push foi e os recados personalizados', (await ap.textContent('#aMain')).includes('Push para todos: chegou em 5 aparelhos · 2 recados personalizados para quem pediu'));
   ok('central: versões com a definição de pronto e a novidade de cada uma', (await ap.textContent('#aMain')).includes('Definição de pronto') && (await ap.textContent('#aMain')).includes('Lançar sem abrir o app') && (await ap.textContent('#aMain')).includes('Novo no backlog'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-13-versoes.png'), fullPage: true });
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
