@@ -1032,10 +1032,13 @@ ok('ligadas: o menu não diz mais "Desligadas"', !(await txt('#drawer [data-sec=
 await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 await page.waitForTimeout(600);
 ok('ao ativar, manda um aviso de teste', window_pushTests >= 1);
+// The service worker tells the page the test reached the phone (headless has no push service: simulated).
+await page.waitForTimeout(600);
+await page.evaluate(() => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'push', tag: 'teste', shown: true } })));
 await page.waitForSelector('#pCheck:not([hidden])', { timeout: 8000 }).catch(() => {});
-ok('depois do teste, pergunta se o aviso apareceu no celular', await page.isVisible('#pYes') && await page.isVisible('#pNo'));
+ok('depois do teste, diz que o aviso chegou ao celular e pergunta se apareceu', await page.isVisible('#pYes') && await page.isVisible('#pNo') && (await txt('#pCheck')).includes('chegou neste celular'));
 await page.click('#pNo'); await page.waitForTimeout(300);
-ok('"Não apareceu": abre o passo a passo dos ajustes do celular', await page.evaluate(() => document.querySelector('#pPhone').open) && (await txt('#pPhone')).includes('Não perturbe') && (await txt('#pMsg')).includes('celular está segurando'));
+ok('"Não apareceu" (mas chegou): explica que são os ajustes do celular e abre o passo a passo', await page.evaluate(() => document.querySelector('#pPhone').open) && (await txt('#pPhone')).includes('Não perturbe') && (await txt('#pMsg')).includes('chegou, mas o celular não mostrou'));
 await shot('08b-avisos');
 await page.check('#pushBox [data-pt="semanal"]'); await page.waitForTimeout(150);
 ok('mudar o tipo de aviso salva na hora', await page.evaluate(() => window.__db.push_subscriptions[0].prefs.semanal === true));

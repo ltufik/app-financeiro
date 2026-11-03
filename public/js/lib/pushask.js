@@ -54,3 +54,12 @@ export function phoneSteps(platform) {
   if (platform === 'android') return [...base, 'Se usa economia de bateria, deixe o Chrome sem restrição em Configurações → Bateria.'];
   return ['Nas configurações do sistema, permita notificações para o navegador e para praondefoi.app.br.', 'Confira se o modo Não perturbe está desligado.'];
 }
+
+// The test notice, from the app's point of view: 'arrived' (the phone got it; if it did not show, the phone's
+// notification settings hold it), 'blocked' (the phone refused to show it) or 'missing' (did not reach the
+// phone in time: battery saving or background limits on Chrome, or no internet).
+export function testOutcome(kind) {
+  if (kind === 'arrived') return { ask: 'O aviso chegou neste celular. Ele apareceu na tela?', no: 'O aviso chegou, mas o celular não mostrou: as notificações estão desligadas nos ajustes do celular. Siga os passos abaixo e mande o teste de novo.' };
+  if (kind === 'blocked') return { ask: '', no: 'O celular recusou mostrar o aviso: as notificações deste app estão bloqueadas. Siga os passos abaixo e mande o teste de novo.' };
+  return { ask: 'O aviso ainda não chegou neste celular. Ele apareceu na tela?', no: 'O aviso não chegou até o celular. Normalmente é a economia de bateria do celular segurando o app ou o navegador, ou a internet. Depois de ajustar, mande o teste de novo.' };
+}

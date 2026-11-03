@@ -15,7 +15,7 @@ import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
 import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
-import { platformOf, phoneSteps } from '../lib/pushask.js';
+import { platformOf, phoneSteps, testOutcome } from '../lib/pushask.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
@@ -478,17 +478,29 @@ async function renderPush(box) {
   };
   else {
     // Did it really show on the phone? If not, the phone's own settings are holding it: show the way.
+    // The service worker says when the test reaches this phone: then the question is only whether it showed.
+    let got = null;
+    const onMsg = ev => { if (ev.data?.type === 'push' && ev.data.tag === 'teste') got = ev.data.shown === false ? 'blocked' : 'arrived'; };
+    navigator.serviceWorker?.addEventListener('message', onMsg);
+    const ask = () => {
+      const c = $('#pCheck'); if (!c) return;
+      const o = testOutcome(got || 'missing');
+      if (got === 'blocked') { $('#pNo').click(); return; }
+      c.querySelector('p').innerHTML = `<strong>${o.ask}</strong>`; c.hidden = false;
+    };
     const test = async () => {
-      say('busy', 'Enviando...');
-      try { await sendTest(); say('ok', 'Aviso enviado. Ele chega em alguns segundos.'); setTimeout(() => { const c = $('#pCheck'); if (c) c.hidden = false; }, 4000); }
-      catch (e) { say('err', 'Não foi possível enviar o teste agora. Verifique a internet e tente de novo.'); }
+      got = null; say('busy', 'Enviando...');
+      try {
+        await sendTest(); say('ok', 'Aviso enviado. Ele chega em alguns segundos.');
+        const t0 = Date.now(); const wait = setInterval(() => { if (got || Date.now() - t0 > 15000) { clearInterval(wait); ask(); } }, 500);
+      } catch (e) { say('err', 'Não foi possível enviar o teste agora. Verifique a internet e tente de novo.'); }
     };
     $('#pTest').onclick = test;
     $('#pYes').onclick = () => { track('avisos.teste_chegou'); $('#pCheck').hidden = true; say('ok', 'Tudo certo! Os avisos vão chegar assim.'); };
     $('#pNo').onclick = () => {
-      track('avisos.teste_nao_chegou'); $('#pCheck').hidden = true;
+      track(got === 'arrived' ? 'avisos.teste_nao_mostrou' : got === 'blocked' ? 'avisos.teste_bloqueado' : 'avisos.teste_nao_chegou'); $('#pCheck').hidden = true;
       const d = $('#pPhone'); d.open = true; d.classList.add('pulse'); d.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      say('err', 'Parece que o celular está segurando os avisos. Confira os passos abaixo e mande o teste de novo.');
+      say('err', testOutcome(got || 'missing').no);
     };
     if (S.pushAskCheck) { S.pushAskCheck = false; setTimeout(test, 400); }
     $('#pOff').onclick = async e => {

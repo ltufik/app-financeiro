@@ -590,3 +590,10 @@ test('notificações: passo a passo dos ajustes do celular', () => {
   assert.match(phoneSteps('samsung').join(' '), /Apps em suspensão/);
   assert.ok(phoneSteps('other').length >= 2);
 });
+
+import { testOutcome } from '../public/js/lib/pushask.js';
+test('notificações: o teste diz se o aviso chegou ao celular ou não', () => {
+  assert.match(testOutcome('arrived').no, /chegou, mas o celular não mostrou/);
+  assert.match(testOutcome('missing').no, /não chegou até o celular/);
+  assert.equal(testOutcome('blocked').ask, '');
+});

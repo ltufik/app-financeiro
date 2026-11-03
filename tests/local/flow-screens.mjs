@@ -139,7 +139,7 @@ await page.evaluate(() => document.querySelectorAll('.bellbox').forEach(x => x.r
 await msg('convite_avisos', async () => {});
 // "Quero receber" → Ativar → Permitir; the test notice did not show: the phone's own settings, step by step.
 await page.click('.ann [data-p]').catch(() => {});
-await step('avisos_celular', async () => { await page.click('#pOn'); await page.waitForSelector('#pCheck:not([hidden])', { timeout: 10000 }); await page.click('#pNo'); await page.waitForTimeout(400); }, { scrollTo: '#pMsg' });
+await step('avisos_celular', async () => { await page.click('#pOn'); await page.waitForSelector('#pCheck:not([hidden])', { timeout: 20000 }); await page.click('#pNo'); await page.waitForTimeout(400); }, { scrollTo: '#pMsg' });
 // Security: the lock screen (left alone longer than the chosen time) and the message after signing out.
 await page.evaluate(() => { localStorage.setItem('shots.msgs', ''); document.querySelectorAll('.bellbox, .cfm-wrap').forEach(x => x.remove()); });
 await step('bloqueio', async () => { await page.keyboard.press('Escape').catch(() => {}); await sec('conta'); await page.click('#lkNow'); await page.waitForSelector('#lockScreen'); });
