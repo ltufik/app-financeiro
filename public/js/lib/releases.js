@@ -91,4 +91,5 @@ export const RELEASES = [
   ] }, addBacklog: [
     { id: 'duas_faturas_no_mesmo_mes', title: 'Duas faturas (ou extratos) no mesmo mês sem uma apagar a outra', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Ao mandar a fatura do Mastercard (só anuidade), o app achou que era a do Visa e perguntou se podia apagar a outra', cost: false, notes: 'Solução: antes de perguntar, o app compara os números finais dos cartões (ou o banco, no extrato) e os lançamentos com o que já está no mês. Mesma fatura reenviada: troca só ela. Outro cartão: entra junto, sem perguntar nada. Faturas antigas sem número do cartão (backup) são reconhecidas pelos lançamentos. No banco: função replace_statement (precisa rodar o schema.sql).', from: [], where: 'Lançar → Fatura ou extrato' },
   ] },
+  { id: 'r56', version: 'v56', at: '2026-11-03T02:54:00Z', backlog: [], semNovidade: 'Central do produto: "Pedir ao Claude" também nos cards do quadro do backlog (antes só na lista) e botão "Resumo p/ Claude" no celular. Só o dono do produto vê.' },
 ];

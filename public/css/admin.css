@@ -167,3 +167,5 @@ body.admin{background:var(--paper)}
   table.atable td:first-child::before{display:none}
   table.atable td:empty{display:none}
 }
+
+.kcard .kclaude{align-self:flex-start;font-size:13px}
