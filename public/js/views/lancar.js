@@ -210,7 +210,7 @@ async function routeFile(file, from) {
 async function statementFromImage(file, kind) {
   openMode('pdf', false);
   $('#pdfLog').innerHTML = ''; $('#review').hidden = true; $('#pwBox').hidden = true;
-  PDF.bytes = null; PDF.name = file.name || 'imagem'; PDF.bank = null;
+  PDF.bytes = null; PDF.name = file.name || 'imagem'; PDF.bank = null; PDF.pageTexts = null;
   plog(`É ${kind === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[kind]}. Lendo a imagem...`);
   let blob;
   try { blob = await shrink(file, 2400); } catch (e) { plog('Não consegui abrir a imagem. Se for do iPhone (HEIC), tire um print e envie o print.', 'var(--bad)'); return; }
@@ -296,7 +296,7 @@ async function startPdf(file) {
   $('#pdfLog').innerHTML = ''; $('#review').hidden = true; $('#pwBox').hidden = true;
   if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { plog('Este arquivo não parece ser um PDF.', 'var(--bad)'); return; }
   if (file.size > 25 * 1024 * 1024) { plog('O PDF é grande demais (máximo 25 MB).', 'var(--bad)'); return; }
-  PDF.bytes = new Uint8Array(await file.arrayBuffer()); PDF.name = file.name;
+  PDF.bytes = new Uint8Array(await file.arrayBuffer()); PDF.name = file.name; PDF.pageTexts = null;
   plog('Lendo ' + file.name + '...');
   return openPdf();
 }
@@ -329,6 +329,7 @@ async function openPdf(password) {
     pages.push({ pg, w: vp.width, items: tc.items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width })) });
   }
   const lines1 = pages.flatMap(p => lineify(p.items, p.w, 1)), text = lines1.join('\n'), type = detect(text);
+  PDF.pageTexts = pages.map(p => lineify(p.items, p.w, 1).join('\n'));
   PDF.bank = detectBank(text);
   // What the text says it is decides the path, whatever button was used.
   const cls = classifyText(text, { pages: doc.numPages });
@@ -379,13 +380,43 @@ Extrato: só a movimentação da conta, na ordem, débitos com valor negativo e 
 Fatura: um item por lançamento da fatura atual, de todos os cartões (titular, adicionais e virtuais), com o final do cartão de cada um; compras e parcelas positivas; créditos, estornos e cashback negativos; inclua anuidade, IOF, juros e encargos como itens. Não inclua o pagamento da fatura anterior, saldo anterior, limite, pagamento mínimo nem simulações de parcelamento. Parcela no formato 02/10 quando houver. Se a fatura mostrar o total de cada cartão, informe em cartoes; informe sempre o valor total da fatura em valorTotalFatura.
 Investimentos: use o resumo por classe de ativo e o total da carteira.`;
 
+// Long documents are read in parts (a few pages each): one long answer can take longer than the server allows,
+// and a part that fails is tried once more before giving up.
+const askTwice = async (prompt, opts) => { try { return await askJSON(prompt, opts); } catch (e) { if (['not_configured', 'not_allowed', 'not_signed_in', 'rate_limited'].includes(e.code)) throw e; plog('Tentando de novo...'); return askJSON(prompt, opts); } };
+function textParts(text, pageTexts, max = 9000) {
+  if (!pageTexts || pageTexts.length < 2 || text.length <= max * 1.4) return [text];
+  const out = []; let cur = '';
+  for (const t of pageTexts) { if (cur && cur.length + t.length > max) { out.push(cur); cur = ''; } cur += (cur ? '\n' : '') + t; }
+  if (cur) out.push(cur);
+  return out;
+}
+// Joins what was read in parts (pages or pieces of text) into one document.
+function mergeParts(kind, parts) {
+  const m = { tipo: kind === 'auto' ? parts.find(p => p?.tipo)?.tipo : kind, banco: parts.map(p => p?.banco).find(Boolean) };
+  if (m.tipo === 'fatura') {
+    m.itens = parts.flatMap(p => p?.itens || []); const cs = {}; parts.forEach(p => (p?.cartoes || []).forEach(c => { if (c?.final && +c.valorTotal) cs[c.final] = +c.valorTotal; }));
+    m.cartoes = Object.entries(cs).map(([final, valorTotal]) => ({ final, valorTotal })); m.vencimento = parts.map(p => p?.vencimento).find(Boolean);
+    m.valorTotalFatura = parts.map(p => p?.valorTotalFatura).find(v => v != null && +v);
+  } else if (m.tipo === 'extrato') {
+    m.movimentos = parts.flatMap(p => p?.movimentos || []); m.saldoAnterior = parts.map(p => p?.saldoAnterior).find(v => v != null); m.saldoFinal = parts.map(p => p?.saldoFinal).filter(v => v != null).pop(); m.mes = parts.map(p => p?.mes).find(Boolean);
+    m.totalEntradas = parts.map(p => p?.totalEntradas).find(v => v != null); m.totalSaidas = parts.map(p => p?.totalSaidas).find(v => v != null);
+  } else Object.assign(m, parts.find(p => p && p.totalBruto) || {});
+  return m;
+}
+
 async function viaClaude(doc, pages, text, kind, blobs = null) {
   const fmt = kind === 'investimentos' ? JSON_INVEST : kind === 'extrato' ? JSON_EXTRATO : kind === 'fatura' ? JSON_FATURA : `um destes formatos, conforme o documento: ${JSON_EXTRATO} ou ${JSON_FATURA} ou ${JSON_INVEST}`;
   try {
     if (text && (text.match(MONEY) || []).length > 5) {
       plog('Lendo o documento com a leitura inteligente...');
-      const r = await askJSON(`Extraia os dados deste documento financeiro brasileiro (texto extraído de PDF). Responda só com JSON em ${fmt}.\n${RULES_TXT}\nDocumento:\n"""${text.slice(0, 150000)}"""`, { maxTokens: 16000 });
-      return handleExtracted(r);
+      const chunks = textParts(text, PDF.pageTexts);
+      if (chunks.length === 1) return handleExtracted(await askTwice(`Extraia os dados deste documento financeiro brasileiro (texto extraído de PDF). Responda só com JSON em ${fmt}.\n${RULES_TXT}\nDocumento:\n"""${text.slice(0, 150000)}"""`, { maxTokens: 16000 }));
+      const parts = [];
+      for (let i = 0; i < chunks.length; i++) {
+        plog(`Lendo a parte ${i + 1} de ${chunks.length}...`);
+        parts.push(await askTwice(`Abaixo está a parte ${i + 1} de ${chunks.length} de um documento financeiro brasileiro (texto extraído de PDF). Extraia só o que aparece nesta parte. Responda só com JSON em ${fmt}. Se esta parte não tiver lançamentos, devolva as listas vazias; se mostrar o total da fatura, o vencimento ou os saldos, informe.\n${RULES_TXT}\nParte do documento:\n"""${chunks[i]}"""`, { maxTokens: 8000 }));
+      }
+      return handleExtracted(mergeParts(kind, parts));
     }
     const parts = [];
     const n = blobs ? blobs.length : pages.length;
@@ -400,10 +431,7 @@ async function viaClaude(doc, pages, text, kind, blobs = null) {
       try { parts.push(await askJSON(`A imagem é ${blobs ? 'uma foto ou um print' : `a página ${i + 1} de ${n}`} de um documento financeiro brasileiro (${kind}). Extraia só o que aparece nesta página. Responda só com JSON em ${fmt}. Se a página não tiver lançamentos, devolva as listas vazias.\n${RULES_TXT}`, { images: [blob], maxTokens: 8000 })); }
       catch (e) { plog(`A página ${i + 1} não pôde ser lida (${aiErrorText(e)})`, 'var(--warn)'); if (['not_configured', 'not_allowed', 'not_signed_in'].includes(e.code)) return; }
     }
-    const m = { tipo: kind === 'auto' ? parts.find(p => p?.tipo)?.tipo : kind };
-    if (m.tipo === 'fatura') { m.itens = parts.flatMap(p => p?.itens || []); const cs = {}; parts.forEach(p => (p?.cartoes || []).forEach(c => { if (c?.final && +c.valorTotal) cs[c.final] = +c.valorTotal; })); m.cartoes = Object.entries(cs).map(([final, valorTotal]) => ({ final, valorTotal })); m.vencimento = parts.map(p => p?.vencimento).find(Boolean); }
-    else if (m.tipo === 'extrato') { m.movimentos = parts.flatMap(p => p?.movimentos || []); m.saldoAnterior = parts.map(p => p?.saldoAnterior).find(v => v != null); m.saldoFinal = parts.map(p => p?.saldoFinal).filter(v => v != null).pop(); m.mes = parts.map(p => p?.mes).find(Boolean); }
-    else Object.assign(m, parts.find(p => p && p.totalBruto) || {});
+    const m = mergeParts(kind, parts);
     return handleExtracted(m);
   } catch (e) { plog(aiErrorText(e), 'var(--bad)'); }
 }

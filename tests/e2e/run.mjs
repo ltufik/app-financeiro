@@ -23,7 +23,7 @@ const clog = []; page.on('console', m => clog.push(m.type() + ': ' + m.text().sl
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fetching the script/.test(m.text())) errors.push(m.text()); });
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
-const adminStore = {}, adminPuts = [], adminPatches = [];
+const adminStore = {}, adminPuts = [], adminPatches = [], adminPatchesSeen = [];
 const NAV_FIXTURE = { days: 30, at: '2026-10-30T12:00:00Z',
   screens: [{ s: 'inicio', views: 40, users: 2, seconds: 1200 }, { s: 'lancar', views: 12, users: 2, seconds: 600 }, { s: 'menu.metas', views: 3, users: 1, seconds: 240 }],
   flows: [{ f: 'inicio', t: 'lancar', n: 9, users: 2 }, { f: 'lancar', t: 'inicio', n: 5, users: 1 }],
@@ -54,10 +54,10 @@ async function addRoutes(t) {
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'nav') return r.fulfill({ json: NAV_FIXTURE });
     if (u.pathname === '/api/admin' && r.request().method() === 'PATCH') { const b = JSON.parse(r.request().postData()); adminPatches.push(b); const f = FB_FIXTURE.find(x => x.id === b.feedback); if (f && b.status) f.status = b.status; if (f && b.reply) Object.assign(f, { reply: b.reply, replied_at: '2026-10-30T15:00:00Z', reply_seen: false, status: 'resolvido' }); return r.fulfill({ json: { ok: true, pushed: b.reply ? 1 : 0 } }); }
-    if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); const prev = adminStore[b.key]; adminStore[b.key] = b.data; adminPuts.push(b.key); const loop = b.key === 'backlog' ? { replied: newlyDone(prev?.items || [], b.data.items).reduce((a, x) => a + x.ids.length, 0) } : null; if (prev && b.key === 'backlog') adminStore[b.key] = JSON.parse(JSON.stringify(b.data)); return r.fulfill({ json: { ok: true, loop } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
+    if (u.pathname === '/api/admin') { if (r.request().method() === 'PUT') { const b = JSON.parse(r.request().postData()); const prev = adminStore[b.key]; if (b.patch) { adminPatchesSeen.push(b.key); const items = [...(prev?.items || [])]; for (const it of b.patch.upsert) { const i = items.findIndex(x => x.id === it.id); if (i >= 0) items[i] = it; else items.unshift(it); } const pos = new Map(b.patch.order.map((id, i) => [id, i])); b.data = { ...(prev || {}), items: items.filter(x => !b.patch.delete.includes(x.id)).sort((x, y) => (pos.has(x.id) ? pos.get(x.id) : -1) - (pos.has(y.id) ? pos.get(y.id) : -1)) }; } adminStore[b.key] = b.data; adminPuts.push(b.key); const loop = b.key === 'backlog' ? { replied: newlyDone(prev?.items || [], b.data.items).reduce((a, x) => a + x.ids.length, 0) } : null; if (prev && b.key === 'backlog') adminStore[b.key] = JSON.parse(JSON.stringify(b.data)); return r.fulfill({ json: { ok: true, loop, data: adminStore[b.key] } }); } return r.fulfill({ json: { data: adminStore[u.searchParams.get('key')] ?? null } }); }
     if (u.pathname === '/api/notify') { notifies.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { sent: 1 } }); }
     if (u.pathname === '/api/push-test') { window_pushTests++; return r.fulfill({ json: { ok: true } }); }
-    if (u.pathname === '/api/ai') return r.fulfill({ json: aiMock(JSON.parse(r.request().postData())) });
+    if (u.pathname === '/api/ai') { const out = aiMock(JSON.parse(r.request().postData())); return out?.__status ? r.fulfill({ status: out.__status, json: { error: 'timeout' } }) : r.fulfill({ json: out }); }
     const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
     if (!fs.existsSync(p)) return r.fulfill({ status: 404, body: 'nf' });
     r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
@@ -103,9 +103,18 @@ await page.addInitScript(() => {
 
 const txt2 = (p, sel) => p.textContent(sel).then(t => (t || '').trim());
 let chatCalls = 0, window_pushTests = 0, AI_DOC = null; const notifies = [];
+let failPart2 = true;
 function aiMock(b) {
   const text = JSON.stringify(b.messages);
   const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
+  // A long bill read in parts: each part returns its own purchases; part 2 fails once (the app tries again).
+  if (text.includes('Abaixo está a parte')) {
+    if (text.includes('parte 2 de') && failPart2) { failPart2 = false; return { __status: 504 }; }
+    const chunk = (text.split('Parte do documento:')[1] || '').split('\\n').join('\n');
+    const itens = chunk.split('\n').filter(l => !/Total|Vencimento/.test(l)).map(l => /(\d{2}\/\d{2})\s+(.+?)\s+R\$\s*([\d.,]+)/.exec(l)).filter(Boolean)
+      .map(m => ({ cartao: '7777', data: m[1], descricao: m[2], parcela: '', valor: +m[3].replace(/\./g, '').replace(',', '.') }));
+    return reply(JSON.stringify({ tipo: 'fatura', banco: 'Banco Ficticio', vencimento: /Vencimento/.test(chunk) ? '10/12/2026' : null, valorTotalFatura: /Total desta fatura/.test(chunk) ? 18750 : null, cartoes: [], itens }));
+  }
   if (text.includes('Transforme a frase')) return reply(JSON.stringify({ itens: [{ descricao: 'Mercado', valor: 230, sentido: 'saida', data: '2026-10-06', meio: 'cartao', categoria: 'Mercado' }, { descricao: 'Terapia', valor: 350, sentido: 'saida', data: '2026-10-06', meio: 'conta', categoria: 'Saúde' }] }));
   if (text.includes('documento compartilhado') && AI_DOC && AI_DOC !== 'comprovante') return reply(JSON.stringify({ tipo: AI_DOC, itens: [] }));
   if (text.includes('Antes, confira pelo conteúdo') && AI_DOC && AI_DOC !== 'nota') return reply(JSON.stringify({ tipo: AI_DOC }));
@@ -490,6 +499,12 @@ if (outra) {
   }
   await page.click('#rvSave'); await page.click('.cfm [data-y]'); await page.waitForFunction(() => window.__lastReplace?.p_month === '2026-11');
   ok('fatura de outro banco salva', true);
+  // A long bill (5 pages, 250 purchases) is read in parts; a part that fails is tried again.
+  await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/fatura-longa-ficticia.pdf'));
+  await page.waitForSelector('#rvSave', { timeout: 60000 }).catch(() => {});
+  const lg = await txt('#pdfLog');
+  ok('fatura longa lida em partes, com nova tentativa quando uma parte falha', /Lendo a parte 1 de [2-9]/.test(lg) && lg.includes('Tentando de novo') && lg.includes('250 lançamentos') && lg.includes('A soma confere'), lg.slice(150, 600));
+  await page.click('#rvCancel'); await page.click('.cfm [data-y]').catch(() => {});
 }
 
 await page.click('[data-tab=perguntar]');
@@ -599,8 +614,13 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: nova ideia salva no servidor', adminPuts.includes('backlog') && adminStore.backlog.items[0].title === 'Ideia de teste e2e');
   await ap.click('[data-v="lista"]'); await ap.waitForSelector('.blist');
   const id = adminStore.backlog.items[0].id;
-  await ap.selectOption(`[data-st="${id}"]`, 'agora'); await ap.waitForTimeout(200);
-  ok('central: mudar status salva', adminStore.backlog.items[0].status === 'agora');
+  // Meanwhile a release adds an item and marks another one done on the server: the console must not undo it.
+  const other = adminStore.backlog.items[1].id;
+  adminStore.backlog.items.unshift({ id: 'veio_da_versao', title: 'Item que veio de uma versão', status: 'proximo' });
+  adminStore.backlog.items.find(i => i.id === other).status = 'feito';
+  await ap.selectOption(`[data-st="${id}"]`, 'agora'); await ap.waitForTimeout(300);
+  ok('central: mudar status salva', adminStore.backlog.items.find(i => i.id === id).status === 'agora');
+  ok('central: salvar não apaga o que uma versão mudou enquanto a Central estava aberta', adminStore.backlog.items.some(i => i.id === 'veio_da_versao') && adminStore.backlog.items.find(i => i.id === other).status === 'feito' && adminPatchesSeen.includes('backlog'));
   await ap.click(`[data-del="${id}"]`); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(200);
   ok('central: apagar pede confirmação e remove', !adminStore.backlog.items.some(i => i.id === id));
   await atab('bench'); await ap.waitForSelector('.atable');
@@ -651,7 +671,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.click(`[data-claude="${fromOp}"]`); await ap.waitForTimeout(200);
   ok('central: pedir ao Claude copia o pedido com o id do item', /copiado|copie/.test(await ap.textContent('#toast')));
   await ap.selectOption(`[data-st="${fromOp}"]`, 'feito'); await ap.waitForTimeout(300);
-  ok('central: concluir item vindo de opinião manda o recado sozinho', !(await ap.$('.cfm')) && (await ap.textContent('#toast')).includes('Recado automático enviado para 1 pessoa'), await ap.textContent('#toast'));
+  ok('central: concluir item vindo de opinião manda o recado sozinho', !(await ap.$('.cfm')) && (await ap.textContent('#toast')).includes('Recado automático enviado para 1 pessoa'), (await ap.textContent('#toast')) + ' | ' + JSON.stringify(adminStore.backlog.items.find(i => i.id === fromOp)) + ' | ' + adminPuts.slice(-3).join(','));
   await atab('novidades'); await ap.waitForSelector('#nwAdd');
   ok('central: novidades começam com a desta versão', (await ap.textContent('#aMain')).includes('Sua opinião agora tem lugar no app'));
   await ap.click('#nwAdd'); await ap.click('#nwPub');

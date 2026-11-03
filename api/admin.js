@@ -71,10 +71,23 @@ export default async function handler(req, res) {
     }
     if (req.method === 'PUT') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-      if (!KEYS.includes(b.key) || READ_ONLY.includes(b.key) || typeof b.data !== 'object' || b.data === null) return res.status(400).json({ error: 'bad_request' });
-      if (JSON.stringify(b.data).length > MAX) return res.status(413).json({ error: 'too_large' });
       const db = rest(URL_, SERVICE);
       const prev = b.key === 'backlog' ? await db.board('backlog') : null;
+      // A patch (only what changed in the console) is applied over the current board, so changes made
+      // meanwhile by a release or another device are not lost.
+      if (b.patch && typeof b.patch === 'object' && KEYS.includes(b.key) && !READ_ONLY.includes(b.key)) {
+        const cur = (await db.board(b.key)) || (prev || { items: [] });
+        const items = Array.isArray(cur.items) ? [...cur.items] : [];
+        const del = new Set(Array.isArray(b.patch.delete) ? b.patch.delete : []);
+        for (const it of Array.isArray(b.patch.upsert) ? b.patch.upsert : []) { if (!it || !it.id) continue; const i = items.findIndex(x => x.id === it.id); if (i >= 0) items[i] = it; else items.unshift(it); }
+        const order = Array.isArray(b.patch.order) ? b.patch.order : [], pos = new Map(order.map((id, i) => [id, i]));
+        const kept = items.filter(x => !del.has(x.id));
+        // Keep the console's order for the items it knows; items it did not know stay at the top.
+        kept.sort((x, y) => (pos.has(x.id) ? pos.get(x.id) : -1) - (pos.has(y.id) ? pos.get(y.id) : -1));
+        b.data = { ...cur, items: kept };
+      }
+      if (!KEYS.includes(b.key) || READ_ONLY.includes(b.key) || typeof b.data !== 'object' || b.data === null) return res.status(400).json({ error: 'bad_request' });
+      if (JSON.stringify(b.data).length > MAX) return res.status(413).json({ error: 'too_large' });
       const r = await fetch(`${URL_}/rest/v1/product_board?on_conflict=key`, { method: 'POST', headers: { ...H, prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify({ key: b.key, data: b.data, updated_at: new Date().toISOString(), updated_by: user.email }) });
       if (!r.ok) return res.status(502).json({ error: 'db' });
       const [row] = await r.json();

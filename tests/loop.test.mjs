@@ -189,3 +189,20 @@ test('Compartilhar no iPhone: comprovante vira lançamento; fatura manda abrir o
     assert.equal(r.status, 400); assert.match(r.text, /HEIC/); assert.equal(sent.length, 2);
   } finally { globalThis.fetch = realFetch; }
 });
+test('cada versão nova repõe o que a Central desfez das versões anteriores (itens, feitos e bugs)', async () => {
+  // Release r1 was applied earlier, but the console saved an old copy over it: its item is gone and the done item is back to "ideia".
+  const T = { product_board: [{ key: 'releases', data: { applied: ['r1'] } }, { key: 'backlog', data: { items: [{ id: 'exemplo', title: 'Mês de exemplo', status: 'ideia' }, { id: 'bug1', title: 'Bug', status: 'feito' }] } }], feedback: [], members: [], push_subscriptions: [] };
+  const fetchImpl = async (url, o = {}) => { const u = new URL(url), table = u.pathname.split('/').pop(), q = Object.fromEntries(u.searchParams), m = o.method || 'GET';
+    const json = d => ({ ok: true, status: 200, json: async () => d });
+    if (m === 'GET') return json(T[table].filter(r => !q.key || 'eq.' + r.key === q.key));
+    if (m === 'POST') { const b = JSON.parse(o.body), i = T[table].findIndex(r => r.key === b.key); if (i >= 0) T[table][i] = b; else T[table].push(b); return json([b]); } return json([]); };
+  const db = rest('https://x.supabase.co', 'sb_secret_x', fetchImpl);
+  const rel = [{ id: 'r1', at: '2026-11-01T00:00:00Z', backlog: ['exemplo'], addBacklog: [{ id: 'pesquisa', title: 'Pesquisa', status: 'proximo' }] },
+    { id: 'r2', at: '2026-11-03T00:00:00Z', backlog: [], updateBacklog: [{ id: 'bug1', set: { tipo: 'bug' } }] }];
+  const out = await applyReleases(db, null, { releases: rel });
+  const items = T.product_board.find(r => r.key === 'backlog').data.items;
+  assert.equal(out.applied, 1);
+  assert.equal(items.find(i => i.id === 'exemplo').status, 'feito');
+  assert.ok(items.some(i => i.id === 'pesquisa'));
+  assert.equal(items.find(i => i.id === 'bug1').tipo, 'bug');
+});

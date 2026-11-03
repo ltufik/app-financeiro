@@ -64,7 +64,7 @@ export function buildSummary({ metrics: m, usage: u, nav = null, feedback = [], 
   for (const s of ['agora', 'proximo', 'ideia']) {
     if (!by(s).length) continue;
     L.push(`### ${ST[s]}`);
-    by(s).forEach(i => { const n = (i.from || []).length; L.push(`- ${i.id}: ${i.title}${i.problem ? ' (problema: ' + i.problem + ')' : ''}${n ? ` · pedido por ${n}` : ''} · esforço ${i.effort || '—'}`); });
+    by(s).forEach(i => { const n = (i.from || []).length; L.push(`- ${i.id}: ${i.tipo === 'bug' ? '[bug] ' : ''}${i.title}${i.problem ? ' (problema: ' + i.problem + ')' : ''}${n ? ` · pedido por ${n}` : ''} · esforço ${i.effort || '—'}`); });
   }
   L.push('', 'Sem e-mails e sem valores das famílias. Gerado na Central do produto.');
   return L.join('\n');

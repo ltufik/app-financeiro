@@ -169,3 +169,4 @@ body.admin{background:var(--paper)}
 }
 
 .kcard .kclaude{align-self:flex-start;font-size:13px}
+.tag.bug{background:var(--bad-soft);color:var(--bad);text-transform:uppercase;letter-spacing:.04em}

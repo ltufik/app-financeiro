@@ -24,14 +24,30 @@ let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-async function api(method, key, data) {
-  const r = await fetch('/api/admin' + (method === 'GET' ? '?key=' + key : ''), { method, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: method === 'PUT' ? JSON.stringify({ key, data }) : undefined });
+async function api(method, key, data, patch) {
+  const r = await fetch('/api/admin' + (method === 'GET' ? '?key=' + key : ''), { method, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: method === 'PUT' ? JSON.stringify(patch ? { key, patch } : { key, data }) : undefined });
   if (!r.ok) { const e = new Error(String(r.status)); e.status = r.status; throw e; }
   return r.json();
 }
+// Boards made of items with ids (backlog, news, FAQ...) are saved as a patch: only what changed here since
+// the page was loaded. A release or another device may have changed the board meanwhile; that is kept.
+const BASE = {};
+const snap = key => { BASE[key] = JSON.parse(JSON.stringify(D[key] || null)); };
+function patchOf(key) {
+  const cur = D[key], base = BASE[key];
+  if (!Array.isArray(cur?.items) || !Array.isArray(base?.items) || !cur.items.every(i => i && i.id) || !base.items.every(i => i && i.id)) return null;
+  const old = new Map(base.items.map(i => [i.id, JSON.stringify(i)]));
+  const upsert = cur.items.filter(i => old.get(i.id) !== JSON.stringify(i));
+  const ids = new Set(cur.items.map(i => i.id));
+  return { upsert, delete: base.items.filter(i => !ids.has(i.id)).map(i => i.id), order: cur.items.map(i => i.id) };
+}
 async function save(key, msg) {
   try {
-    const res = await api('PUT', key, D[key]);
+    const patch = patchOf(key);
+    const res = await api('PUT', key, D[key], patch);
+    // In place: the page's handlers hold this same array.
+    if (patch && res?.data?.items) { const d = D[key]; d.items.splice(0, d.items.length, ...res.data.items); for (const k in res.data) if (k !== 'items') d[k] = res.data[k]; }
+    snap(key);
     const n = res?.loop?.replied || 0;
     if (n) { toast(`Pronto! Recado automático enviado para ${n} ${n > 1 ? 'pessoas que pediram' : 'pessoa que pediu'}.`); FB = null; }
     else if (msg) toast(msg);
@@ -51,6 +67,8 @@ async function save(key, msg) {
     D.news = nw.data || { items: JSON.parse(JSON.stringify(NEWS)) };
     D.backlog = b.data || { items: BACKLOG }; D.pricing = p.data || { ...PRICING }; D.canvas = c.data || JSON.parse(JSON.stringify(CANVAS));
     D.faq = f.data || { items: JSON.parse(JSON.stringify(FAQ)) }; D.services = sv.data || { items: JSON.parse(JSON.stringify(SERVICES)) }; D.docs = dc.data || { items: JSON.parse(JSON.stringify(DOCS)) };
+    // Boards never saved before go whole the first time; the others go as patches.
+    for (const [k, r] of [['backlog', b], ['news', nw], ['faq', f], ['services', sv], ['docs', dc]]) if (r.data) snap(k);
   } catch (e) {
     $('#aMain').innerHTML = e.status === 403 ? '<div class="panel"><h2>Só para o dono do produto</h2><p class="small">Esta página aparece só para os e-mails cadastrados em ADMIN_EMAILS.</p></div>'
       : '<div class="panel"><h2>Não foi possível carregar</h2><p class="small">Confira se o schema.sql foi rodado de novo e se as variáveis do servidor estão certas.</p></div>';
@@ -133,7 +151,7 @@ async function painel(el) {
 
 // ---------- Backlog ----------
 function backlog(el) {
-  const items = D.backlog.items, shown = items.filter(i => !filter || i.status === filter);
+  const items = D.backlog.items, shown = items.filter(i => !filter || (filter === 'bug' ? i.tipo === 'bug' : i.status === filter));
   el.innerHTML = `<div class="ahead"><h1>Backlog</h1><div class="rowbtn"><button class="chip" type="button" data-v="quadro" aria-pressed="${view === 'quadro'}">Quadro</button><button class="chip" type="button" data-v="lista" aria-pressed="${view === 'lista'}">Lista</button></div></div>
     <details class="panel" id="bNew"><summary><strong>Nova ideia</strong></summary>
       <div class="stack" style="margin-top:10px"><label class="f">Ideia<input type="text" id="nTitle" maxlength="120" placeholder="Ex.: Revisão de domingo"></label>
@@ -141,9 +159,10 @@ function backlog(el) {
       <div class="grid2"><label class="f">De onde veio<input type="text" id="nOrig" maxlength="60" placeholder="Ex.: Testador, Equipe, Benchmarking"></label>
       <label class="f">Esforço<select id="nEff">${Object.entries(EFFORT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
       <label class="f">Status<select id="nStat">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === 'ideia' ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label class="f">Tipo<select id="nTipo"><option value="">Melhoria ou ideia</option><option value="bug">Bug (algo que não funciona como deveria)</option></select></label>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="nCost" style="width:auto"> Tem custo de infraestrutura</label></div>
       <div><button class="btn primary" type="button" id="nAdd">Adicionar</button></div></div></details>
-    ${view === 'lista' ? `<div class="chips">${[['', 'Todos'], ...Object.entries(STATUS)].map(([k, v]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${v} <span class="tiny muted">${k ? items.filter(i => i.status === k).length : items.length}</span></button>`).join('')}</div>
+    ${view === 'lista' ? `<div class="chips">${[['', 'Todos'], ...Object.entries(STATUS), ['bug', 'Bugs']].map(([k, v]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${v} <span class="tiny muted">${k === 'bug' ? items.filter(i => i.tipo === 'bug').length : k ? items.filter(i => i.status === k).length : items.length}</span></button>`).join('')}</div>
       <div class="blist">${shown.map(rowHTML).join('') || '<p class="small muted">Nada aqui.</p>'}</div>`
     : `<div class="kanban">${['agora', 'proximo', 'ideia', 'depois', 'feito'].map(s => `<section class="kcol"><h3>${STATUS[s]} <span class="tiny muted">${items.filter(i => i.status === s).length}</span></h3>${items.filter(i => i.status === s).map(cardHTML).join('')}</section>`).join('')}</div>`}`;
   el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; backlog(el); });
@@ -170,16 +189,17 @@ function backlog(el) {
     const title = $('#nTitle').value.trim(); const m = checkName(title, 'a ideia', 3, 120); if (m) return invalid($('#nTitle'), m);
     if (items.some(i => i.title.toLowerCase() === title.toLowerCase())) return invalid($('#nTitle'), 'Essa ideia já está no backlog.');
     if (!await confirmInline(e.target, { text: `Adicionar "${esc(title)}" ao backlog como ${STATUS[$('#nStat').value]}?`, yes: 'Sim, adicionar' })) return;
-    items.unshift({ id: uid(), title, problem: $('#nProb').value.trim(), origin: $('#nOrig').value.trim() || 'Equipe', effort: $('#nEff').value, status: $('#nStat').value, cost: $('#nCost').checked, notes: '' });
+    items.unshift({ id: uid(), title, problem: $('#nProb').value.trim(), origin: $('#nOrig').value.trim() || 'Equipe', effort: $('#nEff').value, status: $('#nStat').value, cost: $('#nCost').checked, notes: '', ...($('#nTipo').value === 'bug' ? { tipo: 'bug' } : {}) });
     await save('backlog', 'Ideia adicionada.'); backlog(el);
   };
 }
 const statusSel = i => `<select data-st="${i.id}" aria-label="Status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === i.status ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
 const askers = i => [...new Set([...(i.from || []), ...[...String(i.notes || '').matchAll(/Opinião #(\d+)/g)].map(m => +m[1])])].length;
 const askTag = i => askers(i) ? `<span class="tag ask" title="Recebem um recado automático quando ficar pronto">pedido por ${askers(i)}</span>` : '';
-const cardHTML = i => `<article class="kcard"><strong>${esc(i.title)}</strong>${i.problem ? `<span class="tiny">${esc(i.problem)}</span>` : ''}${askTag(i) ? `<span>${askTag(i)}</span>` : ''}
+const bugTag = i => i.tipo === 'bug' ? '<span class="tag bug">bug</span> ' : '';
+const cardHTML = i => `<article class="kcard"><strong>${bugTag(i)}${esc(i.title)}</strong>${i.problem ? `<span class="tiny">${esc(i.problem)}</span>` : ''}${askTag(i) ? `<span>${askTag(i)}</span>` : ''}
   <span><span class="tag">${EFFORT[i.effort] || ''}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''} <span class="tiny">${esc(i.origin || '')}</span></span>${statusSel(i)}${i.status !== 'feito' ? `<button class="chip kclaude" type="button" data-claude="${esc(i.id)}">Pedir ao Claude</button>` : ''}</article>`;
-const rowHTML = i => `<div class="brow3"><span><strong>${esc(i.title)}</strong>${i.problem ? `<br><span class="tiny muted">${esc(i.problem)}</span>` : ''}<br><span class="tiny muted">${esc(i.origin || '')}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''} ${askTag(i)}
+const rowHTML = i => `<div class="brow3"><span><strong>${bugTag(i)}${esc(i.title)}</strong>${i.problem ? `<br><span class="tiny muted">${esc(i.problem)}</span>` : ''}<br><span class="tiny muted">${esc(i.origin || '')}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''} ${askTag(i)}
     ${i.status !== 'feito' ? `<span class="bmore"><input type="text" data-where="${esc(i.id)}" value="${esc(i.where || '')}" placeholder="Onde vai ficar no app (vai no recado)" maxlength="80"><button class="chip" type="button" data-claude="${esc(i.id)}">Pedir ao Claude</button></span>` : ''}</span>
   ${statusSel(i)}<select data-ef="${i.id}" aria-label="Esforço">${Object.entries(EFFORT).map(([k, v]) => `<option value="${k}"${k === i.effort ? ' selected' : ''}>${v}</option>`).join('')}</select>
   <button class="chip" type="button" data-del="${i.id}" aria-label="Apagar">×</button></div>`;

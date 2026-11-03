@@ -515,3 +515,9 @@ body.locked > :not(#lockScreen):not(.toast){visibility:hidden}
   table.rvcards td.rv-c{grid-column:1;grid-row:3}
   table.rvcards td.r{grid-column:2;grid-row:2/4;align-self:center;font-weight:700}
 }
+
+/* Consent at sign-up: a big target, hard to miss (a tester saw people skipping the tiny box). */
+label.consent{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer}
+label.consent:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+label.consent input{width:24px;height:24px;flex:none;margin:0;accent-color:var(--accent)}
+label.consent[hidden]{display:none}
