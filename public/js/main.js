@@ -18,11 +18,12 @@ import { checkAdmin, touchActivity } from './metrics.js';
 import { initPrivacy } from './privacy.js';
 import { track, navTo, screenOf } from './usage.js';
 import { TEST_PHASE } from './feedback.js';
-import { showMessages, openBell, refreshBell } from './messages.js';
+import { showMessages, openBell, refreshBell, openNewsById, openReplyById } from './messages.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, isAndroid, isMobile, isStandalone, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 import { offerPush, refreshPushState } from './push.js';
+import { parseLink } from './lib/links.js';
 import { initLock, freshSignIn, signOutSafely, showBye, offerBio, setAfterUnlock } from './lock.js';
 
 const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
@@ -45,8 +46,21 @@ function showSignedOut() {
 // opening if a message was just shown (one pop-up per opening).
 let popupAt = 0;
 const afterIntro = () => { refreshPushState(); return showMessages().then(shown => { if (shown) { popupAt = Date.now(); return null; } return offerPush().then(p => p ? null : offerBio()); }).then(() => setTimeout(maybeAskInstall, 600)); };
+// A tapped notification says where to go (lib/links.js): the note or the reply in full, Notificações, or a
+// screen. It counts as the pop-up of this opening. Locked: it waits for the unlock.
+let pendingLink = null;
+async function openLink(l) {
+  if (!l || !S.hh) return;
+  if (document.body.classList.contains('locked')) { pendingLink = l; return; }
+  pendingLink = null; popupAt = Date.now(); track('aviso.tocou');
+  if (l.abrir === 'novidade') { S.go('resumo'); await openNewsById(l.id); return; }
+  if (l.abrir === 'recado') { S.go('resumo'); await openReplyById(l.id); return; }
+  if (l.abrir === 'avisos') { S.go('ajustes', '#pushBox', 'avisos'); return; }
+  if (l.tab) S.go(l.tab, null, l.sec);
+}
 let inviting = false;
 setAfterUnlock(() => {
+  if (pendingLink) { openLink(pendingLink); return; }
   if (inviting || Date.now() - popupAt < 10 * 60e3) return;
   inviting = true;
   offerPush().then(p => p ? null : offerBio()).finally(() => { inviting = false; });
@@ -201,6 +215,8 @@ function renderMonthSel() {
   $('#monthSel').innerHTML = opts.join('');
 }
 
+// ?abrir=novidade|recado|avisos or ?tab=…&sec=… (a tapped notification): kept until the app opens.
+{ const l = parseLink(location.href); if (l) { try { sessionStorage.setItem('fin.link', JSON.stringify(l)); } catch (e) { /* storage blocked */ } history.replaceState(null, '', location.pathname); } }
 // ?acao=voz|nota|pdf|compartilhar (icon shortcuts, the evening reminder, Android share): kept until the app opens.
 { const a = new URLSearchParams(location.search).get('acao'); if (/^(voz|nota|pdf|compartilhar)$/.test(a || '')) { try { sessionStorage.setItem('fin.acao', a); } catch (e) { /* storage blocked */ } history.replaceState(null, '', location.pathname); } }
 function runAcao(a) {
@@ -235,10 +251,10 @@ async function doStart() {
   $('#brand').textContent = S.hh.name;
   touchActivity(); checkAdmin();
   show('app');
-  // Opens on Início; a notification can open another tab (?tab=...).
-  const want = new URLSearchParams(location.search).get('tab');
-  if (VIEWS[want]) history.replaceState(null, '', location.pathname);
-  setTab(VIEWS[want] ? want : 'resumo');
+  setTab('resumo');
+  const link = (() => { try { const l = JSON.parse(sessionStorage.getItem('fin.link') || 'null'); sessionStorage.removeItem('fin.link'); return l; } catch (e) { return null; } })();
+  // A tapped notification: straight there; it is this opening's pop-up.
+  if (link && tourDone()) { setTimeout(() => openLink(link).finally(() => refreshBell()), 300); S.justSignedIn = false; return; }
   // Shortcut on the icon, the evening reminder or something shared with the app: go straight there.
   const acao = (() => { try { const a = sessionStorage.getItem('fin.acao'); sessionStorage.removeItem('fin.acao'); return a; } catch (e) { return null; } })();
   if (acao && tourDone()) { runAcao(acao); S.justSignedIn = false; refreshBell(); return; }
@@ -270,7 +286,7 @@ configureCatPicker({
   // Registered first thing: Android only offers a real install (our icon and name) once the service worker is active.
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
-    navigator.serviceWorker.addEventListener('message', e => { if (e.data?.type === 'open' && S.hh) { const t = new URL(e.data.url).searchParams.get('tab'); if (VIEWS[t]) S.go(t); } });
+    navigator.serviceWorker.addEventListener('message', e => { if (e.data?.type === 'open' && S.hh) openLink(parseLink(e.data.url)); });
   }
   captureInviteFromUrl();
   // Read before the Supabase client consumes the link: a password-recovery link carries type=recovery.

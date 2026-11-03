@@ -597,3 +597,17 @@ test('notificações: o teste diz se o aviso chegou ao celular ou não', () => {
   assert.match(testOutcome('missing').no, /não chegou até o celular/);
   assert.equal(testOutcome('blocked').ask, '');
 });
+
+import { linkFor, parseLink } from '../public/js/lib/links.js';
+test('tocar no aviso leva para o lugar certo', () => {
+  assert.equal(linkFor('novidade', { id: 'n20261103e' }), '/?abrir=novidade&id=n20261103e');
+  assert.equal(linkFor('recado', { id: 42 }), '/?abrir=recado&id=42');
+  assert.equal(linkFor('avisos'), '/?abrir=avisos');
+  assert.equal(linkFor('tela', { tab: 'ajustes', sec: 'metas' }), '/?tab=ajustes&sec=metas');
+  assert.equal(linkFor('tela', { tab: 'nada' }), '/');
+  assert.deepEqual(parseLink('/?abrir=recado&id=42'), { abrir: 'recado', id: '42' });
+  assert.deepEqual(parseLink('/?abrir=novidade&id=n1'), { abrir: 'novidade', id: 'n1' });
+  assert.deepEqual(parseLink('/?tab=ajustes&sec=metas'), { tab: 'ajustes', sec: 'metas' });
+  assert.equal(parseLink('/?abrir=recado&id=<script>'), null);
+  assert.equal(parseLink('/'), null);
+});

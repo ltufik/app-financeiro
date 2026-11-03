@@ -1048,6 +1048,20 @@ ok('não deixa desmarcar todos os tipos', (await txt('#pMsg')).includes('pelo me
 await page.click('#pOff'); await page.waitForSelector('.cfm [data-y]');
 await page.click('.cfm [data-y]'); await page.waitForSelector('#pOn');
 ok('desligar avisos pede confirmação e remove o aparelho', await page.evaluate(() => window.__db.push_subscriptions.length === 0));
+// Tapping a notification goes straight to what it is about.
+await page.evaluate(() => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'open', url: location.origin + '/?abrir=novidade&id=n20261030' } })));
+await page.waitForSelector('.ann', { timeout: 5000 }).catch(() => {});
+ok('tocar na notificação de novidade abre a novidade inteira', (await page.textContent('.ann').catch(() => '')).includes('Sua opinião agora tem lugar no app') && (await page.textContent('.ann').catch(() => '')).includes('Toque no balão no topo'));
+await page.click('.ann [data-p]').catch(() => {}); await page.waitForTimeout(200);
+await page.evaluate(() => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'open', url: location.origin + '/?tab=ajustes&sec=metas' } })));
+await page.waitForTimeout(400);
+ok('tocar num aviso do dia abre a tela certa (Metas)', await page.isVisible('#v-ajustes [data-sec="metas"]'));
+{ // App closed: the notification opens it on the right place.
+  const nctx = await browser.newContext({ viewport: { width: 390, height: 844 }, storageState: await page.context().storageState() }); const np = await nctx.newPage(); await addRoutes(np); await np.addInitScript(fakePush); await np.addInitScript(() => { window.__noMsgs = true; });
+  await np.goto('https://app.test/?abrir=avisos'); await np.waitForSelector('#v-ajustes [data-sec="avisos"]:not([hidden])', { timeout: 15000 }).catch(() => {});
+  ok('app fechado: a notificação de teste abre direto em Notificações', await np.isVisible('#v-ajustes [data-sec="avisos"]') && !np.url().includes('abrir='));
+  await nctx.close();
+}
 // appearance
 ok('app abre no tema claro (Mar aberto) por padrão', await page.evaluate(() => document.documentElement.dataset.theme === 'light' && getComputedStyle(document.body).backgroundColor === 'rgb(244, 238, 227)'));
 await sec('ajuda');

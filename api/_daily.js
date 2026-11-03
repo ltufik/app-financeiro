@@ -1,5 +1,6 @@
 // Daily push run: for each family with notifications on, compute the home insights and send at most
 // one notification per device per day. Pure enough to test with a fake fetch (tests/push.test.mjs).
+import { linkFor } from '../public/js/lib/links.js';
 import { catIndex, monthCalc, byCategory, expandSplits, schedule, project } from '../public/js/lib/calc.js';
 import { insights } from '../public/js/lib/insights.js';
 import { budgetsOf } from '../public/js/lib/budget.js';
@@ -40,7 +41,7 @@ export function familyInsights({ household, categories, txs }, today) {
     pending: k => txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
     goals: g, nextFatura: nf, budgets: budgetsOf(st), recurring: findRecurring(txs, months, { idx }), toClose: (() => { const cur = today.slice(0, 7), cl = st.closed || {}; return months.filter(k => k < cur && !cl[k]).pop() || null; })(),
     etaYears: pmt => { if (!(pmt > 0) || !g.patrimonio) return null; const pts = project({ start: +st.invest?.total || 0, pmt, ret: g.ret ?? 0.05, years: 40 }); const i = pts.findIndex(v => v >= g.patrimonio); return i < 0 ? null : i; },
-  }).map(x => ({ ...x, url: x.action ? '/?tab=' + x.action.go[0] : '/?tab=resumo' }));
+  }).map(x => ({ ...x, url: x.action ? linkFor('tela', { tab: x.action.go[0], sec: x.action.go[2] }) : linkFor('tela', { tab: 'resumo' }) }));
 }
 
 // Pick the one message for a device today, or null.

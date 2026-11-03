@@ -1,5 +1,6 @@
 // Closing the loop with testers: when a backlog item that came from someone's opinion is done,
 // that person gets a personal message (in the app and as a push). Also applies the release manifest.
+import { linkFor } from '../public/js/lib/links.js';
 import { sendPush } from './_webpush.js';
 import { autoReply, newlyDone, replyTitle } from '../public/js/lib/news.js';
 import { RELEASES } from './_releases.js';
@@ -27,7 +28,7 @@ export async function closeLoop(db, prevItems, nextItems, vapid, fetchImpl = fet
       if (!f.user_id || !vapid?.publicKey || !vapid?.privateKey) continue;
       const subs = await db.get(`push_subscriptions?user_id=eq.${f.user_id}&select=endpoint,p256dh,auth`).catch(() => []);
       for (const s of subs) {
-        const p = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title: replyTitle(f.kind, m?.display_name), body: reply.slice(0, 200), url: '/', tag: 'reply-' + f.id }, vapid, fetchImpl).catch(() => ({ ok: false }));
+        const p = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title: replyTitle(f.kind, m?.display_name), body: reply.slice(0, 200), url: linkFor('recado', { id: f.id }), tag: 'reply-' + f.id }, vapid, fetchImpl).catch(() => ({ ok: false }));
         if (p.ok) out.pushed++;
       }
     }
@@ -78,7 +79,7 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
 // With the person's name: "Mari, novidade no Pra Onde Foi: ...".
 export const newsPush = (list, name = '') => {
   const [top, ...rest] = list, first = String(name || '').trim().split(/\s+/)[0];
-  return { title: (first ? `${first}, novidade no Pra Onde Foi: ` : 'Novidade no Pra Onde Foi: ') + top.title, body: (top.items?.[0] || '') + (rest.length ? ` E mais ${rest.length} ${rest.length > 1 ? 'novidades' : 'novidade'} no sininho.` : ''), url: '/', tag: 'news-' + top.id };
+  return { title: (first ? `${first}, novidade no Pra Onde Foi: ` : 'Novidade no Pra Onde Foi: ') + top.title, body: (top.items?.[0] || '') + (rest.length ? ` E mais ${rest.length} ${rest.length > 1 ? 'novidades' : 'novidade'} no sininho.` : ''), url: linkFor('novidade', { id: top.id }), tag: 'news-' + top.id };
 };
 export async function pushNews(db, list, skipUsers, vapid, fetchImpl) {
   const subs = await db.get('push_subscriptions?select=id,user_id,endpoint,p256dh,auth,prefs').catch(() => []);

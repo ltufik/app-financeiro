@@ -3,6 +3,7 @@
 import { cleanUrl } from './config.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
+import { linkFor } from '../public/js/lib/links.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
   const s = body.subscription;
   if (!s || !/^https:\/\//.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth) return res.status(400).json({ error: 'bad_request' });
   try {
-    const r = await sendPush(s, { title: 'Avisos ligados', body: 'Pronto! É assim que o Pra Onde Foi vai te avisar quando algo importante acontecer com o dinheiro da família.', url: '/?tab=resumo', tag: 'teste' }, vapid);
+    const r = await sendPush(s, { title: 'Avisos ligados', body: 'Pronto! É assim que o Pra Onde Foi vai te avisar quando algo importante acontecer com o dinheiro da família.', url: linkFor('avisos'), tag: 'teste' }, vapid);
     res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status });
   } catch (e) { res.status(500).json({ error: 'send_failed' }); }
 }

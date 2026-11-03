@@ -66,6 +66,21 @@ async function newsPopup(list) {
   }).then(r => { if (r === 'secondary') openBell(); });
 }
 
+// Tapped a notification: that note or that reply opens in full (and counts as seen, so it does not show again).
+// Returns true when something was shown; when it is no longer there (older than 30 days), the bell opens.
+export async function openNewsById(id) {
+  const n = (await loadNews()).find(x => x.id === id);
+  if (!n) { openBell(); return true; }
+  const unseen = await unseenNotes(); if (unseen.some(x => x.id === id)) markNewsSeen(unseen);
+  markShown('n:' + n.id); ran = true;
+  await newsPopup([n]); refreshBell(); return true;
+}
+export async function openReplyById(id) {
+  const f = (await myReplies().catch(() => [])).find(x => String(x.id) === String(id) && x.reply);
+  if (!f) { openBell(); return true; }
+  ran = true; await replyPopup(f); refreshBell(); return true;
+}
+
 // ---------- the bell (🔔): last 30 days, with the count of what was not seen ----------
 const BELL = '<svg class="ann-bal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
 const shownKey = () => 'fin.bell.shown.' + S.user.id, seenKey = () => 'fin.bell.seen.' + S.user.id;

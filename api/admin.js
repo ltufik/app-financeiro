@@ -10,6 +10,7 @@ import { vapidFromEnv } from './push-cron.js';
 import { replyTitle } from '../public/js/lib/news.js';
 import { rest, closeLoop, pushNews } from './_loop.js';
 import { pushPeople, deviceKind } from '../public/js/lib/pushinfo.js';
+import { linkFor } from '../public/js/lib/links.js';
 
 const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases'];
 const READ_ONLY = ['releases'];
@@ -64,7 +65,7 @@ export default async function handler(req, res) {
       const name = String(user.user_metadata?.display_name || '').trim().split(/\s+/)[0];
       const results = [];
       for (const s of subs) {
-        const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title: name ? `${name}, o teste chegou` : 'O teste chegou', body: 'As notificações do Pra Onde Foi estão funcionando neste aparelho.', url: '/', tag: 'teste-central' }, vapid).catch(() => ({ ok: false }));
+        const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title: name ? `${name}, o teste chegou` : 'O teste chegou', body: 'As notificações do Pra Onde Foi estão funcionando neste aparelho.', url: linkFor('avisos'), tag: 'teste-central' }, vapid).catch(() => ({ ok: false }));
         // A device that no longer exists (app removed, notifications reset) leaves the list.
         if (r.gone) await fetch(`${URL_}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H }).catch(() => {});
         results.push({ kind: deviceKind(s.endpoint), ok: !!r.ok, gone: !!r.gone });
@@ -95,7 +96,7 @@ export default async function handler(req, res) {
           const [m] = await q(`members?user_id=eq.${row.user_id}&select=display_name&limit=1`);
           const subs = await q(`push_subscriptions?user_id=eq.${row.user_id}&select=endpoint,p256dh,auth`);
           for (const sub of subs) {
-            const out = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title: replyTitle(row.kind, m?.display_name), body: patch.reply.slice(0, 200), url: '/', tag: 'reply-' + id }, vapid).catch(() => ({ ok: false }));
+            const out = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title: replyTitle(row.kind, m?.display_name), body: patch.reply.slice(0, 200), url: linkFor('recado', { id }), tag: 'reply-' + id }, vapid).catch(() => ({ ok: false }));
             if (out.ok) pushed++;
           }
         } catch (e) { /* the in-app message still shows */ }

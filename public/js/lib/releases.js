@@ -148,4 +148,7 @@ export const RELEASES = [
   { id: 'r69', version: 'v69', at: '2026-11-03T18:20:00Z', backlog: [], semNovidade: 'O teste de notificação agora sabe se o aviso chegou ao celular e explica o caso certo (ajustes do celular, bateria ou internet); quem testa vê na hora.', updateBacklog: [
     { id: 'conferir_se_o_aviso_chegou', set: { notes: 'Ao ligar, o app manda um aviso de teste e o próprio app percebe se ele chegou ao celular. Pergunta se apareceu na tela; "Não apareceu" explica o caso certo (chegou mas o celular não mostrou = ajustes de notificação; não chegou = bateria ou internet; bloqueado) e abre o passo a passo do celular da pessoa (iPhone, Samsung, outros Android). A Central conta cada caso.' } },
   ] },
+  { id: 'r70', version: 'v70', at: '2026-11-03T19:40:00Z', backlog: ['tocar_no_aviso_leva_ao_lugar'], semNovidade: 'Tocar numa notificação agora abre a mensagem inteira ou a tela certa; quem recebe percebe na hora, sem pop-up de novidade.', addBacklog: [
+    { id: 'tocar_no_aviso_leva_ao_lugar', title: 'Tocar na notificação leva direto à mensagem ou à tela certa', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Tocar na notificação abria o app na última tela usada, sem a mensagem', cost: false, notes: 'Novidade e recado abrem inteiros (e contam como vistos), o teste abre Notificações, os avisos do dia abrem a tela do assunto (Lançar, Metas, Orçamento...). Funciona com o app fechado, aberto ou bloqueado (depois do desbloqueio). Regra no CLAUDE.md: nada de url "/" em push.', from: [], where: 'Notificações no celular' },
+  ] },
 ];
