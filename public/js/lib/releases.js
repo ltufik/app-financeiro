@@ -113,4 +113,9 @@ export const RELEASES = [
     { id: 'push_de_novidade_para_todos', title: 'Push para todos a cada novidade (personalizado para quem pediu)', status: 'proximo', origin: 'Luiz', effort: 'P', problem: 'Quem não abre o app não fica sabendo do que mudou', cost: false, notes: 'Toda versão com novidade manda um push para todos com os avisos ligados. Quem pediu o que ficou pronto recebe só o push personalizado (com o nome e o pedido dele), não os dois. Respeitar uma opção "Novidades do app" em menu ☰ → Notificações. Entra na Definição de pronto.', from: [], where: 'Notificações no celular' },
     { id: 'versao_web_mais_simples', title: 'Versão web, com menos funções (o app continua mobile first)', status: 'ideia', origin: 'Luiz', effort: 'M', problem: 'Às vezes é melhor ver os números e mandar a fatura pelo computador', cost: false, notes: 'O app já abre no navegador do computador, mas desenhado para o celular. Ideia: um layout para tela grande com o essencial (Início, Extrato, Gráficos, enviar fatura e extrato, Perguntar) e o resto só no celular (voz, foto da nota, atalhos, compartilhar). Mesmo endereço e mesmo login; nada de site de divulgação.', from: [], where: 'praondefoi.app.br no computador' },
   ] },
+  { id: 'r59', version: 'v59', at: '2026-11-03T12:44:00Z', backlog: [{ id: '90seczvt', where: 'Extrato → Anotar' }, { id: 'push_de_novidade_para_todos', where: 'Menu ☰ → Notificações → Novidades do app' }], news: { id: 'n20261103d', title: 'Anote o que foi cada gasto', items: [
+    'No Extrato, toque em "Anotar" e escreva o que o lançamento realmente foi, como "cabeleireiro Lily" para um nome estranho da fatura.',
+    'O app lembra: na próxima fatura, o mesmo lançamento já chega anotado. A anotação entra na busca e o assistente também vê.',
+    'E agora as novidades do app também chegam como notificação no celular (dá para desligar em Notificações).',
+  ] } },
 ];

@@ -93,6 +93,33 @@ export function openCatSheet(categories, current, ctx, onPick) {
   if (matchMedia('(min-width: 700px)').matches) q.focus(); else wrap.querySelector('.cps').focus?.();
 }
 
+// Personal note of an entry: what it really was ("cabeleireiro Lily"). Resolves { note, remember } or null.
+export function openNoteSheet({ description, amount, note = '' }) {
+  return new Promise(resolve => {
+    document.querySelectorAll('.cps-wrap').forEach(x => x.remove());
+    const wrap = document.createElement('div'); wrap.className = 'cps-wrap';
+    const money = v => (+v < 0 ? '−' : '') + 'R$ ' + Math.abs(+v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    wrap.innerHTML = `<div class="cps" role="dialog" aria-modal="true" aria-labelledby="ntT">
+      <div class="cps-top"><div class="cps-h"><h3 id="ntT">${note ? 'Editar anotação' : 'Anotar'}</h3><p class="cps-ctx"><strong>${esc(description)}</strong>${amount != null ? ` · ${money(amount)}` : ''}</p></div><button type="button" class="tx" aria-label="Fechar">×</button></div>
+      <label class="f" style="margin-top:12px">O que foi isso?<input type="text" class="nt-in" maxlength="120" value="${esc(note)}" placeholder="Ex.: cabeleireiro Lily, presente da Ana, conserto do carro"></label>
+      <label class="small nt-rem"><input type="checkbox" class="nt-mem" checked> Lembrar nos próximos lançamentos com este mesmo nome</label>
+      <div class="rowbtn" style="margin-top:12px"><button class="btn primary" type="button" data-s>Salvar anotação</button>${note ? '<button class="btn danger" type="button" data-r>Remover</button>' : ''}</div>
+      <p class="tiny muted" style="margin-top:8px">A anotação aparece embaixo do lançamento, entra na busca e o assistente também vê.</p></div>`;
+    document.body.append(wrap); document.body.classList.add('cfm-open');
+    const inp = wrap.querySelector('.nt-in'), mem = wrap.querySelector('.nt-mem');
+    const close = v => { wrap.remove(); if (!document.querySelector('.cfm-wrap')) document.body.classList.remove('cfm-open'); resolve(v); };
+    wrap.querySelector('.tx').onclick = () => close(null);
+    wrap.onclick = e => { if (e.target === wrap) close(null); };
+    wrap.addEventListener('keydown', e => { if (e.key === 'Escape') close(null); });
+    const save = () => { const v = inp.value.replace(/\s+/g, ' ').trim(); if (!v) { invalid(inp, 'Escreva a anotação ou toque em Remover.'); return; } close({ note: v, remember: mem.checked }); };
+    wrap.querySelector('[data-s]').onclick = save;
+    inp.onkeydown = e => { if (e.key === 'Enter') save(); };
+    const rm = wrap.querySelector('[data-r]');
+    if (rm) rm.onclick = async () => { if (await confirmInline(rm, { text: 'Remover a anotação deste lançamento?', yes: 'Sim, remover', danger: true })) close({ note: '', remember: mem.checked }); };
+    setTimeout(() => inp.focus(), 50);
+  });
+}
+
 // Minimal, safe Markdown for assistant answers: paragraphs, bold, lists, tables, headings.
 export function md(s) {
   const lines = esc(s).split('\n'); let html = '', inList = false, tbl = [];

@@ -15,7 +15,7 @@ export function rest(URL_, SERVICE, fetchImpl = fetch) {
 
 // Sends the automatic message for items that just became "feito". Returns {replied, pushed}.
 export async function closeLoop(db, prevItems, nextItems, vapid, fetchImpl = fetch) {
-  const out = { replied: 0, pushed: 0 };
+  const out = { replied: 0, pushed: 0, users: [] };
   for (const { item, ids } of newlyDone(prevItems, nextItems)) {
     const rows = await db.get(`feedback?id=in.(${ids.join(',')})&reply=is.null&select=id,user_id,kind,text`);
     for (const f of rows) {
@@ -23,7 +23,7 @@ export async function closeLoop(db, prevItems, nextItems, vapid, fetchImpl = fet
       const reply = autoReply({ kind: f.kind, name: m?.display_name, text: f.text }, item);
       const r = await db.send(`feedback?id=eq.${f.id}&reply=is.null`, 'PATCH', { reply, replied_at: new Date().toISOString(), reply_seen: false, status: 'resolvido' });
       if (!r.ok) continue;
-      out.replied++;
+      out.replied++; if (f.user_id) out.users.push(f.user_id);
       if (!f.user_id || !vapid?.publicKey || !vapid?.privateKey) continue;
       const subs = await db.get(`push_subscriptions?user_id=eq.${f.user_id}&select=endpoint,p256dh,auth`).catch(() => []);
       for (const s of subs) {
@@ -47,7 +47,7 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
   const res = await db.setBoard('releases', { applied: [...state.applied, ...todo.map(r => r.id)] });
   if (!res.ok) return { applied: 0 };
   todo.forEach(r => appliedCache.add(r.id));
-  let replied = 0;
+  let replied = 0, pushed = 0; const personal = new Set();
   // Every release is checked again, not only the new ones: if the product console saved an old copy of a
   // board over a release's changes, the next release puts them back (news, new items, items done, bug marks).
   const news = (await db.board('news')) || { items: [] };
@@ -63,8 +63,29 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
     for (const r of releases) for (const b of r.backlog || []) { const it = find(b.id || b); if (it && (it.status !== 'feito' || (b.where && it.where !== b.where))) Object.assign(it, { status: 'feito' }, b.where ? { where: b.where } : {}); }
     if (JSON.stringify(prev) !== JSON.stringify(items)) {
       await db.setBoard('backlog', backlog);
-      replied = (await closeLoop(db, prev, items, vapid, fetchImpl)).replied;
+      const cl = await closeLoop(db, prev, items, vapid, fetchImpl);
+      replied = cl.replied; cl.users.forEach(u => personal.add(u));
     }
   }
-  return { applied: todo.length, replied };
+  // Everyone with notifications on hears about what is new; who got a personal message for this release
+  // already heard it with their name, so they are skipped.
+  const fresh = todo.filter(r => r.news).map(r => r.news);
+  if (fresh.length && vapid?.publicKey && vapid?.privateKey) pushed = await pushNews(db, fresh, personal, vapid, fetchImpl).catch(() => 0);
+  return { applied: todo.length, replied, pushed };
+}
+
+// One push per person (on each of their devices) about the newest note, unless they turned "Novidades" off.
+export const newsPush = list => {
+  const [top, ...rest] = list;
+  return { title: 'Novidade no Pra Onde Foi: ' + top.title, body: (top.items?.[0] || '') + (rest.length ? ` E mais ${rest.length} ${rest.length > 1 ? 'novidades' : 'novidade'} no sininho.` : ''), url: '/', tag: 'news-' + top.id };
+};
+async function pushNews(db, list, skipUsers, vapid, fetchImpl) {
+  const subs = await db.get('push_subscriptions?select=id,user_id,endpoint,p256dh,auth,prefs').catch(() => []);
+  const msg = newsPush(list); let n = 0;
+  for (const s of subs) {
+    if (skipUsers.has(s.user_id) || s.prefs?.novidades === false) continue;
+    const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { ...msg, body: msg.body.slice(0, 200) }, vapid, fetchImpl).catch(() => ({ ok: false }));
+    if (r.ok) n++;
+  }
+  return n;
 }

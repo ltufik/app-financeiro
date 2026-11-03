@@ -534,3 +534,16 @@ test('nome dos documentos do mês, em português', () => {
   assert.equal(docsText('cartao', ['4388', '']), 'a fatura do cartão final 4388 e uma fatura enviada antes');
   assert.equal(docsText('conta', ['@nubank']), 'o extrato da conta Nubank');
 });
+
+import { applyMemos, withMemo, cleanNote, memoKey } from '../public/js/lib/memo.js';
+test('anotação: o app lembra da anotação para o mesmo lançamento', () => {
+  let memos = withMemo({}, 'cartao', 'JIM.COM* STTUP', '  cabeleireiro   Lily ');
+  assert.equal(memos[memoKey('cartao', 'jim.com* sttup')], 'cabeleireiro Lily');
+  const rows = [{ description: 'JIM.COM* STTUP' }, { description: 'PADARIA' }, { description: 'JIM.COM* STTUP', note: 'já tinha' }];
+  assert.equal(applyMemos(rows, 'cartao', memos), 1);
+  assert.equal(rows[0].note, 'cabeleireiro Lily'); assert.equal(rows[1].note, undefined); assert.equal(rows[2].note, 'já tinha');
+  assert.equal(applyMemos([{ description: 'JIM.COM* STTUP' }], 'conta', memos), 0, 'conta e cartão são separados');
+  memos = withMemo(memos, 'cartao', 'JIM.COM* STTUP', '');
+  assert.deepEqual(memos, {});
+  assert.equal(cleanNote('x'.repeat(300)).length, 120);
+});

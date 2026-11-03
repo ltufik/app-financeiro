@@ -21,6 +21,7 @@ export const SCREENS = {
   lancar_nota: { title: 'Nota fiscal lida', where: 'Lançar → Foto da nota', key: 'lancar.nota' },
   lancar_pdf: { title: 'Enviar fatura ou extrato', where: 'Lançar → Fatura ou extrato', key: 'lancar.pdf' },
   lancar_revisao: { title: 'Revisão da fatura', where: 'Depois de enviar o PDF', key: 'lancar.pdf_ok' },
+  anotacao: { title: 'Anotar um lançamento', where: 'Extrato → Anotar', key: 'extrato.anotacao' },
   categoria: { title: 'Escolher a categoria', where: 'Toque na categoria de um lançamento (revisão, Extrato, Fechar o mês)', key: null },
   graficos: { title: 'Gráficos', where: 'Aba Gráficos', key: 'aba.graficos' },
   perguntar: { title: 'Perguntar', where: 'Aba Perguntar', key: 'aba.perguntar' },
@@ -58,7 +59,7 @@ export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
-    { title: 'Dentro das abas', screens: ['inicio_mais', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lancar_revisao', 'categoria', 'perguntar_resposta'] },
+    { title: 'Dentro das abas', screens: ['inicio_mais', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lancar_revisao', 'categoria', 'anotacao', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },

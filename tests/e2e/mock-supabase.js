@@ -92,7 +92,7 @@ const rpcs = {
     const imp = uid(); T.imports.push({ id: imp, household_id: p_household, source: p_source, month: p_month, label: p_label, file_name: p_file, info: p_info, created_at: now() });
     const hit = t => (p_cards || []).includes(t.card) || (p_unknown && !t.card);
     T.transactions = T.transactions.filter(t => !(t.household_id === p_household && t.source === p_source && t.month === p_month && !t.manual && hit(t)) && !(t.manual && (p_reconcile || []).includes(t.id)));
-    p_rows.forEach(r => T.transactions.push({ id: uid(), household_id: p_household, source: p_source, month: p_month, date: r.date || null, day: r.day, description: r.description, amount: r.amount, category: r.category, installment: r.installment, card: r.card, manual: false, pending: !!r.pending, import_id: imp, created_at: now() }));
+    p_rows.forEach(r => T.transactions.push({ id: uid(), household_id: p_household, source: p_source, month: p_month, date: r.date || null, day: r.day, description: r.description, amount: r.amount, category: r.category, installment: r.installment, card: r.card, note: r.note || null, manual: false, pending: !!r.pending, import_id: imp, created_at: now() }));
     window.__lastReplace = { p_source, p_month, n: p_rows.length, reconcile: p_reconcile, cards: p_cards, unknown: p_unknown }; return imp;
   },
   replace_month({ p_household, p_source, p_month, p_rows, p_reconcile, p_label, p_file, p_info }) {

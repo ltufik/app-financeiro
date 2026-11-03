@@ -521,3 +521,10 @@ label.consent{display:flex;gap:12px;align-items:center;padding:12px 14px;border:
 label.consent:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 label.consent input{width:24px;height:24px;flex:none;margin:0;accent-color:var(--accent)}
 label.consent[hidden]{display:none}
+
+/* Personal note on an entry */
+.xnote{display:block;font-size:13px;color:var(--accent);margin-top:2px;overflow-wrap:anywhere}
+.xnote::before{content:'✎ ';opacity:.8}
+.chip.notechip{font-size:12px;padding:4px 10px}
+.nt-rem{display:flex;gap:8px;align-items:center;margin-top:10px}
+.nt-rem input{width:20px;height:20px;accent-color:var(--accent)}

@@ -65,6 +65,11 @@ select public.replace_statement(:'ha', 'cartao', '2026-12', '[{"day":"05/12","de
 select public.replace_statement(:'ha', 'cartao', '2026-12', '[{"day":"01/12","description":"MERCADO","amount":310,"category":"Mercado","card":"4388"}]'::jsonb, array['4388']) \gset
 select count(*) as nst, sum(amount) as sst from transactions where household_id = :'ha' and month = '2026-12' \gset
 \echo duas faturas no mês: :nst lançamentos, soma :sst (Visa reenviada trocou só a dela)
+-- anotação pessoal: continua depois de reenviar a fatura
+update transactions set note = 'cabeleireiro Lily' where household_id = :'ha' and month = '2026-12' and description = 'MERCADO';
+select public.replace_statement(:'ha', 'cartao', '2026-12', '[{"day":"01/12","description":"MERCADO","amount":310,"category":"Mercado","card":"4388"}]'::jsonb, array['4388']) \gset
+select note from transactions where household_id = :'ha' and month = '2026-12' and description = 'MERCADO' \gset
+\echo anotação mantida ao reenviar: :note
 select public.learn_rule(:'ha', 'cartao', 'PADARIA X', 'Mercado');
 select public.learn_rule(:'ha', 'cartao', 'PADARIA X', 'Restaurantes e delivery');
 select category from rules where household_id = :'ha' and kind = 'exact' \gset

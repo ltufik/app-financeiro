@@ -16,7 +16,7 @@ Nada sobe sem isto. `tests/release.test.mjs` cobra os itens marcados com (teste)
 1. Testes passando: `npm test`, `sh tests/db/run.sh` e o e2e (`tests/e2e/run.mjs`).
 2. Versão nova: `VERSION` em `public/sw.js` e `APP_VERSION` em `public/js/usage.js`, iguais (teste).
 3. Entrada da versão em `public/js/lib/releases.js` (teste):
-   - `news`: a novidade do pop-up "O que mudou", em palavras simples, sem citar a IA. Sempre que houver algo visível para o usuário. Se não houver, `semNovidade` com o motivo.
+   - `news`: a novidade do pop-up "O que mudou", em palavras simples, sem citar a IA. Sempre que houver algo visível para o usuário. Se não houver, `semNovidade` com o motivo. A novidade também vira push para todos (automático, `applyReleases`); quem pediu o item recebe só o push personalizado.
    - `backlog`: ids dos itens concluídos (o "Pedir ao Claude" traz o id). Quem pediu recebe o recado personalizado automático.
    - `addBacklog`: itens novos combinados na conversa.
 4. Central em dia: toda página do menu e toda tela nova em `public/js/admin/flows.js` e em `tests/local/flow-screens.mjs` (teste); nomes legíveis em `content.js` para tudo o que o app registra com `track` (teste); matriz de serviços (teste); FAQ em `lib/faq.js`; documentação quando o processo muda.

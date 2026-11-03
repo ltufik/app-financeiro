@@ -47,7 +47,7 @@ test('applyReleases: publica a novidade, conclui o item e avisa, uma vez só', a
   const { T, db } = fakeDb();
   const releases = [{ id: 'r1', at: '2026-11-01T12:00:00Z', backlog: [{ id: 'semana', where: 'Gráficos → por semana' }], news: { id: 'n1', title: 'Gasto por semana', items: ['Em Gráficos'] } }];
   const first = await applyReleases(db, null, { releases });
-  assert.deepEqual(first, { applied: 1, replied: 1 });
+  assert.deepEqual(first, { applied: 1, replied: 1, pushed: 0 });
   const board = k => T.product_board.find(r => r.key === k).data;
   assert.equal(board('news').items[0].title, 'Gasto por semana');
   assert.equal(board('backlog').items[0].status, 'feito');

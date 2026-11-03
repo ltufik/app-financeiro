@@ -103,6 +103,8 @@ await step('graficos', async () => { await page.click('[data-tab=graficos]'); aw
 await step('perguntar', async () => { await page.click('[data-tab=perguntar]'); await page.waitForTimeout(300); });
 await step('perguntar_resposta', async () => { await page.fill('#askText', 'quanto gastamos com mercado em setembro?'); await page.click('#askGo'); await page.waitForFunction(() => /R\$ 1\.284/.test(document.querySelector('#v-perguntar')?.textContent || ''), null, { timeout: 8000 }); });
 await step('extrato', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(400); });
+await step('anotacao', async () => { await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in'); await page.fill('.nt-in', 'cabeleireiro Lily'); });
+await page.click('.cps .tx').catch(() => {});
 await step('menu', async () => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); await page.waitForTimeout(300); });
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 for (const k of ['familia', 'divisao', 'metas', 'patrimonio', 'categorias', 'avisos', 'applepay', 'contexto', 'duvidas', 'opiniao', 'ajuda', 'backup', 'sobre', 'conta']) await step('menu_' + k, () => sec(k));

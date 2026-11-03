@@ -83,6 +83,8 @@ create table if not exists public.transactions (
   created_at   timestamptz not null default now()
 );
 create index if not exists tx_household_month_idx on public.transactions(household_id, month);
+-- Anotação pessoal do lançamento (ex.: "JIM.COM* STTUP" → "cabeleireiro Lily").
+alter table public.transactions add column if not exists note text;
 
 -- Regras de classificação: exatas (aprendidas) e expressões regulares.
 create table if not exists public.rules (
@@ -307,23 +309,24 @@ begin
     returning id into imp;
   -- Receipts already attached to rows of this month (or to manual rows being reconciled) carry over
   -- to the re-imported row with the same amount and the same date or description.
-  select coalesce(jsonb_agg(jsonb_build_object('d', t.date::text, 's', t.description, 'a', t.amount, 'sp', t.splits, 'rc', t.receipt)), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('d', t.date::text, 's', t.description, 'a', t.amount, 'sp', t.splits, 'rc', t.receipt, 'nt', t.note)), '[]'::jsonb)
     into keep
     from transactions t
-    where t.household_id = p_household and (t.splits is not null or t.receipt is not null)
+    where t.household_id = p_household and (t.splits is not null or t.receipt is not null or t.note is not null)
       and ((t.source = p_source and t.month = p_month and t.manual = false) or (t.manual = true and t.id = any(coalesce(p_reconcile, '{}'))));
   delete from transactions where household_id = p_household and source = p_source and month = p_month and manual = false;
   delete from transactions where household_id = p_household and manual = true and id = any(coalesce(p_reconcile, '{}'));
-  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt)
+  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt, note)
   select p_household, p_source, p_month,
          nullif(r->>'date', '')::date, r->>'day', coalesce(r->>'description', ''), (r->>'amount')::numeric,
          r->>'category', nullif(r->>'installment', ''), nullif(r->>'card', ''), false,
          coalesce((r->>'pending')::boolean, false), imp, auth.uid(),
          coalesce(case when jsonb_typeof(r->'splits') = 'array' then r->'splits' end, k.sp),
-         coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc)
+         coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc),
+         left(coalesce(nullif(r->>'note', ''), k.nt), 200)
   from jsonb_array_elements(p_rows) r
   left join lateral (
-    select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc
+    select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc, nullif(x->>'nt', '') nt
     from jsonb_array_elements(keep) x
     where (x->>'a')::numeric = (r->>'amount')::numeric
       and (x->>'d' = nullif(r->>'date', '') or x->>'s' = coalesce(r->>'description', ''))
@@ -345,26 +348,27 @@ begin
   insert into imports(household_id, source, month, label, file_name, info, created_by)
     values (p_household, p_source, p_month, coalesce(p_label, p_source || ' ' || p_month), p_file, coalesce(p_info, '{}'::jsonb), auth.uid())
     returning id into imp;
-  select coalesce(jsonb_agg(jsonb_build_object('d', t.date::text, 's', t.description, 'a', t.amount, 'sp', t.splits, 'rc', t.receipt)), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('d', t.date::text, 's', t.description, 'a', t.amount, 'sp', t.splits, 'rc', t.receipt, 'nt', t.note)), '[]'::jsonb)
     into keep
     from transactions t
-    where t.household_id = p_household and (t.splits is not null or t.receipt is not null)
+    where t.household_id = p_household and (t.splits is not null or t.receipt is not null or t.note is not null)
       and ((t.source = p_source and t.month = p_month and t.manual = false
             and (t.card = any(coalesce(p_cards, '{}')) or (p_unknown and t.card is null)))
         or (t.manual = true and t.id = any(coalesce(p_reconcile, '{}'))));
   delete from transactions where household_id = p_household and source = p_source and month = p_month and manual = false
     and (card = any(coalesce(p_cards, '{}')) or (p_unknown and card is null));
   delete from transactions where household_id = p_household and manual = true and id = any(coalesce(p_reconcile, '{}'));
-  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt)
+  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt, note)
   select p_household, p_source, p_month,
          nullif(r->>'date', '')::date, r->>'day', coalesce(r->>'description', ''), (r->>'amount')::numeric,
          r->>'category', nullif(r->>'installment', ''), nullif(r->>'card', ''), false,
          coalesce((r->>'pending')::boolean, false), imp, auth.uid(),
          coalesce(case when jsonb_typeof(r->'splits') = 'array' then r->'splits' end, k.sp),
-         coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc)
+         coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc),
+         left(coalesce(nullif(r->>'note', ''), k.nt), 200)
   from jsonb_array_elements(p_rows) r
   left join lateral (
-    select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc
+    select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc, nullif(x->>'nt', '') nt
     from jsonb_array_elements(keep) x
     where (x->>'a')::numeric = (r->>'amount')::numeric
       and (x->>'d' = nullif(r->>'date', '') or x->>'s' = coalesce(r->>'description', ''))

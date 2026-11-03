@@ -533,6 +533,16 @@ if (nrows) {
   await page.click('#lRows li:not([data-split]) .chip'); await page.waitForSelector('.cps');
   await page.fill('.cps-q', 'Estacionamento'); await page.click('.cps-new'); await page.waitForTimeout(400);
   ok('dá para criar a categoria na hora e ela já fica escolhida', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Estacionamento' && c.grp === 'dia')) && !(await page.$('.cps')));
+  // Personal note (Paty's idea): what the entry really was, remembered for the same name.
+  await page.waitForTimeout(300); await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in');
+  ok('anotar mostra o lançamento e pede o que foi', (await txt('.cps')).includes('O que foi isso?'));
+  await page.fill('.nt-in', 'cabeleireiro Lily'); await page.click('.cps [data-s]'); await page.waitForTimeout(400);
+  const noted = await page.evaluate(() => window.__db.transactions.find(t => t.note === 'cabeleireiro Lily'));
+  ok('anotação salva no lançamento e lembrada para o mesmo nome', !!noted && await page.evaluate(d => Object.values(window.__db.households[0].settings.memos || {}).includes('cabeleireiro Lily'), null) && (await txt('#lRows')).includes('cabeleireiro Lily'));
+  if (shots) await page.screenshot({ path: path.join(shots, '07c-anotacao.png') });
+  await page.fill('#lSearch', 'lily'); await page.waitForTimeout(300);
+  ok('a busca do Extrato também acha pela anotação', (await page.$$('#lRows li')).length >= 1 && (await txt('#lRows')).includes('cabeleireiro Lily'));
+  await page.fill('#lSearch', ''); await page.waitForTimeout(200);
 }
 await shot('07-extrato');
 await sec('metas');
@@ -952,7 +962,7 @@ ok('uso registrado só com nomes das partes', used.includes('menu.opiniao') && u
 // notifications
 await sec('avisos');
 await page.waitForSelector('#pOn');
-ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 6 && (await txt('#pushBox')).includes('Resumo da semana'));
+ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 7 && (await txt('#pushBox')).includes('Resumo da semana'));
 await page.uncheck('#pushBox [data-pt="semanal"]');
 await page.evaluate(() => { window.__permAnswer = 'default'; });
 await page.click('#pOn');
@@ -968,7 +978,7 @@ ok('ao ativar, manda um aviso de teste', window_pushTests >= 1);
 await shot('08b-avisos');
 await page.check('#pushBox [data-pt="semanal"]'); await page.waitForTimeout(150);
 ok('mudar o tipo de aviso salva na hora', await page.evaluate(() => window.__db.push_subscriptions[0].prefs.semanal === true));
-for (const k of ['dados', 'gastos', 'conquistas', 'familia', 'lembrete']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
+for (const k of ['dados', 'gastos', 'conquistas', 'familia', 'novidades', 'lembrete']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
 await page.click('#pushBox [data-pt="semanal"]');
 ok('não deixa desmarcar todos os tipos', (await txt('#pMsg')).includes('pelo menos um') && await page.isChecked('#pushBox [data-pt="semanal"]'));
 await page.click('#pOff'); await page.waitForSelector('.cfm [data-y]');

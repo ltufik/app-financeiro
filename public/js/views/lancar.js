@@ -12,6 +12,7 @@ import { notifyFamily } from '../push.js';
 import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '../lib/receipt.js';
 import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js';
 import { docKeys, compareStatement, docsText } from '../lib/statements.js';
+import { applyMemos } from '../lib/memo.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
 let Q = null;          // quick-entry preview items
@@ -483,6 +484,7 @@ async function reviewRows(source, rows, month, info) {
   if (!month) month = addM((source === 'cartao' ? latestCard() : latestClosed()) || addM(thisMonth(), -1), 1);
   const prevCard = source === 'cartao' ? txsOf(addM(month, -1)).filter(t => t.source === 'cartao') : null;
   rows.forEach(r => { r.source = source; const k = classify(r, S.prepared, prevCard); if (k) { r.category = k.category; r.how = k.how; r.pending = false; } });
+  applyMemos(rows, source, settings().memos); // personal notes remembered for the same description
   await suggest(source, rows);
   R = { source, rows, month, info };
   renderReview();
@@ -519,7 +521,7 @@ function renderReview() {
   const tb = $('#rvRows');
   rows.map((r, i) => [r, i]).sort((a, b) => (b[0].pending ? 1 : 0) - (a[0].pending ? 1 : 0)).forEach(([r]) => {
     const tr = document.createElement('tr'); if (r.pending) tr.className = 'pend';
-    tr.innerHTML = `<td class="rv-d">${esc(r.day)}</td><td class="rv-x" style="min-width:170px">${esc(r.description)}${r.installment ? ' <span class="tiny muted">' + esc(r.installment) + '</span>' : ''}</td><td class="rv-c"></td><td class="r${source === 'conta' && r.amount > 0 ? ' neg' : ''}">${brl(r.amount)}</td>`;
+    tr.innerHTML = `<td class="rv-d">${esc(r.day)}</td><td class="rv-x" style="min-width:170px">${esc(r.description)}${r.installment ? ' <span class="tiny muted">' + esc(r.installment) + '</span>' : ''}${r.note ? `<span class="xnote">${esc(r.note)}</span>` : ''}</td><td class="rv-c"></td><td class="r${source === 'conta' && r.amount > 0 ? ' neg' : ''}">${brl(r.amount)}</td>`;
     tr.children[2].append(catPicker(S.categories, r.category, r.pending, c => { if (c !== r.category) r.learn = true; r.category = c; r.pending = false; renderReview(); }, { description: r.description, amount: r.amount }));
     tb.append(tr);
   });
@@ -543,7 +545,7 @@ async function saveReview(pend) {
   $('#rvSave').disabled = true;
   const { source, rows, month, info } = R;
   try {
-    const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending }));
+    const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending, ...(r.note ? { note: r.note } : {}) }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month);
     track('lancar.pdf_ok'); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     notifyFamily('imported', { source, month });

@@ -130,3 +130,28 @@ test('lembrete das 21h: só para quem não lançou nada hoje, uma vez por dia', 
   const e = reminderMessage('Mari Souza', { empty: true });
   assert.equal(e.title, 'Mari, o app de vocês ainda está vazio'); assert.equal(e.url, '/?acao=pdf'); assert.match(e.body, /última fatura/);
 });
+
+import { applyReleases, rest as rest2, newsPush } from '../api/_loop.js';
+test('novidade publicada vira push para todos; quem pediu recebe só o personalizado', async () => {
+  const k = browser().sub.keys, sent = [];
+  const T = { feedback: [{ id: 1, user_id: 'u1', kind: 'ideia', text: 'ver por semana', reply: null }], members: [{ user_id: 'u1', display_name: 'Luana Souza' }],
+    push_subscriptions: [{ id: 1, user_id: 'u1', endpoint: 'https://push.example/u1', p256dh: k.p256dh, auth: k.auth, prefs: {} }, { id: 2, user_id: 'u2', endpoint: 'https://push.example/u2', p256dh: k.p256dh, auth: k.auth, prefs: {} },
+      { id: 3, user_id: 'u3', endpoint: 'https://push.example/u3', p256dh: k.p256dh, auth: k.auth, prefs: { novidades: false } }],
+    product_board: [{ key: 'backlog', data: { items: [{ id: 'semana', title: 'Gráfico por semana', status: 'agora', from: [1] }] } }] };
+  const fetchImpl = async (url, o = {}) => {
+    const u = new URL(url), method = o.method || 'GET', json = d => ({ ok: true, status: 200, json: async () => d });
+    if (u.hostname === 'push.example') { sent.push(u.pathname.slice(1)); return { ok: true, status: 201 }; }
+    const table = u.pathname.split('/').pop(), q = Object.fromEntries(u.searchParams);
+    const match = r => Object.entries(q).every(([kk, v]) => ['select', 'limit', 'on_conflict'].includes(kk) || (v.startsWith('eq.') ? String(r[kk]) === v.slice(3) : v.startsWith('in.(') ? v.slice(4, -1).split(',').includes(String(r[kk])) : v === 'is.null' ? r[kk] == null : true));
+    if (method === 'GET') return json((T[table] || []).filter(match));
+    if (method === 'PATCH') { (T[table] || []).filter(match).forEach(r => Object.assign(r, JSON.parse(o.body))); return json([]); }
+    if (method === 'POST') { const b = JSON.parse(o.body), i = T[table].findIndex(r => r.key === b.key); if (i >= 0) T[table][i] = b; else T[table].push(b); return json([b]); }
+    return json([]);
+  };
+  const db = rest2('https://x.supabase.co', 'sb_secret_x', fetchImpl);
+  const releases = [{ id: 'rp1', at: '2026-11-03T12:00:00Z', backlog: ['semana'], news: { id: 'np1', title: 'Gasto por semana', items: ['Em Gráficos, escolha por semana.'] } }];
+  const out = await applyReleases(db, { ...generateVapidKeys(), subject: 'https://praondefoi.app.br' }, { releases, fetchImpl });
+  assert.equal(out.replied, 1); assert.equal(out.pushed, 1);
+  assert.deepEqual(sent.sort(), ['u1', 'u2'], 'u1: o recado com o nome; u2: a novidade; u3 desligou as novidades');
+  assert.equal(newsPush([{ id: 'a', title: 'X', items: ['Y'] }, { id: 'b', title: 'Z' }]).body, 'Y E mais 1 novidade no sininho.');
+});
