@@ -93,7 +93,7 @@ export async function offerPush() {
   if (!shouldAskPush({ status, asks, now: Date.now() })) return false;
   ls(ASK(), JSON.stringify({ n: (+asks.n || 0) + 1, at: Date.now() }));
   const t = pushAskText(status, S.user.user_metadata?.display_name || '');
-  const r = await announce({ eyebrow: 'Notificações', title: t.title, html: `<ul>${t.items.map(i => `<li>${i}</li>`).join('')}</ul>`, primary: t.primary, secondary: t.secondary });
+  const r = await announce({ eyebrow: t.eyebrow, title: t.title, html: `<ul>${t.items.map(i => `<li>${i}</li>`).join('')}</ul>`, primary: t.primary, secondary: t.secondary });
   track(r === 'primary' ? 'avisos.convite_sim' : 'avisos.convite_nao');
   if (r === 'primary') { S.pushFocus = true; S.go('ajustes', '#pushBox', 'avisos'); }
   return true;

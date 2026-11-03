@@ -13,17 +13,17 @@ export function shouldAskPush({ status, asks = {}, now }) {
   return pushIsOff(status) && n < ASK_MAX && (!at || now - at >= ASK_GAP_DAYS * 864e5);
 }
 
-// Pop-up text, with the person's name.
+// Pop-up text, with the person's name: an invitation (what the person gains), not a status report.
+// The state of the device goes in the small label on top.
 export function pushAskText(status, name = '') {
   const first = String(name || '').trim().split(/\s+/)[0];
-  const who = first ? first + ', as' : 'As';
   const items = [
-    'Novidades do app e a resposta quando o que você pediu ficar pronto.',
-    'Fatura fechando, mês acabando sem dados e gasto acima do normal.',
+    'A resposta na hora quando o que você pediu ficar pronto.',
+    'Fatura fechando, mês acabando sem dados ou gasto acima do normal, antes de virar surpresa.',
     'No máximo um aviso por dia, e você escolhe quais quer.',
   ];
-  if (status === 'denied') return { title: `${who} notificações estão bloqueadas neste celular`, items: [...items, 'Na próxima tela, o passo a passo para liberar nos ajustes do celular.'], primary: 'Ver como liberar', secondary: 'Agora não' };
-  return { title: `${who} notificações estão desligadas neste celular`, items: [...items, 'Na próxima tela é só tocar em Ativar e depois em Permitir. Dá para desligar quando quiser.'], primary: 'Ligar agora', secondary: 'Agora não' };
+  if (status === 'denied') return { eyebrow: 'Notificações bloqueadas', title: `${first ? first + ', quer' : 'Quer'} voltar a receber os avisos do app?`, items: [...items, 'Na próxima tela, o passo a passo para liberar nos ajustes do celular. Leva menos de um minuto.'], primary: 'Ver como liberar', secondary: 'Agora não' };
+  return { eyebrow: 'Notificações desligadas', title: `${first ? first + ', que' : 'Que'} tal o app te avisar do que importa?`, items: [...items, 'É só tocar em Ativar e depois em Permitir. Dá para desligar quando quiser.'], primary: 'Quero receber', secondary: 'Agora não' };
 }
 
 // The line under "Notificações" in menu ☰.
