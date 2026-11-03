@@ -16,6 +16,7 @@ import { renderApplePay } from '../applepay.js';
 import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
 import { platformOf, phoneSteps, testOutcome } from '../lib/pushask.js';
+import { toCSV } from '../lib/csv.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
@@ -142,7 +143,8 @@ export function render(el) {
   <div class="panel stack" data-sec="backup">
     <h2>Backup</h2>
     <p class="small muted">Um arquivo com todos os lançamentos, categorias e ajustes da família. Guarde num lugar seguro: ele tem os seus dados financeiros.</p>
-    <div class="rowbtn"><button class="btn" id="dExport" type="button">Baixar backup</button>
+    <p class="tiny muted">A planilha tem todos os lançamentos, um por linha, e abre no Excel ou no Google Planilhas. O backup serve para trazer tudo de volta para o app.</p>
+    <div class="rowbtn"><button class="btn" id="dExport" type="button">Baixar backup</button><button class="btn" id="dCsv" type="button">Baixar planilha (Excel)</button>
       <span class="btn" style="position:relative">Importar backup<input type="file" id="dImport" class="fileover" accept=".json,application/json" aria-label="Importar backup"></span></div>
     <p class="status" id="bkStatus" role="status" hidden></p>
   </div>
@@ -351,6 +353,15 @@ export function render(el) {
       return true;
     } catch (e) { status('err', 'Não foi possível gerar o backup. Verifique a internet e tente de novo.'); return false; }
     finally { $('#dExport').disabled = false; }
+  };
+  $('#dCsv').onclick = async e => {
+    if (!await confirmInline(e.target, { title: 'Baixar a planilha?', text: `Todos os ${S.txs.length.toLocaleString('pt-BR')} lançamentos da família, para abrir no Excel. Guarde num lugar seguro e não compartilhe.`, yes: 'Sim, baixar' })) return;
+    try {
+      const name = `lancamentos-${S.hh.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').toLowerCase()}-${todayISO()}.csv`;
+      const url = URL.createObjectURL(new Blob([toCSV(S.txs, S.categories)], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+      track('backup.planilha'); statusBk('ok', `Planilha pronta: ${name}. Ela fica na pasta de downloads (no iPhone, no app Arquivos).`);
+    } catch (err) { statusBk('err', 'Não foi possível gerar a planilha. Tente de novo.'); }
   };
   $('#dExport').onclick = async e => {
     if (!await confirmInline(e.target, { title: 'Baixar o backup?', text: 'O arquivo tem todos os dados financeiros da família. Guarde num lugar seguro e não compartilhe.', yes: 'Sim, baixar' })) return;

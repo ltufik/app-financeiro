@@ -4,7 +4,7 @@ import { monthToClose } from '../lib/closing.js';
 import { budgetStatus, budgetsOf } from '../lib/budget.js';
 import { findRecurring } from '../lib/recurring.js';
 import { settle } from '../lib/settle.js';
-import { settings } from '../state.js';
+import { settings, closeDay } from '../state.js';
 import { expandSplits } from '../lib/calc.js';
 import { todayISO } from '../lib/format.js';
 import { byCategory } from '../lib/calc.js';
@@ -128,6 +128,7 @@ function renderInsights(box) {
     has: (k, src) => S.txs.some(t => t.month === k && t.source === src && !t.manual),
     manualCount: k => S.txs.filter(t => t.month === k && t.manual).length,
     pending: k => S.txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
+    fixedCats: [...idx.values()].filter(c => c.grp === 'dia' && c.recurring).map(c => c.name), closeDay: closeDay(),
     goals: G, nextFatura: nextFatura(), budgets: budgetsOf(settings()), recurring: findRecurring(S.txs, monthKeys(), { idx }), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
   }).filter(x => x.id !== 'close');

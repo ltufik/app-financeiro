@@ -611,3 +611,48 @@ test('tocar no aviso leva para o lugar certo', () => {
   assert.equal(parseLink('/?abrir=recado&id=<script>'), null);
   assert.equal(parseLink('/'), null);
 });
+
+import { makeQueue, advance, isDone, position, queueSummary, QUEUE_MAX } from '../public/js/lib/queue.js';
+test('vários arquivos de uma vez: fila e resumo', () => {
+  const q = makeQueue([{ name: 'visa.pdf' }, { name: 'master.pdf' }, { name: 'extrato.pdf' }]);
+  q.items[0].status = 'lendo';
+  assert.equal(position(q), '1 de 3');
+  advance(q, 'salvo', 'Fatura de outubro'); assert.equal(q.items[1].status, 'lendo'); assert.equal(position(q), '2 de 3');
+  advance(q, 'pulado'); advance(q, 'salvo', 'Extrato de outubro');
+  assert.ok(isDone(q));
+  const s = queueSummary(q);
+  assert.equal(s.head, 'Pronto: 2 salvos e 1 pulado.');
+  assert.equal(s.lines[0].label, 'Fatura de outubro');
+  const big = makeQueue(Array.from({ length: QUEUE_MAX + 2 }, (_, i) => ({ name: i + '.pdf' })));
+  assert.equal(big.items.length, QUEUE_MAX); assert.match(queueSummary(big).head, /2 arquivos ficaram de fora/);
+});
+
+import { toCSV } from '../public/js/lib/csv.js';
+test('planilha CSV abre no Excel brasileiro', () => {
+  const csv = toCSV([
+    { source: 'cartao', month: '2026-10', date: '2026-10-05', description: 'Mercado; "Pão"', category: 'Mercado', amount: 123.4, installment: '02/10', card: '4388', note: 'compra do mês' },
+    { source: 'conta', month: '2026-09', day: '01/09', description: 'Nota', category: 'Mercado', amount: -100, splits: [{ category: 'Mercado', amount: 60 }, { category: 'Farmácia', amount: 40 }] },
+  ], [{ name: 'Mercado', grp: 'dia', recurring: false }]);
+  assert.ok(csv.startsWith('﻿Data;Mês;Onde'));
+  const ls = csv.trim().split('\r\n');
+  assert.equal(ls.length, 4);
+  assert.equal(ls[1], '01/09;2026-09;Conta;Nota;Mercado;Despesa variável;-60,00;;;');
+  assert.equal(ls[2].split(';').slice(4, 7).join(';'), 'Farmácia;;-40,00');
+  assert.equal(ls[3], '05/10/2026;2026-10;Cartão;"Mercado; ""Pão""";Mercado;Despesa variável;123,40;02/10;4388;compra do mês');
+});
+
+test('insights: quanto dá para gastar por dia no cartão e conta fixa acima do normal', async () => {
+  const { insights } = await import('../public/js/lib/insights.js');
+  const M = { res: 2000, renda: 10000, E: 10000, out: 8000, tx: 0.2 };
+  const cats = { '2026-07': { Moradia: 700, Escola: 1500 }, '2026-08': { Moradia: 720, Escola: 1500 }, '2026-09': { Moradia: 680, Escola: 1500 }, '2026-10': { Moradia: 1050, Escola: 1520 } };
+  const base = { months: Object.keys(cats), calc: () => M, cats: k => cats[k] || {}, fixed: () => 0, manualCount: () => 1, pending: () => 0, has: () => true,
+    goals: { savings: 0.2, cardMonthly: 5000 }, nextFatura: { month: '2026-11', total: 3000 }, fixedCats: ['Moradia', 'Escola'], closeDay: 24 };
+  const a = insights({ ...base, today: '2026-11-14' });
+  const pd = a.find(x => x.id === 'perday');
+  assert.ok(pd); assert.equal(pd.title, 'Dá para gastar cerca de R$ 200 por dia no cartão'); assert.match(pd.text, /Sobram R\$ 2\.000 para os 10 dias/);
+  const bu = a.find(x => x.id === 'bill_up');
+  assert.ok(bu); assert.equal(bu.title, 'Moradia veio acima do normal'); assert.match(bu.text, /Moradia: R\$ 1\.050 em outubro, R\$ 350 \(50%\) acima da média/);
+  // After the closing day, the days run to next month's closing; above the limit, no per-day message.
+  assert.match(insights({ ...base, today: '2026-11-26' }).find(x => x.id === 'perday').text, /28 dias/);
+  assert.ok(!insights({ ...base, today: '2026-11-14', nextFatura: { month: '2026-11', total: 5200 } }).some(x => x.id === 'perday'));
+});

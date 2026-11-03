@@ -109,6 +109,12 @@ if (arg('pdf')) await step('lancar_revisao', async () => {
 // Choosing a category: the sheet with the entry, the search and the suggestions.
 if (arg('pdf')) await step('categoria', async () => { await page.click('#rvRows .catchip'); await page.waitForSelector('.cps'); await page.fill('.cps-q', 'estacion'); await page.waitForTimeout(200); });
 await page.click('.cps .tx').catch(() => {});
+// Several files at once: the queue on top ("Arquivo 1 de 2") and the review of the first one.
+if (arg('pdf')) await step('varios_arquivos', async () => {
+  await page.click('#rvCancel'); await page.click('.cfm [data-y]'); await page.waitForTimeout(200);
+  await page.setInputFiles('#pdfIn', [arg('pdf'), path.join(HERE, '../fixtures/comprovante-ficticio.pdf')]); await page.waitForSelector('#rvSave', { timeout: 30000 });
+}, { scrollTo: '#qBar' });
+if (arg('pdf')) { await page.click('#quSkip').catch(() => {}); await page.waitForSelector('#quClose', { timeout: 30000 }).catch(() => page.click('#quSkip').catch(() => {})); await page.click('#quClose').catch(() => {}); }
 await step('graficos', async () => { await page.click('[data-tab=graficos]'); await page.waitForTimeout(500); });
 await step('perguntar', async () => { await page.click('[data-tab=perguntar]'); await page.waitForTimeout(300); });
 await step('perguntar_resposta', async () => { await page.fill('#askText', 'quanto gastamos com mercado em setembro?'); await page.click('#askGo'); await page.waitForFunction(() => /R\$ 1\.284/.test(document.querySelector('#v-perguntar')?.textContent || ''), null, { timeout: 8000 }); });

@@ -1,4 +1,5 @@
 // Starting content for the console's service matrix, documentation and usage labels.
+import { BUG_STUDY } from '../lib/bugstudy.js';
 // Once saved in the console, the database copy is the one that counts.
 
 // Friendly names for the usage keys recorded by the app (public/js/usage.js).
@@ -10,13 +11,13 @@ export const FEATURE_LABELS = {
   'opiniao.erro': 'Mandou erro', 'opiniao.ideia': 'Mandou ideia', 'opiniao.critica': 'Mandou crítica', 'duvida.ler': 'Leu uma dúvida', 'duvida.perguntar': 'Perguntou nas Dúvidas',
   'menu.familia': 'Menu: Família', 'menu.divisao': 'Menu: Quem paga o quê', 'menu.metas': 'Menu: Metas', 'menu.patrimonio': 'Menu: Patrimônio', 'menu.categorias': 'Menu: Categorias',
   'menu.avisos': 'Menu: Notificações', 'avisos.convite_sim': 'Aceitou ligar as notificações (pop-up)', 'avisos.convite_nao': 'Disse "agora não" às notificações (pop-up)', 'avisos.ligou': 'Ligou as notificações neste celular', 'aviso.tocou': 'Tocou numa notificação e foi direto ao lugar', 'avisos.teste_chegou': 'O aviso de teste apareceu no celular', 'avisos.teste_nao_chegou': 'Aviso de teste não chegou ao celular (bateria ou internet)', 'avisos.teste_nao_mostrou': 'Aviso de teste chegou, mas o celular não mostrou (ajustes)', 'avisos.teste_bloqueado': 'O celular bloqueou o aviso de teste', 'teste.jornada': 'Dono do produto: rever os convites de abertura', 'menu.contexto': 'Menu: O que o assistente sabe', 'menu.ajuda': 'Menu: Ajuda', 'menu.duvidas': 'Menu: Dúvidas', 'menu.opiniao': 'Menu: Dar opinião',
-  'menu.applepay': 'Menu: Atalhos do iPhone', 'conta.zerar': 'Zerou os lançamentos da família', 'extrato.anotacao': 'Anotou um lançamento', 'exemplo.fatura': 'Do mês de exemplo, foi enviar a fatura', 'exemplo.falar': 'Do mês de exemplo, foi lançar falando', 'seguranca.biometria': 'Ligou a digital ou o rosto', 'seguranca.desbloqueio_bio': 'Desbloqueou com a digital ou o rosto', 'seguranca.desbloqueio_senha': 'Desbloqueou com a senha', 'seguranca.tempo': 'Mudou o tempo do bloqueio', 'seguranca.bloquear': 'Bloqueou o app na mão', 'applepay.codigo': 'Gerou código do atalho do iPhone', 'lancar.comprovante': 'Leu comprovante compartilhado', 'atalho.voz': 'Abriu pelo atalho Falar', 'atalho.nota': 'Abriu pelo atalho Nota', 'atalho.pdf': 'Abriu pelo atalho PDF', 'atalho.compartilhar': 'Compartilhou algo com o app', sininho: 'Abriu o sininho', 'menu.backup': 'Menu: Backup', 'menu.sobre': 'Menu: Sobre', 'menu.metricas': 'Menu: Métricas', 'menu.conta': 'Menu: Conta',
+  'menu.applepay': 'Menu: Atalhos do iPhone', 'conta.zerar': 'Zerou os lançamentos da família', 'extrato.anotacao': 'Anotou um lançamento', 'lancar.varios': 'Enviou vários arquivos de uma vez', 'backup.planilha': 'Baixou a planilha (CSV)', 'exemplo.fatura': 'Do mês de exemplo, foi enviar a fatura', 'exemplo.falar': 'Do mês de exemplo, foi lançar falando', 'seguranca.biometria': 'Ligou a digital ou o rosto', 'seguranca.desbloqueio_bio': 'Desbloqueou com a digital ou o rosto', 'seguranca.desbloqueio_senha': 'Desbloqueou com a senha', 'seguranca.tempo': 'Mudou o tempo do bloqueio', 'seguranca.bloquear': 'Bloqueou o app na mão', 'applepay.codigo': 'Gerou código do atalho do iPhone', 'lancar.comprovante': 'Leu comprovante compartilhado', 'atalho.voz': 'Abriu pelo atalho Falar', 'atalho.nota': 'Abriu pelo atalho Nota', 'atalho.pdf': 'Abriu pelo atalho PDF', 'atalho.compartilhar': 'Compartilhou algo com o app', sininho: 'Abriu o sininho', 'menu.backup': 'Menu: Backup', 'menu.sobre': 'Menu: Sobre', 'menu.metricas': 'Menu: Métricas', 'menu.conta': 'Menu: Conta',
 };
 export const AREA_LABELS = { extrato: 'Extrato', conta: 'Conta', exemplo: 'Mês de exemplo', seguranca: 'Segurança', atalho: 'Atalhos', applepay: 'Atalhos do iPhone', aba: 'Abas', lancar: 'Lançar', perguntar: 'Perguntar', fechar: 'Fechar o mês', graficos: 'Gráficos', privacidade: 'Privacidade', opiniao: 'Opinião', duvida: 'Dúvidas', menu: 'Menu' };
 
 const sv = (id, name, what, where, status, plan, ai, deps, keys) => ({ id, name, what, where, status, plan, ai, deps, keys });
 export const SERVICES = [
-  sv('pdf', 'Leitura de fatura e extrato', 'Lê PDF, foto ou print de qualquer banco, confere com o total e separa em lançamentos', 'Lançar → Fatura ou extrato', 'no_ar', 'gratis', 'as_vezes', 'pdf.js; IA quando o layout é novo ou é foto', ['lancar.pdf_ok']),
+  sv('pdf', 'Leitura de fatura e extrato', 'Lê PDF, foto ou print de qualquer banco, confere com o total e separa em lançamentos', 'Lançar → Fatura ou extrato', 'no_ar', 'gratis', 'as_vezes', 'pdf.js; IA quando o layout é novo ou é foto', ['lancar.pdf_ok', 'lancar.varios']),
   sv('tipo', 'Reconhecer o documento', 'Lê o conteúdo e decide se é fatura, extrato, comprovante, nota ou investimentos, qualquer que seja o arquivo ou o botão', 'Lançar e Compartilhar', 'no_ar', 'gratis', 'as_vezes', 'Regras de palavras (lib/classify.js); IA para foto e print', ['lancar.pdf_ok', 'lancar.comprovante', 'lancar.nota_ok']),
   sv('cat', 'Categorias que aprendem', 'Sugere a categoria e aprende com cada correção', 'Revisão do PDF e Extrato', 'no_ar', 'gratis', 'sim', 'IA (rápida); regras salvas', ['lancar.pdf_ok']),
   sv('voz', 'Lançar falando ou escrevendo', '"Gastei 45 na padaria no pix" vira um lançamento', 'Lançar → Falar ou escrever', 'no_ar', 'a_definir', 'sim', 'Reconhecimento de voz do celular; IA', ['lancar.salvar', 'lancar.falar']),
@@ -35,7 +36,7 @@ export const SERVICES = [
   sv('push_convite', 'Convite para ligar as notificações', 'Se as notificações estão desligadas ou bloqueadas no celular, o app avisa (1 vez por dia, até 7 vezes, ao abrir ou voltar do bloqueio) e leva para Notificações; o menu mostra "Desligadas"', 'Pop-up ao abrir o app; menu ☰', 'no_ar', 'gratis', 'nao', 'Estado do Web Push no próprio aparelho', ['avisos.convite_sim', 'avisos.convite_nao']),
   sv('priv', 'Modo privacidade', 'Esconde todos os valores', 'Olho no topo', 'no_ar', 'gratis', 'nao', '—', ['privacidade']),
   sv('pat', 'Patrimônio e dívidas', 'Investimentos, bens, financiamentos e projeção do sonho', 'Menu → Patrimônio', 'no_ar', 'gratis', 'nao', '—', ['menu.patrimonio']),
-  sv('backup', 'Backup', 'Baixar e importar todos os dados', 'Menu → Backup', 'no_ar', 'gratis', 'nao', '—', ['menu.backup']),
+  sv('backup', 'Backup e planilha', 'Baixar e importar todos os dados; baixar todos os lançamentos numa planilha (CSV para Excel)', 'Menu → Backup', 'no_ar', 'gratis', 'nao', '—', ['menu.backup', 'backup.planilha']),
   sv('faq', 'Dúvidas', 'Perguntas frequentes; o assistente responde o que não está lá', 'Menu → Dúvidas', 'teste', 'gratis', 'sim', 'IA (rápida)', ['duvida.ler', 'duvida.perguntar']),
   sv('applepay', 'Compras com Apple Pay', 'Cada compra por aproximação no iPhone entra sozinha (atalho do app Atalhos)', 'Menu ☰ → Atalhos do iPhone', 'teste', 'gratis', 'nao', 'App Atalhos do iPhone', ['applepay.codigo', 'menu.applepay']),
   sv('siri', 'Lançar com a Siri', '"E aí Siri, gastei" e o gasto falado vira lançamento', 'Menu ☰ → Atalhos do iPhone', 'teste', 'pago', 'sim', 'App Atalhos do iPhone; IA (rápida)', []),
@@ -55,6 +56,7 @@ export const SV_PLAN = { gratis: 'Grátis', pago: 'Pago', a_definir: 'A definir'
 export const SV_AI = { sim: 'Sim', as_vezes: 'Às vezes', nao: 'Não' };
 
 export const DOCS = [
+  BUG_STUDY,
   { id: 'visao', title: 'Visão geral', body: `**Pra Onde Foi** mostra para a família para onde vai o dinheiro, sem conectar no banco.
 A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e dinheiro falando, e o app mostra quanto sobrou, onde dá para economizar e se estão no caminho do sonho.
 ## Fase atual

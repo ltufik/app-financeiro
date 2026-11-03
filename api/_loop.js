@@ -56,6 +56,12 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
   for (const r of releases) if (r.news && !news.items.some(n => n.id === r.news.id)) { news.items.unshift({ ...r.news, at: r.at }); newsChanged = true; }
   if (newsChanged) news.items.sort((x, y) => String(y.at || '').localeCompare(String(x.at || '')));
   if (newsChanged) await db.setBoard('news', news);
+  // Documentation sections a release brings (e.g. the bug study), added once to Central → Documentação.
+  const newDocs = releases.flatMap(r => r.addDocs || []);
+  if (newDocs.length) {
+    const docs = await db.board('docs');
+    if (docs?.items) { let ch = false; for (const d of newDocs) if (!docs.items.some(x => x.id === d.id)) { docs.items.push({ ...d }); ch = true; } if (ch) await db.setBoard('docs', docs); }
+  }
   const backlog = await db.board('backlog');
   if (backlog?.items) {
     const items = backlog.items, prev = JSON.parse(JSON.stringify(items)), find = id => items.find(i => i.id === id);

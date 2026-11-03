@@ -207,3 +207,13 @@ test('cada versão nova repõe o que a Central desfez das versões anteriores (i
   assert.ok(items.some(i => i.id === 'pesquisa'));
   assert.equal(items.find(i => i.id === 'bug1').tipo, 'bug');
 });
+
+test('applyReleases: seção nova na Documentação da Central, uma vez só', async () => {
+  const { T, db } = fakeDb();
+  T.product_board.push({ key: 'docs', data: { items: [{ id: 'visao', title: 'Visão geral', body: 'x' }] } });
+  const releases = [{ id: 'r9', at: '2026-11-03T12:00:00Z', backlog: [], semNovidade: 'só documentação', addDocs: [{ id: 'estudo', title: 'Estudo dos bugs', body: '## Lições' }] }];
+  await applyReleases(db, null, { releases });
+  await applyReleases(db, null, { releases: [...releases, { id: 'r10', at: '2026-11-04T12:00:00Z', backlog: [], semNovidade: 'x' }] });
+  const docs = T.product_board.find(r => r.key === 'docs').data.items;
+  assert.deepEqual(docs.map(d => d.id), ['visao', 'estudo']);
+});

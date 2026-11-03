@@ -1,6 +1,6 @@
 // Service worker: caches the app shell so it opens fast and installs as an app.
 // Data and /api calls always go to the network.
-const VERSION = 'v71';
+const VERSION = 'v72';
 const SHELL = ['/', '/index.html', '/css/app.css', '/js/main.js', '/js/db.js', '/js/ai.js', '/js/ui.js', '/js/state.js', '/js/speech.js', '/js/tour.js', '/js/steps.js', '/js/onboarding.js', '/js/art.js', '/js/install.js', '/js/push.js', '/js/metrics.js', '/js/privacy.js', '/js/lib/recurring.js', '/js/lib/settle.js', '/js/photos.js', '/js/menu.js', '/js/coach.js', '/js/views/graficos.js', '/js/views/fechar.js', '/js/lib/closing.js', '/js/lib/charts.js', '/js/lib/receipt.js', '/js/lib/insights.js', '/js/lib/budget.js', '/js/lib/pricing.js', '/js/lib/faq.js', '/js/feedback.js', '/js/usage.js', '/js/lib/navlog.js', '/js/applepay.js', '/js/lib/quick.js', '/js/lib/feed.js', '/js/messages.js', '/js/lib/news.js',
   '/js/lib/format.js', '/js/lib/calc.js', '/js/lib/categorize.js', '/js/lib/parse.js', '/js/lib/validate.js',
   '/js/views/resumo.js', '/js/views/lancar.js', '/js/views/perguntar.js', '/js/views/extrato.js', '/js/views/ajustes.js',
@@ -13,10 +13,12 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'POST' || u.origin !== location.origin || u.pathname !== '/compartilhar') return;
   e.respondWith((async () => {
     try {
-      const f = await e.request.formData(), file = f.get('file'), text = [f.get('title'), f.get('text'), f.get('url')].filter(Boolean).join(' ').trim();
+      // One or several files (all the card bills and the statement at once), kept until the page reads them.
+      const f = await e.request.formData(), files = f.getAll('file').filter(x => x && x.size).slice(0, 10), text = [f.get('title'), f.get('text'), f.get('url')].filter(Boolean).join(' ').trim();
       const c = await caches.open('share');
-      await c.put('/shared/meta', new Response(JSON.stringify({ text, name: file && file.name || '', type: file && file.type || '', at: Date.now() }), { headers: { 'content-type': 'application/json' } }));
-      if (file && file.size) await c.put('/shared/file', new Response(file, { headers: { 'content-type': file.type || 'application/octet-stream' } })); else await c.delete('/shared/file');
+      for (const k of await c.keys()) if (/\/shared\/file/.test(k.url)) await c.delete(k);
+      await c.put('/shared/meta', new Response(JSON.stringify({ text, name: files[0] && files[0].name || '', type: files[0] && files[0].type || '', files: files.map(x => ({ name: x.name || '', type: x.type || '' })), at: Date.now() }), { headers: { 'content-type': 'application/json' } }));
+      for (let i = 0; i < files.length; i++) await c.put(i ? '/shared/file' + i : '/shared/file', new Response(files[i], { headers: { 'content-type': files[i].type || 'application/octet-stream' } }));
     } catch (x) { /* the page shows a message if nothing arrived */ }
     return Response.redirect('/?acao=compartilhar', 303);
   })());

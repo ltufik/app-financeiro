@@ -24,6 +24,8 @@ const RANK = { bad: 0, warn: 1, good: 2, info: 3 };
    goals: { savings, cardMonthly, patrimonio }
    nextFatura: { month, total } | null
    etaYears(pmt) -> number | null      years to reach the wealth goal saving pmt per month
+   fixedCats: ['Moradia e contas', ...] fixed (recurring) day-to-day categories (optional)
+   closeDay: number                    day the card bill closes (optional)
  }
 */
 export function insights(ctx) {
@@ -90,6 +92,27 @@ export function insights(ctx) {
   // 4. Next card bill already above the goal
   const nf = ctx.nextFatura, cap = ctx.goals.cardMonthly;
   if (nf && cap && nf.total > cap) out.push({ id: 'card', tone: 'warn', title: 'Cartão acima do limite', text: `A fatura de ${mName(nf.month)} já soma ${R(nf.total)} entre parcelas e contas fixas, ${R(nf.total - cap)} acima do limite de ${R(cap)}. Segure as compras no cartão até o fechamento.` });
+
+  // 4b. How much is left per day on the card until the bill closes (only while under the limit).
+  if (nf && cap && nf.total < cap && ctx.closeDay) {
+    const cd = Math.min(+ctx.closeDay, lastDay), left = cap - nf.total;
+    const days = day < cd ? cd - day : (new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate() - day) + Math.min(+ctx.closeDay, new Date(+addM(cur, 1).slice(0, 4), +addM(cur, 1).slice(5, 7), 0).getDate());
+    if (days > 0 && left >= 50) out.push({ id: 'perday', tone: 'info', title: `Dá para gastar cerca de ${R(left / days)} por dia no cartão`, text: `A fatura de ${mName(nf.month)} já soma ${R(nf.total)} e o limite combinado é ${R(cap)}. Sobram ${R(left)} para os ${days} dias até o cartão fechar.`, action: { label: 'Ver metas', go: ['ajustes', null, 'metas'] } });
+  }
+
+  // 4c. A fixed bill (electricity, condo fee, school...) well above its own average.
+  if (before.length >= 2 && (ctx.fixedCats || []).length) {
+    const cm = ctx.cats(m), bills = [];
+    for (const n of ctx.fixedCats) {
+      const hist = before.map(k => ctx.cats(k)[n] || 0).filter(v => v > 0);
+      if (hist.length < 2 || !(cm[n] > 0)) continue;
+      const base = avg(hist);
+      if (cm[n] > base * 1.25 && cm[n] - base >= 80) bills.push([n, cm[n], base]);
+    }
+    bills.sort((a, b) => (b[1] - b[2]) - (a[1] - a[2]));
+    if (bills.length) out.push({ id: 'bill_up', tone: 'warn', title: bills.length > 1 ? `${bills.length} contas fixas vieram acima do normal` : `${bills[0][0]} veio acima do normal`,
+      text: bills.slice(0, 2).map(([n, v, b]) => `${n}: ${R(v)} em ${name}, ${R(v - b)} (${P(v / b - 1)}) acima da média`).join('; ') + '. Vale conferir a conta: pode ser consumo, reajuste ou cobrança errada.', action: { label: 'Ver no extrato', go: ['extrato'] } });
+  }
 
   // 5. Fixed costs eating the income
   const fx = ctx.fixed ? ctx.fixed(m) : 0;

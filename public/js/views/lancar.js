@@ -13,6 +13,7 @@ import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '.
 import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js';
 import { docKeys, compareStatement, docsText } from '../lib/statements.js';
 import { applyMemos } from '../lib/memo.js';
+import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX } from '../lib/queue.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
 let Q = null;          // quick-entry preview items
@@ -50,6 +51,7 @@ function build(el) {
     <h2>O que você quer lançar?</h2>
     <div class="ltiles" role="group" aria-label="Como lançar"><button type="button" class="ltile" data-mode="falar" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><strong>Falar ou escrever</strong><span class="tiny muted">"Gastei 45 na padaria no pix"</span></span></button><button type="button" class="ltile" data-mode="nota" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><strong>Foto da nota</strong><span class="tiny muted">Separa cada item por categoria</span></span></button><button type="button" class="ltile" data-mode="pdf" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></span><span><strong>Fatura ou extrato</strong><span class="tiny muted">PDF de qualquer banco</span></span></button><button type="button" class="ltile" data-mode="mao" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span><strong>Preencher à mão</strong><span class="tiny muted">Data, valor e categoria</span></span></button></div>
   </div>
+  <div class="panel stack qbar" id="qBar" hidden aria-live="polite"></div>
   <div class="panel" data-panel="falar" hidden>
     <h2>Lançar um gasto ou entrada</h2>
     <p class="muted small">Fale ou escreva do jeito que diria. Pode ser mais de um na mesma frase.</p>
@@ -75,8 +77,8 @@ function build(el) {
     <div class="drop" id="drop" style="margin-top:12px">
       <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
       <strong>Escolher PDF, foto ou print</strong>
-      <span class="small muted">PDF com senha também funciona: o app pede a senha e não a guarda.</span>
-      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf,image/*" aria-label="Escolher PDF, foto ou print">
+      <span class="small muted">Pode escolher vários de uma vez: as faturas de todos os cartões e o extrato. PDF com senha também funciona: o app pede a senha e não a guarda.</span>
+      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf,image/*" multiple aria-label="Escolher PDF, foto ou print (um ou vários)">
     </div>
     <details class="help" style="margin-top:10px"><summary>Onde encontro o PDF?</summary><ol>
       <li><strong>Fatura do cartão:</strong> no app do banco, abra Cartões → Fatura e procure <em>Baixar PDF</em>, <em>Compartilhar</em> ou <em>Enviar por e-mail</em>.</li>
@@ -106,11 +108,11 @@ function build(el) {
   el.querySelectorAll('#qExamples .chip').forEach(b => b.onclick = () => { $('#qText').value = b.textContent; $('#qText').focus(); });
   $('#qGo').onclick = interpret;
   $('#qManual').onclick = () => { Q = [{ source: 'conta', date: todayISO(), description: '', amount: 0, category: 'A classificar' }]; renderQ(); $('#qStatus').textContent = 'Preencha e salve.'; };
-  $('#pdfIn').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => routeFile(f, 'pdf'), resultArea).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')).finally(() => { e.target.value = ''; }); };
+  $('#pdfIn').onchange = e => { const fs = [...(e.target.files || [])]; e.target.value = ''; startFiles(fs, 'pdf'); };
   const drop = $('#drop');
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
   drop.ondragleave = () => drop.classList.remove('over');
-  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) withBusy('Lendo ' + f.name + '...', () => routeFile(f, 'pdf'), resultArea).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)')); };
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); startFiles([...(e.dataTransfer.files || [])], 'pdf'); };
   $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), resultArea);
   for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => routeFile(f, 'nota'), resultArea); };
 }
@@ -167,17 +169,64 @@ function itemsToQ(its, fallback) {
 // A Pix/TED receipt becomes an entry to review; a fiscal receipt goes to "Foto da nota";
 // a statement PDF goes to "Fatura ou extrato"; shared text is read like a spoken phrase.
 export async function handleShared() {
-  let meta = null, file = null;
+  let meta = null; const files = [];
   try {
     const c = await caches.open('share');
     const m = await c.match('/shared/meta'); meta = m ? await m.json() : null;
-    const f = await c.match('/shared/file');
-    if (f) { const b = await f.blob(); file = new File([b], meta?.name || 'compartilhado', { type: meta?.type || b.type }); }
-    await c.delete('/shared/meta'); await c.delete('/shared/file');
+    const list = meta?.files?.length ? meta.files : [{ name: meta?.name, type: meta?.type }];
+    for (let i = 0; i < list.length; i++) {
+      const key = i ? '/shared/file' + i : '/shared/file', f = await c.match(key);
+      if (f) { const b = await f.blob(); files.push(new File([b], list[i].name || 'compartilhado', { type: list[i].type || b.type })); }
+      await c.delete(key);
+    }
+    await c.delete('/shared/meta');
   } catch (e) { /* no cache: nothing shared */ }
-  if (!meta || (!file && !meta.text)) { toast('Não recebi nada do compartilhamento. Tente de novo pelo botão Compartilhar do banco.', 'info'); return; }
-  if (!file) { openMode('falar', true); $('#qText').value = meta.text.slice(0, 500); return interpret(); }
-  return withBusy('Lendo o que você compartilhou...', () => routeFile(file, 'share'), resultArea);
+  if (!meta || (!files.length && !meta.text)) { toast('Não recebi nada do compartilhamento. Tente de novo pelo botão Compartilhar do banco.', 'info'); return; }
+  if (!files.length) { openMode('falar', true); $('#qText').value = meta.text.slice(0, 500); return interpret(); }
+  if (files.length > 1) return startFiles(files, 'share');
+  return withBusy('Lendo o que você compartilhou...', () => routeFile(files[0], 'share'), resultArea);
+}
+
+// ---------- several files at once ----------
+// One file: as always. Several: read one at a time, each with its review ("2 de 3"); saving, discarding or
+// skipping moves to the next; a summary at the end. Later files see what the earlier ones saved, so a second
+// card's bill enters alongside the first.
+let QU = null, QFILES = [];
+function startFiles(files, from) {
+  files = files.filter(f => f && f.size !== 0);
+  if (!files.length) return;
+  if (files.length === 1 && !QU) return withBusy('Lendo ' + files[0].name + '...', () => routeFile(files[0], from), resultArea).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)'));
+  if (QU && !isDone(QU)) { toast('Termine os arquivos que já estão na fila antes de escolher outros.', 'info'); return; }
+  QU = makeQueue(files); QFILES = files.slice(0, QUEUE_MAX); QU.items[0].status = 'lendo'; track('lancar.varios');
+  if (QU.extra) toast(`Dá para ler até ${QUEUE_MAX} arquivos por vez. Os outros ${QU.extra} ficaram de fora.`, 'info');
+  openMode('pdf', false); runCurrent();
+}
+// Something is waiting for the person: a review, the password, the "what is it?" choice.
+const waiting = () => ['#review', '#pwBox', '#qPreview', '#rcReview'].some(s => $(s) && !$(s).hidden) || !!$('#pdfLog .chips');
+async function runCurrent() {
+  renderQueue();
+  const f = QFILES[QU.i];
+  await withBusy(`Arquivo ${position(QU)}: lendo ${f.name}...`, () => routeFile(f, 'fila'), resultArea).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)'));
+  if (QU && !isDone(QU) && QFILES[QU.i] === f && !waiting()) docDone('erro');
+}
+// Called when the current document was saved, discarded or could not be read. Does nothing outside a queue.
+function docDone(status, label = '') {
+  if (!QU || isDone(QU)) return;
+  advance(QU, status, label);
+  ['#review', '#pwBox', '#qPreview', '#rcReview'].forEach(s => { if ($(s)) $(s).hidden = true; });
+  if (isDone(QU)) { renderQueue(); toast(queueSummary(QU).head.replace(/^Pronto:\s*/, 'Arquivos lidos: ')); $('#qBar').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  setTimeout(runCurrent, 400);
+}
+function renderQueue() {
+  const bar = $('#qBar'); if (!bar) return;
+  if (!QU) { bar.hidden = true; return; }
+  const done = isDone(QU), s = queueSummary(QU);
+  bar.hidden = false;
+  bar.innerHTML = `<div class="qbar-h"><h3>${done ? esc(s.head) : `Arquivo ${position(QU)}`}</h3>${done ? '<button class="btn" type="button" id="quClose">Fechar</button>' : '<button class="btn" type="button" id="quSkip">Pular este arquivo</button>'}</div>
+    <ol class="qlist small">${s.lines.map((x, i) => `<li class="q-${x.status}${!done && i === QU.i ? ' now' : ''}"><span>${esc(x.name)}</span><span class="tiny muted">${esc(x.label || STATUS_LABEL[x.status])}</span></li>`).join('')}</ol>
+    ${done ? '' : '<p class="tiny muted">Revise e salve cada um. Ao salvar ou descartar, o próximo começa sozinho.</p>'}`;
+  if (done) $('#quClose').onclick = () => { QU = null; QFILES = []; renderQueue(); $('#pdfLog').innerHTML = ''; };
+  else $('#quSkip').onclick = () => { R = null; Q = null; RC = null; $('#pdfLog').innerHTML = ''; docDone('pulado'); };
 }
 
 // ---------- what is this document? ----------
@@ -260,7 +309,7 @@ function renderQ() {
     });
     tb.append(tr);
   });
-  $('#qCancel').onclick = () => { box.hidden = true; Q = null; $('#qStatus').textContent = ''; };
+  $('#qCancel').onclick = () => { box.hidden = true; Q = null; $('#qStatus').textContent = ''; docDone('descartado'); };
   $('#qSave').onclick = async () => {
     clearInvalid(box);
     // Validate every row before saving.
@@ -278,7 +327,7 @@ function renderQ() {
       const rows = Q.map(it => ({ household_id: S.hh.id, source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
       const saved = await db.addTransactions(rows); track('lancar.salvar');
       S.txs.push(...saved.map(t => ({ ...t, amount: +t.amount })));
-      toast(rows.length > 1 ? 'Lançamentos salvos' : 'Lançamento salvo'); box.hidden = true; Q = null; $('#qText').value = ''; $('#qStatus').textContent = ''; S.render();
+      toast(rows.length > 1 ? 'Lançamentos salvos' : 'Lançamento salvo'); box.hidden = true; Q = null; $('#qText').value = ''; $('#qStatus').textContent = ''; S.render(); docDone('salvo', rows.length > 1 ? rows.length + ' lançamentos' : 'Lançamento');
     } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#qSave').disabled = false; }
   };
 }
@@ -530,7 +579,7 @@ function renderReview() {
     $('#rvPend').querySelectorAll('input').forEach(inp => inp.onchange = () => { pend[+inp.dataset.i]._match = inp.checked; });
   }
   $('#rvMonth').onchange = e => { R.month = e.target.value; renderReview(); };
-  $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; };
+  $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; docDone('descartado'); };
   $('#rvSave').onclick = async e => {
     const n = rows.length, nPend = rows.filter(r => r.pending).length;
     const what = source === 'cartao' ? 'a fatura' : 'o extrato';
@@ -551,7 +600,7 @@ async function saveReview(pend) {
     notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
-    toast(label + ' salvo'); $('#review').hidden = true; $('#pdfLog').innerHTML = ''; R = null; S.m = month; S.render();
+    toast(label + ' salvo'); $('#review').hidden = true; $('#pdfLog').innerHTML = ''; R = null; S.m = month; S.render(); docDone('salvo', label);
   } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#rvSave').disabled = false; }
 }
 
@@ -563,13 +612,13 @@ function reviewInvest(r) {
   <ul class="list small" style="margin-top:8px">${cls.map(c => `<li><span>${esc(c.nome)}</span><span class="amt">${brl(+c.valor)}</span></li>`).join('')}</ul>
   <label class="f" style="margin-top:10px;max-width:280px">Somar valor guardado em outro lugar (opcional)<input type="number" step="0.01" id="ivExtra" value="0"></label>
   <div class="rowbtn" style="margin-top:12px"><button class="btn primary" id="ivSave" type="button">Atualizar investimentos</button><button class="btn" id="ivCancel" type="button">Descartar</button></div>`;
-  $('#ivCancel').onclick = () => { box.hidden = true; };
+  $('#ivCancel').onclick = () => { box.hidden = true; docDone('descartado'); };
   $('#ivSave').onclick = async e => {
     const cur = +settings().invest?.total || 0, nv = total + (+$('#ivExtra').value || 0);
     if (!await confirmInline(e.target, { text: `Atualizar os investimentos${cur ? ` de ${brl(cur)}` : ''} para ${brl(nv)}?`, yes: 'Sim, atualizar' })) return;
     const extra = +$('#ivExtra').value || 0, classes = cls.map(c => [c.nome, +c.valor]); if (extra) classes.push(['Outros', extra]);
     const st = { ...settings(), invest: { date: r.data || todayISO(), total: total + extra, liquido: (+r.totalLiquido || 0) + extra, classes } };
-    try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; toast('Investimentos atualizados'); box.hidden = true; S.render(); } catch (e) { toast('Não foi possível salvar.'); }
+    try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; toast('Investimentos atualizados'); box.hidden = true; S.render(); docDone('salvo', 'Investimentos'); } catch (e) { toast('Não foi possível salvar.'); }
   };
 }
 
@@ -668,7 +717,7 @@ function renderReceipt() {
   $('#rcSrc').onchange = e => { RC.source = e.target.value; RC.match = undefined; refreshReceipt(); };
   $('#rcCancel').onclick = async e => {
     if (!await confirmInline(e.target, { text: 'Descartar a leitura desta nota?', yes: 'Sim, descartar', danger: true })) return;
-    RC = null; box.hidden = true; $('#rcLog').innerHTML = '';
+    RC = null; box.hidden = true; $('#rcLog').innerHTML = ''; docDone('descartado');
   };
   $('#rcSave').onclick = saveReceipt;
 }
@@ -740,8 +789,8 @@ async function saveReceipt(e) {
       const [t] = await db.addTransactions([{ household_id: S.hh.id, source: RC.source, month: RC.source === 'cartao' ? cycleMonth(RC.date, closeDay()) : RC.date.slice(0, 7), date: RC.date, day: isoToBr(RC.date).slice(0, 5), description: RC.store, amount, category: parts[0].category, manual: true, splits, receipt }]);
       S.txs.push({ ...t, amount: +t.amount });
     }
-    toast('Nota salva'); track('lancar.nota_ok'); RC = null; box.hidden = true;
+    const RC_store = RC.store; toast('Nota salva'); track('lancar.nota_ok'); RC = null; box.hidden = true;
     $('#rcLog').innerHTML = ''; rlog(match ? 'Pronto: o lançamento agora mostra os itens da nota por categoria.' : 'Pronto: gasto lançado e dividido por categoria.', 'var(--good)');
-    S.render();
+    S.render(); docDone('salvo', 'Nota de ' + RC_store);
   } catch (err) { toast('Não foi possível salvar. ' + db.errorText(err)); e.target.disabled = false; }
 }

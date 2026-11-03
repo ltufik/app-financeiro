@@ -512,6 +512,19 @@ if (outra) {
   const lg = await txt('#pdfLog');
   ok('fatura longa lida em partes, com nova tentativa quando uma parte falha', /Lendo a parte 1 de [2-9]/.test(lg) && lg.includes('Tentando de novo') && lg.includes('250 lançamentos') && lg.includes('A soma confere'), lg.slice(150, 600));
   await page.click('#rvCancel'); await page.click('.cfm [data-y]').catch(() => {});
+  // Several files at once: one review at a time ("1 de 2"), the next starts by itself, a summary at the end.
+  await page.click('.ltile[data-mode="pdf"]');
+  await page.setInputFiles('#pdfIn', [path.join(ROOT, '../tests/fixtures/fatura-ficticia.pdf'), path.join(ROOT, '../tests/fixtures/comprovante-ficticio.pdf')]);
+  await page.waitForSelector('#rvSave', { timeout: 60000 }).catch(() => {});
+  ok('vários arquivos: mostra a fila e revisa o primeiro', (await txt('#qBar')).includes('Arquivo 1 de 2') && (await txt('#qBar')).includes('fatura-ficticia.pdf') && await page.isVisible('#review'), await txt('#qBar'));
+  await page.click('#rvSave'); await page.click('.cfm [data-y]');
+  await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 30000 }).catch(() => {});
+  ok('vários arquivos: ao salvar, o próximo começa sozinho', (await txt('#qBar')).includes('Arquivo 2 de 2') && /Fatura de .* salvo|Fatura de/.test(await txt('#qBar')) && await page.isVisible('#qPreview'), await txt('#qBar'));
+  await page.click('#quSkip'); await page.waitForTimeout(300);
+  ok('vários arquivos: resumo no fim, sem nada aberto embaixo', (await txt('#qBar')).includes('Pronto: 1 salvo e 1 pulado.') && await page.isVisible('#quClose') && !(await page.isVisible('#qPreview')), await txt('#qBar'));
+  await shot('05c-varios-arquivos');
+  await page.click('#quClose');
+  ok('vários arquivos: fechar o resumo limpa a fila', !(await page.isVisible('#qBar')));
 }
 
 await page.click('[data-tab=perguntar]');
@@ -763,7 +776,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
   ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
   await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
-  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 7 && (await ap.textContent('.fflow')).includes('pessoas'));
+  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 8 && (await ap.textContent('.fflow')).includes('pessoas'));
   await ap.click('.fstep .phone'); await ap.waitForSelector('#flBox[open]');
   ok('central: tela ampliada mostra onde fica e em que fluxos aparece', (await ap.textContent('#flBox')).includes('Aparece nos fluxos'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-10-fluxo-zoom.png') });

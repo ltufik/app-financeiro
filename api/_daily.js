@@ -39,6 +39,7 @@ export function familyInsights({ household, categories, txs }, today) {
     has: (k, src) => txs.some(t => t.month === k && t.source === src && !t.manual),
     manualCount: k => txs.filter(t => t.month === k && t.manual).length,
     pending: k => txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
+    fixedCats: [...idx.values()].filter(c => c.grp === 'dia' && c.recurring).map(c => c.name), closeDay: +st.cardCloseDay || 24,
     goals: g, nextFatura: nf, budgets: budgetsOf(st), recurring: findRecurring(txs, months, { idx }), toClose: (() => { const cur = today.slice(0, 7), cl = st.closed || {}; return months.filter(k => k < cur && !cl[k]).pop() || null; })(),
     etaYears: pmt => { if (!(pmt > 0) || !g.patrimonio) return null; const pts = project({ start: +st.invest?.total || 0, pmt, ret: g.ret ?? 0.05, years: 40 }); const i = pts.findIndex(v => v >= g.patrimonio); return i < 0 ? null : i; },
   }).map(x => ({ ...x, url: x.action ? linkFor('tela', { tab: x.action.go[0], sec: x.action.go[2] }) : linkFor('tela', { tab: 'resumo' }) }));

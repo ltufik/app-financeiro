@@ -3,6 +3,8 @@
 // the backlog ids it finishes (they get the personal message) and new backlog items.
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
+import { BUG_STUDY } from './bugstudy.js';
+
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
     'Toque no balão no topo para mandar um erro, uma ideia ou uma crítica, falando ou escrevendo.',
@@ -154,4 +156,15 @@ export const RELEASES = [
   { id: 'r71', version: 'v71', at: '2026-11-03T21:50:00Z', backlog: [], semNovidade: 'Central do produto (só o dono vê): a novidade mandada no celular mostra para quantos aparelhos chegou; se não chegou a nenhum, fica livre para mandar de novo.', addBacklog: [
     { id: 'varios_arquivos_de_uma_vez', title: 'Enviar vários arquivos de uma vez (faturas de todos os cartões e o extrato)', status: 'proximo', origin: 'Luiz (pedido de quem testa)', effort: 'M', problem: 'Quem tem mais de um cartão manda uma fatura por vez, repetindo o caminho', cost: false, notes: 'Escolher ou compartilhar vários PDFs, fotos ou prints de uma vez. O app reconhece cada um pelo conteúdo (fatura, extrato, comprovante), lê todos em sequência e mostra a revisão de um por vez ("2 de 3"), com o comparativo que já existe (mesma fatura de novo ou outro cartão). No fim, um resumo do que entrou. Arquivo com senha pede a senha só dele.', from: [], where: 'Lançar → Fatura ou extrato' },
   ] },
+  { id: 'r72', version: 'v72', at: '2026-11-04T00:30:00Z', backlog: [{ id: 'varios_arquivos_de_uma_vez', where: 'Lançar → Fatura ou extrato (escolha vários)' }, { id: 'exportar_tudo_em_csv', where: 'Menu ☰ → Backup → Baixar planilha' }, { id: 'conta_fora_do_normal_luz_condominio_acim', where: 'Início, nos avisos' }, { id: 'quanto_ainda_da_para_gastar_por_dia', where: 'Início, nos avisos (com limite do cartão em Metas)' }, { id: 'perguntas_sugeridas_no_assistente', where: 'Perguntar' }, { id: 'dominio_proprio', where: 'praondefoi.app.br' }, { id: 'estudo_dos_bugs', where: 'Central → Documentação → Estudo dos bugs' }],
+    news: { id: 'n20261104', title: 'Todas as faturas de uma vez', items: [
+      'Em Lançar → Fatura ou extrato, escolha as faturas de todos os cartões e o extrato juntos. O app lê um por vez e você só confere e salva.',
+      'Novo no Início: quanto ainda dá para gastar por dia no cartão até ele fechar, e um aviso quando uma conta fixa, como luz ou condomínio, vem acima do normal.',
+      'Em menu ☰ → Backup, baixe todos os lançamentos numa planilha que abre no Excel.',
+    ] },
+    addDocs: [BUG_STUDY],
+    addBacklog: [
+      { id: 'saude_do_servidor', title: 'Saúde do servidor na Central', status: 'proximo', origin: 'Estudo dos bugs', effort: 'P', problem: 'Banco sem permissão e push parado passaram semanas sem ninguém ver', cost: false, notes: 'Uma checagem que roda depois de cada publicação (e quando a Central abre) e mostra no Painel se o banco responde com o papel do servidor, se as chaves das notificações e da leitura inteligente estão configuradas e quando saiu o último push. Vermelho = avisa o Luiz.', from: [], where: 'Central → Painel' },
+      { id: 'erros_do_servidor_na_central', title: 'Erros das rotinas automáticas aparecem na Central', status: 'proximo', origin: 'Estudo dos bugs', effort: 'P', problem: 'As rotinas automáticas (avisos do dia, recados, novidades) trocavam o erro por lista vazia', cost: false, notes: 'Quando uma rotina do servidor falhar, registrar em Central → Erros com o nome da rotina e o motivo, em vez de calar.', from: [], where: 'Central → Erros' },
+    ] },
 ];
