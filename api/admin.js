@@ -32,7 +32,8 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && req.query?.view === 'usage') return res.status(200).json(await rpc('product_usage', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
     if (req.method === 'GET' && req.query?.view === 'feedback') return res.status(200).json(await rpc('product_feedback'));
     if (req.method === 'GET' && req.query?.view === 'nav') return res.status(200).json(await rpc('product_nav', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
-    const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); if (!x.ok) throw new Error('db'); return x.json(); };
+    // A failed read says which table and why (shown to the owner in the console), never just "db".
+    const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); if (!x.ok) { let m = ''; try { m = (await x.json()).message || ''; } catch (e) { /* no body */ } throw new Error(`banco ${x.status} em ${path.split('?')[0]}${m ? ' (' + m + ')' : ''}`); } return x.json(); };
     // Notifications: devices and people, never the push keys.
     if (req.method === 'GET' && req.query?.view === 'push') {
       const [subs, members, fams] = await Promise.all([q('push_subscriptions?select=user_id,endpoint,prefs,created_at'), q('members?select=user_id,display_name,household_id'), q('households?select=id,name')]);

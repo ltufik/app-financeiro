@@ -257,3 +257,10 @@ select * from quick_tokens;
 reset role;
 select count(*) as nq from quick_tokens \gset
 \echo códigos guardados (o novo substitui o antigo): :nq
+
+-- O servidor lê o que precisa para os avisos no celular e para os atalhos do iPhone.
+set role service_role;
+select 'servidor lê aparelhos, membros, famílias, categorias, regras e lançamentos: ' || (
+  (select count(*) from public.push_subscriptions) + (select count(*) from public.members) + (select count(*) from public.households)
+  + (select count(*) from public.categories) + (select count(*) from public.rules) + (select count(*) from public.transactions) >= 0)::text;
+reset role;

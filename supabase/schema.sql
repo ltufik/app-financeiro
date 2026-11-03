@@ -857,3 +857,10 @@ revoke all on function public.quick_token_status(uuid) from public, anon;
 grant execute on function public.save_quick_token(uuid, text) to authenticated;
 grant execute on function public.delete_quick_token(uuid) to authenticated;
 grant execute on function public.quick_token_status(uuid) to authenticated;
+
+-- O servidor (service_role, só nas funções da Vercel) lê e grava estas tabelas direto: avisos no celular
+-- (aparelhos, nomes, famílias), atalhos do iPhone (lançamentos, categorias, regras) e a Central.
+-- Sem estas permissões nenhum push saía e o atalho não salvava.
+grant select, update, delete on public.push_subscriptions to service_role;
+grant select on public.members, public.households, public.categories, public.rules to service_role;
+grant select, insert on public.transactions to service_role;
