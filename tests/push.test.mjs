@@ -154,4 +154,5 @@ test('novidade publicada vira push para todos; quem pediu recebe só o personali
   assert.equal(out.replied, 1); assert.equal(out.pushed, 1);
   assert.deepEqual(sent.sort(), ['u1', 'u2'], 'u1: o recado com o nome; u2: a novidade; u3 desligou as novidades');
   assert.equal(newsPush([{ id: 'a', title: 'X', items: ['Y'] }, { id: 'b', title: 'Z' }]).body, 'Y E mais 1 novidade no sininho.');
+  assert.equal(newsPush([{ id: 'a', title: 'X' }], 'Mari Souza').title, 'Mari, novidade no Pra Onde Foi: X');
 });

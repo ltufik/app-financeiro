@@ -24,7 +24,7 @@ page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const adminStore = {}, adminPuts = [], adminPatches = [], adminPatchesSeen = [];
-let pushTestSent = 0;
+let pushTestSent = 0; const newsPushes = [];
 const NAV_FIXTURE = { days: 30, at: '2026-10-30T12:00:00Z',
   screens: [{ s: 'inicio', views: 40, users: 2, seconds: 1200 }, { s: 'lancar', views: 12, users: 2, seconds: 600 }, { s: 'menu.metas', views: 3, users: 1, seconds: 240 }],
   flows: [{ f: 'inicio', t: 'lancar', n: 9, users: 2 }, { f: 'lancar', t: 'inicio', n: 5, users: 1 }],
@@ -52,6 +52,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/news') return r.fulfill({ json: { items: adminStore.news?.items || null } });
     if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'push') return r.fulfill({ json: { configured: true, mine: pushTestSent ? [] : [{ kind: 'Android ou Chrome', since: '2026-10-20T10:00:00Z', prefs: {} }], people: [{ name: 'Mari', family: 'Família Souza', devices: 1, kinds: ['Android ou Chrome'], novidades: true, since: '2026-10-20T10:00:00Z', me: true }, { name: 'Beto', family: 'Família Souza', devices: 2, kinds: ['iPhone ou iPad'], novidades: false, since: '2026-10-21T10:00:00Z', me: false }], users: 4 } });
+    if (u.pathname === '/api/admin' && r.request().method() === 'POST' && JSON.parse(r.request().postData()).action === 'news_push') { newsPushes.push(JSON.parse(r.request().postData()).id); return r.fulfill({ json: { pushed: 3 } }); }
     if (u.pathname === '/api/admin' && r.request().method() === 'POST') { pushTestSent++; return r.fulfill({ json: { results: [{ kind: 'Android ou Chrome', ok: true, gone: false }, { kind: 'iPhone ou iPad', ok: false, gone: true }] } }); }
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
@@ -704,7 +705,13 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: novidade sem título é recusada', (await ap.getAttribute('#nwTitle', 'aria-invalid')) === 'true');
   await ap.fill('#nwTitle', 'Gasto por semana nos gráficos'); await ap.fill('#nwItems', '- Em Gráficos, escolha "por semana"\nNova cor para o cartão');
   ok('central: prévia com o nome da pessoa', (await ap.textContent('#nwPrev')).includes('Mari, olha o que tem de novo') && (await ap.textContent('#nwPrev')).includes('Nova cor para o cartão'));
-  await ap.click('#nwPub'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
+  await ap.waitForFunction(() => /para 1 pessoa/.test(document.querySelector('#nwReach')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});
+  ok('central: novidade vai também no celular, com prévia do push e quantos recebem', await ap.isChecked('#nwPush') && (await ap.textContent('#nwPrev')).includes('Mari, novidade no Pra Onde Foi: Gasto por semana') && (await ap.textContent('#nwReach')).includes('para 1 pessoa'));
+  await ap.click('#nwPub'); await ap.waitForSelector('.cfm');
+  ok('central: confirmação avisa que vai para o celular', (await ap.textContent('.cfm')).includes('recebe agora no celular'));
+  await ap.click('.cfm [data-y]'); await ap.waitForTimeout(500);
+  ok('central: publicar manda a notificação uma vez e mostra quantos receberam', newsPushes.length === 1 && newsPushes[0] === adminStore.news?.items?.[0]?.id && (await ap.textContent('#toast')).includes('chegou em 3 aparelhos') && (await ap.textContent('#aMain')).includes('Enviada no celular em'));
+  ok('central: novidade antiga pode ser mandada no celular', (await ap.$$('[data-npush]')).length >= 1);
   ok('central: novidade publicada', adminStore.news?.items?.[0]?.title === 'Gasto por semana nos gráficos' && adminStore.news.items[0].items.length === 2 && adminStore.news.items.length === 2);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-9-novidades.png'), fullPage: true });
   await atab('opinioes'); await ap.waitForSelector('.fbcard');

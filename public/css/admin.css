@@ -171,3 +171,4 @@ body.admin{background:var(--paper)}
 .kcard .kclaude{align-self:flex-start;font-size:13px}
 .tag.bug{background:var(--bad-soft);color:var(--bad);text-transform:uppercase;letter-spacing:.04em}
 .avlist{margin:0;padding-left:20px;display:grid;gap:6px}
+.pushprev{padding:10px 12px;border-radius:12px;background:var(--surface-2,var(--accent-soft));font-size:13px}

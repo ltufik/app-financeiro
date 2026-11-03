@@ -1,14 +1,14 @@
 // Product console data (/admin): backlog, pricing and product design, for ADMIN_EMAILS only.
 // GET /api/admin?key=backlog  ->  {key, data, updated_at}     PUT /api/admin {key, data}
 // GET /api/admin?view=usage|feedback|nav  ->  usage per person/feature, testers' feedback
-// GET /api/admin?view=push -> who can receive notifications (yours first)   POST /api/admin {action:'test_push'} -> test to your devices
+// GET /api/admin?view=push -> who can receive notifications (yours first)   POST /api/admin {action:'test_push'} -> test to your devices; {action:'news_push', id} -> a note as push to everyone
 // PATCH /api/admin {feedback: id, status?, note?, reply?}  (reply: personal message to who sent it, also as a push)
 // Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS.
 import { cleanUrl } from './config.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
 import { replyTitle } from '../public/js/lib/news.js';
-import { rest, closeLoop } from './_loop.js';
+import { rest, closeLoop, pushNews } from './_loop.js';
 import { pushPeople, deviceKind } from '../public/js/lib/pushinfo.js';
 
 const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases'];
@@ -46,9 +46,19 @@ export default async function handler(req, res) {
     }
     if (req.method === 'POST') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-      if (b.action !== 'test_push') return res.status(400).json({ error: 'bad_request' });
       const vapid = vapidFromEnv();
       if (!vapid.publicKey || !vapid.privateKey) return res.status(503).json({ error: 'not_configured' });
+      // A note published in the console also goes as a push to everyone with "Novidades" on. Once per note.
+      if (b.action === 'news_push') {
+        const db = rest(URL_, SERVICE), news = (await db.board('news')) || { items: [] };
+        const item = (news.items || []).find(n => n.id === String(b.id || ''));
+        if (!item) return res.status(404).json({ error: 'not_found' });
+        if (item.pushed_at) return res.status(409).json({ error: 'already_sent', pushed_at: item.pushed_at });
+        item.pushed_at = new Date().toISOString(); await db.setBoard('news', news, user.email);
+        const pushed = await pushNews(db, [item], new Set(), vapid, fetch).catch(() => 0);
+        return res.status(200).json({ pushed });
+      }
+      if (b.action !== 'test_push') return res.status(400).json({ error: 'bad_request' });
       const subs = await q(`push_subscriptions?user_id=eq.${user.id}&select=id,endpoint,p256dh,auth`);
       const name = String(user.user_metadata?.display_name || '').trim().split(/\s+/)[0];
       const results = [];

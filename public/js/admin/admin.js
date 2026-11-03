@@ -513,6 +513,21 @@ async function avisos(el) {
   await draw();
 }
 
+// How many people get a note on the phone now (notifications on, "Novidades" not turned off).
+async function reach() { try { return (await getView('push')).people.filter(p => p.novidades).length; } catch (e) { return null; } }
+async function sendNewsPush(id, okMsg) {
+  try {
+    const r = await fetch('/api/admin', { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'news_push', id }) });
+    if (r.status === 409) { toast('Esta novidade já foi mandada no celular.'); return; }
+    if (r.status === 503) { toast('As notificações não estão configuradas no servidor.'); return; }
+    if (!r.ok) throw new Error(String(r.status));
+    const { pushed } = await r.json();
+    // Same mark the server saved, so the next save of the board keeps it.
+    const it = D.news.items.find(n => n.id === id); if (it) { it.pushed_at = new Date().toISOString(); snap('news'); }
+    toast(`${okMsg}: chegou em ${pushed} ${pushed === 1 ? 'aparelho' : 'aparelhos'}.`);
+  } catch (e) { toast('A novidade foi publicada, mas a notificação não saiu. Tente "Mandar no celular" de novo.'); }
+}
+
 function novidades(el) {
   const items = D.news.items.slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at)); D.news.items = items;
   el.innerHTML = `<div class="ahead"><h1>Novidades</h1><button class="btn primary" type="button" id="nwAdd">Nova novidade</button></div>
@@ -521,9 +536,10 @@ function novidades(el) {
       <label class="f">Título<input type="text" id="nwTitle" maxlength="80" placeholder="Ex.: Agora dá para ver o gasto por semana" value="${esc(newsEdit >= 0 ? items[newsEdit].title : '')}"></label>
       <label class="f">O que mudou (uma linha por item, em palavras simples)<textarea id="nwItems" style="min-height:120px">${esc(newsEdit >= 0 ? (items[newsEdit].items || []).join('\n') : '')}</textarea></label>
       <div class="cbox"><h3>Prévia</h3><div id="nwPrev" class="small"></div></div>
+      ${newsEdit === -1 ? `<label class="radio"><input type="checkbox" id="nwPush" checked><span><strong>Mandar também como notificação no celular</strong><br><span class="tiny muted" id="nwReach">Chega na hora para quem está com as notificações ligadas, com o nome da pessoa. Quem está com elas desligadas vê o pop-up quando abrir o app.</span></span></label>` : ''}
       <div class="rowbtn"><button class="btn primary" type="button" id="nwPub">${newsEdit === -1 ? 'Publicar para todos' : 'Salvar'}</button><button class="btn" type="button" id="nwCancel">Cancelar</button></div></div>` : ''}
     <div class="stack">${items.map((n, i) => `<article class="panel stack"><div class="ahead"><div><span class="tiny muted">${dt(n.at)}</span><h2 style="margin:0">${esc(n.title)}</h2></div>
-      <div class="rowbtn"><button class="chip" type="button" data-ned="${i}">Editar</button><button class="chip" type="button" data-ndel="${i}" aria-label="Apagar">×</button></div></div>
+      <div class="rowbtn">${n.pushed_at ? `<span class="tiny muted">Enviada no celular em ${dt(n.pushed_at)}</span>` : `<button class="chip" type="button" data-npush="${i}">Mandar no celular</button>`}<button class="chip" type="button" data-ned="${i}">Editar</button><button class="chip" type="button" data-ndel="${i}" aria-label="Apagar">×</button></div></div>
       <ul class="small" style="margin:0">${(n.items || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></article>`).join('') || '<p class="small muted">Nenhuma novidade publicada.</p>'}</div>`;
   $('#nwAdd').onclick = () => { newsEdit = -1; novidades(el); $('#nwTitle').focus(); };
   el.querySelectorAll('[data-ned]').forEach(b => b.onclick = () => { newsEdit = +b.dataset.ned; novidades(el); });
@@ -532,9 +548,16 @@ function novidades(el) {
     if (!await confirmInline(e.target, { text: `Apagar "${esc(items[i].title)}"? Quem ainda não viu não vai ver.`, yes: 'Sim, apagar', danger: true })) return;
     items.splice(i, 1); await save('news', 'Novidade apagada.'); novidades(el);
   });
+  el.querySelectorAll('[data-npush]').forEach(b => b.onclick = async e => {
+    const n = items[+b.dataset.npush], k = await reach();
+    if (!await confirmInline(e.target, { text: `Mandar "${esc(n.title)}" como notificação${k != null ? ` para ${k} ${k === 1 ? 'pessoa' : 'pessoas'}` : ''}? Dá para mandar só uma vez.`, yes: 'Sim, mandar' })) return;
+    await sendNewsPush(n.id, 'Notificação enviada'); novidades(el);
+  });
   if (newsEdit == null) return;
   const lines = () => $('#nwItems').value.split('\n').map(x => x.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
-  const prev = () => { $('#nwPrev').innerHTML = `<p class="tiny muted">O QUE MUDOU</p><p><strong>Mari, olha o que tem de novo</strong></p><p><strong>${esc($('#nwTitle').value || 'Título')}</strong></p><ul>${lines().map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; };
+  const prev = () => { $('#nwPrev').innerHTML = `<p class="tiny muted">O QUE MUDOU</p><p><strong>Mari, olha o que tem de novo</strong></p><p><strong>${esc($('#nwTitle').value || 'Título')}</strong></p><ul>${lines().map(x => `<li>${esc(x)}</li>`).join('')}</ul>`
+    + ($('#nwPush')?.checked ? `<p class="tiny muted">NOTIFICAÇÃO NO CELULAR</p><div class="pushprev"><strong>Mari, novidade no Pra Onde Foi: ${esc($('#nwTitle').value || 'Título')}</strong><br>${esc(lines()[0] || '')}</div>` : ''); };
+  if ($('#nwPush')) { $('#nwPush').onchange = prev; reach().then(n => { if (n != null && $('#nwReach')) $('#nwReach').textContent = `Chega na hora para ${n} ${n === 1 ? 'pessoa' : 'pessoas'} com as notificações ligadas, com o nome de cada uma. Quem está com elas desligadas vê o pop-up quando abrir o app.`; }); }
   $('#nwTitle').oninput = $('#nwItems').oninput = prev; prev();
   $('#nwCancel').onclick = () => { newsEdit = null; novidades(el); };
   $('#nwPub').onclick = async e => {
@@ -542,10 +565,15 @@ function novidades(el) {
     const title = $('#nwTitle').value.trim(), m = checkName(title, 'o título', 5, 80); if (m) return invalid($('#nwTitle'), m);
     if (!lines().length) return invalid($('#nwItems'), 'Escreva pelo menos uma linha com o que mudou.');
     const isNew = newsEdit === -1;
-    if (!await confirmInline(e.target, { text: isNew ? `Publicar "${esc(title)}"? Todos que já usam o app vão ver na próxima vez que abrirem.` : `Salvar as mudanças em "${esc(title)}"?`, yes: isNew ? 'Sim, publicar' : 'Sim, salvar' })) return;
-    if (isNew) items.unshift({ id: 'n' + Date.now(), at: new Date().toISOString(), title, items: lines() });
+    const push = isNew && $('#nwPush')?.checked;
+    if (!await confirmInline(e.target, { text: isNew ? `Publicar "${esc(title)}"? Todos que já usam o app vão ver na próxima vez que abrirem${push ? ', e quem está com as notificações ligadas recebe agora no celular' : ''}.` : `Salvar as mudanças em "${esc(title)}"?`, yes: isNew ? 'Sim, publicar' : 'Sim, salvar' })) return;
+    const id = 'n' + Date.now();
+    if (isNew) items.unshift({ id, at: new Date().toISOString(), title, items: lines() });
     else Object.assign(items[newsEdit], { title, items: lines() });
-    newsEdit = null; await save('news', isNew ? 'Novidade publicada.' : 'Novidade salva.'); novidades(el);
+    newsEdit = null;
+    const ok = await save('news', isNew && !push ? 'Novidade publicada.' : isNew ? null : 'Novidade salva.');
+    if (ok && push) await sendNewsPush(id, 'Novidade publicada');
+    novidades(el);
   };
 }
 

@@ -75,15 +75,19 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
 }
 
 // One push per person (on each of their devices) about the newest note, unless they turned "Novidades" off.
-export const newsPush = list => {
-  const [top, ...rest] = list;
-  return { title: 'Novidade no Pra Onde Foi: ' + top.title, body: (top.items?.[0] || '') + (rest.length ? ` E mais ${rest.length} ${rest.length > 1 ? 'novidades' : 'novidade'} no sininho.` : ''), url: '/', tag: 'news-' + top.id };
+// With the person's name: "Mari, novidade no Pra Onde Foi: ...".
+export const newsPush = (list, name = '') => {
+  const [top, ...rest] = list, first = String(name || '').trim().split(/\s+/)[0];
+  return { title: (first ? `${first}, novidade no Pra Onde Foi: ` : 'Novidade no Pra Onde Foi: ') + top.title, body: (top.items?.[0] || '') + (rest.length ? ` E mais ${rest.length} ${rest.length > 1 ? 'novidades' : 'novidade'} no sininho.` : ''), url: '/', tag: 'news-' + top.id };
 };
-async function pushNews(db, list, skipUsers, vapid, fetchImpl) {
+export async function pushNews(db, list, skipUsers, vapid, fetchImpl) {
   const subs = await db.get('push_subscriptions?select=id,user_id,endpoint,p256dh,auth,prefs').catch(() => []);
-  const msg = newsPush(list); let n = 0;
+  const members = await db.get('members?select=user_id,display_name').catch(() => []);
+  const nameOf = id => members.find(m => m.user_id === id)?.display_name || '';
+  let n = 0;
   for (const s of subs) {
     if (skipUsers.has(s.user_id) || s.prefs?.novidades === false) continue;
+    const msg = newsPush(list, nameOf(s.user_id));
     const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { ...msg, body: msg.body.slice(0, 200) }, vapid, fetchImpl).catch(() => ({ ok: false }));
     if (r.ok) n++;
   }
