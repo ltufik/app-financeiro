@@ -84,7 +84,7 @@ export async function refreshPushState() {
 }
 
 // Notifications off: say so and take the person to the page that turns them on (the phone only asks
-// after a tap there). Every 3 days, up to 4 times per device. Returns true when the pop-up was shown.
+// after a tap there). Once a day, up to 7 times per device. Returns true when the pop-up was shown.
 const ASK = () => 'fin.pushask.' + (S.user?.id || '');
 export async function offerPush() {
   if (window.__noMsgs || document.body.classList.contains('locked') || !S.user) return false;

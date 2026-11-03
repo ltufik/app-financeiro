@@ -130,4 +130,7 @@ export const RELEASES = [
   ] },
   { id: 'r62', version: 'v62', at: '2026-11-03T14:05:00Z', backlog: [], semNovidade: 'Só o texto do aviso de notificações desligadas ficou mais convidativo ("que tal o app te avisar do que importa?"); a novidade já foi contada na v61.' },
   { id: 'r63', version: 'v63', at: '2026-11-03T14:40:00Z', backlog: [{ id: 'bug_fatura_longa_nao_lida', where: 'Lançar → Fatura ou extrato' }], semNovidade: 'Recado de erro corrigido agora pede para tentar de novo; o bug da fatura longa (corrigido na v57) é fechado e quem avisou recebe o recado. Para o dono do produto: botão para rever os convites de abertura.' },
+  { id: 'r64', version: 'v64', at: '2026-11-03T14:55:00Z', backlog: [], semNovidade: 'Convite das notificações: agora 1 vez por dia (até 7) e também ao voltar do bloqueio; antes o app aberto bloqueado nunca mostrava o convite. Nenhuma função nova para contar.', updateBacklog: [
+    { id: 'avisar_notificacao_desligada', set: { notes: 'Não força: o celular só pede permissão depois de um toque. O app convida (pop-up com o nome, 1 vez por dia, até 7 vezes por celular, ao abrir ou ao voltar do bloqueio, só quando não houve outro pop-up naquela abertura), leva para menu ☰ → Notificações com o botão em destaque, e o menu mostra "Desligadas neste celular". Bloqueadas nos ajustes: mostra como liberar.' } },
+  ] },
 ];

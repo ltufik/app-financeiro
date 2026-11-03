@@ -573,9 +573,9 @@ test('notificações desligadas: avisa sem forçar', () => {
   assert.equal(shouldAskPush({ status: 'off', now }), true);
   assert.equal(shouldAskPush({ status: 'denied', now }), true);
   for (const s of ['on', 'need-install', 'unsupported', 'not-configured', 'no-sw']) assert.equal(shouldAskPush({ status: s, now }), false, s);
-  assert.equal(shouldAskPush({ status: 'off', asks: { n: 1, at: now - 2 * 864e5 }, now }), false);
-  assert.equal(shouldAskPush({ status: 'off', asks: { n: 1, at: now - 3 * 864e5 }, now }), true);
-  assert.equal(shouldAskPush({ status: 'off', asks: { n: 4, at: now - 30 * 864e5 }, now }), false);
+  assert.equal(shouldAskPush({ status: 'off', asks: { n: 1, at: now - 60e3 }, now }), false);
+  assert.equal(shouldAskPush({ status: 'off', asks: { n: 1, at: now - 864e5 }, now }), true);
+  assert.equal(shouldAskPush({ status: 'off', asks: { n: 7, at: now - 30 * 864e5 }, now }), false);
   assert.equal(pushAskText('off', 'Ana Souza').title, 'Ana, que tal o app te avisar do que importa?'); assert.equal(pushAskText('off', '').eyebrow, 'Notificações desligadas');
   assert.equal(pushAskText('denied', '').primary, 'Ver como liberar');
   assert.equal(menuNote('off'), 'Desligadas neste celular'); assert.equal(menuNote('on'), ''); assert.equal(pushIsOff('need-install'), false);

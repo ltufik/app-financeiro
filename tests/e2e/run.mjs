@@ -921,7 +921,15 @@ const used = await page.evaluate(() => window.__db.usage);
   await page.evaluate(() => { window.__badPass = 'errada-123'; }); await page.fill('#lkPass', 'errada-123'); await page.click('#lkGo');
   await page.waitForFunction(() => /Senha incorreta/.test(document.querySelector('#lkMsg')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});
   ok('senha errada não desbloqueia', (await txt('#lkMsg')).includes('Senha incorreta') && await page.isVisible('#lockScreen'));
-  await page.evaluate(() => { window.__noMsgs = false; });
+  // Back from the lock with notifications off: first the notifications invitation...
+  await page.evaluate(u => { window.__noMsgs = false; localStorage.removeItem('fin.pushask.' + u); }, uid);
+  await page.fill('#lkPass', 'senha-forte-123'); await page.click('#lkGo');
+  await page.waitForSelector('.ann', { timeout: 5000 }).catch(() => {});
+  ok('voltando do bloqueio com as notificações desligadas: vem o convite das notificações', /te avisar do que importa/.test(await page.textContent('.ann').catch(() => '')));
+  await page.click('.ann [data-s]').catch(() => {}); await page.waitForTimeout(300);
+  // ...and, that one already seen today, the fingerprint the next time.
+  await sec('conta'); await page.click('#lkNow');
+  await page.waitForSelector('#lockScreen', { timeout: 5000 }).catch(() => {});
   await page.fill('#lkPass', 'senha-forte-123'); await page.click('#lkGo');
   await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 5000 }).catch(() => {});
   ok('senha certa desbloqueia', !(await page.$('#lockScreen')));
@@ -988,7 +996,7 @@ ok('notificações desligadas: o app avisa com o nome e diz que dá para desliga
 await page.click('.ann [data-p]'); await pushAsk1;
 await page.waitForSelector('#pOn.pulse', { timeout: 5000 }).catch(() => {});
 ok('"Quero receber" leva para Notificações com o botão em destaque', await page.isVisible('#pOn.pulse'));
-ok('o aviso não volta na mesma semana', (await page.evaluate(() => import('/js/push.js').then(m => m.offerPush()))) === false);
+ok('o aviso não volta no mesmo dia', (await page.evaluate(() => import('/js/push.js').then(m => m.offerPush()))) === false);
 await page.evaluate(() => { window.__noMsgs = true; });
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
 ok('menu mostra "Desligadas neste celular" em Notificações', (await txt('#drawer [data-sec="avisos"]')).includes('Desligadas neste celular'));

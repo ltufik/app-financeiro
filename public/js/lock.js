@@ -57,7 +57,7 @@ export async function lock(reason = 'parado') {
   </div>`;
   document.body.append(el);
   const msg = (t, bad) => { $('#lkMsg').textContent = t; $('#lkMsg').className = 'small' + (bad ? ' err' : ''); };
-  const done = () => { el.remove(); document.body.classList.remove('locked'); touch(); };
+  const done = () => { el.remove(); document.body.classList.remove('locked'); touch(); setTimeout(() => afterUnlock(), 300); };
   if (bio) {
     const go = async () => {
       msg('Confirme no celular...');
@@ -79,10 +79,13 @@ export async function lock(reason = 'parado') {
     $('#lkGo').disabled = false;
     if (error) return msg(/invalid/i.test(error.message || '') ? 'Senha incorreta. Tente de novo.' : 'Não consegui conferir agora. Confira a internet e tente de novo.', true);
     track('seguranca.desbloqueio_senha'); done();
-    offerBio();
   };
   $('#lkOut').onclick = () => signOutSafely();
 }
+
+// Coming back after the lock counts as a new opening: one invitation (main.js sets which, in order).
+let afterUnlock = () => offerBio();
+export const setAfterUnlock = fn => { afterUnlock = fn; };
 
 // Every "Sair da conta" goes through here: the goodbye message about security shows on the front door.
 export async function signOutSafely(sb = L?.sb) {

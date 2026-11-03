@@ -34,7 +34,7 @@ export const SCREENS = {
   menu_patrimonio: { title: 'Patrimônio e dívidas', where: 'Menu ☰', key: 'menu.patrimonio' },
   menu_categorias: { title: 'Categorias', where: 'Menu ☰', key: 'menu.categorias' },
   menu_avisos: { title: 'Notificações', where: 'Menu ☰', key: 'menu.avisos' },
-  convite_avisos: { title: 'Notificações desligadas', where: 'Ao abrir o app, se as notificações estão desligadas (a cada 3 dias, até 4 vezes)', key: 'avisos.convite_sim' },
+  convite_avisos: { title: 'Notificações desligadas', where: 'Ao abrir o app ou voltar do bloqueio, se as notificações estão desligadas (1 vez por dia, até 7 vezes)', key: 'avisos.convite_sim' },
   menu_applepay: { title: 'Atalhos do iPhone', where: 'Menu ☰', key: 'menu.applepay' },
   menu_contexto: { title: 'O que o assistente sabe', where: 'Menu ☰', key: 'menu.contexto' },
   lancar_comprovante: { title: 'Comprovante compartilhado', where: 'Compartilhar → Pra Onde Foi (Android; no iPhone, pelo atalho 3)', key: 'lancar.comprovante' },

@@ -32,7 +32,7 @@ export const SERVICES = [
   sv('split', 'Quem paga o quê', 'Quanto cada um pagou e o acerto do mês', 'Menu → Quem paga o quê', 'no_ar', 'gratis', 'nao', '—', ['menu.divisao']),
   sv('fam', 'Família e convites', 'Convite pelo WhatsApp; todos veem os mesmos números', 'Menu → Família', 'no_ar', 'gratis', 'nao', 'Supabase Auth', ['menu.familia']),
   sv('push', 'Notificações', 'Um aviso por dia no máximo e resumo de domingo; avisos da família', 'Menu → Notificações', 'no_ar', 'gratis', 'nao', 'Web Push; Vercel Cron', ['menu.avisos', 'avisos.ligou']),
-  sv('push_convite', 'Convite para ligar as notificações', 'Se as notificações estão desligadas ou bloqueadas no celular, o app avisa (a cada 3 dias, até 4 vezes) e leva para Notificações; o menu mostra "Desligadas"', 'Pop-up ao abrir o app; menu ☰', 'no_ar', 'gratis', 'nao', 'Estado do Web Push no próprio aparelho', ['avisos.convite_sim', 'avisos.convite_nao']),
+  sv('push_convite', 'Convite para ligar as notificações', 'Se as notificações estão desligadas ou bloqueadas no celular, o app avisa (1 vez por dia, até 7 vezes, ao abrir ou voltar do bloqueio) e leva para Notificações; o menu mostra "Desligadas"', 'Pop-up ao abrir o app; menu ☰', 'no_ar', 'gratis', 'nao', 'Estado do Web Push no próprio aparelho', ['avisos.convite_sim', 'avisos.convite_nao']),
   sv('priv', 'Modo privacidade', 'Esconde todos os valores', 'Olho no topo', 'no_ar', 'gratis', 'nao', '—', ['privacidade']),
   sv('pat', 'Patrimônio e dívidas', 'Investimentos, bens, financiamentos e projeção do sonho', 'Menu → Patrimônio', 'no_ar', 'gratis', 'nao', '—', ['menu.patrimonio']),
   sv('backup', 'Backup', 'Baixar e importar todos os dados', 'Menu → Backup', 'no_ar', 'gratis', 'nao', '—', ['menu.backup']),

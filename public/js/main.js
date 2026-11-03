@@ -23,7 +23,7 @@ import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, isAndroid, isMobile, isStandalone, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
 import { offerPush, refreshPushState } from './push.js';
-import { initLock, freshSignIn, signOutSafely, showBye, offerBio } from './lock.js';
+import { initLock, freshSignIn, signOutSafely, showBye, offerBio, setAfterUnlock } from './lock.js';
 
 const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -41,7 +41,16 @@ function showSignedOut() {
 // Messages for testers (welcome, replies, what's new) come first; then the invitation to install.
 // Nothing else to say this time: notifications off? Otherwise offer the fingerprint/face (once a week, up to 3 times); then the install invitation.
 // Then, if notifications are off on this phone, say so (every few days); else the fingerprint/face.
-const afterIntro = () => { refreshPushState(); return showMessages().then(shown => shown ? null : offerPush().then(p => p ? null : offerBio())).then(() => setTimeout(maybeAskInstall, 600)); };
+// The app may open locked (left unused): then the invitation waits for the unlock, which counts as the same
+// opening if a message was just shown (one pop-up per opening).
+let popupAt = 0;
+const afterIntro = () => { refreshPushState(); return showMessages().then(shown => { if (shown) { popupAt = Date.now(); return null; } return offerPush().then(p => p ? null : offerBio()); }).then(() => setTimeout(maybeAskInstall, 600)); };
+let inviting = false;
+setAfterUnlock(() => {
+  if (inviting || Date.now() - popupAt < 10 * 60e3) return;
+  inviting = true;
+  offerPush().then(p => p ? null : offerBio()).finally(() => { inviting = false; });
+});
 const maybeAskInstall = () => { if (shouldAskInstall()) askInstall({ note: isIOS() ? 'Depois de instalar, abra pelo ícone e entre com o mesmo e-mail e senha.' : '' }); };
 $('#wHero').innerHTML = photo('lost', { w: 1100, ratio: '3 / 2', fallback: 'hero', cls: 'land-photo' });
 // Always available on the phone: the automatic invitation only comes back after a few days.
