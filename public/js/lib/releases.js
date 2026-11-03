@@ -128,4 +128,5 @@ export const RELEASES = [
   ] }, addBacklog: [
     { id: 'avisar_notificacao_desligada', title: 'Avisar quando as notificações estão desligadas e levar para ligar', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Ninguém procura ligar as notificações sozinho; sem elas, a pessoa não fica sabendo das novidades nem das respostas', cost: false, notes: 'Não força: o celular só pede permissão depois de um toque. O app avisa (pop-up com o nome, a cada 3 dias, até 4 vezes por celular, só quando não há outro pop-up), leva para menu ☰ → Notificações com o botão em destaque, e o menu mostra "Desligadas neste celular". Bloqueadas nos ajustes: mostra como liberar.', from: [], where: 'Ao abrir o app; menu ☰ → Notificações' },
   ] },
+  { id: 'r62', version: 'v62', at: '2026-11-03T14:05:00Z', backlog: [], semNovidade: 'Só o texto do aviso de notificações desligadas ficou mais convidativo ("que tal o app te avisar do que importa?"); a novidade já foi contada na v61.' },
 ];
