@@ -606,6 +606,13 @@ ok('métricas mostram funil, retenção e uso', mt.includes('Famílias com 2 mes
 ok('app registra o dia de uso', await page.evaluate(() => (window.__touches || 0) >= 1));
 await shot('08c-metricas');
 ok('métricas: link para a Central do produto', (await page.getAttribute('#adminLink', 'href')) === '/admin.html');
+{ // Owner only: replay the opening invitations on this device (to test the journey as a newcomer).
+  const u = await page.evaluate(() => window.__db.users[0].id);
+  await page.evaluate(id => localStorage.setItem('fin.pushask.' + id, JSON.stringify({ n: 4, at: Date.now() })), u);
+  await page.evaluate(() => { window.__noReload = true; });
+  await page.click('#jrReset'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(300);
+  ok('dono do produto: rever os convites de abertura limpa o aparelho', await page.evaluate(id => !localStorage.getItem('fin.pushask.' + id), u));
+}
 { // Product console in a desktop-size tab of the same session.
   const actx = await browser.newContext({ viewport: { width: 1280, height: 900 }, storageState: await page.context().storageState() }); const ap = await actx.newPage(); await addRoutes(ap);
   ap.on('pageerror', e => errors.push('admin: ' + e.message));

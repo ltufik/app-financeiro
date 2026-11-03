@@ -7,7 +7,8 @@ import { rest, closeLoop, applyReleases } from '../api/_loop.js';
 test('autoReply: nome, pedido, o que foi feito e onde encontrar', () => {
   assert.equal(autoReply({ kind: 'ideia', name: 'Luana Souza', text: 'ver gasto por semana' }, { title: 'Gráfico por semana', where: 'Gráficos → por semana' }),
     'Oi, Luana! Você sugeriu "ver gasto por semana". Ficou pronto: Gráfico por semana. Onde encontrar: Gráficos → por semana. Obrigado por ajudar a melhorar o app!');
-  assert.equal(autoReply({ kind: 'erro', name: '', text: 'botão não salva' }, { title: 'botão não salva' }), 'Oi, tudo bem! Você avisou que "botão não salva". Corrigimos. Obrigado por ajudar a melhorar o app!');
+  assert.equal(autoReply({ kind: 'erro', name: '', text: 'botão não salva' }, { title: 'botão não salva' }), 'Oi, tudo bem! Você avisou que "botão não salva". Corrigimos. Pode tentar de novo? Se ainda não der certo, conte pelo balão no topo do app. Obrigado por ajudar a melhorar o app!');
+  assert.match(autoReply({ kind: 'erro', name: 'Paty', text: 'a fatura não foi lida' }, { title: 'Fatura longa não era lida', where: 'Lançar → Fatura ou extrato' }), /^Oi, Paty! .*Corrigimos: Fatura longa não era lida\. Pode tentar de novo em Lançar → Fatura ou extrato\?/);
 });
 
 test('newlyDone: só itens que viraram feito e vieram de opiniões', () => {

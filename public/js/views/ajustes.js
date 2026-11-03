@@ -112,6 +112,9 @@ export function render(el) {
     <a class="btn primary" href="/admin.html" target="_blank" rel="noopener" id="adminLink">Abrir a Central do produto</a>
     <p class="tiny muted">Painel, backlog, benchmarking, precificação e desenho do produto, numa página para o computador.</p>
     <div id="metricsBox" class="stack"></div>
+    <h3>Testar a jornada neste aparelho</h3>
+    <p class="tiny muted">Faz este aparelho voltar a mostrar, ao abrir, o convite para ligar as notificações e o da digital, como para quem acabou de chegar. Os dados não mudam.</p>
+    <div><button class="btn" type="button" id="jrReset">Ver de novo os convites de abertura</button></div>
   </div>
 
   <div class="panel stack" data-sec="contexto">
@@ -158,7 +161,14 @@ export function render(el) {
   $('#secBack').onclick = () => openMenu();
   if (sec.key === 'avisos') renderPush($('#pushBox'));
   if (sec.key === 'divisao') renderSplit($('#splitBox'));
-  if (sec.key === 'metricas') renderMetrics($('#metricsBox'));
+  if (sec.key === 'metricas') {
+    renderMetrics($('#metricsBox'));
+    $('#jrReset').onclick = async e => {
+      if (!await confirmInline(e.target, { text: 'Mostrar de novo os convites de abertura neste aparelho? O app vai recarregar.', yes: 'Sim, mostrar' })) return;
+      try { for (const k of ['fin.pushask.' + S.user.id, 'fin.bio.ask.' + S.user.id]) localStorage.removeItem(k); } catch (err) { /* storage blocked */ }
+      track('teste.jornada'); toast('Pronto. Abrindo o app de novo...'); setTimeout(() => { if (!window.__noReload) location.reload(); }, 900);
+    };
+  }
   if (sec.key === 'duvidas') renderDuvidas($('#faqBox'));
   if (sec.key === 'applepay') renderApplePay($('#apBox'));
   if (sec.key === 'conta') renderSecurity($('#secBox'));

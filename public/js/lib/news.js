@@ -33,7 +33,9 @@ export function autoReply({ kind, name, text }, item = {}) {
   const what = String(text || '').trim(), short = what.length > 90 ? what.slice(0, 90) + '…' : what;
   const lead = { erro: `Você avisou que "${short}". Corrigimos`, ideia: `Você sugeriu "${short}". Ficou pronto`, critica: `Você comentou que "${short}". Mudamos`, duvida: `Você perguntou "${short}". Melhoramos` }[kind] || `Você escreveu "${short}". Ficou pronto`;
   const done = String(item.title || '').trim(), where = String(item.where || '').trim();
-  return `Oi, ${firstName(name) || 'tudo bem'}! ${lead}${done && done.toLowerCase() !== what.toLowerCase() ? `: ${done}` : ''}.${where ? ` Onde encontrar: ${where}.` : ''} Obrigado por ajudar a melhorar o app!`;
+  // A fixed error: ask the person to try again, so nobody has to be told one by one.
+  const retry = kind === 'erro' ? ` Pode tentar de novo${where ? ` em ${where}` : ''}? Se ainda não der certo, conte pelo balão no topo do app.` : (where ? ` Onde encontrar: ${where}.` : '');
+  return `Oi, ${firstName(name) || 'tudo bem'}! ${lead}${done && done.toLowerCase() !== what.toLowerCase() ? `: ${done}` : ''}.${retry} Obrigado por ajudar a melhorar o app!`;
 }
 
 // Backlog items that just became "feito" and came from opinions: [{item, ids}].

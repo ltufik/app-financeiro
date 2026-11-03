@@ -18,6 +18,7 @@ Nada sobe sem isto. `tests/release.test.mjs` cobra os itens marcados com (teste)
 3. Entrada da versão em `public/js/lib/releases.js` (teste):
    - `news`: a novidade do pop-up "O que mudou", em palavras simples, sem citar a IA. Sempre que houver algo visível para o usuário. Se não houver, `semNovidade` com o motivo. A novidade também vira push para todos (automático, `applyReleases`); quem pediu o item recebe só o push personalizado.
    - `backlog`: ids dos itens concluídos (o "Pedir ao Claude" traz o id). Quem pediu recebe o recado personalizado automático.
+   - Bug corrigido é fechado na versão que leva a correção, sem esperar quem avisou testar: o recado automático pede para tentar de novo (e, se falhar, contar pelo balão). Nada de avisar um a um.
    - `addBacklog`: itens novos combinados na conversa.
 4. Central em dia: toda página do menu e toda tela nova em `public/js/admin/flows.js` e em `tests/local/flow-screens.mjs` (teste); nomes legíveis em `content.js` para tudo o que o app registra com `track` (teste); matriz de serviços (teste); FAQ em `lib/faq.js`; documentação quando o processo muda.
 5. Privacidade: se mudou o que o app guarda, atualizar a página Sobre o app.
