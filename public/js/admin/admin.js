@@ -537,10 +537,12 @@ async function sendNewsPush(id, okMsg) {
     const r = await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'news_push', id }) });
     if (r.status === 409) { toast('Esta novidade já foi mandada no celular.'); return; }
     if (!r.ok) await failWith(r);
-    const { pushed } = await r.json();
+    const { pushed, pushed_at } = await r.json();
     // Same mark the server saved, so the next save of the board keeps it.
-    const it = D.news.items.find(n => n.id === id); if (it) { it.pushed_at = new Date().toISOString(); snap('news'); }
-    toast(`${okMsg}: chegou em ${pushed} ${pushed === 1 ? 'aparelho' : 'aparelhos'}.`);
+    const it = D.news.items.find(n => n.id === id);
+    if (it) { if (pushed) Object.assign(it, { pushed_at: pushed_at || new Date().toISOString(), pushed_count: pushed }); else { delete it.pushed_at; delete it.pushed_count; } snap('news'); }
+    if (pushed) toast(`${okMsg}: chegou em ${pushed} ${pushed === 1 ? 'aparelho' : 'aparelhos'}.`);
+    else toast('Nenhum aparelho recebeu: ninguém está com as notificações de novidades ligadas, ou os aparelhos não responderam. Veja Avisos no celular e tente "Mandar no celular" de novo.', 'err');
   } catch (e) { toast('A notificação não saiu. ' + errText(e), 'err'); }
 }
 
@@ -555,7 +557,7 @@ function novidades(el) {
       ${newsEdit === -1 ? `<label class="radio"><input type="checkbox" id="nwPush" checked><span><strong>Mandar também como notificação no celular</strong><br><span class="tiny muted" id="nwReach">Chega na hora para quem está com as notificações ligadas, com o nome da pessoa. Quem está com elas desligadas vê o pop-up quando abrir o app.</span></span></label>` : ''}
       <div class="rowbtn"><button class="btn primary" type="button" id="nwPub">${newsEdit === -1 ? 'Publicar para todos' : 'Salvar'}</button><button class="btn" type="button" id="nwCancel">Cancelar</button></div></div>` : ''}
     <div class="stack">${items.map((n, i) => `<article class="panel stack"><div class="ahead"><div><span class="tiny muted">${dt(n.at)}</span><h2 style="margin:0">${esc(n.title)}</h2></div>
-      <div class="rowbtn">${n.pushed_at ? `<span class="tiny muted">Enviada no celular em ${dt(n.pushed_at)}</span>` : `<button class="chip" type="button" data-npush="${i}">Mandar no celular</button>`}<button class="chip" type="button" data-ned="${i}">Editar</button><button class="chip" type="button" data-ndel="${i}" aria-label="Apagar">×</button></div></div>
+      <div class="rowbtn">${n.pushed_at ? `<span class="tiny muted">Enviada no celular em ${dt(n.pushed_at)}${n.pushed_count ? ` para ${n.pushed_count} ${n.pushed_count === 1 ? 'aparelho' : 'aparelhos'}` : ''}</span>` : `<button class="chip" type="button" data-npush="${i}">Mandar no celular</button>`}<button class="chip" type="button" data-ned="${i}">Editar</button><button class="chip" type="button" data-ndel="${i}" aria-label="Apagar">×</button></div></div>
       <ul class="small" style="margin:0">${(n.items || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></article>`).join('') || '<p class="small muted">Nenhuma novidade publicada.</p>'}</div>`;
   $('#nwAdd').onclick = () => { newsEdit = -1; novidades(el); $('#nwTitle').focus(); };
   el.querySelectorAll('[data-ned]').forEach(b => b.onclick = () => { newsEdit = +b.dataset.ned; novidades(el); });

@@ -56,9 +56,12 @@ export default async function handler(req, res) {
         const item = (news.items || []).find(n => n.id === String(b.id || ''));
         if (!item) return res.status(404).json({ error: 'not_found' });
         if (item.pushed_at) return res.status(409).json({ error: 'already_sent', pushed_at: item.pushed_at });
+        // Marked first (two taps do not send twice); if it reached no device, unmarked so it can go again.
         item.pushed_at = new Date().toISOString(); await db.setBoard('news', news, user.email);
         const pushed = await pushNews(db, [item], new Set(), vapid, fetch).catch(() => 0);
-        return res.status(200).json({ pushed });
+        const now = (await db.board('news')) || news, it = (now.items || []).find(n => n.id === item.id);
+        if (it) { if (pushed) it.pushed_count = pushed; else { delete it.pushed_at; delete it.pushed_count; } await db.setBoard('news', now, user.email); }
+        return res.status(200).json({ pushed, pushed_at: pushed ? item.pushed_at : null });
       }
       if (b.action !== 'test_push') return res.status(400).json({ error: 'bad_request' });
       const subs = await q(`push_subscriptions?user_id=eq.${user.id}&select=id,endpoint,p256dh,auth`);
