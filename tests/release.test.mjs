@@ -7,6 +7,7 @@ import path from 'path';
 import { RELEASES } from '../public/js/lib/releases.js';
 import { FEATURE_LABELS, screenLabel, SERVICES } from '../public/js/admin/content.js';
 import { SCREENS } from '../public/js/admin/flows.js';
+import { TESTS, AREAS, testsOf } from '../public/js/lib/testbook.js';
 import { APP_VERSION } from './helpers/app-version.mjs';
 
 const ROOT = new URL('../public/', import.meta.url).pathname;
@@ -62,4 +63,12 @@ test('Central: tudo o que o app registra tem nome legível', () => {
 
 test('Central: a matriz de serviços só aponta para medidas que existem', () => {
   for (const s of SERVICES) for (const k of s.keys || []) assert.ok(FEATURE_LABELS[k], `${s.id}: ${k}`);
+});
+
+test('caderno de testes: versão com algo visível tem casos para testar no celular (ou o motivo de não ter)', () => {
+  const r = RELEASES.find(x => x.version === VERSION);
+  const visible = !!r.news || (r.backlog || []).length > 0 || (r.addBacklog || []).some(i => i.status === 'feito');
+  if (visible) assert.ok(testsOf(VERSION).length > 0 || (typeof r.semTeste === 'string' && r.semTeste.length > 10), `adicione os casos da ${VERSION} em public/js/lib/testbook.js (ou explique em semTeste)`);
+  assert.equal(new Set(TESTS.map(x => x.id)).size, TESTS.length, 'ids repetidos no caderno');
+  for (const x of TESTS) assert.ok(AREAS.includes(x.area) && x.steps.length && x.expect && /^v\d+$/.test(x.version) && ['ambos', 'android', 'iphone'].includes(x.device), x.id);
 });

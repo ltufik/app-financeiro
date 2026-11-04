@@ -24,6 +24,8 @@ export const SCREENS = {
   planilha: { title: 'Trazer de uma planilha', where: 'Lançar → Fatura ou extrato, escolhendo um Excel ou CSV', key: 'lancar.planilha' },
   varios_arquivos: { title: 'Vários arquivos de uma vez', where: 'Lançar → Fatura ou extrato, escolhendo mais de um arquivo', key: 'lancar.varios' },
   lancar_revisao: { title: 'Revisão da fatura', where: 'Depois de enviar o PDF', key: 'lancar.pdf_ok' },
+  extrato_categoria: { title: 'Extrato por categoria', where: 'Extrato → Categoria', key: 'extrato.categoria' },
+  juntar_categorias: { title: 'Categorias parecidas', where: 'Menu ☰ → Organizar o app → Categorias (e aviso no Início)', key: 'categorias.juntar' },
   anotacao: { title: 'Anotar um lançamento', where: 'Extrato → Anotar', key: 'extrato.anotacao' },
   categoria: { title: 'Escolher a categoria', where: 'Toque na categoria de um lançamento (revisão, Extrato, Fechar o mês)', key: null },
   graficos: { title: 'Gráficos', where: 'Aba Gráficos', key: 'aba.graficos' },
@@ -64,7 +66,7 @@ export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
-    { title: 'Dentro das abas', screens: ['inicio_mais', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'perguntar_resposta'] },
+    { title: 'Dentro das abas', screens: ['inicio_mais', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
@@ -79,7 +81,10 @@ export const FLOWS = [
     st('inicio_exemplo', 'Mês de exemplo: "Enviar a última fatura"', 'exemplo.fatura'), st('inicio', 'Régua: "Envie a última fatura"'), st('lancar', 'Abre Lançar'), st('lancar_pdf', 'Escolhe o PDF, a foto ou o print (e a senha, se tiver); o app vê pelo conteúdo o que é'), st('lendo', 'Enquanto lê: o símbolo do app se montando, o passo e o percentual', null),
     st('lancar_revisao', 'Confere a soma e as categorias, toca em Salvar'), st('varios_arquivos', 'Com várias faturas e o extrato: um por vez ("1 de 3"), o próximo começa sozinho e no fim vem o resumo', 'lancar.varios'), st('categoria', 'Troca uma categoria: busca ("estacionamento") ou toca numa sugestão', null), st('inicio', 'Sobra do mês atualizada', null)] },
   { id: 'planilha', title: 'Trazer a planilha antiga', desc: 'Quase todo mundo já controlava os gastos numa planilha: começar com o histórico faz o app ter valor no primeiro dia.', steps: [
-    st('lancar_pdf', 'Escolhe o Excel ou CSV (dá junto com as faturas)', null), st('planilha', 'Confere as colunas, diz para onde vai cada categoria e salva', 'lancar.planilha'), st('menu_categorias', 'Junta categorias parecidas, se o app sugerir', 'categorias.juntar')] },
+    st('lancar_pdf', 'Escolhe o Excel ou CSV (dá junto com as faturas)', null), st('planilha', 'Confere as colunas, diz para onde vai cada categoria e salva', 'lancar.planilha'), st('juntar_categorias', 'Junta categorias parecidas, se o app sugerir', 'categorias.juntar')] },
+  { id: 'categorias', title: 'Organizar as categorias', desc: 'Categorias repetidas deixam gráficos e orçamento confusos; o app sugere juntar.', steps: [
+    st('inicio', 'Aviso no Início: "Duas categorias parecem a mesma"', null), st('juntar_categorias', 'Em Categorias, toca em "Juntar em…" e confirma', 'categorias.juntar'),
+    st('extrato_categoria', 'No Extrato, filtra pela categoria e vê o total só dela', 'extrato.categoria')] },
   { id: 'falar', title: 'Lançar falando', desc: 'Pix e dinheiro antes do extrato chegar.', steps: [
     st('lancar', 'Abre Lançar'), st('lancar_falar', 'Fala "gastei 45 na padaria no pix" e toca em Interpretar'), st('lancar_salvo', 'Confere e salva')] },
   { id: 'nota', title: 'Nota fiscal', desc: 'Uma compra com itens de categorias diferentes.', steps: [

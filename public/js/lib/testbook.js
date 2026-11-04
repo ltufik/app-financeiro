@@ -1,0 +1,88 @@
+// Caderno de testes (Central → Planejar → Caderno de testes): what to try on a real phone after each version,
+// step by step, and what should happen. `auto` = the robot also checks it at every change (tests/e2e/run.mjs);
+// the notebook is for what only a real phone shows (notifications, sharing, installing, real bank files).
+// Definição de pronto: a version with something visible adds its cases here (tests/release.test.mjs checks).
+export const AREAS = ['Lançar', 'Extrato', 'Categorias', 'Início', 'Notificações', 'Menu e telas', 'Segurança', 'Central'];
+const t = (id, area, version, device, title, steps, expect, auto = false) => ({ id, area, version, device, title, steps, expect, auto });
+
+export const TESTS = [
+  // Lançar
+  t('varios_arquivos', 'Lançar', 'v75', 'ambos', 'Mandar várias faturas e o extrato de uma vez',
+    ['Lançar → Fatura ou extrato → escolha duas faturas e o extrato juntos.', 'Confira a fila no topo ("Arquivo 1 de 3") e o "Agora: confira a revisão abaixo".', 'Salve a primeira e veja o próximo começar sozinho.', 'No fim, leia o resumo.'],
+    'Um por vez, com o pop-up de leitura; Salvar e Descartar sempre à vista; no fim "Pronto: 3 salvos".', true),
+  t('arquivo_que_falha', 'Lançar', 'v75', 'ambos', 'Arquivo que não dá para ler, no meio de vários',
+    ['Mande junto com as faturas um arquivo que não é fatura (um .txt ou uma foto qualquer).'],
+    'O aviso diz qual falhou e por quê; a fila segue; no fim aparece "Tentar de novo o que falhou".', true),
+  t('progresso_leitura', 'Lançar', 'v74', 'ambos', 'Pop-up de leitura com o símbolo e o percentual',
+    ['Mande uma fatura longa (muitas páginas).'],
+    'O símbolo se monta barra por barra, a frase diz o passo ("Lendo a parte 2 de 4") e o percentual sobe até 100%.', true),
+  t('extrato_em_partes', 'Lançar', 'v79', 'ambos', 'Extrato do mês dividido em dois arquivos',
+    ['Mande a primeira parte do extrato da conta e salve.', 'Mande a segunda parte.'],
+    'A segunda mostra "Este arquivo completa o extrato…", com "Salvar N novos". Nada é apagado e o mês fica com as duas partes.'),
+  t('mesma_fatura_de_novo', 'Lançar', 'v79', 'ambos', 'A mesma fatura mandada de novo',
+    ['Mande uma fatura que já foi salva.'],
+    'Avisa que essa fatura já foi enviada e que salvar troca a anterior por esta.', true),
+  t('planilha', 'Lançar', 'v78', 'ambos', 'Trazer a planilha antiga (Excel ou CSV)',
+    ['Lançar → Fatura ou extrato → escolha a planilha de controle.', 'Confira as colunas e diga para onde vai cada categoria.', 'Salve.', 'Mande a mesma planilha de novo.'],
+    'Lê todas as abas; categorias iguais já vêm ligadas; na segunda vez, "N linhas já estão no app" e nada duplica.', true),
+  t('compartilhar_varios', 'Lançar', 'v72', 'android', 'Compartilhar várias faturas pelo app do banco',
+    ['No app do banco (ou em Arquivos), selecione dois PDFs e toque em Compartilhar → Pra Onde Foi.'],
+    'O app abre em Lançar com a fila dos dois arquivos.'),
+  t('anotacao', 'Extrato', 'v59', 'ambos', 'Anotar um lançamento e o app lembrar',
+    ['Extrato → Anotar num lançamento → escreva e marque "lembrar".', 'Mande a fatura do mês seguinte.'],
+    'Na revisão, o mesmo lançamento já vem anotado; a busca acha pela anotação.', true),
+  // Extrato
+  t('extrato_categoria', 'Extrato', 'v78', 'ambos', 'Filtrar o Extrato por categoria',
+    ['Extrato → Categoria → escolha uma.'],
+    'Só os lançamentos dela, e o total embaixo é só dela (partes de nota fiscal contam).', true),
+  t('conta_nao_cartao', 'Extrato', 'v78', 'ambos', 'Lançamento da conta aparece como conta',
+    ['Extrato → Conta.'],
+    'Embaixo de cada lançamento aparece "conta Santander" (e não "cartão @santander").', true),
+  // Categorias
+  t('juntar_sugestao', 'Categorias', 'v78', 'ambos', 'Sugestão de juntar categorias parecidas',
+    ['Menu ☰ → Organizar o app → Categorias.', 'Em "Categorias parecidas", toque em "Juntar em…" e confirme.'],
+    'A categoria some, os lançamentos passam para a que ficou e o aviso diz quantos. "Manter separadas" não pergunta de novo. (Precisa do SQL da v78.)', true),
+  t('juntar_com', 'Categorias', 'v78', 'ambos', 'Juntar qualquer categoria com outra',
+    ['Em Suas categorias, toque em "Juntar com…" numa categoria, escolha a outra e confirme.'],
+    'Lançamentos, regras e orçamento passam para a escolhida.'),
+  // Início
+  t('por_dia_cartao', 'Início', 'v72', 'ambos', 'Quanto dá para gastar por dia no cartão',
+    ['Em Metas, combine um limite para o cartão maior que a fatura atual.', 'Abra o Início.'],
+    'Aviso "Dá para gastar cerca de R$ X por dia no cartão", com os dias até o cartão fechar.', true),
+  t('conta_acima', 'Início', 'v72', 'ambos', 'Conta fixa acima do normal',
+    ['Com três meses ou mais de dados, veja os avisos do Início.'],
+    'Quando luz, condomínio ou outra conta fixa vem bem acima da média, aparece o aviso com o valor e a diferença.', true),
+  // Notificações
+  t('convite_notificacoes', 'Notificações', 'v64', 'ambos', 'Convite para ligar as notificações',
+    ['Menu ☰ → Dados e conta → Métricas → "Ver de novo os convites de abertura".', 'Toque em "Quero receber", depois Ativar e Permitir.'],
+    'Abre Notificações com o botão em destaque; depois de permitir, o app manda um teste e pergunta se ele apareceu.', true),
+  t('teste_push_celular', 'Notificações', 'v69', 'android', 'Teste de notificação diz se chegou ao celular',
+    ['Menu ☰ → Organizar o app → Notificações → Enviar aviso de teste.', 'Espere até 15 segundos.'],
+    'Aparece "Avisos ligados" no celular; o app diz "O aviso chegou neste celular". Se não aparecer, "Não apareceu" mostra os ajustes do celular.'),
+  t('toque_na_notificacao', 'Notificações', 'v70', 'ambos', 'Tocar na notificação leva ao lugar certo',
+    ['Feche o app.', 'Na Central → Avisos no celular, mande o push de teste.', 'Toque na notificação.'],
+    'O app abre direto em Notificações. Uma novidade abre a novidade inteira; um recado abre o recado.', true),
+  t('push_da_versao', 'Notificações', 'v73', 'ambos', 'Push de cada versão para todos e recado para quem pediu',
+    ['Depois de uma versão com novidade, abra o app uma vez.', 'Na Central → Versões, veja a linha da versão.'],
+    'Todos com notificação ligada recebem a novidade com o nome; quem pediu recebe só o recado. Versões mostra "chegou em N aparelhos · M recados".'),
+  // Menu e telas
+  t('menu_grupos', 'Menu e telas', 'v76', 'ambos', 'Menu em grupos',
+    ['Abra o menu ☰.', 'Toque em outro grupo.'],
+    '4 grupos; um aberto por vez; o da página atual abre sozinho; ponto colorido em "Organizar o app" se as notificações estiverem desligadas.', true),
+  t('avisos_3s', 'Menu e telas', 'v73', 'ambos', 'Avisos de baixo fecham em 3 segundos',
+    ['Salve qualquer coisa.'], 'O aviso "Pronto!" fecha sozinho em 3 segundos (ou no ×).', true),
+  t('planilha_baixar', 'Menu e telas', 'v72', 'ambos', 'Baixar a planilha',
+    ['Menu ☰ → Dados e conta → Backup → Baixar planilha (Excel).', 'Abra o arquivo no Excel ou no Google Planilhas.'],
+    'Um lançamento por linha, com acentos certos, valores com vírgula e a coluna "Cartão ou conta".'),
+  // Central
+  t('central_caderno', 'Central', 'v80', 'ambos', 'Caderno de testes e documentação na Central',
+    ['Central → Planejar → Caderno de testes.', 'Marque um caso como Passou e outro como Falhou, contando o que aconteceu.', 'Central → Planejar → Documentação.'],
+    'Os contadores mudam; o que falhou vira bug em Backlog → Agora. A Documentação tem as seções de Lançar, Categorias, Notificações e Caderno de testes.', true),
+  t('central_push_teste', 'Central', 'v67', 'ambos', 'Push de teste da Central',
+    ['Central → Acompanhar → Avisos no celular → Enviar push de teste para mim.'],
+    'Chega "Luiz, o teste chegou". Se der erro, a mensagem diz o motivo (login, permissão, servidor), nunca "sem internet" à toa.', true),
+  t('central_novidade_push', 'Central', 'v71', 'ambos', 'Mandar uma novidade no celular para todos',
+    ['Central → Novidades → Nova novidade, com "Mandar também como notificação" marcado.', 'Publique.'],
+    'A lista mostra "Enviada no celular para N aparelhos"; se não chegou a ninguém, o botão "Mandar no celular" volta.', true),
+];
+export const testsOf = version => TESTS.filter(x => x.version === version);

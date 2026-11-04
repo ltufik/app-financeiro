@@ -836,6 +836,16 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: versões mostram para quantos aparelhos o push foi e os recados personalizados', (await ap.textContent('#aMain')).includes('Push para todos: chegou em 5 aparelhos · 2 recados personalizados para quem pediu'));
   ok('central: versões com a definição de pronto e a novidade de cada uma', (await ap.textContent('#aMain')).includes('Definição de pronto') && (await ap.textContent('#aMain')).includes('Lançar sem abrir o app') && (await ap.textContent('#aMain')).includes('Novo no backlog'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-13-versoes.png'), fullPage: true });
+  await atab('caderno'); await ap.waitForSelector('.tcase');
+  ok('central: caderno de testes com casos por área e o que o robô também testa', (await ap.$$('.tcase')).length >= 20 && (await ap.textContent('#aMain')).includes('Robô também testa') && (await ap.textContent('#aMain')).includes('O que deve acontecer'));
+  await ap.click('.tcase[data-t="planilha"] [data-ok]'); await ap.waitForTimeout(300);
+  ok('central: marcar "Passou" salva o resultado', adminStore.tests?.results?.planilha?.status === 'passou' && (await ap.textContent('.tcase[data-t="planilha"]')).includes('Passou em'));
+  await ap.click('.tcase[data-t="extrato_em_partes"] [data-bad]'); await ap.fill('.tcase[data-t="extrato_em_partes"] [data-note]', 'a segunda parte pediu para substituir');
+  await ap.click('.tcase[data-t="extrato_em_partes"] [data-save]'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(400);
+  ok('central: "Falhou" vira bug no backlog, em Agora, com o que aconteceu', adminStore.tests?.results?.extrato_em_partes?.status === 'falhou' && (adminStore.backlog?.items || []).some(i => i.tipo === 'bug' && i.status === 'agora' && /Falhou no teste: Extrato do mês dividido/.test(i.title) && /substituir/.test(i.problem)));
+  await atab('docs'); await ap.waitForSelector('#aMain .docsec');
+  const dtext = await ap.textContent('#aMain');
+  ok('central: documentação tem as seções novas', ['Lançar: faturas, extratos e planilhas', 'Categorias e como juntar', 'Notificações: do servidor ao celular', 'Caderno de testes', 'Estudo dos bugs'].every(t => dtext.includes(t)), dtext.slice(0, 200));
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
   ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
   await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
@@ -851,7 +861,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
-  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
   for (const [w, h, name] of [[390, 844, 'celular'], [800, 1334, 'tablet em pé'], [1334, 800, 'tablet deitado']]) {
     await ap.setViewportSize({ width: w, height: h }); await ap.waitForTimeout(250);
     const wide = [];

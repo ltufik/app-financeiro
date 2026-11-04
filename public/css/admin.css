@@ -172,3 +172,4 @@ body.admin{background:var(--paper)}
 .tag.bug{background:var(--bad-soft);color:var(--bad);text-transform:uppercase;letter-spacing:.04em}
 .avlist{margin:0;padding-left:20px;display:grid;gap:6px}
 .pushprev{padding:10px 12px;border-radius:12px;background:var(--surface-2,var(--accent-soft));font-size:13px}
+.tcase.passou{border-left:4px solid var(--good)}.tcase.falhou{border-left:4px solid var(--bad)}

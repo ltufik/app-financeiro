@@ -12,7 +12,7 @@ import { rest, closeLoop, pushNews } from './_loop.js';
 import { pushPeople, deviceKind } from '../public/js/lib/pushinfo.js';
 import { linkFor } from '../public/js/lib/links.js';
 
-const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases'];
+const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases', 'tests'];
 const READ_ONLY = ['releases'];
 const STATUS = ['novo', 'visto', 'backlog', 'resolvido'];
 const MAX = 400_000;

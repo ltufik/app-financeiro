@@ -14,12 +14,13 @@ import { SCREENS, FLOWS, flowFunnel } from './flows.js';
 import { buildSummary } from './summary.js';
 import { testText } from '../lib/pushinfo.js';
 import { RELEASES } from '../lib/releases.js';
+import { TESTS, AREAS } from '../lib/testbook.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS, screenLabel, screenShot } from './content.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
-const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null };
-const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
+const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -105,7 +106,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -128,7 +129,7 @@ function labelTables(root) {
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
   { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
-  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
+  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
 ];
 const CHEV = IC('<path d="M9 6l6 6-6 6"/>');
@@ -718,10 +719,55 @@ export const DONE = [
   ['Recado para quem pediu', 'Os itens do backlog concluídos entram na versão; o recado personalizado sai sozinho para quem pediu.'],
   ['Backlog em dia', 'Itens novos da conversa entram no backlog; os feitos vão para Feito.'],
   ['Central em dia', 'Telas novas nos Fluxos (fotos refeitas no GitHub), nomes das telas e botões no Uso e na Navegação, matriz de serviços, Dúvidas e documentação.'],
+  ['Caderno de testes', 'Cada versão com algo visível ganha seus casos no Caderno de testes: o passo a passo para testar num celular de verdade e o que deve acontecer.'],
+  ['Projetos feitos', 'Tudo o que foi entregue vira um item Feito no backlog, com onde encontrar.'],
   ['Privacidade', 'Se mudou o que o app guarda, a página Sobre o app explica.'],
   ['Banco de dados', 'Se mudou o banco, o schema.sql continua podendo rodar de novo e você recebe o aviso para rodar no Supabase.'],
   ['Versão do app', 'O número da versão muda, para os celulares buscarem a nova.'],
 ];
+// ---------- Caderno de testes: what to try on a real phone after each version ----------
+let tbFilter = 'todos';
+async function caderno(el) {
+  if (!D.tests) { try { D.tests = (await api('GET', 'tests')).data || { results: {} }; } catch (e) { D.tests = { results: {} }; } }
+  const res = D.tests.results || (D.tests.results = {}), st = x => res[x.id]?.version === x.version ? res[x.id].status : 'pendente';
+  const count = k => TESTS.filter(x => k === 'todos' || st(x) === k).length;
+  const list = TESTS.filter(x => tbFilter === 'todos' || st(x) === tbFilter);
+  const DEV = { ambos: 'Android e iPhone', android: 'Android', iphone: 'iPhone' };
+  el.innerHTML = `<div class="ahead"><h1>Caderno de testes</h1><span class="tiny muted">${count('passou')} passaram · ${count('falhou')} falharam · ${count('pendente')} para testar</span></div>
+    <p class="small muted">O que testar num celular de verdade depois de cada versão. "Robô também testa" quer dizer que o teste automático já confere a cada mudança; aqui vale o que só o celular mostra (notificação, compartilhar, arquivos reais do banco). Marcar "Falhou" cria um bug no backlog.</p>
+    <div class="chips">${[['todos', 'Todos'], ['pendente', 'Para testar'], ['falhou', 'Falharam'], ['passou', 'Passaram']].map(([k, l]) => `<button class="chip" type="button" data-tf="${k}" aria-pressed="${tbFilter === k}">${l} <span class="tiny muted">${count(k)}</span></button>`).join('')}</div>
+    ${AREAS.map(a => { const xs = list.filter(x => x.area === a); if (!xs.length) return ''; return `<h2 style="margin:16px 0 6px">${esc(a)}</h2><div class="stack">${xs.map(x => { const r = res[x.id], s = st(x);
+      return `<article class="panel stack tcase ${s}" data-t="${x.id}"><div class="ahead"><div><span class="tag">${esc(x.version)}</span> <span class="tiny muted">${DEV[x.device]}</span>${x.auto ? ' <span class="pill ok" style="font-size:11px;padding:1px 6px">Robô também testa</span>' : ''}<h3 style="margin:4px 0 0">${esc(x.title)}</h3></div>
+        <span class="tiny ${s === 'passou' ? 'pos' : s === 'falhou' ? 'neg' : 'muted'}">${s === 'passou' ? 'Passou' : s === 'falhou' ? 'Falhou' : 'Para testar'}${r && s !== 'pendente' ? ` em ${new Date(r.at).toLocaleDateString('pt-BR')}` : ''}</span></div>
+        <ol class="small" style="margin:0">${x.steps.map(p => `<li>${esc(p)}</li>`).join('')}</ol><p class="small" style="margin:0"><strong>O que deve acontecer:</strong> ${esc(x.expect)}</p>
+        ${s === 'falhou' && r?.note ? `<p class="small neg" style="margin:0">O que aconteceu: ${esc(r.note)}</p>` : ''}
+        <div class="rowbtn"><button class="btn${s === 'passou' ? ' primary' : ''}" type="button" data-ok>Passou</button><button class="btn${s === 'falhou' ? ' danger' : ''}" type="button" data-bad>Falhou</button>${s !== 'pendente' ? '<button class="chip" type="button" data-reset>Testar de novo</button>' : ''}</div>
+        <div data-why hidden class="stack"><label class="f">O que aconteceu?<textarea data-note maxlength="500" placeholder="Ex.: a segunda parte pediu para substituir a primeira"></textarea></label><div><button class="btn danger" type="button" data-save>Marcar como falhou e criar bug</button></div></div></article>`; }).join('')}</div>`; }).join('')}`;
+  el.querySelectorAll('[data-tf]').forEach(b => b.onclick = () => { tbFilter = b.dataset.tf; caderno(el); });
+  const mark = async (x, status, note = '') => {
+    res[x.id] = { status, version: x.version, at: new Date().toISOString(), note };
+    if (status === 'falhou') {
+      // A failed case becomes a bug in the backlog (Agora), with what happened.
+      const id = 'bug_teste_' + x.id + '_' + x.version.replace(/\W/g, '');
+      if (!D.backlog.items.some(i => i.id === id)) { D.backlog.items.unshift({ id, tipo: 'bug', title: 'Falhou no teste: ' + x.title, status: 'agora', origin: 'Caderno de testes', effort: 'P', problem: note || x.expect, cost: false, notes: `Caso ${x.id} (${x.version}). Esperado: ${x.expect}`, from: [], where: x.area }); await save('backlog'); }
+    }
+    try { await api('PUT', 'tests', D.tests); toast(status === 'passou' ? 'Marcado como passou' : status === 'falhou' ? 'Marcado como falhou: virou bug no backlog' : 'Volta para testar'); } catch (e) { toast('Não foi possível salvar. ' + errText(e), 'err'); }
+    caderno(el);
+  };
+  el.querySelectorAll('.tcase').forEach(card => {
+    const x = TESTS.find(y => y.id === card.dataset.t);
+    card.querySelector('[data-ok]').onclick = () => mark(x, 'passou');
+    card.querySelector('[data-bad]').onclick = () => { card.querySelector('[data-why]').hidden = false; card.querySelector('[data-note]').focus(); };
+    card.querySelector('[data-save]').onclick = async e => {
+      const note = card.querySelector('[data-note]').value.trim();
+      if (note.length < 5) { invalid(card.querySelector('[data-note]'), 'Conte em poucas palavras o que aconteceu.'); return; }
+      if (!await confirmInline(e.target, { text: `Marcar "${esc(x.title)}" como falhou? Vira um bug no backlog, em Agora.`, yes: 'Sim, marcar' })) return;
+      mark(x, 'falhou', note);
+    };
+    const rs = card.querySelector('[data-reset]'); if (rs) rs.onclick = () => { delete res[x.id]; mark(x, 'pendente'); };
+  });
+}
+
 async function versoes(el) {
   let applied = [], log = []; try { const d = (await api('GET', 'releases')).data || {}; applied = d.applied || []; log = d.log || []; } catch (e) { /* not applied yet */ }
   // What each release did when it reached the users: push to everyone and personal messages.

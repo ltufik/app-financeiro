@@ -1,5 +1,6 @@
 // Starting content for the console's service matrix, documentation and usage labels.
 import { BUG_STUDY } from '../lib/bugstudy.js';
+import { NEW_DOCS } from '../lib/docsections.js';
 // Once saved in the console, the database copy is the one that counts.
 
 // Friendly names for the usage keys recorded by the app (public/js/usage.js).
@@ -58,6 +59,7 @@ export const SV_AI = { sim: 'Sim', as_vezes: 'Às vezes', nao: 'Não' };
 
 export const DOCS = [
   BUG_STUDY,
+  ...NEW_DOCS,
   { id: 'visao', title: 'Visão geral', body: `**Pra Onde Foi** mostra para a família para onde vai o dinheiro, sem conectar no banco.
 A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e dinheiro falando, e o app mostra quanto sobrou, onde dá para economizar e se estão no caminho do sonho.
 ## Fase atual

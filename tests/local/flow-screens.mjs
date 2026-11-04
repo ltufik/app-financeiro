@@ -127,6 +127,11 @@ await step('perguntar_resposta', async () => { await page.fill('#askText', 'quan
 await step('extrato', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(400); });
 await step('anotacao', async () => { await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in'); await page.fill('.nt-in', 'cabeleireiro Lily'); });
 await page.click('.cps .tx').catch(() => {});
+await step('extrato_categoria', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(300); const v = await page.$$eval('#lCat option', o => o.map(x => x.value).filter(Boolean)); if (v.length) await page.selectOption('#lCat', v[0]); await page.waitForTimeout(300); });
+await page.selectOption('#lCat', '').catch(() => {});
+await step('juntar_categorias', async () => { await sec('categorias'); await page.fill('#cNew', 'Mercados'); await page.click('#cAdd'); await page.click('.cfm [data-y]'); await page.waitForSelector('#catMerge .mergecard', { timeout: 8000 }); }, { scrollTo: '#catMerge' });
+await page.click('#catMerge .mergecard [data-mj]').catch(() => {}); await page.click('.cfm [data-y]').catch(() => {}); await page.waitForTimeout(300);
+await page.keyboard.press('Escape').catch(() => {});
 await step('menu', async () => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); await page.waitForTimeout(300); });
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 for (const k of ['familia', 'divisao', 'metas', 'patrimonio', 'categorias', 'avisos', 'applepay', 'contexto', 'duvidas', 'opiniao', 'ajuda', 'backup', 'sobre', 'conta']) await step('menu_' + k, () => sec(k));

@@ -4,6 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
+import { NEW_DOCS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -197,4 +198,14 @@ export const RELEASES = [
   { id: 'r79', version: 'v79', at: '2026-11-04T05:40:00Z', backlog: [], semNovidade: 'Correção: extrato ou fatura dividido em mais de um arquivo não pede mais para substituir a parte que já estava; entra só o que é novo.', addBacklog: [
     { id: 'bug_extrato_em_duas_partes', tipo: 'bug', title: 'Extrato dividido em dois arquivos pedia para substituir a primeira parte', status: 'feito', origin: 'Erro de Luiz', effort: 'P', problem: 'O banco dividiu o extrato do mês em dois arquivos pelo tamanho; ao mandar a segunda parte, o app dizia que ia substituir o extrato que já estava (e apagaria a primeira parte)', cost: false, notes: 'Causa: o app achava que era o mesmo documento só porque era a mesma conta no mesmo mês, sem olhar os lançamentos; e considerava iguais dois Pix de mesmo valor para a mesma pessoa em dias diferentes. Correção: só é o mesmo documento quando quase todos os lançamentos batem nos dois sentidos (mesmo valor e mesmo dia). Outra parte do mesmo extrato entra junto, só com o que é novo, e nada é apagado; um arquivo que já está todo no app avisa que não há nada novo. Lição para o estudo dos bugs: decidir pelos dados, não pelo rótulo.', from: [], where: 'Lançar → Fatura ou extrato' },
   ] },
+  { id: 'r80', version: 'v80', at: '2026-11-04T06:30:00Z', backlog: [], semNovidade: 'Só a Central do produto (o dono vê): caderno de testes, documentação das funcionalidades, telas e fluxo de categorias e os projetos feitos que faltavam na lista.',
+    addDocs: NEW_DOCS,
+    addBacklog: [
+      { id: 'pop_up_de_leitura', title: 'Pop-up de leitura com o símbolo do app, o passo e o percentual', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Só uma frase pequena embaixo: não ficava claro que o app estava lendo', cost: false, notes: 'Entrou na v74: o símbolo se monta barra por barra, a frase diz o passo e o percentual sobe; com vários arquivos, "Arquivo 2 de 3".', from: [], where: 'Lançar, enquanto lê' },
+      { id: 'registro_do_push_por_versao', title: 'Central mostra para quantos aparelhos o push de cada versão chegou', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não dava para saber se o push da versão saiu', cost: false, notes: 'Entrou na v73: Versões mostra aparelhos e recados; se não sair, o motivo e a novidade fica livre para mandar de novo.', from: [], where: 'Central → Versões' },
+      { id: 'avisos_fecham_em_3s', title: 'Avisos de baixo fecham em 3 segundos', status: 'feito', origin: 'Luiz', effort: 'P', problem: '5 segundos era tempo demais', cost: false, notes: 'Entrou na v73.', from: [], where: 'Todo o app' },
+      { id: 'checagem_das_bibliotecas_cdn', title: 'Robô confere se as bibliotecas do CDN continuam no ar', status: 'feito', origin: 'Estudo dos bugs', effort: 'P', problem: 'Se uma biblioteca sumir do CDN, o app quebra no celular sem aviso', cost: false, notes: 'Entrou na v78: a cada mudança, o robô testa os endereços do pdf.js, supabase-js e SheetJS.', from: [], where: 'GitHub → Testes' },
+      { id: 'caderno_de_testes', title: 'Caderno de testes na Central', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não havia lugar para registrar o que testar num celular de verdade e o resultado', cost: false, notes: 'Casos por funcionalidade, com passos e o que deve acontecer; Passou ou Falhou; Falhou vira bug no backlog. Entra na Definição de pronto.', from: [], where: 'Central → Planejar → Caderno de testes' },
+      { id: 'documentacao_das_funcionalidades', title: 'Documentação de Lançar, Categorias, Notificações e Caderno de testes', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'As regras novas estavam só no código e na conversa', cost: false, notes: 'Seções novas em Central → Documentação.', from: [], where: 'Central → Documentação' },
+    ] },
 ];
