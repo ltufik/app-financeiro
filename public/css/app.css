@@ -602,3 +602,13 @@ label.consent[hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.mchev{transition:none}}
 .mergecard{padding:12px 14px;border-radius:12px;background:var(--sunk);display:flex;flex-direction:column;gap:8px}.mergecard p{margin:0}
 .shcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+
+/* Trust seal: "sem senha do banco" (landing, sign in, Lançar) */
+.trust{display:flex;gap:12px;align-items:flex-start;margin:16px 0 4px;padding:14px;border-radius:var(--r);background:var(--accent-soft);color:var(--ink);font-size:14px;line-height:1.45;text-align:left}
+.trust .trust-ico{flex:none;width:36px;height:36px;border-radius:50%;background:var(--card);color:var(--accent);display:flex;align-items:center;justify-content:center}
+.trust > div{min-width:0}
+.trust details{margin-top:6px}
+.trust summary{color:var(--accent);font-weight:600;cursor:pointer}
+.trust ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.trust-line{display:flex;align-items:center;gap:6px;margin:4px 0 0;color:var(--accent);font-weight:600}
+.trust-line svg{flex:none}

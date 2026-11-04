@@ -36,6 +36,12 @@ try { var t = localStorage.getItem('fin.theme') || 'light'; if (t !== 'auto') do
   <h1>Para onde foi o seu dinheiro?</h1>
   <p class="lead">O Pra Onde Foi mostra, centavo por centavo, para onde vai o dinheiro da família: o pix do dia a dia, as comprinhas no cartão e quanto entra de verdade.</p>
   <div class="land-cta"><button class="btn primary" type="button" id="wSignup">Criar conta grátis</button></div>
+  <div class="trust" id="wTrust"><span class="trust-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><strong>Sem senha do banco.</strong> O app não se conecta à sua conta: você mesmo baixa o PDF da fatura ou do extrato, e ele é lido no seu celular e descartado.
+    <details><summary>Como cuidamos dos seus dados</summary><ul>
+      <li>Nunca pedimos a senha do banco nem acesso à conta (não usamos Open Finance).</li>
+      <li>O arquivo da fatura, a senha do PDF e as fotos não são guardados.</li>
+      <li>Os lançamentos ficam só com a sua família, e dá para apagar tudo quando quiser.</li>
+      <li>Se alguém pedir a senha do seu banco em nome do Pra Onde Foi, não é o app.</li></ul></details></div></div>
   <button class="linkbtn" type="button" id="wInstall" hidden>📲 Instalar o app no celular</button>
   <ul class="land-feats">
     <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 14l2 2 4-4"/></svg></span><span><strong>Mande a fatura e o extrato</strong><br>Em PDF, de qualquer banco. O app lê, confere os totais e separa tudo por categoria.</span></li>
@@ -43,7 +49,7 @@ try { var t = localStorage.getItem('fin.theme') || 'light'; if (t !== 'auto') do
     <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span><strong>Veja quanto sobra</strong><br>Quanto entrou, quanto saiu e para onde foi, mês a mês.</span></li>
     <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/></svg></span><span><strong>Use em família</strong><br>Convide quem divide as contas com um link no WhatsApp.</span></li>
   </ul>
-  <p class="tiny muted" style="text-align:center">Seus dados ficam só com a sua família. PDFs e senhas não são guardados.</p>
+  <p class="tiny muted" style="text-align:center">Seus dados ficam só com a sua família. Funciona com qualquer banco.</p>
 </section>
 
 <!-- ENTRAR -->
@@ -51,6 +57,7 @@ try { var t = localStorage.getItem('fin.theme') || 'light'; if (t !== 'auto') do
   <button class="tour-skip" type="button" id="aBack" style="align-self:flex-start">← Voltar</button>
   <div class="brandbig">Pra Onde Foi</div>
   <p class="muted">Entre ou crie sua conta para começar.</p>
+  <p class="trust-line small" id="aTrust"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Nunca pedimos a senha do seu banco.</p>
   <div class="banner ok" id="aInvite" hidden></div>
   <form class="panel stack" id="authForm" novalidate>
     <div class="chips" role="tablist">

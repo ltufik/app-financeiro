@@ -155,8 +155,10 @@ try {
 await page.goto('https://app.test/');
 await page.waitForSelector('#welcome:not([hidden])');
 ok('tela inicial explica o app com foto', (await txt('#welcome')).includes('Para onde foi o seu dinheiro?') && await page.isVisible('#wHero img') && !(await txt('#wHero')).includes('Foto:'));
+ok('tela inicial: selo "sem senha do banco" com os cuidados', (await txt('#wTrust')).includes('Sem senha do banco') && (await page.$$('#wTrust details li')).length === 4);
 await shot('00-inicial');
 await page.click('#wSignup');
+ok('tela de entrar: "Nunca pedimos a senha do seu banco"', await page.isVisible('#aTrust') && (await txt('#aTrust')).includes('Nunca pedimos a senha do seu banco'));
 await page.waitForSelector('#auth:not([hidden])');
 ok('criar conta abre o cadastro', await page.isVisible('#nameRow'));
 await shot('01-login');
@@ -266,6 +268,7 @@ await page.click('[data-tab=resumo]');
 // The family's old control sheet: CSV (always) and Excel with two tabs (when the Excel reader is available).
 async function sheetTests(tag) {
   await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="pdf"]');
+  ok('Lançar: selo "sem senha do banco" junto do envio', await page.isVisible('#lTrust') && (await txt('#lTrust')).includes('Sem senha do banco'));
   await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/planilha-ficticia.csv'));
   await page.waitForSelector('#shReview:not([hidden])', { timeout: 15000 }).catch(() => {});
   const sh = await txt('#shReview');

@@ -84,6 +84,7 @@ function build(el) {
         <li><b>Foto ou print</b><span>de fatura, extrato ou comprovante</span></li>
       </ul>
       <p class="tiny muted">Mandou vários? O app lê um por vez, numa fila, e você revisa cada um. PDF com senha também funciona: o app pede a senha e não a guarda.</p>
+      <p class="trust-line small" id="lTrust"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Sem senha do banco: o arquivo é lido neste celular e descartado.</p>
     </div>
     <div class="drop" id="drop" style="margin-top:12px">
       <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>

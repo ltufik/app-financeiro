@@ -223,7 +223,7 @@ function backlog(el) {
       <div><button class="btn primary" type="button" id="nAdd">Adicionar</button></div></div></details>
     ${view === 'lista' ? `<div class="chips">${[['', 'Todos'], ...Object.entries(STATUS), ['bug', 'Bugs']].map(([k, v]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${v} <span class="tiny muted">${k === 'bug' ? items.filter(i => i.tipo === 'bug').length : k ? items.filter(i => i.status === k).length : items.length}</span></button>`).join('')}</div>
       <div class="blist">${shown.map(rowHTML).join('') || '<p class="small muted">Nada aqui.</p>'}</div>`
-    : `<div class="kanban">${['agora', 'proximo', 'ideia', 'depois', 'feito'].map(s => `<section class="kcol"><h3>${STATUS[s]} <span class="tiny muted">${items.filter(i => i.status === s).length}</span></h3>${items.filter(i => i.status === s).map(cardHTML).join('')}</section>`).join('')}</div>`}`;
+    : `<div class="kanban">${['agora', 'proximo', 'ideia', 'depois', 'feito'].map(s => `<section class="kcol"><h3>${STATUS[s]} <span class="tiny muted">${items.filter(i => i.status === s).length}</span></h3>${items.filter(i => i.status === s).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99)).map(cardHTML).join('')}</section>`).join('')}</div>`}`;
   el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; backlog(el); });
   el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; backlog(el); });
   el.querySelectorAll('[data-st]').forEach(s => s.onchange = async e => {

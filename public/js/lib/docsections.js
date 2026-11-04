@@ -118,5 +118,11 @@ export const DOC_DORES = { id: 'pesquisa_dores', title: 'Pesquisa: as dores de q
 - "Funciona com qualquer banco e nunca pede a senha do banco."
 - "Todas as faturas de todos os cartões num lugar só, e o quanto sobrou no mês."
 - "Quanto dá para gastar por dia até a fatura fechar."
+## Feito a partir do estudo
+- v88: selo "sem senha do banco" na página inicial, na tela de entrar e em Lançar.
+## Ordem do backlog (aprovada em 04/11/2026)
+- Agora: lembrete para mandar a fatura, pesquisa no app, saúde do servidor, histórico de outros apps, saques e dinheiro vivo.
+- Próximo: retrospectiva do ano (começo de dezembro), parcelas comprometidas, juros da fatura, previsão do fim do mês, caixa a revisar, gastos anuais (antes de janeiro), resultado antes da conta, meu-seu-nosso, revisão de custos.
+- Depois: e-mail próprio (antes de abrir ao público), notificações do banco, e-mail do banco, WhatsApp, Open Finance, lojas, versão web, plano pago, cobrança honesta, parcerias.
 ## Ideias que foram para o backlog
 Lembrete para mandar a fatura quando ela fecha; juros e tarifas da fatura em destaque; saques e dinheiro vivo; ver o resultado antes de criar a conta; selo de confiança na entrada; trazer o histórico de outros apps. As parcelas já comprometidas (já no backlog) ganharam peso com a pesquisa.` };
