@@ -571,14 +571,16 @@ function renderReview() {
   if (source === 'conta' && keys[0]) rows.forEach(r => { r.card = keys[0]; });
   const cmp = R.cmp = compareStatement({ keys, rows, existing: txsOf(R.month).filter(t => t.source === source && !t.manual) });
   const exist = cmp.mode === 'replace';
+  // Another part of a document already in the month (a statement split in two files): only what is new is shown and saved.
+  const part = cmp.mode === 'complement', shown = R.save = part ? rows.filter((_, i) => cmp.fresh.includes(i)) : rows;
   const thisDoc = keys.length ? docsText(source, keys).replace(/^(a fatura|o extrato) d(o|a|os|as) /, '') : '';
   const otherDocs = docsText(source, cmp.others);
   const Month = mLong(R.month).charAt(0).toUpperCase() + mLong(R.month).slice(1);
   const pend = txsOf(R.month).filter(t => t.manual && t.source === source);
   pend.forEach(e => { if (e._match == null) e._match = rows.some(r => Math.abs(r.amount - e.amount) < 0.01); });
   const ks = monthKeys(); const months = [...new Set([R.month, ...ks, addM(ks[ks.length - 1] || R.month, 1)])].sort();
-  const tot = rows.reduce((a, r) => a + r.amount, 0);
-  const head = source === 'cartao' ? `Fatura de ${mLong(R.month)}: ${brl(tot)}` : `Extrato de ${mLong(R.month)}: ${rows.length} movimentos`;
+  const tot = shown.reduce((a, r) => a + r.amount, 0);
+  const head = source === 'cartao' ? `Fatura de ${mLong(R.month)}: ${brl(tot)}` : `Extrato de ${mLong(R.month)}: ${shown.length} movimentos${part ? ' novos' : ''}`;
   const sub = [info.bank, source === 'cartao'
     ? (info.checks || []).map(c => `${c.card === 'total' ? 'total da fatura' : 'cartão ' + c.card} ${c.ok ? '✓' : '≠ ' + brl(c.sum) + ' de ' + brl(c.total)}`).join(' · ')
     : info.saldoIni != null && info.saldoFim != null ? `Saldo inicial ${brl(info.saldoIni)} · saldo final ${brl(info.saldoFim)}` : ''].filter(Boolean).join(' · ');
@@ -586,17 +588,19 @@ function renderReview() {
   <label class="f" style="margin-top:10px;max-width:260px">Salvar no mês<select id="rvMonth">${months.map(k => `<option value="${k}"${k === R.month ? ' selected' : ''}>${mLong(k)}</option>`).join('')}</select></label>
   ${info.ok === false ? `<p class="banner no" style="margin-top:10px">A soma não bateu com o total do documento. Confira os valores com a fatura ou o extrato antes de salvar; se faltar algum lançamento, você pode lançar à mão depois.</p>` : ''}
   ${exist ? `<p class="banner at" style="margin-top:10px">${source === 'cartao' ? 'Esta fatura' : 'Este extrato'}${thisDoc ? ` (${esc(thisDoc)})` : ''} já foi ${source === 'cartao' ? 'enviada' : 'enviado'} para ${mLong(R.month)}. Salvar troca ${source === 'cartao' ? 'a anterior' : 'o anterior'} por ${source === 'cartao' ? 'esta' : 'este'}${otherDocs ? `; ${esc(otherDocs)} continua como está` : ''}.</p>` : ''}
+  ${part ? (shown.length ? `<p class="banner ok" style="margin-top:10px">${source === 'cartao' ? 'Esta fatura completa' : 'Este arquivo completa'} ${esc(docsText(source, cmp.keys || keys) || (source === 'cartao' ? 'a fatura' : 'o extrato'))} de ${mLong(R.month)} que já está no app (por exemplo, a outra parte de um extrato dividido em dois arquivos). Entram só os ${shown.length} ${shown.length === 1 ? 'lançamento novo' : 'lançamentos novos'}${cmp.dup ? `; ${cmp.dup} que já ${cmp.dup === 1 ? 'estava fica' : 'estavam ficam'} como ${cmp.dup === 1 ? 'está' : 'estão'}` : ''}. Nada é apagado.</p>`
+    : `<p class="banner ok" style="margin-top:10px">Tudo deste arquivo (${rows.length} ${rows.length === 1 ? 'lançamento' : 'lançamentos'}) já está em ${mLong(R.month)}. Não há nada novo para salvar; toque em Descartar.</p>`) : ''}
   ${cmp.mode === 'alongside' ? `<p class="banner ok" style="margin-top:10px">${Month} já tem ${esc(otherDocs || docsText(source, ['']))}. ${source === 'cartao' ? 'Esta fatura é de outro cartão' : 'Este extrato é de outra conta'}${thisDoc ? ` (${esc(thisDoc)})` : ''} e entra junto, sem apagar nada.</p>` : ''}
   <div class="rvguide"><strong>${QU && !isDone(QU) ? `Arquivo ${position(QU)}: o que fazer` : 'O que fazer'}</strong><ol class="small">
     <li>${info.ok === false ? 'A soma não bateu: confira os valores com o documento.' : 'A soma foi conferida com o total do documento.'}</li>
-    <li>${rows.filter(r => r.pending).length ? `Toque na categoria dos <strong>${rows.filter(r => r.pending).length} marcados "a classificar"</strong> (no topo da lista) e escolha a certa. O app aprende.` : 'Todas as categorias já estão escolhidas. Se quiser trocar alguma, toque nela.'}</li>
+    <li>${shown.filter(r => r.pending).length ? `Toque na categoria dos <strong>${shown.filter(r => r.pending).length} marcados "a classificar"</strong> (no topo da lista) e escolha a certa. O app aprende.` : 'Todas as categorias já estão escolhidas. Se quiser trocar alguma, toque nela.'}</li>
     <li>Toque em <strong>Salvar</strong>${QU && !isDone(QU) && QU.i < QU.items.length - 1 ? '. O próximo arquivo começa sozinho' : ''}.</li></ol></div>
-  <p class="small" style="margin-top:10px"><span class="pill at">${rows.filter(r => r.pending).length} a classificar</span> <span class="tiny muted">Toque na categoria para trocar. O app aprende.</span></p>
+  <p class="small" style="margin-top:10px"><span class="pill at">${shown.filter(r => r.pending).length} a classificar</span> <span class="tiny muted">Toque na categoria para trocar. O app aprende.</span></p>
   <div class="tw" style="margin-top:8px;max-height:520px;overflow:auto"><table class="rvcards"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="rvRows"></tbody></table></div>
   <div id="rvPend" style="margin-top:12px"></div>
-  <div class="rowbtn rvactions" style="margin-top:12px"><button class="btn primary" id="rvSave" type="button">Salvar ${source === 'cartao' ? 'a fatura' : 'o extrato'}</button><button class="btn" id="rvCancel" type="button">Descartar</button></div>`;
+  <div class="rowbtn rvactions" style="margin-top:12px"><button class="btn primary" id="rvSave" type="button"${part && !shown.length ? ' disabled' : ''}>${part ? `Salvar ${shown.length} ${shown.length === 1 ? 'novo' : 'novos'}` : `Salvar ${source === 'cartao' ? 'a fatura' : 'o extrato'}`}</button><button class="btn" id="rvCancel" type="button">Descartar</button></div>`;
   const tb = $('#rvRows');
-  rows.map((r, i) => [r, i]).sort((a, b) => (b[0].pending ? 1 : 0) - (a[0].pending ? 1 : 0)).forEach(([r]) => {
+  shown.map((r, i) => [r, i]).sort((a, b) => (b[0].pending ? 1 : 0) - (a[0].pending ? 1 : 0)).forEach(([r]) => {
     const tr = document.createElement('tr'); if (r.pending) tr.className = 'pend';
     tr.innerHTML = `<td class="rv-d">${esc(r.day)}</td><td class="rv-x" style="min-width:170px">${esc(r.description)}${r.installment ? ' <span class="tiny muted">' + esc(r.installment) + '</span>' : ''}${r.note ? `<span class="xnote">${esc(r.note)}</span>` : ''}</td><td class="rv-c"></td><td class="r${source === 'conta' && r.amount > 0 ? ' neg' : ''}">${brl(r.amount)}</td>`;
     tr.children[2].append(catPicker(S.categories, r.category, r.pending, c => { if (c !== r.category) r.learn = true; r.category = c; r.pending = false; renderReview(); }, { description: r.description, amount: r.amount }));
@@ -609,9 +613,9 @@ function renderReview() {
   $('#rvMonth').onchange = e => { R.month = e.target.value; renderReview(); };
   $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; docDone('descartado'); };
   $('#rvSave').onclick = async e => {
-    const n = rows.length, nPend = rows.filter(r => r.pending).length;
+    const n = shown.length, nPend = shown.filter(r => r.pending).length;
     const what = source === 'cartao' ? 'a fatura' : 'o extrato';
-    const text = [exist ? `<strong>${mLong(R.month)} já tem ${what} salvo${thisDoc ? ` (${esc(thisDoc)})` : ''}.</strong> Ele será substituído por estes ${n} lançamentos.` : cmp.mode === 'alongside' ? `Salvar ${n} lançamentos em ${mLong(R.month)}, junto com ${esc(otherDocs || docsText(source, ['']))}?` : `Salvar ${n} lançamentos em ${mLong(R.month)}?`,
+    const text = [exist ? `<strong>${mLong(R.month)} já tem ${what} salvo${thisDoc ? ` (${esc(thisDoc)})` : ''}.</strong> Ele será substituído por estes ${n} lançamentos.` : part ? `Juntar ${n} ${n === 1 ? 'lançamento novo' : 'lançamentos novos'} ao que já está em ${mLong(R.month)}? Nada é apagado.` : cmp.mode === 'alongside' ? `Salvar ${n} lançamentos em ${mLong(R.month)}, junto com ${esc(otherDocs || docsText(source, ['']))}?` : `Salvar ${n} lançamentos em ${mLong(R.month)}?`,
       info.ok === false ? 'Atenção: a soma não bateu com o total do documento.' : '', nPend ? `${nPend} ainda estão "a classificar" e podem ser ajustados depois no Extrato.` : ''].filter(Boolean).join(' ');
     if (!await confirmInline(e.target, { text, yes: exist ? 'Sim, substituir' : 'Sim, salvar', danger: exist })) return;
     saveReview(pend);
@@ -620,10 +624,10 @@ function renderReview() {
 
 async function saveReview(pend) {
   $('#rvSave').disabled = true;
-  const { source, rows, month, info } = R;
+  const { source, month, info } = R, rows = R.save || R.rows;
   try {
     const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending, ...(r.note ? { note: r.note } : {}) }));
-    const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month);
+    const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month) + (R.cmp?.mode === 'complement' ? ' (parte)' : '');
     track('lancar.pdf_ok'); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }

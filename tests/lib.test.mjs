@@ -747,3 +747,26 @@ test('planilha: lançamentos com sinal certo, categorias da família e sem dupli
   const marked = markDuplicates(r.entries, [{ source: 'conta', amount: -23.5, date: '2026-10-06' }]);
   assert.deepEqual(marked.map(e => e.dup), [true, false, false, false]);
 });
+
+test('extrato dividido em dois arquivos: a segunda parte entra junto, sem apagar a primeira', () => {
+  const mk = (d, desc, v) => ({ day: d, description: desc, amount: v, card: '@santander' });
+  const part1 = [mk('01/10', 'PIX JOAO', -100), mk('03/10', 'TED SALARIO', 5000), mk('05/10', 'BOLETO LUZ', -190), mk('10/10', 'PIX PADARIA', -20)];
+  const part2 = [mk('16/10', 'PIX MERCADO', -300), mk('20/10', 'BOLETO ESCOLA', -1500), mk('28/10', 'PIX JOAO', -100), mk('30/10', 'TARIFA', -30)];
+  let c = compareStatement({ keys: ['@santander'], rows: part2, existing: part1 });
+  assert.equal(c.mode, 'complement'); assert.deepEqual(c.cards, []); assert.deepEqual(c.fresh, [0, 1, 2, 3]); assert.equal(c.dup, 0);
+  // Parts that share a few days: only what is new goes in.
+  const part2b = [part1[3], ...part2];
+  c = compareStatement({ keys: ['@santander'], rows: part2b, existing: part1 });
+  assert.equal(c.mode, 'complement'); assert.equal(c.dup, 1); assert.deepEqual(c.fresh, [1, 2, 3, 4]);
+  // The same file again: replace.
+  assert.equal(compareStatement({ keys: ['@santander'], rows: part1, existing: part1 }).mode, 'replace');
+  // The full month after the first half: the half is inside it, the rest comes in (nothing is erased).
+  c = compareStatement({ keys: ['@santander'], rows: [...part1, ...part2], existing: part1 });
+  assert.equal(c.mode, 'complement'); assert.equal(c.dup, 4); assert.deepEqual(c.fresh, [4, 5, 6, 7]);
+  // A half that is already all there (the full month was saved before): nothing new, nothing erased.
+  c = compareStatement({ keys: ['@santander'], rows: part1, existing: [...part1, ...part2] });
+  assert.equal(c.mode, 'complement'); assert.deepEqual(c.fresh, []);
+  // Two identical Pix on the same day count twice.
+  const twin = [mk('05/10', 'PIX PADARIA', -20), mk('05/10', 'PIX PADARIA', -20)];
+  assert.deepEqual(compareStatement({ keys: ['@santander'], rows: twin, existing: [twin[0]] }).fresh, [1]);
+});
