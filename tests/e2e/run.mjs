@@ -1021,12 +1021,28 @@ const used = await page.evaluate(() => window.__db.usage);
   await page.waitForFunction(u => !!localStorage.getItem('fin.bio.' + u), uid, { timeout: 8000 }).catch(() => {});
   ok('conta: liga a digital ou o rosto (só a chave do aparelho fica guardada)', !!(await page.evaluate(u => localStorage.getItem('fin.bio.' + u), uid)) && (await txt('#secBox')).includes('Parar de usar'));
   if (shots) await page.screenshot({ path: path.join(shots, '18-seguranca.png'), fullPage: true });
-  await page.evaluate(() => { window.__sawLock = false; new MutationObserver(() => { if (document.querySelector('#lockScreen')) window.__sawLock = true; }).observe(document.body, { childList: true }); });
-  await page.click('#lkNow');
-  await page.waitForFunction(() => window.__sawLock, null, { timeout: 5000 }).catch(() => {});
-  const lockedNow = await page.evaluate(() => window.__sawLock);
+  // Desconectar agora: the "entrar" screen; the fingerprint is asked only after tapping Entrar.
+  await page.click('#lkNow'); await page.waitForSelector('#lockScreen', { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(1200);
+  ok('desconectado: tela de entrada com "Olá" e Entrar, sem pedir a digital sozinha', await page.isVisible('#lockScreen') && (await txt('#lockScreen')).includes('Olá, Luiz') && await page.isVisible('#lkBio') && (await txt('#lkBio')).includes('Entrar') && await page.isVisible('#lkUsePass') && (await txt('#lockScreen')).includes('Não é você?'));
+  if (shots) await page.screenshot({ path: path.join(shots, '19a-entrar-digital.png') });
+  await page.click('#lkBio');
   await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 8000 }).catch(() => {});
-  ok('bloquear agora cobre a tela e a digital desbloqueia', lockedNow && !(await page.$('#lockScreen')) && !(await page.evaluate(() => document.body.classList.contains('locked'))));
+  ok('tocar em Entrar pede a digital e entra', !(await page.$('#lockScreen')) && !(await page.evaluate(() => document.body.classList.contains('locked'))));
+  // 30 s before the time: the warning counts down; "Continuar no app" keeps the app open.
+  await page.evaluate(u => localStorage.setItem('fin.lock.last.' + u, String(Date.now() - 35e3)), uid);
+  await page.waitForSelector('#lkWarn', { timeout: 4000 }).catch(() => {});
+  ok('30 s antes: aviso "vamos desconectar" com a contagem', await page.isVisible('#lkWarn') && /vamos desconectar em \d+ segundos/.test(await txt('#lkWarn')) && /\d+/.test(await txt('#lkWN')));
+  if (shots) await page.screenshot({ path: path.join(shots, '19c-aviso-inatividade.png') });
+  await page.click('#lkStay'); await page.waitForTimeout(1500);
+  ok('"Continuar no app" fecha o aviso e o app segue aberto', !(await page.$('#lkWarn')) && !(await page.$('#lockScreen')));
+  // Nobody taps: it disconnects by itself.
+  await page.evaluate(u => localStorage.setItem('fin.lock.last.' + u, String(Date.now() - 35e3)), uid);
+  await page.waitForSelector('#lkWarn', { timeout: 4000 }).catch(() => {});
+  await page.evaluate(u => localStorage.setItem('fin.lock.last.' + u, String(Date.now() - 61e3)), uid);
+  await page.waitForSelector('#lockScreen', { timeout: 4000 }).catch(() => {});
+  ok('sem tocar, desconecta sozinho por inatividade', await page.isVisible('#lockScreen') && !(await page.$('#lkWarn')) && (await txt('#lockScreen')).includes('desconectado por inatividade'));
+  await page.click('#lkBio'); await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 8000 }).catch(() => {});
   // Left alone longer than the chosen time, then back to the app: locked, numbers hidden.
   await page.evaluate(u => { localStorage.setItem('fin.lock.last.' + u, String(Date.now() - 2 * 60e3)); localStorage.removeItem('fin.bio.' + u); }, uid);
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -1049,7 +1065,7 @@ const used = await page.evaluate(() => window.__db.usage);
   await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 5000 }).catch(() => {});
   ok('senha certa desbloqueia', !(await page.$('#lockScreen')));
   await page.waitForSelector('.ann', { timeout: 5000 }).catch(() => {});
-  ok('depois da senha, o app oferece a digital e diz que dá para desligar', /desbloquear com a digital ou o rosto/.test(await page.textContent('.ann').catch(() => '')) && /desligar quando quiser/.test(await page.textContent('.ann').catch(() => '')));
+  ok('depois da senha, o app oferece a digital e diz que dá para desligar', /entrar com a digital ou o rosto/.test(await page.textContent('.ann').catch(() => '')) && /desligar quando quiser/.test(await page.textContent('.ann').catch(() => '')));
   if (shots) await page.screenshot({ path: path.join(shots, '19b-oferta-digital.png') });
   await page.click('.ann [data-p]').catch(() => {});
   await page.waitForFunction(u => !!localStorage.getItem('fin.bio.' + u), uid, { timeout: 8000 }).catch(() => {});

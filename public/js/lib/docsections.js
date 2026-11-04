@@ -1,6 +1,10 @@
 // Documentation sections for Central → Documentação, shipped by release r80 (addDocs) and kept in the seed of DOCS.
 // What each feature does and the rules behind it, in plain words.
 export const DOC_LANCAR = { id: 'lancar_documentos', title: 'Lançar: faturas, extratos e planilhas', body: `Tudo entra por Lançar → Fatura ou extrato: PDF, foto, print ou planilha, um ou vários de uma vez (até 10). O arquivo é lido no celular e nunca fica guardado.
+## Como a pessoa descobre que pode mandar vários
+- O botão Fatura ou extrato traz o selo "Vários de uma vez" e diz "PDF, foto ou planilha".
+- Ao abrir, a caixa "O que dá para mandar" mostra os 4 casos: faturas de todos os cartões, extrato da conta (mesmo dividido), planilha Excel ou CSV, foto ou print.
+- O botão diz "Escolher arquivos (um ou vários)" e "Como marcar vários arquivos no celular?" explica o iPhone (Selecionar) e o Android (segurar o dedo).
 ## O que é cada arquivo
 - O app decide pelo conteúdo, nunca pela extensão: fatura, extrato, comprovante, nota fiscal ou investimentos.
 - PDF com senha: o app pede a senha e não guarda.
@@ -55,6 +59,19 @@ export const DOC_TESTES = { id: 'caderno_doc', title: 'Caderno de testes', body:
 - "Robô também testa": o teste automático já confere a cada mudança (navegador do computador e Safari do iPhone).
 - Marque Passou ou Falhou. Falhou vira bug no backlog, em Agora, com o que aconteceu.
 - Toda versão com algo visível precisa trazer seus casos (Definição de pronto; o teste automático bloqueia a publicação sem eles).` };
+
+export const DOC_SEGURANCA = { id: 'seguranca_doc', title: 'Segurança: desconectar por inatividade e entrar de novo', body: `Como nos apps de banco: o app não fica aberto com os números da família à vista.
+## A jornada
+| Momento | O que aparece |
+| Parado, 30 s antes do tempo | Aviso "Ainda está aí? Por segurança, vamos desconectar em 30 segundos", com a contagem: Continuar no app ou Desconectar agora. Qualquer toque no app também conta como uso. |
+| Passou o tempo (ou abriu o app depois dele) | Tela de entrada: símbolo do app, "Olá, Nome", "Você foi desconectado por inatividade" e o tempo. |
+| Quem ligou a digital ou o rosto | Botão Entrar: só ao tocar o celular pede a digital ou o rosto. Nada aparece sozinho. "Entrar com a senha" fica embaixo. |
+| Quem não ligou | Campo da senha e Entrar. Depois de entrar, o app oferece ligar a digital (até 3 vezes, uma por semana). |
+| Não é a pessoa | "Não é você? Sair da conta" sai de vez e mostra a mensagem de segurança. |
+## Regras
+- Tempo no app: 1, 3, 5 (de fábrica), 15 ou 30 minutos, em menu ☰ → Dados e conta → Conta; vale para o aparelho. Não existe "nunca".
+- Central do produto: 1 hora fixa (não tem números da família).
+- A conta continua conectada por baixo (o login não cai): entrar de novo é só confirmar que é a pessoa. A digital e o rosto ficam no celular; o app guarda só a identificação da chave do aparelho.` };
 
 export const NEW_DOCS = [DOC_LANCAR, DOC_CATEGORIAS, DOC_AVISOS, DOC_TESTES];
 

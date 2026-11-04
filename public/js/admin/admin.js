@@ -81,7 +81,7 @@ async function save(key, msg) {
   token = data?.session?.access_token || '';
   if (!token) { $('#aMain').innerHTML = '<div class="panel stack"><h2>Entre primeiro</h2><p class="small">Abra o app, entre com o seu e-mail e senha e volte para esta página.</p><div><a class="btn primary" href="/">Abrir o app</a></div></div>'; return; }
   $('#aWho').textContent = data.session.user.email;
-  initLock({ sb: db.sb, user: data.session.user.id, name: data.session.user.user_metadata?.display_name || '', email: data.session.user.email });
+  initLock({ sb: db.sb, user: data.session.user.id, name: data.session.user.user_metadata?.display_name || '', email: data.session.user.email, minutes: 60 }); // no family numbers here: one hour
   try {
     const [b, p, c, f, sv, dc, nw] = await Promise.all(['backlog', 'pricing', 'canvas', 'faq', 'services', 'docs', 'news'].map(k => api('GET', k)));
     D.news = nw.data || { items: JSON.parse(JSON.stringify(NEWS)) };

@@ -87,6 +87,15 @@ textarea{min-height:92px;resize:vertical}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
 .drop{border:2px dashed var(--line);border-radius:var(--r);padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;cursor:pointer}
 .drop{position:relative}
+.lmany{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:600;letter-spacing:.02em}
+.ltile .lmany{display:table}
+.cansend{margin-top:12px;padding:14px;border-radius:var(--r);background:var(--sunk)}
+.cansend .cs-t{margin:0 0 8px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.cansend .cs-t .lmany{margin:0}
+.cansend ul{list-style:none;margin:0 0 8px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.cansend li{background:var(--card);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:14px;min-width:0}
+.cansend li span{font-size:12px;color:var(--muted)}
+.cansend .tiny{margin:0}
 .fileover{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
 .drop:focus-within{outline:3px solid var(--accent);outline-offset:2px}
 .drop.over{border-color:var(--accent);background:var(--accent-soft)}
@@ -468,11 +477,21 @@ details.more > .stack{padding:0 10px 10px}
 /* ---------- Automatic lock (lock.js) ---------- */
 #lockScreen{position:fixed;inset:0;z-index:90;background:var(--deep);color:var(--deep-ink);display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px));overflow-y:auto}
 #lockScreen .lk-card{width:min(420px,100%);background:var(--card);color:var(--ink);border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;gap:12px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-#lockScreen .lk-ico{width:60px;height:60px;border-radius:18px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto}
+#lockScreen .lk-brand{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:18px}
+#lockScreen .lk-brand img{border-radius:12px}
+#lockScreen .lk-hello{margin:6px 0 0;font-size:15px;color:var(--muted)}
+#lockScreen #lkBio{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+#lockScreen .lk-links{display:flex;flex-direction:column;align-items:center;gap:8px}
+/* "Vamos desconectar em 30 s": over everything except the lock screen */
+#lkWarn{position:fixed;inset:0;z-index:89;background:color-mix(in srgb,var(--deep) 70%,transparent);display:flex;align-items:center;justify-content:center;padding:16px;animation:fade .15s ease}
+#lkWarn .lk-card{width:min(380px,100%);background:var(--card);color:var(--ink);border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+#lkWarn h2{margin:0;font-size:20px;text-wrap:balance}
+#lkWarn p{margin:0}
+#lkWarn .lk-big{width:100%;min-height:48px;font-size:16px}
+#lkWarn .lk-ring{width:64px;height:64px;border-radius:50%;border:4px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
 #lockScreen h2{margin:0;font-size:22px;text-wrap:balance}
 #lockScreen form{text-align:left}
 #lockScreen .lk-big{width:100%;min-height:48px;font-size:16px}
-#lockScreen .lk-links{justify-content:center;gap:20px}
 body.locked{overflow:hidden}
 body.locked > :not(#lockScreen):not(.toast){visibility:hidden}
 
@@ -565,7 +584,7 @@ label.consent[hidden]{display:none}
 /* Save and Discard always in reach while reviewing on the phone */
 .rvactions{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:3;background:var(--card);padding:10px 0;box-shadow:0 -8px 12px -8px rgba(0,0,0,.15)}
 .qlist li.q-erro{flex-direction:column;gap:2px}.qlist li.q-erro span:first-child{white-space:normal}
-[data-panel="pdf"].inqueue > h2,[data-panel="pdf"].inqueue > p.muted,[data-panel="pdf"].inqueue #drop,[data-panel="pdf"].inqueue > details.help{display:none}
+[data-panel="pdf"].inqueue > h2,[data-panel="pdf"].inqueue > p.muted,[data-panel="pdf"].inqueue #drop,[data-panel="pdf"].inqueue > details.help,[data-panel="pdf"].inqueue #canSend{display:none}
 /* Side menu in groups (like the product console) */
 .drawer-groups{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .mgh{appearance:none;border:0;background:none;width:100%;display:flex;gap:12px;align-items:center;padding:10px 8px;border-radius:12px;cursor:pointer;color:var(--ink);font-size:16px;text-align:left}

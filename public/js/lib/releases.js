@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -229,5 +229,16 @@ export const RELEASES = [
     { id: 'bug_ritmo_fixo_do_sonho', tipo: 'bug', title: 'Ritmo do sonho era um número fixo (R$ 1.000/mês)', status: 'feito', origin: 'Erro de Luiz', effort: 'P', problem: 'O cartão do sonho dizia "Ritmo atual: R$ 1.000/mês" sem relação com o que a família guarda hoje', cost: false, notes: 'Causa: os cenários vieram do backup da planilha antiga, com o "Ritmo atual" escrito à mão, e o app usava os cenários salvos no lugar da conta. Correção: o primeiro cenário é sempre a média real da sobra dos 3 últimos meses completos, com os meses ao lado; o "Ritmo atual" fixo é descartado; os outros cenários salvos continuam e podem ser removidos em Metas. Com os dados da família: R$ 3.600/mês (jul a set).', from: [], where: 'Início → Sonho' },
     { id: 'plano_de_quanto_guardar', title: 'Metas: quanto a família acha que consegue guardar', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Só dava para ver o sonho com cenários fixos', cost: false, notes: 'Campos "por mês" e "extra por ano" em Metas; vira o cenário "O plano de vocês". Valor e idade do sonho já eram de cada família.', from: [], where: 'Menu ☰ → Família e metas → Metas' },
     { id: 'grafico_sobra_acumulada', title: 'Gráfico da sobra acumulada e modelos prontos sempre à mão', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não havia como ver quanto já guardaram no ano, somando mês a mês', cost: false, notes: 'Novo "Sobra acumulada (soma mês a mês)" e modelos prontos (sobra de cada mês, acumulado no ano, % da renda), que aparecem mesmo para quem já salvou gráficos.', from: [], where: 'Gráficos' },
+  ] },
+  { id: 'r84', version: 'v84', at: '2026-11-04T16:30:00Z', backlog: [], news: { id: 'n20261104h', title: 'Entrar de novo, como no app do banco', items: [
+    'Parado por um tempo, o app avisa antes: "vamos desconectar em 30 segundos". Toque em Continuar no app para seguir.',
+    'Depois aparece a tela de entrada. Quem ligou a digital ou o rosto toca em Entrar e só então o celular pede; nada aparece sozinho.',
+    'Em Lançar → Fatura ou extrato ficou claro o que dá para mandar, e que dá para escolher vários arquivos de uma vez.',
+    'No menu ☰, o grupo de categorias e notificações agora se chama Configurações.',
+  ] }, addDocs: [DOC_SEGURANCA], updateDocs: [DOC_LANCAR], addBacklog: [
+    { id: 'entrar_como_no_banco', title: 'Desconectar por inatividade e entrar de novo, como nos apps de banco', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Ao abrir o app ou depois do tempo sem uso, o celular pedia a digital sozinho, sem aviso, e a tela não deixava claro o que tinha acontecido', cost: false, notes: 'Aviso 30 s antes com contagem (Continuar no app / Desconectar agora); tela de entrada com o símbolo, "Olá, Nome", o motivo, Entrar (digital ou rosto só ao tocar e só para quem ligou), Entrar com a senha e "Não é você? Sair da conta". A conta continua conectada por baixo.', from: [], where: 'Todo o app' },
+    { id: 'central_uma_hora', title: 'Central do produto desconecta só depois de 1 hora', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A Central bloqueava em 5 minutos, como o app, mas não tem números da família', cost: false, notes: 'Tempo fixo de 1 hora na Central, com o mesmo aviso antes; o app continua com o tempo escolhido em Conta.', from: [], where: 'Central' },
+    { id: 'menu_configuracoes', title: 'Menu: "Organizar o app" passa a ser "Configurações"', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'O nome do grupo não dizia o que tinha dentro', cost: false, notes: 'Grupo com Categorias, Notificações, Atalhos do iPhone e O que o assistente sabe.', from: [], where: 'Menu ☰' },
+    { id: 'lancar_varios_claro', title: 'Lançar: deixar claro que dá para mandar vários arquivos e planilha', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A opção de mandar vários arquivos e a planilha existiam, mas ficavam escondidas num texto pequeno', cost: false, notes: 'Selo "Vários de uma vez" no botão; caixa "O que dá para mandar" com os 4 casos; botão "Escolher arquivos (um ou vários)"; ajuda de como marcar vários no iPhone e no Android.', from: [], where: 'Lançar → Fatura ou extrato' },
   ] },
 ];

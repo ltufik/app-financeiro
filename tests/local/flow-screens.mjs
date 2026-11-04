@@ -159,7 +159,16 @@ await page.click('.ann [data-p]').catch(() => {});
 await step('avisos_celular', async () => { await page.click('#pOn'); await page.waitForSelector('#pCheck:not([hidden])', { timeout: 20000 }); await page.click('#pNo'); await page.waitForTimeout(400); }, { scrollTo: '#pMsg' });
 // Security: the lock screen (left alone longer than the chosen time) and the message after signing out.
 await page.evaluate(() => { localStorage.setItem('shots.msgs', ''); document.querySelectorAll('.bellbox, .cfm-wrap').forEach(x => x.remove()); });
-await step('bloqueio', async () => { await page.keyboard.press('Escape').catch(() => {}); await sec('conta'); await page.click('#lkNow'); await page.waitForSelector('#lockScreen'); });
+// Like the bank apps: the countdown warning, then the "entrar" screen (password; and with the fingerprint turned on).
+const ago = ms => page.evaluate(ms => { window.scrollTo(0, 0); localStorage.setItem('fin.lock.min', '1'); for (const k of Object.keys(localStorage)) if (k.startsWith('fin.lock.last.')) localStorage.setItem(k, String(Date.now() - ms)); }, ms);
+await step('aviso_inatividade', async () => { await page.keyboard.press('Escape').catch(() => {}); await page.click('[data-tab=resumo]'); await page.waitForTimeout(500); await ago(36e3); await page.waitForSelector('#lkWarn', { timeout: 6000 }); });
+await step('bloqueio', async () => { await ago(120e3); await page.waitForSelector('#lockScreen', { timeout: 6000 }); });
+await step('entrar_digital', async () => {
+  const cdp = await page.context().newCDPSession(page); await cdp.send('WebAuthn.enable');
+  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true } }).catch(() => {}); // one may exist already
+  await page.evaluate(() => { document.querySelector('#lockScreen')?.remove(); document.body.classList.remove('locked'); const k = Object.keys(localStorage).find(x => x.startsWith('fin.lock.last.')); localStorage.setItem('fin.bio.' + k.slice(14), 'AAAA'); });
+  await ago(120e3); await page.waitForSelector('#lockScreen #lkBio', { timeout: 6000 });
+});
 await step('saiu', async () => { await page.click('#lkOut'); await page.waitForSelector('#welcome:not([hidden])'); await page.waitForSelector('.ann'); await page.waitForTimeout(400); });
 await browser.close();
 console.log('telas:', done.length, done.join(' '));

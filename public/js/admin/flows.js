@@ -25,7 +25,7 @@ export const SCREENS = {
   varios_arquivos: { title: 'Vários arquivos de uma vez', where: 'Lançar → Fatura ou extrato, escolhendo mais de um arquivo', key: 'lancar.varios' },
   lancar_revisao: { title: 'Revisão da fatura', where: 'Depois de enviar o PDF', key: 'lancar.pdf_ok' },
   extrato_categoria: { title: 'Extrato por categoria', where: 'Extrato → Categoria', key: 'extrato.categoria' },
-  juntar_categorias: { title: 'Categorias parecidas', where: 'Menu ☰ → Organizar o app → Categorias (e aviso no Início)', key: 'categorias.juntar' },
+  juntar_categorias: { title: 'Categorias parecidas', where: 'Menu ☰ → Configurações → Categorias (e aviso no Início)', key: 'categorias.juntar' },
   anotacao: { title: 'Anotar um lançamento', where: 'Extrato → Anotar', key: 'extrato.anotacao' },
   categoria: { title: 'Escolher a categoria', where: 'Toque na categoria de um lançamento (revisão, Extrato, Fechar o mês)', key: null },
   graficos: { title: 'Gráficos', where: 'Aba Gráficos', key: 'aba.graficos' },
@@ -56,7 +56,9 @@ export const SCREENS = {
   recado: { title: 'Recado personalizado', where: 'Ao abrir o app, quando o pedido fica pronto', key: null },
   novidades: { title: 'O que mudou', where: 'Ao abrir o app depois de uma atualização', key: null },
   sininho: { title: 'Sininho de novidades', where: 'Sino no topo: últimos 30 dias', key: 'sininho' },
-  bloqueio: { title: 'App bloqueado', where: 'Depois de alguns minutos sem uso, ou menu ☰ → Conta → Bloquear agora', key: ['seguranca.desbloqueio_bio', 'seguranca.desbloqueio_senha'] },
+  aviso_inatividade: { title: 'Vamos desconectar em 30 s', where: '30 segundos antes do tempo sem uso (escolhido em menu ☰ → Dados e conta → Conta; na Central, 1 hora)', key: ['seguranca.aviso', 'seguranca.continuar', 'seguranca.desconectar'] },
+  bloqueio: { title: 'Desconectado: entrar com a senha', where: 'Depois do tempo sem uso, ao abrir o app depois desse tempo, ou em Desconectar agora', key: 'seguranca.desbloqueio_senha' },
+  entrar_digital: { title: 'Desconectado: entrar com a digital', where: 'A mesma tela, para quem ligou a digital ou o rosto: o celular só pede ao tocar em Entrar', key: 'seguranca.desbloqueio_bio' },
   saiu: { title: 'Mensagem de segurança ao sair', where: 'Depois de Sair da conta', key: null },
 };
 
@@ -71,7 +73,7 @@ export const FLOWS = [
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
     { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'convite_avisos', 'avisos_celular', 'sininho'] },
-    { title: 'Segurança', screens: ['biometria', 'menu_conta', 'bloqueio', 'saiu'] },
+    { title: 'Segurança', screens: ['biometria', 'menu_conta', 'aviso_inatividade', 'bloqueio', 'entrar_digital', 'saiu'] },
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
     st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'), st('biometria', 'Liga a digital ou o rosto (ou "Agora não")'),
@@ -95,8 +97,8 @@ export const FLOWS = [
     st('menu', 'Abre o menu'), st('menu_metas', 'Limite do cartão, quanto guardar, sonho'), st('inicio', 'Selos "Guardaram X% · queriam Y%"', null), st('inicio_mais', 'Projeção do sonho em Mais detalhes', null)] },
   { id: 'semabrir', title: 'Lançar sem abrir o app', desc: 'iPhone: Apple Pay, Siri e Compartilhar pelo app Atalhos. Android: Compartilhar e segurar o ícone.', steps: [
     st('menu', 'Abre o menu'), st('menu_applepay', 'Gera o código e monta os atalhos no app Atalhos', 'applepay.codigo'), st('lancar_comprovante', 'Android: compartilha o comprovante, a fatura ou a nota do banco; o app vê o que é e leva para o lugar certo', 'atalho.compartilhar')] },
-  { id: 'seguranca', title: 'Segurança: bloqueio e biometria', desc: 'O app não fica aberto com os números da família à vista.', steps: [
-    st('menu_conta', 'Escolhe o tempo do bloqueio e liga a digital ou o rosto', 'seguranca.biometria'), st('bloqueio', 'Depois do tempo sem uso, o app cobre a tela'), st('inicio', 'Desbloqueia com a digital, o rosto ou a senha', null), st('saiu', 'Ao sair da conta, a mensagem de segurança')] },
+  { id: 'seguranca', title: 'Segurança: desconectar por inatividade e entrar de novo', desc: 'Como nos apps de banco: o app não fica aberto com os números da família à vista, avisa antes de desconectar e só pede a digital quando a pessoa toca em Entrar.', steps: [
+    st('menu_conta', 'Escolhe o tempo para desconectar e, se quiser, liga a digital ou o rosto', 'seguranca.biometria'), st('aviso_inatividade', 'Parado: 30 s antes, o aviso com a contagem; Continuar no app ou Desconectar agora', 'seguranca.aviso'), st('bloqueio', 'Sem tocar: a tela de entrada com "Olá" e o motivo; entra com a senha'), st('entrar_digital', 'Quem ligou a digital: toca em Entrar e o celular pede a digital ou o rosto'), st('inicio', 'Volta para onde estava', null), st('saiu', 'Ao sair da conta, a mensagem de segurança')] },
   { id: 'notificacoes', title: 'Ligar as notificações', desc: 'Sem notificação, a pessoa não fica sabendo das novidades nem das respostas. O app não liga sozinho: avisa e leva até lá.', steps: [
     st('convite_avisos', 'Ao abrir o app, o convite com o nome', 'avisos.convite_sim'), st('menu_avisos', 'Toca em Ativar avisos neste celular e em Permitir', 'avisos.ligou'),
     st('avisos_celular', 'O app manda um teste e pergunta se apareceu; se não, mostra os ajustes do celular', 'avisos.teste_nao_chegou')] },

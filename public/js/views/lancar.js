@@ -50,7 +50,7 @@ function build(el) {
   el.innerHTML = `
   <div class="panel stack">
     <h2>O que você quer lançar?</h2>
-    <div class="ltiles" role="group" aria-label="Como lançar"><button type="button" class="ltile" data-mode="falar" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><strong>Falar ou escrever</strong><span class="tiny muted">"Gastei 45 na padaria no pix"</span></span></button><button type="button" class="ltile" data-mode="nota" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><strong>Foto da nota</strong><span class="tiny muted">Separa cada item por categoria</span></span></button><button type="button" class="ltile" data-mode="pdf" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></span><span><strong>Fatura ou extrato</strong><span class="tiny muted">PDF de qualquer banco</span></span></button><button type="button" class="ltile" data-mode="mao" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span><strong>Preencher à mão</strong><span class="tiny muted">Data, valor e categoria</span></span></button></div>
+    <div class="ltiles" role="group" aria-label="Como lançar"><button type="button" class="ltile" data-mode="falar" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><strong>Falar ou escrever</strong><span class="tiny muted">"Gastei 45 na padaria no pix"</span></span></button><button type="button" class="ltile" data-mode="nota" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><strong>Foto da nota</strong><span class="tiny muted">Separa cada item por categoria</span></span></button><button type="button" class="ltile" data-mode="pdf" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></span><span><strong>Fatura ou extrato</strong><span class="tiny muted">PDF, foto ou planilha</span><span class="lmany">Vários de uma vez</span></span></button><button type="button" class="ltile" data-mode="mao" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span><strong>Preencher à mão</strong><span class="tiny muted">Data, valor e categoria</span></span></button></div>
   </div>
   <div class="panel stack qbar" id="qBar" hidden aria-live="polite"></div>
   <div class="panel" data-panel="falar" hidden>
@@ -73,18 +73,32 @@ function build(el) {
     <div id="rcReview" hidden style="margin-top:14px"></div>
   </div>
   <div class="panel" data-panel="pdf" hidden>
-    <h2>Enviar fatura ou extrato</h2>
-    <p class="muted small">Fatura do cartão, extrato da conta ou de investimentos, em PDF, foto ou print. O app descobre o que é pelo conteúdo, lê, confere os totais e mostra tudo para você revisar antes de salvar. O arquivo não fica guardado.</p>
-    <div class="drop" id="drop" style="margin-top:12px">
-      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
-      <strong>Escolher PDF, foto, print ou planilha</strong>
-      <span class="small muted">Pode escolher vários de uma vez: as faturas de todos os cartões e o extrato. Também dá para trazer a planilha (Excel ou CSV) em que vocês já controlavam os gastos. PDF com senha também funciona: o app pede a senha e não a guarda.</span>
-      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf,image/*,.xlsx,.xls,.csv,.ods,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple aria-label="Escolher PDF, foto, print ou planilha (um ou vários)">
+    <h2>Enviar faturas, extratos ou planilha</h2>
+    <p class="muted small">O app descobre o que é cada arquivo pelo conteúdo, lê, confere os totais e mostra tudo para você revisar antes de salvar. O arquivo não fica guardado.</p>
+    <div class="cansend" id="canSend">
+      <p class="cs-t"><strong>O que dá para mandar</strong> <span class="lmany">um ou vários de uma vez</span></p>
+      <ul>
+        <li><b>Faturas de todos os cartões</b><span>do mesmo mês, juntas</span></li>
+        <li><b>Extrato da conta</b><span>mesmo se o banco dividiu em vários arquivos</span></li>
+        <li><b>Planilha Excel ou CSV</b><span>a que vocês já usavam para controlar</span></li>
+        <li><b>Foto ou print</b><span>de fatura, extrato ou comprovante</span></li>
+      </ul>
+      <p class="tiny muted">Mandou vários? O app lê um por vez, numa fila, e você revisa cada um. PDF com senha também funciona: o app pede a senha e não a guarda.</p>
     </div>
-    <details class="help" style="margin-top:10px"><summary>Onde encontro o PDF?</summary><ol>
+    <div class="drop" id="drop" style="margin-top:12px">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
+      <strong>Escolher arquivos (um ou vários)</strong>
+      <span class="small muted">PDF, foto, print ou planilha.</span>
+      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf,image/*,.xlsx,.xls,.csv,.ods,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple aria-label="Escolher arquivos: PDF, foto, print ou planilha (um ou vários)">
+    </div>
+    <details class="help" style="margin-top:10px"><summary>Como marcar vários arquivos no celular?</summary><ol>
+      <li><strong>iPhone:</strong> toque em Escolher arquivos → <em>Escolher Arquivo</em> (ou <em>Procurar</em>), depois em <em>Selecionar</em>, no canto de cima, marque todos e toque em <em>Abrir</em>.</li>
+      <li><strong>Android:</strong> toque em Escolher arquivos, segure o dedo no primeiro arquivo até ele ficar marcado, toque nos outros e depois em <em>Selecionar</em> (ou <em>Abrir</em>).</li>
+      <li>Também dá para compartilhar vários PDFs de uma vez a partir do app do banco ou de Arquivos: toque em Compartilhar → Pra Onde Foi (no Android, com o app instalado).</li></ol></details>
+    <details class="help" style="margin-top:10px"><summary>Onde encontro o PDF no app do banco?</summary><ol>
       <li><strong>Fatura do cartão:</strong> no app do banco, abra Cartões → Fatura e procure <em>Baixar PDF</em>, <em>Compartilhar</em> ou <em>Enviar por e-mail</em>.</li>
       <li><strong>Extrato da conta:</strong> abra Conta → Extrato, escolha o mês inteiro (do dia 1 ao último dia) e procure <em>Exportar PDF</em> ou <em>Compartilhar</em>.</li>
-      <li>No celular, ao compartilhar, escolha <em>Salvar em Arquivos</em> (iPhone) ou <em>Salvar no aparelho</em> (Android). Depois toque em Escolher PDF aqui e procure o arquivo.</li>
+      <li>No celular, ao compartilhar, escolha <em>Salvar em Arquivos</em> (iPhone) ou <em>Salvar no aparelho</em> (Android). Depois toque em Escolher arquivos aqui e procure o arquivo.</li>
       <li>Se o banco mandar o PDF por e-mail, abra o anexo e salve do mesmo jeito.</li></ol></details>
     <div id="pwBox" hidden style="margin-top:12px" class="stack">
       <label class="f" for="pwIn">Senha do PDF<input type="password" id="pwIn" autocomplete="off"></label>

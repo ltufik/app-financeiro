@@ -26,7 +26,7 @@ export const SECTIONS = [
 // The menu in groups, like the product console: tap a group to open it; the group of the page in use opens by itself.
 export const GROUPS = [
   { id: 'fam', title: 'Família e metas', icon: I('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/>') },
-  { id: 'app', title: 'Organizar o app', icon: I('<path d="M4 6h16M4 12h10M4 18h7"/>') },
+  { id: 'app', title: 'Configurações', icon: I('<path d="M4 6h16M4 12h10M4 18h7"/>') },
   { id: 'ajuda', title: 'Ajuda e opinião', icon: I('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/>') },
   { id: 'dados', title: 'Dados e conta', icon: I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>') },
 ];
