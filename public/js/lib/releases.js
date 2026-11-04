@@ -175,4 +175,11 @@ export const RELEASES = [
   { id: 'r75', version: 'v75', at: '2026-11-04T03:00:00Z', backlog: [], semNovidade: 'Ajustes no envio de vários arquivos (o que fazer agora, motivo de quem não foi lido, tentar de novo, botões Salvar e Descartar sempre à vista); a novidade dos vários arquivos já foi contada na v72.', updateBacklog: [
     { id: 'varios_arquivos_de_uma_vez', set: { notes: 'Escolher ou compartilhar até 10 PDFs, fotos ou prints. Pop-up de leitura com "Arquivo 2 de 3", o passo e o percentual. No topo, a fila diz o que fazer agora ("confira a revisão abaixo e toque em Salvar") e a área de envio sai da frente. A revisão tem um passo a passo curto e Salvar/Descartar sempre à vista. Arquivo que não dá para ler mostra o motivo, a fila segue sozinha e no fim há "Tentar de novo", com a dica de mandar print ou foto.' } },
   ] },
+  { id: 'r76', version: 'v76', at: '2026-11-04T03:40:00Z', backlog: [{ id: 'menu_em_grupos', where: 'Menu ☰' }], news: { id: 'n20261104c', title: 'Menu mais organizado', items: [
+    'O menu ☰ agora tem 4 grupos: Família e metas, Organizar o app, Ajuda e opinião, Dados e conta. Toque num grupo para abrir.',
+    'O grupo da página em que você está já abre sozinho.',
+  ] }, addBacklog: [
+    { id: 'menu_em_grupos', title: 'Menu ☰ em grupos, como a Central', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Com 15 itens, o menu ficou comprido e confuso', cost: false, notes: '4 grupos que abrem ao tocar (um por vez); o da página atual abre sozinho; ponto colorido no grupo quando as notificações estão desligadas.', from: [], where: 'Menu ☰' },
+    { id: 'importar_planilha', title: 'Trazer os lançamentos de uma planilha (Excel ou Google Planilhas)', status: 'proximo', origin: 'Ideia da Paty (parte 2) e Luiz', effort: 'M', problem: 'Quase todo mundo já controla os gastos numa planilha; recomeçar do zero afasta', cost: false, notes: 'Enviar o arquivo .xlsx ou .csv em Lançar. O app acha sozinho as colunas de data, descrição, valor e categoria (e pergunta só se tiver dúvida), mostra a revisão como numa fatura, usa as categorias da pessoa (cria as que faltam, com confirmação) e não duplica o que já veio pela fatura ou pelo extrato. A planilha não fica guardada.', from: [], where: 'Lançar → Fatura ou extrato (ou planilha)' },
+  ] },
 ];

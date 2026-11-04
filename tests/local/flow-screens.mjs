@@ -67,7 +67,7 @@ const snap = async (id, { keepToast = false, scrollTo } = {}) => {
   await page.waitForTimeout(350); await page.screenshot({ path: path.join(out, id + '.jpg'), type: 'jpeg', quality: 72 }); done.push(id);
 };
 const step = async (id, fn, opts) => { try { await fn(); await snap(id, opts); } catch (e) { failed.push(id + ': ' + e.message.split('\n')[0]); } };
-const sec = async k => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); await page.click(`#drawer [data-sec="${k}"]`); await page.waitForSelector(`#v-ajustes [data-sec="${k}"]:not([hidden])`); await page.waitForTimeout(300); };
+const sec = async k => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); if (!(await page.isVisible(`#drawer [data-sec="${k}"]`))) await page.click(`#drawer .mgroup:has([data-sec="${k}"]) .mgh`); await page.click(`#drawer [data-sec="${k}"]`); await page.waitForSelector(`#v-ajustes [data-sec="${k}"]:not([hidden])`); await page.waitForTimeout(300); };
 
 await page.goto('https://app.test/');
 await step('boas_vindas', () => page.waitForSelector('#welcome:not([hidden])'));

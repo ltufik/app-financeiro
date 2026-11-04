@@ -566,3 +566,17 @@ label.consent[hidden]{display:none}
 .rvactions{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:3;background:var(--card);padding:10px 0;box-shadow:0 -8px 12px -8px rgba(0,0,0,.15)}
 .qlist li.q-erro{flex-direction:column;gap:2px}.qlist li.q-erro span:first-child{white-space:normal}
 [data-panel="pdf"].inqueue > h2,[data-panel="pdf"].inqueue > p.muted,[data-panel="pdf"].inqueue #drop,[data-panel="pdf"].inqueue > details.help{display:none}
+/* Side menu in groups (like the product console) */
+.drawer-groups{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.mgh{appearance:none;border:0;background:none;width:100%;display:flex;gap:12px;align-items:center;padding:10px 8px;border-radius:12px;cursor:pointer;color:var(--ink);font-size:16px;text-align:left}
+.mgh:hover{background:var(--sunk)}
+.mgh strong{flex:1}
+.mgh .di{flex:none;width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
+.mgh .di svg,.mchev svg{width:20px;height:20px}
+.mchev{display:flex;color:var(--muted);transition:transform .15s ease}
+.mgroup.open .mchev{transform:rotate(90deg)}
+.mgroup.open > .mgh{background:var(--sunk)}
+.mdot{width:9px;height:9px;border-radius:50%;background:var(--coral)}
+.mgroup .drawer-list{margin:2px 0 4px;padding-left:58px}
+.mgroup .drawer-list button{padding:9px 8px}
+@media (prefers-reduced-motion:reduce){.mchev{transition:none}}

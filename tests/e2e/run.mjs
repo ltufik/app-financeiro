@@ -144,7 +144,7 @@ let window_tool = null;
 const dismissBye = async (pg = page) => { await pg.waitForSelector('.ann', { timeout: 3000 }).catch(() => {}); await pg.click('.ann [data-p]').catch(() => {}); };
 const txt = async s => (await page.textContent(s)).replace(/\s+/g, ' ').trim();
 // Settings now live in the side menu (hamburger), one page per subject.
-const sec = async k => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open [data-sec="' + k + '"]'); await page.click('#drawer [data-sec="' + k + '"]'); await page.waitForSelector('#v-ajustes [data-sec="' + k + '"]:not([hidden])'); await page.waitForTimeout(250); };
+const sec = async k => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); if (!(await page.isVisible('#drawer [data-sec="' + k + '"]'))) await page.click('#drawer .mgroup:has([data-sec="' + k + '"]) .mgh'); await page.waitForSelector('#drawer.open [data-sec="' + k + '"]'); await page.click('#drawer [data-sec="' + k + '"]'); await page.waitForSelector('#v-ajustes [data-sec="' + k + '"]:not([hidden])'); await page.waitForTimeout(250); };
 // The guided walkthrough shows on the first accesses; skip it where a test is not about it.
 const noCoach = async () => { await page.waitForTimeout(900); if (await page.$('.coach')) await page.click('#coachSkip'); };
 const shot = async n => { if (shots) await page.screenshot({ path: path.join(shots, n + '.png'), fullPage: true }); };
@@ -245,6 +245,10 @@ const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
 ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 15 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu em 4 grupos, só o primeiro aberto', (await page.$$('#drawer .mgroup')).length === 4 && (await page.$$('#drawer .drawer-list:not([hidden])')).length === 1 && await page.isVisible('#drawer [data-sec="metas"]') && !(await page.isVisible('#drawer [data-sec="backup"]')));
+await page.click('#drawer .mgroup[data-g="dados"] .mgh');
+ok('tocar num grupo abre ele e fecha o outro', await page.isVisible('#drawer [data-sec="backup"]') && !(await page.isVisible('#drawer [data-sec="metas"]')));
+await page.click('#drawer .mgroup[data-g="fam"] .mgh');
 await shot('02b-menu');
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 ok('menu fecha com Esc', await page.isHidden('#drawer'));
@@ -1038,6 +1042,7 @@ ok('"Quero receber" leva para Notificações com o botão em destaque', await pa
 ok('o aviso não volta no mesmo dia', (await page.evaluate(() => import('/js/push.js').then(m => m.offerPush()))) === false);
 await page.evaluate(() => { window.__noMsgs = true; });
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
+if (!(await page.isVisible('#drawer [data-sec="avisos"]'))) await page.click('#drawer .mgroup[data-g="app"] .mgh');
 ok('menu mostra "Desligadas neste celular" em Notificações', (await txt('#drawer [data-sec="avisos"]')).includes('Desligadas neste celular'));
 await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 await sec('avisos');
