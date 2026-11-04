@@ -12,6 +12,6 @@ export function toCSV(txs, categories) {
   const idx = new Map((categories || []).map(c => [c.name, c]));
   const rows = expandSplits(txs).slice().sort((a, b) => String(a.month).localeCompare(String(b.month)) || String(a.date || a.day || '').localeCompare(String(b.date || b.day || '')));
   const lines = rows.map(t => [brDate(t.date) || t.day || '', t.month || '', t.source === 'cartao' ? 'Cartão' : 'Conta', t.description, t.category,
-    idx.get(t.category) ? kindOf(idx.get(t.category)).label : '', money(t.amount), t.installment || '', t.card || '', t.note || ''].map(cell).join(';'));
+    idx.get(t.category) ? kindOf(idx.get(t.category)).label : '', money(t.amount), t.installment || '', String(t.card || '').replace(/^@(.)/, (_, c) => c.toUpperCase()), t.note || ''].map(cell).join(';'));
   return '﻿' + [HEAD.join(';'), ...lines].join('\r\n') + '\r\n';
 }

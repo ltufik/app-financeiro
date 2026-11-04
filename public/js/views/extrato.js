@@ -4,8 +4,9 @@ import { brl, esc, mLong, norm } from '../lib/format.js';
 import { $, toast, catPicker, confirmInline, openNoteSheet } from '../ui.js';
 import { withMemo } from '../lib/memo.js';
 import { track } from '../usage.js';
+import { shortTag } from '../lib/statements.js';
 
-let src = 'cartao', pendOnly = false, q = '';
+let src = 'cartao', pendOnly = false, q = '', cat = '';
 
 export function render(el) {
   if (!el.dataset.built) {
@@ -13,11 +14,13 @@ export function render(el) {
     el.innerHTML = `<div class="panel"><h2>Lançamentos do mês</h2>
       <div class="chips" style="margin-top:10px" id="srcChips"></div>
       <div class="rowbtn" style="margin-top:10px"><input type="search" id="lSearch" placeholder="Buscar" aria-label="Buscar lançamentos" style="flex:1 1 200px"><button class="chip" id="lPend" aria-pressed="false" type="button">Só a classificar</button></div>
+      <label class="f" style="margin-top:10px">Categoria<select id="lCat" aria-label="Filtrar por categoria"></select></label>
       <p class="tiny muted" style="margin-top:8px">Trocar a categoria corrige o lançamento e ensina o app: da próxima vez o mesmo lançamento já vem certo.</p></div>
       <ul class="xlist" id="lRows"></ul>
       <p class="small muted" id="lCount"></p>`;
     $('#lSearch').oninput = e => { q = norm(e.target.value); draw(); };
     $('#lPend').onclick = () => { pendOnly = !pendOnly; draw(); };
+    $('#lCat').onchange = e => { cat = e.target.value; if (cat) track('extrato.categoria'); draw(); };
   }
   draw();
 }
@@ -42,14 +45,20 @@ function draw() {
   $('#srcChips').innerHTML = [['cartao', 'Cartão'], ['conta', 'Conta']].map(([k, l]) => `<button class="chip" type="button" aria-pressed="${src === k}" data-k="${k}">${l}</button>`).join('');
   $('#srcChips').querySelectorAll('.chip').forEach(b => b.onclick = () => { src = b.dataset.k; draw(); });
   $('#lPend').setAttribute('aria-pressed', pendOnly);
-  const rows = txsOf(m).filter(t => t.source === src && (!q || norm(t.description + ' ' + (t.category || '') + ' ' + (t.note || '')).includes(q)) && (!pendOnly || t.pending || !t.category))
+  // Category filter: the categories of this month and source, with how many entries each (receipt parts count).
+  const catsOf = t => t.splits?.length ? t.splits.map(x => x.category) : [t.category || 'A classificar'];
+  const base = txsOf(m).filter(t => t.source === src), counts = {};
+  base.forEach(t => catsOf(t).forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
+  if (cat && !counts[cat]) cat = '';
+  $('#lCat').innerHTML = `<option value="">Todas as categorias</option>` + Object.keys(counts).sort((a, b) => a.localeCompare(b, 'pt')).map(c => `<option value="${esc(c)}"${c === cat ? ' selected' : ''}>${esc(c)} (${counts[c]})</option>`).join('');
+  const rows = base.filter(t => (!q || norm(t.description + ' ' + catsOf(t).join(' ') + ' ' + (t.note || '')).includes(q)) && (!pendOnly || t.pending || !t.category) && (!cat || catsOf(t).includes(cat)))
     .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.day || '').localeCompare(b.day || ''));
   const tb = $('#lRows'); tb.innerHTML = '';
   for (const t of rows) {
     // One card per transaction: what and when on the left, amount on the right, category below.
     const tr = document.createElement('li'); tr.className = 'xrow' + (t.pending ? ' pend' : '');
     tr.innerHTML = `<div class="xmain"><span class="xd">${esc(t.description)}${t.installment ? ' <span class="tiny muted">' + esc(t.installment) + '</span>' : ''}</span>
-      <span class="tiny muted">${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}${t.card ? ' · cartão ' + esc(t.card) : ''}${t.manual ? ' · <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}</span>
+      <span class="tiny muted">${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}${t.card ? ' · ' + esc(shortTag(t.card)) : ''}${t.manual ? ' · <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}</span>
       ${t.note ? `<span class="xnote">${esc(t.note)}</span>` : ''}
       ${t.splits?.length ? `<span class="tiny muted splits">Nota${t.receipt?.store ? ' ' + esc(t.receipt.store) : ''}: ${t.splits.map(x => esc(x.category) + ' ' + brl(x.amount)).join(' · ')}</span>` : ''}</div>
       <span class="xv${src === 'conta' && t.amount > 0 ? ' pos' : ''}">${brl(t.amount)}</span><div class="xcat"></div>`;
@@ -72,6 +81,8 @@ function draw() {
     tr.querySelector('.xcat').append(noteButton(t));
     tb.append(tr);
   }
-  const tot = rows.reduce((a, t) => a + t.amount, 0);
-  $('#lCount').textContent = rows.length ? `${rows.length} lançamentos em ${mLong(m)}, somando ${brl(tot)}.` : `Nada em ${mLong(m)} com esse filtro.`;
+  // With a category chosen, the total is what went to that category (only the matching parts of a receipt).
+  const amt = t => cat && t.splits?.length ? t.splits.filter(x => x.category === cat).reduce((a, x) => a + Math.sign(t.amount || 1) * Math.abs(+x.amount), 0) : t.amount;
+  const tot = rows.reduce((a, t) => a + amt(t), 0);
+  $('#lCount').textContent = rows.length ? `${rows.length} lançamentos${cat ? ` de ${cat}` : ''} em ${mLong(m)}, somando ${brl(tot)}.` : `Nada em ${mLong(m)} com esse filtro.`;
 }

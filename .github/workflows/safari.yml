@@ -20,13 +20,18 @@ jobs:
           node-version: 22
       - name: Regras (npm test)
         run: npm test
+      - name: Bibliotecas do CDN existem (o app carrega estas no celular)
+        run: |
+          for u in $(grep -rhoE "https://(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com)/[^'\"\` )]+" public/index.html public/admin.html public/js | sort -u); do
+            curl -fsSIL -o /dev/null "$u" && echo "ok  $u" || { echo "::error::Biblioteca do CDN não encontrada: $u"; exit 1; }
+          done
       - name: Ferramentas (só para o teste; o app não usa)
         run: |
           mkdir -p /tmp/tools && cd /tmp/tools && npm init -y >/dev/null
-          npm i playwright@1.56.0 pdfjs-dist@6.2.108 >/dev/null
+          npm i playwright@1.56.0 pdfjs-dist@6.2.108 xlsx@0.18.5 >/dev/null
           npx playwright install --with-deps webkit
       - name: App no Safari do iPhone (WebKit)
-        run: node tests/e2e/run.mjs --browser webkit --smoke --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --outra tests/fixtures/fatura-ficticia.pdf --shots /tmp/safari
+        run: node tests/e2e/run.mjs --browser webkit --smoke --playwright /tmp/tools/node_modules/playwright/index.mjs --pdfjs /tmp/tools/node_modules/pdfjs-dist/legacy/build --outra tests/fixtures/fatura-ficticia.pdf --xlsx /tmp/tools/node_modules/xlsx/dist/xlsx.full.min.js --shots /tmp/safari
       - name: Prints do teste
         if: always()
         uses: actions/upload-artifact@v4

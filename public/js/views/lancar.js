@@ -13,6 +13,7 @@ import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '.
 import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js';
 import { docKeys, compareStatement, docsText } from '../lib/statements.js';
 import { applyMemos } from '../lib/memo.js';
+import { parseCSV, detectColumns, buildEntries, markDuplicates, matchCategory } from '../lib/sheet.js';
 import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX, progressOf, nowHint, failedIndexes } from '../lib/queue.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
@@ -76,9 +77,9 @@ function build(el) {
     <p class="muted small">Fatura do cartão, extrato da conta ou de investimentos, em PDF, foto ou print. O app descobre o que é pelo conteúdo, lê, confere os totais e mostra tudo para você revisar antes de salvar. O arquivo não fica guardado.</p>
     <div class="drop" id="drop" style="margin-top:12px">
       <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
-      <strong>Escolher PDF, foto ou print</strong>
-      <span class="small muted">Pode escolher vários de uma vez: as faturas de todos os cartões e o extrato. PDF com senha também funciona: o app pede a senha e não a guarda.</span>
-      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf,image/*" multiple aria-label="Escolher PDF, foto ou print (um ou vários)">
+      <strong>Escolher PDF, foto, print ou planilha</strong>
+      <span class="small muted">Pode escolher vários de uma vez: as faturas de todos os cartões e o extrato. Também dá para trazer a planilha (Excel ou CSV) em que vocês já controlavam os gastos. PDF com senha também funciona: o app pede a senha e não a guarda.</span>
+      <input type="file" id="pdfIn" class="fileover" accept=".pdf,application/pdf,image/*,.xlsx,.xls,.csv,.ods,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple aria-label="Escolher PDF, foto, print ou planilha (um ou vários)">
     </div>
     <details class="help" style="margin-top:10px"><summary>Onde encontro o PDF?</summary><ol>
       <li><strong>Fatura do cartão:</strong> no app do banco, abra Cartões → Fatura e procure <em>Baixar PDF</em>, <em>Compartilhar</em> ou <em>Enviar por e-mail</em>.</li>
@@ -91,6 +92,7 @@ function build(el) {
     </div>
     <div class="log" id="pdfLog" style="margin-top:12px"></div>
     <div id="review" hidden style="margin-top:14px"></div>
+    <div id="shReview" hidden style="margin-top:14px"></div>
   </div>
   <details class="more" id="lHist">
     <summary><span><strong>Lançados à mão e importações</strong><br><span class="tiny muted" id="lHistSum"></span></span></summary>
@@ -202,7 +204,7 @@ function startFiles(files, from) {
   openMode('pdf', false); runCurrent();
 }
 // Something is waiting for the person: a review, the password, the "what is it?" choice.
-const waiting = () => ['#review', '#pwBox', '#qPreview', '#rcReview'].some(s => $(s) && !$(s).hidden) || !!$('#pdfLog .chips');
+const waiting = () => ['#review', '#pwBox', '#qPreview', '#rcReview', '#shReview'].some(s => $(s) && !$(s).hidden) || !!$('#pdfLog .chips');
 async function runCurrent() {
   renderQueue();
   const f = QFILES[QU.i];
@@ -218,14 +220,14 @@ function failReason() {
   return (lines.pop() || t || 'Não reconheci o documento.').replace(/\s+/g, ' ').slice(0, 140);
 }
 // What the person has to do now, from what is on screen.
-const nowWhat = () => !$('#review').hidden ? 'revisao' : !$('#pwBox').hidden ? 'senha' : $('#pdfLog .chips') ? 'escolher' : !$('#qPreview').hidden ? 'lancamento' : !$('#rcReview').hidden ? 'nota' : '';
-const nowTarget = { revisao: '#review', senha: '#pwBox', escolher: '#pdfLog', lancamento: '#qPreview', nota: '#rcReview' };
+const nowWhat = () => !$('#shReview').hidden ? 'planilha' : !$('#review').hidden ? 'revisao' : !$('#pwBox').hidden ? 'senha' : $('#pdfLog .chips') ? 'escolher' : !$('#qPreview').hidden ? 'lancamento' : !$('#rcReview').hidden ? 'nota' : '';
+const nowTarget = { planilha: '#shReview', revisao: '#review', senha: '#pwBox', escolher: '#pdfLog', lancamento: '#qPreview', nota: '#rcReview' };
 // Called when the current document was saved, discarded or could not be read. Does nothing outside a queue.
 function docDone(status, label = '') {
   if (!QU || isDone(QU)) return;
   const name = QU.items[QU.i]?.name;
   advance(QU, status, label);
-  ['#review', '#pwBox', '#qPreview', '#rcReview'].forEach(s => { if ($(s)) $(s).hidden = true; });
+  ['#review', '#pwBox', '#qPreview', '#rcReview', '#shReview'].forEach(s => { if ($(s)) $(s).hidden = true; });
   if (status === 'erro' && !isDone(QU)) toast(`${name} não deu para ler. Seguindo para o próximo; no fim dá para tentar de novo.`, 'info');
   if (isDone(QU)) { renderQueue(); toast(queueSummary(QU).head.replace(/^Pronto:\s*/, 'Arquivos lidos: ')); $('#qBar').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   setTimeout(runCurrent, 400);
@@ -246,7 +248,7 @@ function renderQueue() {
   if (what) $('#quGo').onclick = () => $(nowTarget[what])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (failed.length) $('#quRetry').onclick = () => { const fs = failed.map(i => QFILES[i]); QU = null; QFILES = []; $('#pdfLog').innerHTML = ''; startFiles(fs, 'pdf'); };
   if (done) $('#quClose').onclick = () => { QU = null; QFILES = []; renderQueue(); $('#pdfLog').innerHTML = ''; };
-  else $('#quSkip').onclick = () => { R = null; Q = null; RC = null; $('#pdfLog').innerHTML = ''; docDone('pulado'); };
+  else $('#quSkip').onclick = () => { R = null; Q = null; RC = null; SH = null; $('#pdfLog').innerHTML = ''; docDone('pulado'); };
 }
 
 // ---------- what is this document? ----------
@@ -264,13 +266,15 @@ async function sniffFile(file) {
   return type && type !== file.type ? new File([file], file.name || 'documento', { type }) : file;
 }
 const isPdfFile = f => f.type === 'application/pdf';
+const isSheetFile = f => /\.(xlsx|xls|csv|ods)$/i.test(f.name || '') || /spreadsheet|ms-excel|text\/csv|opendocument\.spreadsheet/.test(f.type || '');
 const isImageFile = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name || '');
 // The part of Lançar that ended up with something to show.
-const resultArea = () => ['#qPreview', '#rcReview', '#review', '#pwBox'].map(s => $(s)).find(el => el && !el.hidden) || (mode === 'nota' ? $('#rcLog') : mode === 'pdf' ? $('#pdfLog') : null);
+const resultArea = () => ['#qPreview', '#rcReview', '#review', '#shReview', '#pwBox'].map(s => $(s)).find(el => el && !el.hidden) || (mode === 'nota' ? $('#rcLog') : mode === 'pdf' ? $('#pdfLog') : null);
 async function routeFile(file, from) {
   HOP = 0;
   file = await sniffFile(file);
   if (file.size > 25 * 1024 * 1024) { toast('O arquivo é grande demais (máximo 25 MB).', 'info'); return; }
+  if (isSheetFile(file)) { if (mode !== 'pdf') openMode('pdf', false); return readSheet(file); }
   if (isPdfFile(file)) { if (mode !== 'pdf') openMode('pdf', from === 'share'); return startPdf(file); }
   if (!isImageFile(file)) { toast('Esse tipo de arquivo não dá para ler. Envie um PDF, uma foto ou um print.', 'info'); return; }
   if (from === 'nota') return readReceipt(file);
@@ -643,6 +647,98 @@ function reviewInvest(r) {
     const extra = +$('#ivExtra').value || 0, classes = cls.map(c => [c.nome, +c.valor]); if (extra) classes.push(['Outros', extra]);
     const st = { ...settings(), invest: { date: r.data || todayISO(), total: total + extra, liquido: (+r.totalLiquido || 0) + extra, classes } };
     try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; toast('Investimentos atualizados'); box.hidden = true; S.render(); docDone('salvo', 'Investimentos'); } catch (e) { toast('Não foi possível salvar.'); }
+  };
+}
+
+// ---------- spreadsheets (Excel or CSV) ----------
+// The family's old control sheet: columns found by themselves, categories matched (or created, or left to classify),
+// rows already in the app left out, and a review before saving. The file is never kept.
+let SH = null;
+const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+const loadXlsx = () => window.XLSX ? Promise.resolve(window.XLSX) : new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = XLSX_URL; sc.onload = () => ok(window.XLSX); sc.onerror = () => no(new Error('xlsx')); document.head.append(sc); });
+const colName = (rows, header, j) => (header >= 0 && String(rows[header][j] ?? '').trim()) || 'Coluna ' + String.fromCharCode(65 + (j % 26));
+const FIELD = { date: 'Data', description: 'Descrição', amount: 'Valor', category: 'Categoria', source: 'Conta ou cartão', kind: 'Entrada ou saída' };
+async function readSheet(file) {
+  $('#pdfLog').innerHTML = ''; $('#review').hidden = true; $('#shReview').hidden = true; $('#pwBox').hidden = true; SH = null;
+  plog(`É uma planilha. Lendo ${file.name}...`);
+  let sheets = [];
+  try {
+    if (/\.csv$/i.test(file.name) || /text\/csv/.test(file.type)) {
+      const buf = await file.arrayBuffer(); let text = new TextDecoder('utf-8').decode(buf);
+      if (text.includes('\uFFFD')) text = new TextDecoder('windows-1252').decode(buf);
+      sheets = [{ name: file.name, rows: parseCSV(text) }];
+    } else {
+      plog('Abrindo o Excel...');
+      const X = await loadXlsx(), wb = X.read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
+      sheets = wb.SheetNames.map(n => ({ name: n, rows: X.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }) }));
+    }
+  } catch (e) { plog('Não consegui abrir a planilha. Salve como Excel (.xlsx) ou CSV e tente de novo.', 'var(--bad)'); return; }
+  // Every tab with dates, values and descriptions counts (a tab per month is common).
+  sheets = sheets.map(s => ({ ...s, det: detectColumns(s.rows) })).filter(s => s.det.map.date != null && s.det.map.amount != null && s.det.map.description != null);
+  if (!sheets.length) { plog('Não achei na planilha as colunas de data, descrição e valor. Confira se ela tem uma linha por gasto, com essas três informações.', 'var(--bad)'); return; }
+  plog(`Planilha lida: ${sheets.length > 1 ? sheets.length + ' abas com lançamentos' : 'aba ' + sheets[0].name}.`, 'var(--good)');
+  SH = { file: file.name, sheets, map: { ...sheets[0].det.map }, defaultSource: 'conta', positives: 'saida', catMap: {}, includeDup: false };
+  // Sheet categories: the family's when the name matches, else created with the same name.
+  const all = {}; for (const s of sheets) { const r = buildEntries(s.rows, { map: s.det.map, header: s.det.header, categories: S.categories }); Object.assign(all, r.sheetCats); }
+  for (const c of Object.keys(all)) SH.catMap[c] = matchCategory(c, S.categories) || '+' + c;
+  renderSheet();
+}
+function sheetEntries() {
+  // New categories are not passed as categories: their rows keep the sign of the sheet (in or out).
+  const cats = S.categories;
+  const catMap = Object.fromEntries(Object.entries(SH.catMap).map(([k, v]) => [k, v.startsWith('+') ? v.slice(1) : v]));
+  let entries = [], skipped = 0;
+  for (const s of SH.sheets) { const map = s === SH.sheets[0] ? SH.map : { ...s.det.map, ...SH.mapEdits }; const r = buildEntries(s.rows, { map, header: s.det.header, defaultSource: SH.defaultSource, positives: SH.positives, closeDay: closeDay(), categories: cats, catMap }); entries = entries.concat(r.entries); skipped += r.skipped; }
+  return { entries: markDuplicates(entries, S.txs), skipped };
+}
+function renderSheet() {
+  const box = $('#shReview'); box.hidden = false;
+  const { entries, skipped } = sheetEntries(), keep = entries.filter(e => SH.includeDup || !e.dup), dups = entries.filter(e => e.dup).length;
+  const months = [...new Set(keep.map(e => e.month))].sort(), out = keep.filter(e => e.source === 'conta' ? e.amount < 0 : e.amount > 0).reduce((a, e) => a + Math.abs(e.amount), 0), inn = keep.reduce((a, e) => a + Math.abs(e.amount), 0) - out;
+  const s0 = SH.sheets[0], ncol = Math.max(...s0.rows.slice(0, 20).map(r => r.length));
+  const allPositive = SH.map.kind == null && !s0.rows.slice(s0.det.header + 1).some(r => { const v = r[SH.map.amount]; return typeof v === 'number' ? v < 0 : /^\s*-|\(/.test(String(v)); });
+  const sheetCats = Object.keys(SH.catMap).sort((a, b) => a.localeCompare(b, 'pt'));
+  const catOpts = cur => `<option value="">A classificar</option>` + S.categories.filter(c => c.name !== 'A classificar').sort((a, b) => a.name.localeCompare(b.name, 'pt')).map(c => `<option value="${esc(c.name)}"${c.name === cur ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+  box.innerHTML = `<h3>Planilha: ${keep.length} lançamentos${months.length ? ` de ${mLong(months[0])}${months.length > 1 ? ` a ${mLong(months[months.length - 1])}` : ''}` : ''}</h3>
+    <p class="small muted">${esc(SH.file)}${SH.sheets.length > 1 ? ` · ${SH.sheets.length} abas` : ''} · saídas ${brl(out)} · entradas ${brl(inn)}${skipped ? ` · ${skipped} ${skipped === 1 ? 'linha sem data ou valor ficou' : 'linhas sem data ou valor ficaram'} de fora` : ''}</p>
+    <div class="rvguide"><strong>${QU && !isDone(QU) ? `Arquivo ${position(QU)}: o que fazer` : 'O que fazer'}</strong><ol class="small">
+      <li>Confira se as colunas abaixo estão certas.</li>
+      <li>${sheetCats.length ? 'Diga para qual categoria do app vai cada categoria da planilha.' : 'A planilha não tem categorias: os lançamentos entram "a classificar" e o app sugere depois.'}</li>
+      <li>Toque em <strong>Salvar</strong>.</li></ol></div>
+    <h4 style="margin:12px 0 4px">Colunas</h4><div class="shcols">${['date', 'description', 'amount', 'category', 'source'].map(k => `<label class="f">${FIELD[k]}<select data-col="${k}"><option value="">${k === 'category' || k === 'source' ? 'Não tem' : 'Escolha'}</option>${Array.from({ length: ncol }, (_, j) => `<option value="${j}"${SH.map[k] === j ? ' selected' : ''}>${esc(colName(s0.rows, s0.det.header, j))}</option>`).join('')}</select></label>`).join('')}</div>
+    <div class="shcols">${SH.map.source == null ? `<label class="f">Os gastos foram na<select id="shSrc"><option value="conta"${SH.defaultSource === 'conta' ? ' selected' : ''}>Conta (pix, débito, boleto)</option><option value="cartao"${SH.defaultSource === 'cartao' ? ' selected' : ''}>Cartão de crédito</option></select></label>` : ''}
+      ${allPositive ? `<label class="f">Valores sem sinal são<select id="shPos"><option value="saida"${SH.positives === 'saida' ? ' selected' : ''}>Gastos (saídas)</option><option value="entrada"${SH.positives === 'entrada' ? ' selected' : ''}>Entradas</option></select></label>` : ''}</div>
+    ${sheetCats.length ? `<h4 style="margin:12px 0 4px">Categorias da planilha</h4><div class="stack">${sheetCats.map(c => { const v = SH.catMap[c]; return `<label class="f">${esc(c)} <span class="tiny muted">(${keep.filter(e => e.sheetCategory === c).length})</span><select data-cat="${esc(c)}"><option value="+${esc(c)}"${v === '+' + c ? ' selected' : ''}>Criar "${esc(c)}" no app</option>${catOpts(v)}</select></label>`; }).join('')}</div>` : ''}
+    ${dups ? `<label class="radio" style="margin-top:10px"><input type="checkbox" id="shDup"${SH.includeDup ? ' checked' : ''}><span>${dups} ${dups === 1 ? 'linha já está' : 'linhas já estão'} no app (mesmo valor e data) e ${dups === 1 ? 'fica' : 'ficam'} de fora. Marque para trazer mesmo assim.</span></label>` : ''}
+    <h4 style="margin:12px 0 4px">Primeiras linhas</h4>
+    <div class="tw"><table class="rvcards"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody>${keep.slice(0, 8).map(e => `<tr><td class="rv-d">${esc(e.day)}</td><td class="rv-x">${esc(e.description)} <span class="tiny muted">${e.source === 'cartao' ? 'cartão' : 'conta'}</span></td><td class="rv-c">${esc(e.category)}</td><td class="r${e.source === 'conta' && e.amount > 0 ? ' neg' : ''}">${brl(e.amount)}</td></tr>`).join('')}</tbody></table></div>
+    ${keep.length > 8 ? `<p class="tiny muted">E mais ${keep.length - 8}.</p>` : ''}
+    <div class="rowbtn rvactions" style="margin-top:12px"><button class="btn primary" id="shSave" type="button"${keep.length ? '' : ' disabled'}>Salvar ${keep.length} lançamentos</button><button class="btn" id="shCancel" type="button">Descartar</button></div>`;
+  box.querySelectorAll('[data-col]').forEach(sel => sel.onchange = () => { const k = sel.dataset.col; if (sel.value === '') delete SH.map[k]; else SH.map[k] = +sel.value; SH.mapEdits = { ...(SH.mapEdits || {}), [k]: SH.map[k] }; renderSheet(); });
+  box.querySelectorAll('[data-cat]').forEach(sel => sel.onchange = () => { SH.catMap[sel.dataset.cat] = sel.value; renderSheet(); });
+  if ($('#shSrc')) $('#shSrc').onchange = e => { SH.defaultSource = e.target.value; renderSheet(); };
+  if ($('#shPos')) $('#shPos').onchange = e => { SH.positives = e.target.value; renderSheet(); };
+  if ($('#shDup')) $('#shDup').onchange = e => { SH.includeDup = e.target.checked; renderSheet(); };
+  $('#shCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura desta planilha? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; SH = null; $('#pdfLog').innerHTML = ''; docDone('descartado'); };
+  $('#shSave').onclick = async e => {
+    if (SH.map.date == null || SH.map.amount == null || SH.map.description == null) { toast('Escolha as colunas de data, descrição e valor.', 'info'); return; }
+    const newCats = [...new Set(Object.values(SH.catMap).filter(v => v.startsWith('+')).map(v => v.slice(1)))].filter(n => keep.some(x => x.category === n) && !S.categories.some(c => c.name.toLowerCase() === n.toLowerCase()));
+    const text = `Salvar ${keep.length} lançamentos${months.length ? ` de ${mLong(months[0])}${months.length > 1 ? ` a ${mLong(months[months.length - 1])}` : ''}` : ''}?` + (newCats.length ? ` Também cria ${newCats.length > 1 ? `as categorias ${newCats.map(n => '"' + esc(n) + '"').join(', ')} (dá para mudar o tipo de cada uma em Categorias)` : `a categoria "${esc(newCats[0])}" (dá para mudar o tipo em Categorias)`}.` : '');
+    if (!await confirmInline(e.target, { text, yes: 'Sim, salvar' })) return;
+    e.target.disabled = true;
+    BUSY = busy('Salvando os lançamentos...', { title: 'Trazendo a planilha' });
+    try {
+      // A new category is income when most of its rows are money in, else a day-to-day expense.
+      const isIn = x => x.source === 'conta' ? x.amount > 0 : x.amount < 0;
+      for (const name of newCats) { const rs = keep.filter(x => x.category === name), inc = rs.filter(isIn).length > rs.length / 2; BUSY.set(`Criando a categoria ${name}...`); S.categories.push(await db.addCategory(S.hh.id, { name, grp: inc ? 'entrada' : 'dia', recurring: false })); }
+      if (newCats.length) reindex();
+      const rows = keep.map(x => ({ household_id: S.hh.id, source: x.source, month: x.month, date: x.date, day: x.day, description: x.description, amount: x.amount, category: x.category, pending: x.category === 'A classificar', manual: false }));
+      const label = 'Planilha ' + SH.file.replace(/\.[^.]+$/, '');
+      await db.importSheet(S.hh.id, rows, { label, file: SH.file, onStep: (n, t) => BUSY.set(`Salvando: ${n} de ${t}...`, 10 + 85 * n / t) });
+      track('lancar.planilha'); await S.reload();
+      toast(`Planilha salva: ${rows.length} lançamentos.`); box.hidden = true; SH = null; $('#pdfLog').innerHTML = ''; S.render(); docDone('salvo', label);
+    } catch (err) { toast('Não foi possível salvar. ' + db.errorText(err), 'err'); e.target.disabled = false; }
+    finally { BUSY?.done(); BUSY = null; }
   };
 }
 

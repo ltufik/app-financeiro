@@ -79,6 +79,13 @@ const rpcs = {
     T.rules.forEach(r => { if (r.household_id === c.household_id && r.category === old) r.category = p_name; });
     setTimeout(persist); return null;
   },
+  merge_category({ p_from, p_into }) {
+    const a = T.categories.find(x => x.id === p_from), b = T.categories.find(x => x.id === p_into); if (!a || !b || a.household_id !== b.household_id) throw new Error('not_member');
+    let n = 0;
+    T.transactions.forEach(t => { if (t.household_id !== a.household_id) return; if (t.category === a.name) { t.category = b.name; n++; } (t.splits || []).forEach(x => { if (x.category === a.name) x.category = b.name; }); });
+    T.rules.forEach(r => { if (r.household_id === a.household_id && r.category === a.name) r.category = b.name; });
+    T.categories = T.categories.filter(x => x.id !== p_from); setTimeout(persist); return n;
+  },
   create_household({ p_name, p_display_name }) {
     const h = { id: uid(), name: p_name, settings: { goals: { cardMonthly: 0, savings: 0.2, savingsNoFin: 0.3, patrimonio: 0 }, cardCloseDay: 24 }, created_by: session.user.id, created_at: now() };
     T.households.push(h); T.members.push({ household_id: h.id, user_id: session.user.id, role: 'owner', display_name: p_display_name, created_at: now() });

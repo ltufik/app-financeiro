@@ -17,6 +17,7 @@ import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
 import { platformOf, phoneSteps, testOutcome } from '../lib/pushask.js';
 import { toCSV } from '../lib/csv.js';
+import { mergeSuggestions, mergeSettings, pairKey } from '../lib/catmerge.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
@@ -78,6 +79,7 @@ export function render(el) {
   <div class="panel stack" data-sec="categorias">
     <h2>Categorias</h2>
     <p class="small muted">Toda categoria é uma receita ou uma despesa. As fixas se repetem todo mês; as extras ficam fora da sobra do mês, para não distorcer a conta.</p>
+    <div id="catMerge" class="stack"></div>
     <h3 style="margin-top:6px">Criar categoria</h3>
     <label class="f">Nome<input type="text" id="cNew" maxlength="60" placeholder="Ex.: Academia"></label>
     <div class="kinds" role="radiogroup" aria-label="Tipo da categoria" id="cKinds">${KINDS.map(k => `<button type="button" class="kind" role="radio" aria-checked="${k.key === 'dvar'}" data-kind="${k.key}"><strong>${k.label}</strong><span>${k.hint}</span></button>`).join('')}</div>
@@ -291,14 +293,50 @@ export function render(el) {
   // categories
   let newKind = 'dvar';
   el.querySelectorAll('#cKinds .kind').forEach(b => b.onclick = () => { newKind = b.dataset.kind; el.querySelectorAll('#cKinds .kind').forEach(x => x.setAttribute('aria-checked', x === b)); });
+  // Joining categories: entries, rules and receipt parts move to the one that stays (database, in one go);
+  // budgets add up. Used by the suggestions ("Categorias parecidas") and by "Juntar com…" on each category.
+  const usage = () => { const u = {}; for (const t of S.txs) for (const c of (t.splits?.length ? t.splits.map(x => x.category) : [t.category])) if (c) u[c] = (u[c] || 0) + 1; return u; };
+  const joinCats = async (drop, keep, btn) => {
+    const n = usage()[drop.name] || 0;
+    if (!await confirmInline(btn, { title: `Juntar "${esc(drop.name)}" em "${esc(keep.name)}"?`, text: `${n ? `Os ${n} lançamentos de "${esc(drop.name)}"` : 'As regras'} passam para "${esc(keep.name)}", e "${esc(drop.name)}" deixa de existir. As regras e o orçamento também passam.`, yes: 'Sim, juntar' })) return false;
+    try {
+      await db.mergeCategory(drop.id, keep.id);
+      S.txs.forEach(t => { if (t.category === drop.name) t.category = keep.name; (t.splits || []).forEach(x => { if (x.category === drop.name) x.category = keep.name; }); });
+      S.rules.forEach(r => { if (r.category === drop.name) r.category = keep.name; });
+      S.categories = S.categories.filter(c => c.id !== drop.id);
+      const st = mergeSettings(settings(), drop.name, keep.name);
+      if (st.budgets !== settings().budgets) { await db.saveSettings(S.hh.id, st).catch(() => {}); S.hh.settings = st; }
+      reindex(); track('categorias.juntar'); toast(`Pronto: ${n} ${n === 1 ? 'lançamento passou' : 'lançamentos passaram'} para ${keep.name}.`); drawCats(); S.render();
+      return true;
+    } catch (err) { toast(err?.code === 'needs_schema' ? 'O banco de dados precisa de uma atualização para juntar categorias. Avise quem cuida do app.' : 'Não foi possível juntar. ' + db.errorText(err), 'err'); return false; }
+  };
+  const drawMerge = () => {
+    const box = $('#catMerge'), dismissed = settings().catKeepApart || [];
+    const list = mergeSuggestions(S.categories, usage(), dismissed);
+    if (!list.length) { box.innerHTML = ''; return; }
+    box.innerHTML = `<h3 style="margin-top:10px">Categorias parecidas <span class="tiny muted">${list.length}</span></h3>
+      <p class="small muted">O app achou categorias que parecem a mesma coisa. Juntar deixa os gráficos e o orçamento mais claros.</p>
+      ${list.map((x, i) => `<article class="mergecard" data-i="${i}"><p class="small"><strong>${esc(x.drop)}</strong> <span class="tiny muted">(${x.dropCount} ${x.dropCount === 1 ? 'lançamento' : 'lançamentos'})</span> e <strong>${esc(x.keep)}</strong> <span class="tiny muted">(${x.keepCount})</span>: ${esc(x.reason)}.</p>
+        <div class="rowbtn"><button class="btn primary" type="button" data-mj>Juntar em ${esc(x.keep)}</button><button class="btn" type="button" data-mjr>Juntar em ${esc(x.drop)}</button><button class="btn" type="button" data-mk>Manter separadas</button></div></article>`).join('')}`;
+    box.querySelectorAll('.mergecard').forEach(card => {
+      const x = list[+card.dataset.i], A = S.categories.find(c => c.name === x.keep), B = S.categories.find(c => c.name === x.drop);
+      card.querySelector('[data-mj]').onclick = e => joinCats(B, A, e.target);
+      card.querySelector('[data-mjr]').onclick = e => joinCats(A, B, e.target);
+      card.querySelector('[data-mk]').onclick = async () => {
+        const st = { ...settings(), catKeepApart: [...dismissed, pairKey(x.keep, x.drop)].slice(-200) };
+        try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; toast('Combinado: ficam separadas e o app não pergunta de novo.'); drawMerge(); } catch (err) { toast('Não foi possível salvar.'); }
+      };
+    });
+  };
   const drawCats = () => {
+    drawMerge();
     const box = $('#catList');
     box.innerHTML = KINDS.map(k => {
       const list = S.categories.filter(c => kindOf(c).key === k.key).sort((a, b) => a.name.localeCompare(b.name, 'pt'));
       if (!list.length) return '';
       return `<section class="catgroup"><h4>${k.label} <span class="tiny muted">${list.length}</span></h4><ul class="list small">${list.map(c => `<li data-c="${c.id}">
         <span class="catname">${esc(c.name)}${c.financing ? ' <span class="pill ok" style="font-size:11px;padding:1px 6px">financiamento</span>' : ''}</span>
-        <span class="rowbtn"><select data-kind aria-label="Tipo de ${esc(c.name)}">${KINDS.map(x => `<option value="${x.key}"${x.key === k.key ? ' selected' : ''}>${x.label}</option>`).join('')}</select><button class="chip" type="button" data-ren>Renomear</button></span></li>`).join('')}</ul></section>`;
+        <span class="rowbtn"><select data-kind aria-label="Tipo de ${esc(c.name)}">${KINDS.map(x => `<option value="${x.key}"${x.key === k.key ? ' selected' : ''}>${x.label}</option>`).join('')}</select><button class="chip" type="button" data-ren>Renomear</button><button class="chip" type="button" data-join>Juntar com…</button></span></li>`).join('')}</ul></section>`;
     }).join('');
     box.querySelectorAll('li[data-c]').forEach(li => {
       const c = S.categories.find(x => x.id === li.dataset.c);
@@ -306,6 +344,13 @@ export function render(el) {
         const k = kindByKey(e.target.value), patch = { grp: k.grp, recurring: k.recurring };
         if (!await confirmInline(e.target, { text: `Mudar "${esc(c.name)}" para ${k.label}? Os meses já lançados são recalculados.`, yes: 'Sim, mudar' })) { e.target.value = kindOf(c).key; return; }
         try { await db.updateCategory(c.id, patch); Object.assign(c, patch); reindex(); toast('Categoria atualizada'); drawCats(); } catch (err) { toast('Não foi possível salvar.'); e.target.value = kindOf(c).key; }
+      };
+      li.querySelector('[data-join]').onclick = () => {
+        const span = li.querySelector('.catname'), others = S.categories.filter(x => x.id !== c.id && x.name !== 'A classificar' && kindOf(x).side === kindOf(c).side).sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+        if (!others.length) { toast('Não há outra categoria do mesmo lado (receita ou despesa) para juntar.', 'info'); return; }
+        span.innerHTML = `${esc(c.name)}<label class="f" style="margin-top:6px">Juntar "${esc(c.name)}" em<select data-into>${others.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select></label><span class="rowbtn" style="margin-top:6px"><button class="btn primary" type="button" data-ok>Juntar</button><button class="btn" type="button" data-no>Cancelar</button></span>`;
+        span.querySelector('[data-no]').onclick = drawCats;
+        span.querySelector('[data-ok]').onclick = e => joinCats(c, S.categories.find(o => o.id === span.querySelector('[data-into]').value), e.target);
       };
       li.querySelector('[data-ren]').onclick = () => {
         const span = li.querySelector('.catname');

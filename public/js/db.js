@@ -61,6 +61,11 @@ export const saveSettings = async (hh, settings) => must(await sb.from('househol
 export const renameHousehold = async (hh, name) => must(await sb.from('households').update({ name }).eq('id', hh));
 
 export const addTransactions = async rows => must(await sb.from('transactions').insert(rows).select());
+// Entries from a spreadsheet: in batches, plus a line in "Importações" (the file itself is never kept).
+export async function importSheet(hh, rows, { label, file, onStep } = {}) {
+  for (let i = 0; i < rows.length; i += 500) { must(await sb.from('transactions').insert(rows.slice(i, i + 500))); onStep && onStep(i + 500 >= rows.length ? rows.length : i + 500, rows.length); }
+  must(await sb.from('imports').insert({ household_id: hh, source: 'planilha', label, file_name: file || null, info: { transactions: rows.length } }));
+}
 export const updateTransaction = async (id, patch) => must(await sb.from('transactions').update(patch).eq('id', id));
 export const deleteTransaction = async id => must(await sb.from('transactions').delete().eq('id', id));
 
@@ -80,6 +85,8 @@ export const learnRule = async (hh, source, pattern, category) => must(await sb.
 
 export const addCategory = async (hh, c) => must(await sb.from('categories').insert({ household_id: hh, ...c }).select().single());
 export const renameCategory = async (id, name) => must(await sb.rpc('rename_category', { p_id: id, p_name: name }));
+// Joins category `from` into `into` (entries, rules and receipt parts move; `from` is removed). Needs the v78 SQL.
+export const mergeCategory = async (from, into) => { const r = await sb.rpc('merge_category', { p_from: from, p_into: into }); if (r.error && /merge_category|function .* does not exist|PGRST202/i.test(r.error.message || r.error.code || '')) { const e = new Error('needs_schema'); e.code = 'needs_schema'; throw e; } return must(r); };
 export const savePush = async (hh, sub, prefs) => must(await sb.rpc('save_push', { p_household: hh, p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_prefs: prefs || {} }));
 export const deletePush = async endpoint => must(await sb.rpc('delete_push', { p_endpoint: endpoint }));
 export const myPush = async endpoint => (must(await sb.from('push_subscriptions').select('endpoint, prefs, household_id').eq('endpoint', endpoint)) || [])[0] || null;

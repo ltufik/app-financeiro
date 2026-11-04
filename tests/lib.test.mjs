@@ -678,3 +678,72 @@ test('vários arquivos: o que fazer agora e o que tentar de novo', () => {
   assert.deepEqual(failedIndexes(q), [0, 2]);
   assert.equal(queueSummary(q).lines[0].label, 'Não deu para responder agora.');
 });
+
+import { shortTag } from '../public/js/lib/statements.js';
+test('extrato: conta aparece como conta, não como cartão', () => {
+  assert.equal(shortTag('@santander'), 'conta Santander');
+  assert.equal(shortTag('4388'), 'cartão 4388');
+  assert.equal(shortTag(''), '');
+  assert.match(toCSV([{ source: 'conta', month: '2026-10', day: '01/10', description: 'Pix', category: 'X', amount: -1, card: '@santander' }], []), /;Santander;/);
+});
+
+import { sameReason, mergeSuggestions, mergeSettings, pairKey } from '../public/js/lib/catmerge.js';
+test('categorias parecidas: sugere juntar e mantém a mais usada', () => {
+  assert.equal(sameReason('Mercado', 'Mercados'), 'mesmo nome');
+  assert.equal(sameReason('Saúde', 'Saúde e terapia'), 'um nome está dentro do outro');
+  assert.equal(sameReason('Farmácia', 'Remédios'), 'querem dizer a mesma coisa');
+  assert.equal(sameReason('Restaurantes', 'Restaurante e bar'), 'um nome está dentro do outro');
+  assert.equal(sameReason('Casa', 'Casa de praia alugada'), null, 'nome mais longo com duas palavras a mais é outra coisa');
+  assert.equal(sameReason('Outros', 'Outros pequenos gastos'), 'um nome está dentro do outro');
+  assert.equal(sameReason('Salário Luana', 'Salário Luana: consignado da Claudia'), null);
+  assert.equal(sameReason('Presentes', 'Guaratuba: móveis e equipamentos (presente dos pais)'), null);
+  assert.equal(sameReason('Assinaturas', 'Assinatura'), 'mesmo nome');
+  assert.equal(sameReason('Mercado', 'Moradia'), null);
+  assert.equal(sameReason('Restaurantes e delivery', 'Mercado'), null);
+  assert.equal(sameReason('Lazer', 'Lazer'), 'mesmo nome');
+  assert.equal(mergeSuggestions([{ name: 'Acordo Itaú', grp: 'dia' }, { name: 'Quitação do acordo Itaú', grp: 'fora' }]).length, 0, 'tipos diferentes não se juntam por nome parecido');
+  const cats = [{ name: 'Saúde', grp: 'dia' }, { name: 'Saúde e terapia', grp: 'dia' }, { name: 'Salário', grp: 'renda', recurring: true }, { name: 'Salários', grp: 'dia' },
+    { name: 'Mercado', grp: 'dia' }, { name: 'A classificar', grp: 'dia' }];
+  const s = mergeSuggestions(cats, { 'Saúde': 3, 'Saúde e terapia': 25, 'Mercado': 40 });
+  assert.equal(s.length, 1, 'receita e despesa nunca se juntam');
+  assert.deepEqual([s[0].keep, s[0].drop, s[0].dropCount], ['Saúde e terapia', 'Saúde', 3]);
+  assert.equal(mergeSuggestions(cats, {}, [pairKey('Saúde e terapia', 'Saúde')]).length, 0, 'quem disse para manter separadas não é perguntado de novo');
+  assert.deepEqual(mergeSettings({ budgets: { 'Saúde': 100, 'Saúde e terapia': 400 }, x: 1 }, 'Saúde', 'Saúde e terapia'), { budgets: { 'Saúde e terapia': 500 }, x: 1 });
+});
+
+test('insights: aviso de categorias parecidas leva para Categorias', async () => {
+  const { insights } = await import('../public/js/lib/insights.js');
+  const a = insights({ months: ['2026-10'], today: '2026-10-10', calc: () => ({ res: 0, renda: 0, out: 0, tx: 0 }), cats: () => ({}), fixed: () => 0, has: () => true, manualCount: () => 1, pending: () => 0, goals: {}, nextFatura: null, catMerge: 2 });
+  const x = a.find(i => i.id === 'cat_merge');
+  assert.ok(x); assert.equal(x.title, '2 pares de categorias parecidas'); assert.deepEqual(x.action.go, ['ajustes', '#catMerge', 'categorias']);
+});
+
+import { parseCSV, parseAmount, parseDate, detectColumns, buildEntries, markDuplicates, matchCategory } from '../public/js/lib/sheet.js';
+test('planilha: números, datas e colunas', () => {
+  assert.equal(parseAmount('R$ -1.234,56'), -1234.56); assert.equal(parseAmount('(45,00)'), -45); assert.equal(parseAmount('1,234.50'), 1234.5);
+  assert.equal(parseAmount('230'), 230); assert.equal(parseAmount(12.5), 12.5); assert.equal(parseAmount('mercado'), null);
+  assert.equal(parseDate('05/10/2026'), '2026-10-05'); assert.equal(parseDate('5/1/26'), '2026-01-05'); assert.equal(parseDate('2026-10-05'), '2026-10-05');
+  assert.equal(parseDate(46300), '2026-10-05'); assert.equal(parseDate('31/02/x'), null);
+  const csv = parseCSV('﻿Data;Descrição;Categoria;Valor;Forma de pagamento\n05/10/2026;"Padaria; pão";Mercado;-23,50;Pix\n06/10/2026;Salário;Salário;9.800,00;Conta\n07/10/2026;Posto Shell;Combustível;150,00;Cartão de crédito\n;Total;;;\n');
+  assert.equal(csv.length, 5); assert.equal(csv[1][1], 'Padaria; pão');
+  const d = detectColumns(csv);
+  assert.deepEqual([d.header, d.map.date, d.map.description, d.map.category, d.map.amount, d.map.source], [0, 0, 1, 2, 3, 4]);
+});
+
+test('planilha: lançamentos com sinal certo, categorias da família e sem duplicar', () => {
+  const rows = parseCSV('Data;Descrição;Categoria;Valor;Forma de pagamento\n05/10/2026;Padaria;Mercado;23,50;Pix\n06/10/2026;Salário;Salário;9.800,00;Conta\n27/10/2026;Posto Shell;Gasolina;150,00;Cartão de crédito\n08/10/2026;Coisa nova;Hobbies;40;Pix\n;Total;;;');
+  const cats = [{ name: 'Mercado', grp: 'dia' }, { name: 'Salário', grp: 'renda', recurring: true }, { name: 'Combustível', grp: 'dia' }];
+  const { map, header } = detectColumns(rows);
+  const r = buildEntries(rows, { map, header, categories: cats, closeDay: 24 });
+  assert.equal(r.entries.length, 4); assert.equal(r.skipped, 1);
+  const [pad, sal, posto, nova] = r.entries;
+  assert.deepEqual([pad.source, pad.amount, pad.category, pad.month], ['conta', -23.5, 'Mercado', '2026-10']);
+  assert.deepEqual([sal.amount, sal.category], [9800, 'Salário']);
+  assert.deepEqual([posto.source, posto.amount, posto.category, posto.month], ['cartao', 150, 'Combustível', '2026-11']);
+  assert.deepEqual([nova.category, nova.sheetCategory], ['A classificar', 'Hobbies']);
+  assert.equal(matchCategory('mercado', cats), 'Mercado');
+  // A chosen mapping wins ("Hobbies" -> new category "Hobbies").
+  assert.equal(buildEntries(rows, { map, header, categories: [...cats, { name: 'Hobbies', grp: 'dia' }], catMap: { Hobbies: 'Hobbies' } }).entries[3].category, 'Hobbies');
+  const marked = markDuplicates(r.entries, [{ source: 'conta', amount: -23.5, date: '2026-10-06' }]);
+  assert.deepEqual(marked.map(e => e.dup), [true, false, false, false]);
+});

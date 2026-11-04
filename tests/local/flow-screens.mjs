@@ -112,9 +112,12 @@ await page.click('.cps .tx').catch(() => {});
 // While a document is read: the symbol building itself, the step and the percentage (shown as it looks halfway).
 await step('lendo', async () => { await page.evaluate(() => import('/js/ui.js').then(m => { const b = m.busy('Lendo a parte 2 de 4...', { title: 'Arquivo 1 de 3' }); b.set('Lendo a parte 2 de 4...', 45); window.__bz = b; })); await page.waitForTimeout(900); });
 await page.evaluate(() => window.__bz?.done()); await page.waitForTimeout(300);
+// A spreadsheet: columns found, categories matched or created, rows already in the app left out.
+await step('planilha', async () => { await page.setInputFiles('#pdfIn', path.join(HERE, '../fixtures/planilha-ficticia.csv')); await page.waitForSelector('#shReview:not([hidden])', { timeout: 15000 }); }, { scrollTo: '#shReview' });
+await page.click('#shCancel').catch(() => {}); await page.click('.cfm [data-y]').catch(() => {}); await page.waitForTimeout(200);
 // Several files at once: the queue on top ("Arquivo 1 de 2") and the review of the first one.
 if (arg('pdf')) await step('varios_arquivos', async () => {
-  await page.click('#rvCancel'); await page.click('.cfm [data-y]'); await page.waitForTimeout(200);
+  if (await page.isVisible('#rvCancel')) { await page.click('#rvCancel'); await page.click('.cfm [data-y]'); await page.waitForTimeout(200); }
   await page.setInputFiles('#pdfIn', [arg('pdf'), path.join(HERE, '../fixtures/comprovante-ficticio.pdf')]); await page.waitForSelector('#rvSave', { timeout: 30000 });
 }, { scrollTo: '#qBar' });
 if (arg('pdf')) { await page.click('#quSkip').catch(() => {}); await page.waitForSelector('#quClose', { timeout: 30000 }).catch(() => page.click('#quSkip').catch(() => {})); await page.click('#quClose').catch(() => {}); }

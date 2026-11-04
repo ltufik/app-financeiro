@@ -52,3 +52,6 @@ export function docsText(source, keys) {
   if (keys.includes('')) parts.push(source === 'cartao' ? 'uma fatura enviada antes' : 'um extrato enviado antes');
   return andList(parts);
 }
+
+// The short tag on each entry: "cartão 4388" for a card, "conta Santander" for a bank account (@santander).
+export const shortTag = k => !k ? '' : String(k).startsWith('@') ? 'conta ' + String(k).charAt(1).toUpperCase() + String(k).slice(2) : 'cartão ' + k;

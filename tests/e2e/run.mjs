@@ -69,6 +69,8 @@ async function addRoutes(t) {
     r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
   });
   await t.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
+  // --xlsx <xlsx.full.min.js>: the Excel reader the app loads from the CDN (installed on GitHub; not available offline).
+  if (arg('xlsx')) await t.route('https://cdn.jsdelivr.net/npm/xlsx@*/**', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(arg('xlsx')) }));
   // --pdfjs3 <pdfjs-dist@3.11.174 dir>: the same PDF reader the app loads in production (used on GitHub).
   const PDF3 = arg('pdfjs3'), pick = (...fs_) => fs_.map(f => path.join(PDF3, 'build', f)).find(f => fs.existsSync(f));
   if (PDF3) {
@@ -259,6 +261,33 @@ ok('voltar da seção reabre o menu', true);
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 await page.click('[data-tab=resumo]');
 
+// The family's old control sheet: CSV (always) and Excel with two tabs (when the Excel reader is available).
+async function sheetTests(tag) {
+  await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="pdf"]');
+  await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/planilha-ficticia.csv'));
+  await page.waitForSelector('#shReview:not([hidden])', { timeout: 15000 }).catch(() => {});
+  const sh = await txt('#shReview');
+  ok(tag + 'planilha CSV: acha as colunas e mostra a revisão', sh.includes('Planilha: 6 lançamentos') && sh.includes('Categorias da planilha') && sh.includes('Criar "Academia" no app') && sh.includes('linha sem data ou valor ficou de fora'), sh.slice(0, 300));
+  await page.click('#shSave'); await page.waitForSelector('.cfm [data-y]');
+  ok(tag + 'planilha: salvar pede confirmação e diz as categorias novas', (await txt('.cfm')).includes('Salvar 6 lançamentos') && (await txt('.cfm')).includes('"Academia"'));
+  await page.click('.cfm [data-y]');
+  await page.waitForFunction(() => window.__db.transactions.some(t => t.description === 'Academia Movimento'), null, { timeout: 15000 }).catch(() => {});
+  const got = await page.evaluate(() => { const f = d => window.__db.transactions.find(t => t.description === d); return { acad: f('Academia Movimento'), posto: f('Posto Avenida'), sal: f('Salário Ana'), cat: window.__db.categories.find(c => c.name === 'Academia'), imp: window.__db.imports.some(i => i.source === 'planilha') }; });
+  ok(tag + 'planilha: salva com conta e cartão, sinal certo, categoria criada e registro em Importações', got.acad?.amount === -129.9 && got.acad?.category === 'Academia' && got.posto?.source === 'cartao' && got.posto?.amount === 210 && got.sal?.amount === 8200 && !!got.cat && got.imp, JSON.stringify(got).slice(0, 300));
+  await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/planilha-ficticia.csv'));
+  await page.waitForSelector('#shReview:not([hidden])', { timeout: 15000 }).catch(() => {});
+  ok(tag + 'planilha de novo: o que já está no app fica de fora', (await txt('#shReview')).includes('6 linhas já estão no app') && await page.isDisabled('#shSave'), await txt('#shReview'));
+  await page.click('#shCancel'); await page.click('.cfm [data-y]').catch(() => {});
+  if (arg('xlsx')) {
+    await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/planilha-ficticia.xlsx'));
+    await page.waitForSelector('#shReview:not([hidden])', { timeout: 20000 }).catch(() => {});
+    const xs = await txt('#shReview');
+    ok(tag + 'planilha Excel com duas abas e título em cima', xs.includes('Planilha: 5 lançamentos') && xs.includes('2 abas'), xs.slice(0, 200) + ' | ' + await txt('#pdfLog'));
+    await page.click('#shCancel'); await page.click('.cfm [data-y]').catch(() => {});
+  }
+}
+
+await sheetTests(SMOKE ? 'safari: ' : '');
 if (SMOKE) { // The rest needs real family data: in the smoke run, check the main ways to add entries and stop.
   await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="falar"]');
   await page.fill('#qText', 'gastei 230 no mercado hoje no cartão e 350 de terapia por pix'); await page.click('#qGo');
@@ -554,6 +583,15 @@ await shot('06-perguntar');
 await page.click('[data-tab=extrato]');
 const nrows = await page.$$eval('#lRows li', r => r.length);
 ok('extrato lista lançamentos', nrows > 0, nrows + ' linhas');
+{ // Filter by category: only that category, with its total.
+  const opts = await page.$$eval('#lCat option', o => o.map(x => x.value).filter(Boolean));
+  if (opts.length) {
+    await page.selectOption('#lCat', opts[0]); await page.waitForTimeout(150);
+    const cnt = await txt('#lCount'), shown = await page.$$eval('#lRows li', r => r.length);
+    ok('extrato: filtrar por categoria mostra só ela e o total dela', shown > 0 && shown <= nrows && cnt.includes('de ' + opts[0]), cnt);
+    await page.selectOption('#lCat', '');
+  }
+}
 if (nrows) {
   await page.click('#lRows li:not([data-split]) .chip');
   await page.waitForSelector('.cps');
@@ -628,6 +666,14 @@ ok('renomear para nome repetido é recusado', (await txt('#catList')).includes('
 await page.fill('#catList .catname input', 'Farmácia e saúde'); await page.click('#catList [data-ok]'); await page.waitForSelector('.cfm [data-y]');
 await page.click('.cfm [data-y]'); await page.waitForTimeout(200);
 ok('categoria renomeada', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Farmácia e saúde')));
+// Similar categories: the app suggests joining them; joining moves everything and removes the other.
+await page.fill('#cNew', 'Mercados'); await page.click('#cAdd'); await page.click('.cfm [data-y]'); await page.waitForTimeout(200);
+const mcard = '#catMerge .mergecard:has-text("Mercados")';
+ok('categorias parecidas: o app sugere juntar Mercados e Mercado', await page.isVisible(mcard) && (await txt(mcard)).includes('mesmo nome'), await txt('#catMerge'));
+await page.click(mcard + ' [data-mj]'); await page.waitForSelector('.cfm [data-y]');
+ok('juntar pede confirmação e explica o que acontece', (await txt('.cfm')).includes('deixa de existir'));
+await page.click('.cfm [data-y]'); await page.waitForTimeout(300);
+ok('juntar categorias: a outra some e o aviso diz para onde foram', await page.evaluate(() => !window.__db.categories.some(c => c.name === 'Mercados')) && /passa(ram|u) para Mercado/.test(await txt('#toast')), await txt('#toast'));
 // product metrics (admin)
 await sec('metricas');
 await page.waitForSelector('#metricsBox .funnel');

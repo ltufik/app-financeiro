@@ -114,6 +114,23 @@ select (select category from transactions where household_id = :'hr') as tc, (se
 \echo (o erro a seguir é esperado: nome repetido)
 select public.rename_category(:'cid', 'mercado');
 
+-- Juntar categorias: tudo passa para a que fica e a outra some; outra família não consegue
+\set ON_ERROR_STOP on
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+insert into categories(household_id, name, grp) values (:'hr', 'Remédios', 'dia');
+insert into transactions(household_id, source, month, description, amount, category) values (:'hr', 'cartao', '2026-10', 'DROGA', 30, 'Remédios');
+select public.learn_rule(:'hr', 'cartao', 'DROGA', 'Remédios');
+select id as rid from categories where household_id = :'hr' and name = 'Remédios' \gset
+select public.merge_category(:'rid', :'cid') as moved \gset
+select (select count(*) from categories where household_id = :'hr' and name = 'Remédios') as left_cat, (select category from transactions where household_id = :'hr' and description = 'DROGA') as mtc, (select category from rules where household_id = :'hr' and pattern = 'DROGA') as mrc \gset
+\echo juntar categorias: movidos :moved, sobrou a antiga :left_cat, lançamento :mtc, regra :mrc
+insert into categories(household_id, name, grp) values (:'hr', 'Outra', 'dia');
+select id as oid from categories where household_id = :'hr' and name = 'Outra' \gset
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: A não é da família R)
+select public.merge_category(:'oid', :'cid');
 -- Avisos: cada um vê só os próprios aparelhos; o mesmo aparelho troca de dono
 \set ON_ERROR_STOP on
 set role authenticated;

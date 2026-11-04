@@ -118,6 +118,9 @@ export function insights(ctx) {
   const fx = ctx.fixed ? ctx.fixed(m) : 0;
   if (c.renda > 0 && fx / c.renda >= 0.5) out.push({ id: 'fixed', tone: 'info', title: 'Despesas fixas pesando', text: `As despesas fixas levam ${P(fx / c.renda)} da renda. O ideal é ficar abaixo de 50%: sobra mais espaço para imprevistos e para guardar.` });
 
+  // 5b. Categories that look like the same thing: joining them makes charts and budgets clearer.
+  if (ctx.catMerge > 0) out.push({ id: 'cat_merge', tone: 'info', title: ctx.catMerge > 1 ? `${ctx.catMerge} pares de categorias parecidas` : 'Duas categorias parecem a mesma', text: ctx.catMergeText || 'O app achou categorias que parecem a mesma coisa. Juntar deixa os gráficos e o orçamento mais claros.', action: { label: 'Ver e juntar', go: ['ajustes', '#catMerge', 'categorias'] } });
+
   // 6. Things to classify
   const pend = ctx.pending(m);
   if (pend) out.push({ id: 'pending', tone: 'info', title: `${pend} lançamento${pend > 1 ? 's' : ''} para conferir`, text: 'O app sugeriu a categoria, mas não tem certeza. Confira para a sobra e os gráficos ficarem certos; ele aprende e não pergunta de novo.', action: { label: 'Conferir', go: ['extrato', '#lPend'] } });

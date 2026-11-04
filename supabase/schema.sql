@@ -508,6 +508,27 @@ begin
     where t.household_id = c.household_id and t.splits is not null and t.splits @> jsonb_build_array(jsonb_build_object('category', c.name));
 end $$;
 
+-- Junta duas categorias da família: lançamentos, regras e partes de nota passam para a que fica, e a outra
+-- deixa de existir. Tudo de uma vez (ou nada).
+create or replace function public.merge_category(p_from uuid, p_into uuid)
+returns int language plpgsql security definer set search_path = public as $$
+declare a record; b record; n int;
+begin
+  select * into a from categories where id = p_from;
+  select * into b from categories where id = p_into;
+  if a is null or b is null or not public.is_member(a.household_id) or a.household_id <> b.household_id then raise exception 'not_member'; end if;
+  if p_from = p_into then raise exception 'same'; end if;
+  update transactions set category = b.name where household_id = a.household_id and category = a.name;
+  get diagnostics n = row_count;
+  update rules set category = b.name where household_id = a.household_id and category = a.name;
+  update transactions t set splits = (select jsonb_agg(case when x->>'category' = a.name then jsonb_set(x, '{category}', to_jsonb(b.name)) else x end) from jsonb_array_elements(t.splits) x)
+    where t.household_id = a.household_id and t.splits is not null and t.splits @> jsonb_build_array(jsonb_build_object('category', a.name));
+  delete from categories where id = p_from;
+  return n;
+end $$;
+revoke all on function public.merge_category(uuid, uuid) from public, anon;
+grant execute on function public.merge_category(uuid, uuid) to authenticated;
+
 -- Table access for signed-in users (row-level security above still limits rows to their family).
 -- Explicit, so it works even when the project does not expose new tables automatically.
 grant usage on schema public to authenticated;
