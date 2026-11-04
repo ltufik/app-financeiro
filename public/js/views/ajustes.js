@@ -1,9 +1,9 @@
-import { S, settings, goals, reindex, monthKeys, txsOf } from '../state.js';
+import { S, settings, goals, reindex, monthKeys, txsOf, presets } from '../state.js';
 import * as db from '../db.js';
 import { track } from '../usage.js';
 import { KINDS, kindOf, kindByKey, byCategory } from '../lib/calc.js';
 import { suggestBudgets, budgetsOf } from '../lib/budget.js';
-import { esc, todayISO } from '../lib/format.js';
+import { esc, todayISO, brl } from '../lib/format.js';
 import { $, toast, validate, invalid, clearInvalid, confirmInline } from '../ui.js';
 import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
 import { installHelpHTML, wireInstall, expandSteps } from '../steps.js';
@@ -60,6 +60,10 @@ export function render(el) {
     <p class="tiny muted">Quanto querem ter investido no futuro e com que idade. O app mostra se o que guardam hoje leva até lá.</p>
     <div class="grid3">${num('gPat', 'Quanto querem ter investido (R$)', g.patrimonio)}${num('gAge', 'Sua idade hoje', g.ageNow)}${num('gAgeGoal', 'Com que idade querem chegar lá', g.ageGoal)}
       ${num('gRet', 'Rendimento acima da inflação (% ao ano). Na dúvida, deixe 5', (g.ret ?? 0.05) * 100)}</div>
+    <h3>4. Quanto vocês acham que conseguem guardar</h3>
+    <p class="tiny muted" id="gPaceHint">O Início mostra o sonho com a média do que sobrou de verdade nos últimos meses. Aqui vocês dizem o que acham possível, e ele vira mais um cenário.</p>
+    <div class="grid3">${num('gPlan', 'Por mês (R$)', g.planMonthly)}${num('gPlanY', 'Extra por ano: 13º, PLR, bônus (R$)', g.planYearly)}</div>
+    <div id="gScen"></div>
     <div><button class="btn primary" id="gSave" type="button">Salvar metas</button></div>
     <h3 style="margin-top:10px">Orçamento por categoria</h3>
     <p class="tiny muted">Um limite por mês para as categorias que mais pesam. O Início mostra quanto já foi usado e o app avisa antes de estourar.</p>
@@ -210,11 +214,27 @@ export function render(el) {
       [$('#gAge'), checkNumber($('#gAge').value, { min: 0, max: 120, integer: true, label: 'Sua idade hoje', allowEmpty: true })],
       [$('#gAgeGoal'), checkNumber($('#gAgeGoal').value, { min: 1, max: 120, integer: true, label: 'Com que idade querem chegar lá', allowEmpty: true }) || ($('#gAge').value && $('#gAgeGoal').value && +$('#gAgeGoal').value <= +$('#gAge').value ? 'A idade da meta precisa ser maior que a idade de hoje.' : '')],
       [$('#gRet'), checkNumber($('#gRet').value, { min: -10, max: 30, label: 'Rendimento acima da inflação (%)', allowEmpty: true })],
+      [$('#gPlan'), checkNumber($('#gPlan').value, { min: 0, max: 1e6, label: 'Quanto conseguem guardar por mês', allowEmpty: true })],
+      [$('#gPlanY'), checkNumber($('#gPlanY').value, { min: 0, max: 1e7, label: 'Extra por ano', allowEmpty: true })],
       [$('#gClose'), checkNumber($('#gClose').value, { min: 1, max: 31, integer: true, label: 'Dia em que a fatura fecha', allowEmpty: true })],
     ]);
     if (!ok) return;
-    save({ goals: { ...g, cardMonthly: val('gCard'), savings: val('gSav') / 100, savingsNoFin: val('gSav2') / 100, patrimonio: val('gPat'), ageNow: val('gAge') || null, ageGoal: val('gAgeGoal') || null, ret: val('gRet') / 100 }, goalsSet: true, cardCloseDay: Math.min(31, Math.max(1, val('gClose') || 24)) }, 'Metas salvas');
+    save({ goals: { ...g, cardMonthly: val('gCard'), savings: val('gSav') / 100, savingsNoFin: val('gSav2') / 100, patrimonio: val('gPat'), ageNow: val('gAge') || null, ageGoal: val('gAgeGoal') || null, ret: val('gRet') / 100, planMonthly: val('gPlan') || 0, planYearly: val('gPlanY') || 0 }, goalsSet: true, cardCloseDay: Math.min(31, Math.max(1, val('gClose') || 24)) }, 'Metas salvas');
   };
+
+  // The dream's scenarios: the real average (always computed) and the ones saved before, which can be removed.
+  const drawScen = () => {
+    const box = $('#gScen'); if (!box) return;
+    const pr = presets(), avg = pr[0], saved = pr.filter(x => x[4]);
+    $('#gPaceHint').textContent = `O Início mostra o sonho com a média do que sobrou de verdade: ${brl(avg[1])} por mês (${avg[3]}). Aqui vocês dizem o que acham possível, e ele vira mais um cenário.`;
+    box.innerHTML = saved.length ? `<p class="tiny muted" style="margin:6px 0 4px">Cenários salvos antes</p><ul class="list small">${saved.map(x => `<li><span>${esc(x[0])}: ${brl(x[1])}/mês${x[2] ? ' + ' + brl(x[2]) + '/ano' : ''}</span><button class="chip" type="button" data-rmscen="${esc(x[0])}">Remover</button></li>`).join('')}</ul>` : '';
+    box.querySelectorAll('[data-rmscen]').forEach(b => b.onclick = async () => {
+      if (!await confirmInline(b, { text: `Remover o cenário "${esc(b.dataset.rmscen)}"?`, yes: 'Sim, remover', danger: true })) return;
+      const st2 = { ...settings(), presets: (settings().presets || []).filter(p => p[0] !== b.dataset.rmscen) };
+      try { await db.saveSettings(S.hh.id, st2); S.hh.settings = st2; toast('Cenário removido'); drawScen(); } catch (e) { toast('Não foi possível remover.'); }
+    });
+  };
+  drawScen();
 
   // budget per category
   const dayCats = S.categories.filter(c => c.grp === 'dia' && c.name !== 'A classificar').map(c => c.name).sort((a, b) => a.localeCompare(b, 'pt'));

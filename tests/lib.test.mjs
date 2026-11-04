@@ -770,3 +770,23 @@ test('extrato dividido em dois arquivos: a segunda parte entra junto, sem apagar
   const twin = [mk('05/10', 'PIX PADARIA', -20), mk('05/10', 'PIX PADARIA', -20)];
   assert.deepEqual(compareStatement({ keys: ['@santander'], rows: twin, existing: [twin[0]] }).fresh, [1]);
 });
+
+import { averagePace, paceScenarios } from '../public/js/lib/goalplan.js';
+test('sonho: ritmo atual é a média real dos últimos meses, não um número fixo', () => {
+  const rows = [{ month: '2026-06', res: 9000 }, { month: '2026-08', res: 4210 }, { month: '2026-09', res: 2990 }, { month: '2026-10', res: 5100 }];
+  const a = averagePace(rows);
+  assert.equal(a.value, 4100); assert.deepEqual(a.months, ['2026-08', '2026-09', '2026-10']); assert.equal(a.text, 'ago a out');
+  assert.equal(averagePace([{ month: '2026-10', res: -800 }]).value, 0);
+  const sc = paceScenarios({ rows, goals: { planMonthly: 6000, planYearly: 40000 }, saved: [['Ritmo atual', 1000, 0], ['Cartão em R$ 17 mil', 7000, 0]] });
+  assert.deepEqual(sc.map(s => [s.name, s.monthly, s.yearly]), [['Média dos últimos 3 meses', 4100, 0], ['O plano de vocês', 6000, 40000], ['+ R$ 1.000 por mês', 5100, 0], ['Cartão em R$ 17 mil', 7000, 0]]);
+  assert.match(sc[0].note, /o que sobrou de verdade em ago a out/);
+  assert.equal(paceScenarios({ rows: [] })[0].note, 'aparece quando houver meses com o extrato da conta');
+});
+
+test('gráfico: sobra acumulada soma mês a mês', async () => {
+  const { buildChart, chartSVG } = await import('../public/js/lib/charts.js');
+  const src = { months: ['2026-08', '2026-09', '2026-10'], calc: k => ({ res: { '2026-08': 1000, '2026-09': -200, '2026-10': 3000 }[k] }), cats: () => ({}) };
+  const d = buildChart({ title: 'Acumulado', type: 'linha', metric: 'acumulada', period: { kind: 'faixa', from: '2026-08', to: '2026-10' } }, src);
+  assert.deepEqual(d.series[0].values, [1000, 800, 3800]); assert.equal(d.unit, 'brl');
+  assert.doesNotMatch(chartSVG(d, { title: 'x' }), /NaN|undefined/);
+});

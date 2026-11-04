@@ -6,6 +6,7 @@ export const METRICS = {
   categorias: 'Despesas por categoria',
   escolhidas: 'Categorias que eu escolher',
   sobra: 'Sobra do mês',
+  acumulada: 'Sobra acumulada (soma mês a mês)',
   rendaGastos: 'Receitas e despesas',
   cartao: 'Fatura do cartão',
   taxa: 'Taxa de poupança',
@@ -70,6 +71,7 @@ export function buildChart(c, src) {
   const C = ms.map(k => src.calc(k));
   const S = {
     sobra: [{ name: 'Sobra', values: C.map(x => x.res) }],
+    acumulada: [{ name: 'Acumulado', values: C.reduce((a, x) => (a.push((a[a.length - 1] || 0) + (x.res || 0)), a), []) }],
     rendaGastos: [{ name: 'Receitas', values: C.map(x => x.E) }, { name: 'Despesas', values: C.map(x => x.out) }],
     cartao: [{ name: 'Fatura', values: C.map(x => x.cardTotal) }],
     taxa: [{ name: 'Poupança', values: C.map(x => x.tx) }],

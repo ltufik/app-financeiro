@@ -1,6 +1,7 @@
 // App state and derived values shared by the views.
 import { catIndex, monthCalc, sumCalcs, schedule, project, needPmt } from './lib/calc.js';
 import { prepareRules } from './lib/categorize.js';
+import { paceScenarios } from './lib/goalplan.js';
 import { addM, diffM, thisMonth } from './lib/format.js';
 
 export const S = {
@@ -65,10 +66,9 @@ export function patrimonio() {
   return { total: rows.reduce((a, r) => a + r.value, 0), rows };
 }
 
+// Scenarios for the dream: the real average of the last complete months (with the bank statement, before this
+// month), the family's own plan (Metas) and the scenarios saved before. [name, monthly, yearly, note, saved].
 export function presets() {
-  const st = settings();
-  if (st.presets && st.presets.length) return st.presets;
-  const ks = closedKeys('conta').slice(-3);
-  const avg = ks.length ? Math.max(0, Math.round(calcMonths(ks).res / ks.length / 100) * 100) : 0;
-  return [['Ritmo atual', avg, 0], ['+ R$ 1.000 por mês', avg + 1000, 0], ['+ R$ 2.000 por mês', avg + 2000, 0]];
+  const rows = closedKeys('conta').filter(k => k < thisMonth()).map(k => ({ month: k, res: calcMonth(k).res }));
+  return paceScenarios({ rows, goals: goals(), saved: settings().presets }).map(x => [x.name, x.monthly, x.yearly, x.note, !!x.saved]);
 }

@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -220,5 +220,14 @@ export const RELEASES = [
     'As novidades e os recados para você aparecem logo que o app abre, sem espera.',
   ] }, addBacklog: [
     { id: 'bug_novidade_demorava', tipo: 'bug', title: 'Pop-up de novidade demorava uns 10 segundos para aparecer', status: 'feito', origin: 'Erro de Luiz', effort: 'P', problem: 'Ao abrir o app depois de uma versão nova, o pop-up só aparecia depois de uns 10 segundos', cost: false, notes: 'Causa: para responder "tem novidade?", o servidor primeiro aplicava a versão nova inteira (backlog, recados e o push para todos, um aparelho por vez), e o app só perguntava quase 1 segundo depois de abrir. Correção: a resposta sai na hora, com as novidades do código; aplicar a versão virou uma chamada à parte que o app não espera (no máximo 1,5 s, só para o recado de quem pediu); os pushes saem 10 de cada vez; novidades e recados começam a carregar junto com os dados. Também corrigido: novidade com data um pouco à frente voltava a aparecer. Teste automático cobra menos de 2 segundos. Lição: o que o usuário espera não pode depender de trabalho pesado do servidor.', from: [], where: 'Ao abrir o app' },
+  ] },
+  { id: 'r83', version: 'v83', at: '2026-11-04T15:46:00Z', backlog: [], news: { id: 'n20261104g', title: 'O sonho com os seus números', items: [
+    'No Início, o ritmo do sonho agora é a média do que sobrou de verdade nos últimos 3 meses, e muda sozinho a cada mês.',
+    'Em Metas, digam quanto acham que conseguem guardar por mês e o extra do ano (13º, PLR): vira o cenário "O plano de vocês".',
+    'Em Gráficos, modelos prontos: quanto sobrou em cada mês e quanto já guardaram no ano, somando mês a mês.',
+  ] }, addDocs: [DOC_SONHO], addBacklog: [
+    { id: 'bug_ritmo_fixo_do_sonho', tipo: 'bug', title: 'Ritmo do sonho era um número fixo (R$ 1.000/mês)', status: 'feito', origin: 'Erro de Luiz', effort: 'P', problem: 'O cartão do sonho dizia "Ritmo atual: R$ 1.000/mês" sem relação com o que a família guarda hoje', cost: false, notes: 'Causa: os cenários vieram do backup da planilha antiga, com o "Ritmo atual" escrito à mão, e o app usava os cenários salvos no lugar da conta. Correção: o primeiro cenário é sempre a média real da sobra dos 3 últimos meses completos, com os meses ao lado; o "Ritmo atual" fixo é descartado; os outros cenários salvos continuam e podem ser removidos em Metas. Com os dados da família: R$ 3.600/mês (jul a set).', from: [], where: 'Início → Sonho' },
+    { id: 'plano_de_quanto_guardar', title: 'Metas: quanto a família acha que consegue guardar', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Só dava para ver o sonho com cenários fixos', cost: false, notes: 'Campos "por mês" e "extra por ano" em Metas; vira o cenário "O plano de vocês". Valor e idade do sonho já eram de cada família.', from: [], where: 'Menu ☰ → Família e metas → Metas' },
+    { id: 'grafico_sobra_acumulada', title: 'Gráfico da sobra acumulada e modelos prontos sempre à mão', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não havia como ver quanto já guardaram no ano, somando mês a mês', cost: false, notes: 'Novo "Sobra acumulada (soma mês a mês)" e modelos prontos (sobra de cada mês, acumulado no ano, % da renda), que aparecem mesmo para quem já salvou gráficos.', from: [], where: 'Gráficos' },
   ] },
 ];

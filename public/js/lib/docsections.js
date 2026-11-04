@@ -57,3 +57,17 @@ export const DOC_TESTES = { id: 'caderno_doc', title: 'Caderno de testes', body:
 - Toda versão com algo visível precisa trazer seus casos (Definição de pronto; o teste automático bloqueia a publicação sem eles).` };
 
 export const NEW_DOCS = [DOC_LANCAR, DOC_CATEGORIAS, DOC_AVISOS, DOC_TESTES];
+
+export const DOC_SONHO = { id: 'sonho_doc', title: 'O sonho e quanto a família guarda', body: `## De onde vêm os números
+- Sobra do mês = receitas fixas e variáveis menos despesas fixas e variáveis (conta e cartão). Extras ficam fora.
+- O sonho (valor e idade) é de cada família: menu ☰ → Família e metas → Metas.
+## Cenários do sonho, no Início
+| Cenário | De onde vem |
+| Média dos últimos 3 meses | Calculada sempre: a média da sobra dos 3 últimos meses completos (com o extrato da conta, antes do mês atual). Se der negativa, conta como zero. Os meses aparecem ao lado. |
+| O plano de vocês | O que a família disse em Metas que consegue guardar por mês, mais o extra por ano (13º, PLR, bônus). |
+| + R$ 1.000 por mês | A média mais R$ 1.000. |
+| Cenários salvos | Os que vieram de antes (por exemplo, do backup); dá para remover em Metas. |
+- Um "Ritmo atual" com número fixo, vindo de planilha ou backup antigo, é trocado pela média calculada.
+## Ver quanto guardaram
+- Início: escolha o mês no topo para ver a sobra e a porcentagem guardada; o gráfico de barras mostra a taxa de cada mês.
+- Gráficos prontos: "Quanto sobrou em cada mês", "Quanto já guardamos no ano" (acumulado) e "Quanto guardamos da renda".` };

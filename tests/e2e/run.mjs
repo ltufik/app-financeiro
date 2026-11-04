@@ -367,6 +367,16 @@ if (backup) {
   ok('setembro: 6% e 18%', pills.includes('Guardaram 6% · queriam 20%') && pills.includes('Sem contar o financiamento 18%'), pills);
   ok('próxima fatura com parcelas', (await txt('#v-resumo')).includes('Parcelas R$ 8.401'));
   ok('meta e patrimônio aparecem', (await txt('#v-resumo')).includes('Sonho: R$ 3.000.000 investidos aos 55 anos'));
+  { // The pace is the real average of the last complete months, never the old fixed "Ritmo atual".
+    const gb = await txt('#goalBox');
+    ok('sonho: ritmo pela média real dos últimos 3 meses, com os meses', gb.includes('Média dos últimos 3 meses') && /o que sobrou de verdade em [a-z]{3} a [a-z]{3}/.test(gb) && !gb.includes('Ritmo atual') && gb.includes('Cartão em R$ 17 mil'), gb.slice(0, 300));
+    await sec('metas');
+    await page.fill('#gPlan', '6000'); await page.fill('#gPlanY', '40000'); await page.click('#gSave'); await page.waitForTimeout(400);
+    ok('metas: o plano de quanto conseguem guardar é salvo', await page.evaluate(() => { const h = window.__db.households[0]; return h.settings.goals.planMonthly === 6000 && h.settings.goals.planYearly === 40000; }));
+    ok('metas: mostra a média real e os cenários salvos, que dá para remover', (await txt('#gPaceHint')).includes('a média do que sobrou de verdade') && await page.isVisible('#gScen [data-rmscen]'));
+    await page.click('[data-tab=resumo]'); await page.waitForTimeout(200);
+    ok('sonho: o plano de vocês vira um cenário', (await txt('#goalBox')).includes('O plano de vocês'));
+  }
   await shot('03-resumo-setembro');
   await page.selectOption('#monthSel', 'ano:2026');
   ok('ano: sobra R$ 53.494', (await txt('#v-resumo .big')).includes('53.494'));
@@ -487,6 +497,10 @@ await shot('04c-graficos');
 await page.click('#v-graficos [data-del]'); await page.waitForSelector('.cfm');
 ok('remover gráfico pede confirmação', (await txt('.cfm')).includes('Remover o gráfico'));
 await page.click('.cfm [data-n]');
+// With a saved chart, the ready-made ones stay at hand (accumulated savings included).
+ok('gráficos prontos continuam à mão, com a sobra acumulada', await page.isVisible('#chModels') && (await txt('#chModels')).includes('Quanto já guardamos no ano'));
+await page.click('#chModels summary'); await page.waitForTimeout(150);
+ok('sobra acumulada desenha a linha mês a mês', await page.$$eval('#chModels .chcard', cs => cs.some(c => /Quanto já guardamos no ano/.test(c.textContent) && c.querySelector('svg path, svg polyline, svg circle'))));
 await page.click('[data-tab=lancar]');
 
 const fatura = arg('fatura');

@@ -154,8 +154,9 @@ function renderGoal(box, G, pr) {
   const need = Math.ceil(needPmtFor(p[2], G.patrimonio) / 50) * 50;
   box.innerHTML = `<h3>Sonho: ${brl0(G.patrimonio)} investidos${G.ageGoal ? ' aos ' + G.ageGoal + ' anos' : ''}</h3>
     <div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(end)}</div>
-    <p class="small muted">${esc(p[0])}: aporte de ${brl0(p[1])}/mês${p[2] ? ' + ' + brl0(p[2]) + '/ano' : ''}, retorno de ${pct(G.ret ?? 0.05)} ao ano acima da inflação. ${end >= G.patrimonio ? 'Nesse ritmo, vocês chegam lá.' : 'Para chegar lá, o aporte mensal precisa ser de ' + brl0(need) + '.'}</p>
-    <div class="chips" style="margin-top:10px">${pr.map((x, i) => `<button class="chip" type="button" aria-pressed="${i === goalPreset}" data-i="${i}">${esc(x[0])}</button>`).join('')}</div>`;
+    <p class="small muted">${esc(p[0])}${p[3] ? ` (${esc(p[3])})` : ''}: aporte de ${brl0(p[1])}/mês${p[2] ? ' + ' + brl0(p[2]) + '/ano' : ''}, retorno de ${pct(G.ret ?? 0.05)} ao ano acima da inflação. ${end >= G.patrimonio ? 'Nesse ritmo, vocês chegam lá.' : 'Para chegar lá, o aporte mensal precisa ser de ' + brl0(need) + '.'}</p>
+    <div class="chips" style="margin-top:10px">${pr.map((x, i) => `<button class="chip" type="button" aria-pressed="${i === goalPreset}" data-i="${i}">${esc(x[0])}</button>`).join('')}</div>
+    <p class="tiny muted" style="margin-top:6px">Quanto acham que conseguem guardar, a idade e o valor do sonho: menu ☰ → Família e metas → Metas.</p>`;
   box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { goalPreset = +b.dataset.i; renderGoal(box, G, pr); });
 }
 

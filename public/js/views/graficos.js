@@ -9,7 +9,9 @@ import { TYPES, METRICS, BREAKDOWN, PERIODS, periodMonths, checkChart, buildChar
 
 const SUGGESTED = [
   { id: 'sug1', title: 'Para onde foi o dinheiro', type: 'pizza', metric: 'categorias', period: { kind: 'mes' } },
-  { id: 'sug2', title: 'Sobra mês a mês', type: 'barra', metric: 'sobra', period: { kind: 'm6' } },
+  { id: 'sug2', title: 'Quanto sobrou em cada mês', type: 'barra', metric: 'sobra', period: { kind: 'm12' } },
+  { id: 'sug3', title: 'Quanto já guardamos no ano', type: 'linha', metric: 'acumulada', period: { kind: 'ano' } },
+  { id: 'sug4', title: 'Quanto guardamos da renda', type: 'barra', metric: 'taxa', period: { kind: 'm12' } },
 ];
 let editing = null; // chart being edited (copy), or null
 
@@ -42,7 +44,9 @@ export function render(el) {
   el.innerHTML = `<div class="panel stack"><div class="ch-head"><div><h2>Gráficos</h2><p class="small muted">Monte do seu jeito: escolha o tipo, o que mostrar e o período.</p></div>
       <button class="btn primary" type="button" id="chNew">Criar gráfico</button></div><div id="chForm"></div></div>
     ${list.map(c => card(c, true)).join('')}
-    ${list.length ? '' : `<p class="small muted" style="margin:0 2px">Sugestões para começar. Toque em "Salvar este" para guardar ou em "Criar gráfico" para fazer o seu.</p>${SUGGESTED.map(c => card(c, false)).join('')}`}`;
+    ${(() => { const left = SUGGESTED.filter(x => !list.some(c => c.metric === x.metric && c.type === x.type)); if (!left.length) return '';
+      return list.length ? `<details class="more" id="chModels"><summary><span><strong>Gráficos prontos</strong><br><span class="tiny muted">${left.length} ${left.length > 1 ? 'modelos' : 'modelo'}: ${left.map(x => esc(x.title)).join(', ')}</span></span></summary><div class="stack">${left.map(c => card(c, false)).join('')}</div></details>`
+        : `<p class="small muted" style="margin:0 2px">Sugestões para começar. Toque em "Salvar este" para guardar ou em "Criar gráfico" para fazer o seu.</p>${left.map(c => card(c, false)).join('')}`; })()}`;
   $('#chNew').onclick = () => openForm(el, { id: 'c' + Date.now().toString(36), title: '', type: 'pizza', metric: 'categorias', cats: [], period: { kind: 'mes' } }, false);
   el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openForm(el, JSON.parse(JSON.stringify(list.find(c => c.id === b.dataset.edit))), true));
   el.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
