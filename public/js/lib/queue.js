@@ -26,3 +26,15 @@ export function queueSummary(q) {
   return { head: head + (q.extra ? ` ${plural(q.extra, 'arquivo ficou', 'arquivos ficaram')} de fora (máximo de ${QUEUE_MAX} por vez).` : ''), lines: q.items.map(x => ({ name: x.name, status: x.status, label: x.label })) };
 }
 export const STATUS_LABEL = { espera: 'na fila', lendo: 'agora', salvo: 'salvo', descartado: 'descartado', pulado: 'pulado', erro: 'não deu para ler' };
+
+// How far the reading got, from the step being shown ("Lendo a parte 2 de 5..."), for the progress pop-up.
+// null = unknown: the bar keeps creeping on its own.
+export function progressOf(text = '') {
+  const t = String(text), m = t.match(/(?:parte|página) (\d+) de (\d+)/i);
+  if (m) return 15 + 60 * (Math.max(1, +m[1]) - 1) / Math.max(1, +m[2]);
+  if (/Pedindo sugestão|categoria/i.test(t)) return 82;
+  if (/lid[oa]:|conferem|confere|fecham/i.test(t)) return 78;
+  if (/leitura inteligente|Lendo a imagem|Vendo o que/i.test(t)) return 12;
+  if (/^(Lendo|Abrindo) /i.test(t)) return 5;
+  return null;
+}

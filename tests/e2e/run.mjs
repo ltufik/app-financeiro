@@ -460,8 +460,10 @@ if (fatura && backup) {
   await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
   await page.click('.ltile[data-mode="pdf"]');
   await page.setInputFiles('#pdfIn', fatura);
-  await page.waitForSelector('.busy', { timeout: 5000 }).catch(() => {});
-  ok('enquanto lê o PDF, aparece "Só um instante" com o passo', true);
+  await page.waitForSelector('.busyov', { timeout: 5000 }).catch(() => {});
+  const bz = await page.evaluate(() => { const b = document.querySelector('.busyov'); return b ? { t: b.querySelector('#bzT').textContent, s: b.querySelector('#bzS').textContent, p: b.querySelector('.bzpct').textContent, logo: !!b.querySelector('.bzlogo .b4') } : null; });
+  ok('enquanto lê o PDF, aparece o pop-up com o símbolo, o passo e o percentual', !!bz && bz.t === 'Lendo o documento' && /Lendo|Abrindo/.test(bz.s) && /^\d+%$/.test(bz.p) && bz.logo, JSON.stringify(bz));
+  if (shots) await page.screenshot({ path: path.join(shots, '05a-lendo.png') });
   await page.waitForSelector('#rvSave', { timeout: 30000 });
   const log = await txt('#pdfLog');
   ok('fatura lida com totais conferidos', log.includes('Totais por cartão conferem'), log);
@@ -515,7 +517,10 @@ if (outra) {
   // Several files at once: one review at a time ("1 de 2"), the next starts by itself, a summary at the end.
   await page.click('.ltile[data-mode="pdf"]');
   await page.setInputFiles('#pdfIn', [path.join(ROOT, '../tests/fixtures/fatura-ficticia.pdf'), path.join(ROOT, '../tests/fixtures/comprovante-ficticio.pdf')]);
+  await page.waitForSelector('.busyov', { timeout: 5000 }).catch(() => {});
+  ok('vários arquivos: o pop-up diz qual arquivo está sendo lido', (await page.textContent('.busyov #bzT').catch(() => '')) === 'Arquivo 1 de 2');
   await page.waitForSelector('#rvSave', { timeout: 60000 }).catch(() => {});
+  ok('pop-up some quando a leitura termina', !(await page.$('.busyov')) || (await page.waitForSelector('.busyov', { state: 'detached', timeout: 2000 }).then(() => true).catch(() => false)));
   ok('vários arquivos: mostra a fila e revisa o primeiro', (await txt('#qBar')).includes('Arquivo 1 de 2') && (await txt('#qBar')).includes('fatura-ficticia.pdf') && await page.isVisible('#review'), await txt('#qBar'));
   await page.click('#rvSave'); await page.click('.cfm [data-y]');
   await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 30000 }).catch(() => {});
@@ -778,7 +783,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('fluxos'); await ap.waitForSelector('.fmap .phone');
   ok('central: visão geral com todas as telas', (await ap.$$('.fmap .phone')).length >= 38 && await ap.evaluate(() => [...document.querySelectorAll('.fmap img')].slice(0, 6).every(i => i.complete)));
   await ap.click('[data-fl="fatura"]'); await ap.waitForSelector('.fflow .fstep');
-  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 8 && (await ap.textContent('.fflow')).includes('pessoas'));
+  ok('central: fluxo da fatura em etapas com pessoas por etapa', (await ap.$$('.fstep')).length === 9 && (await ap.textContent('.fflow')).includes('pessoas'));
   await ap.click('.fstep .phone'); await ap.waitForSelector('#flBox[open]');
   ok('central: tela ampliada mostra onde fica e em que fluxos aparece', (await ap.textContent('#flBox')).includes('Aparece nos fluxos'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-10-fluxo-zoom.png') });

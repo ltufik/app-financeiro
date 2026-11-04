@@ -168,4 +168,8 @@ export const RELEASES = [
       { id: 'erros_do_servidor_na_central', title: 'Erros das rotinas automáticas aparecem na Central', status: 'proximo', origin: 'Estudo dos bugs', effort: 'P', problem: 'As rotinas automáticas (avisos do dia, recados, novidades) trocavam o erro por lista vazia', cost: false, notes: 'Quando uma rotina do servidor falhar, registrar em Central → Erros com o nome da rotina e o motivo, em vez de calar.', from: [], where: 'Central → Erros' },
     ] },
   { id: 'r73', version: 'v73', at: '2026-11-04T01:10:00Z', backlog: [], semNovidade: 'Os avisos na parte de baixo da tela fecham em 3 segundos (antes 5). Na Central, cada versão mostra para quantos aparelhos o push foi e quantos recados personalizados saíram; se o push não sair, a novidade fica livre para mandar de novo.' },
+  { id: 'r74', version: 'v74', at: '2026-11-04T02:20:00Z', backlog: [], news: { id: 'n20261104b', title: 'Veja a leitura acontecendo', items: [
+    'Enquanto o app lê uma fatura, um extrato ou uma nota, aparece o que ele está fazendo e quanto falta, em porcentagem.',
+    'Com vários arquivos, mostra qual está sendo lido: "Arquivo 2 de 3".',
+  ] } },
 ];

@@ -13,7 +13,7 @@ import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '.
 import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js';
 import { docKeys, compareStatement, docsText } from '../lib/statements.js';
 import { applyMemos } from '../lib/memo.js';
-import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX } from '../lib/queue.js';
+import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX, progressOf } from '../lib/queue.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
 let Q = null;          // quick-entry preview items
@@ -113,8 +113,8 @@ function build(el) {
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
   drop.ondragleave = () => drop.classList.remove('over');
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); startFiles([...(e.dataTransfer.files || [])], 'pdf'); };
-  $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), resultArea);
-  for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => routeFile(f, 'nota'), resultArea); };
+  $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), resultArea, 'Abrindo o PDF');
+  for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => routeFile(f, 'nota'), resultArea, 'Lendo a nota fiscal'); };
 }
 
 // ---------- manual entries ----------
@@ -206,7 +206,7 @@ const waiting = () => ['#review', '#pwBox', '#qPreview', '#rcReview'].some(s => 
 async function runCurrent() {
   renderQueue();
   const f = QFILES[QU.i];
-  await withBusy(`Arquivo ${position(QU)}: lendo ${f.name}...`, () => routeFile(f, 'fila'), resultArea).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)'));
+  await withBusy(`Lendo ${f.name}...`, () => routeFile(f, 'fila'), resultArea, `Arquivo ${position(QU)}`).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)'));
   if (QU && !isDone(QU) && QFILES[QU.i] === f && !waiting()) docDone('erro');
 }
 // Called when the current document was saved, discarded or could not be read. Does nothing outside a queue.
@@ -335,10 +335,10 @@ function renderQ() {
 // ---------- PDF ----------
 let BUSY = null;
 const pdfResult = () => !$('#review').hidden ? $('#review') : !$('#pwBox').hidden ? $('#pwBox') : $('#pdfLog');
-const plog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#pdfLog').append(p); if (BUSY) BUSY.set(t); };
+const plog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#pdfLog').append(p); if (BUSY) BUSY.set(t, progressOf(t)); };
 // Shows progress while the PDF is read, then brings the result (or the problem) into view.
-async function withBusy(first, run, where) {
-  BUSY = busy(first);
+async function withBusy(first, run, where, title = 'Lendo o documento') {
+  BUSY = busy(first, { title });
   try { return await run(); }
   finally { BUSY.done(); BUSY = null; const t = where(); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
@@ -624,7 +624,7 @@ function reviewInvest(r) {
 
 // ---------- receipts (nota fiscal) ----------
 let RC = null; // receipt being reviewed
-const rlog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#rcLog').append(p); if (BUSY) BUSY.set(t); };
+const rlog = (t, color) => { const p = document.createElement('div'); p.textContent = t; if (color) p.style.color = color; $('#rcLog').append(p); if (BUSY) BUSY.set(t, progressOf(t)); };
 // Phone photos are big: shrink to at most 1600 px and JPEG before sending.
 async function shrink(file, max = 1600) {
   const url = URL.createObjectURL(file);

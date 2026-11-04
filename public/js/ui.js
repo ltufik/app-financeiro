@@ -204,12 +204,25 @@ export function announce({ eyebrow = '', title, html = '', primary = 'Entendi', 
 }
 
 // "Working on it" card while a long task runs (reading a PDF or a receipt). set(text) updates the step.
-export function busy(text) {
-  document.querySelectorAll('.busy').forEach(x => x.remove());
-  const el = document.createElement('div'); el.className = 'busy'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
-  el.innerHTML = `<span class="spin" aria-hidden="true"></span><span class="bt"><strong>Só um instante</strong><span></span></span>`;
-  document.body.append(el);
-  const set = t => { el.querySelector('.bt span').textContent = t; };
-  set(text);
-  return { set, done: () => el.remove() };
+// Work in progress (reading a bill, several files...): a pop-up with the app's symbol building itself bar by
+// bar, what is being done and how far it got. set(text, pct): pct when known (page 2 of 5); otherwise the bar
+// creeps forward on its own so it never looks stuck, and jumps to 100% when done.
+export function busy(text, { title = 'Só um instante' } = {}) {
+  document.querySelectorAll('.busyov').forEach(x => x.remove());
+  const el = document.createElement('div'); el.className = 'busyov';
+  el.innerHTML = `<div class="busybox" role="dialog" aria-modal="true" aria-labelledby="bzT" aria-describedby="bzS">
+    <svg class="bzlogo" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" class="bzbg"/><g stroke-width="36" stroke-linecap="round"><path class="bzb b1" d="M128 368V256"/><path class="bzb b2" d="M208 368V176"/><path class="bzb b3" d="M288 368V224"/><path class="bzb b4" d="M368 368V136"/></g></svg>
+    <h3 id="bzT"></h3><p id="bzS" class="small" role="status" aria-live="polite"></p>
+    <div class="bzbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-labelledby="bzT"><span></span></div><p class="tiny muted bzpct"></p></div>`;
+  document.body.append(el); document.body.classList.add('cfm-open');
+  let pct = 3, known = false;
+  const draw = () => { const v = Math.round(pct); el.querySelector('.bzbar span').style.width = v + '%'; el.querySelector('.bzbar').setAttribute('aria-valuenow', v); el.querySelector('.bzpct').textContent = v + '%'; };
+  const creep = setInterval(() => { if (!known) { pct += (90 - pct) * 0.025; draw(); } }, 400);
+  const api = {
+    set(t, p) { if (t) el.querySelector('#bzS').textContent = t; if (p != null && isFinite(p)) { known = true; pct = Math.max(pct, Math.min(99, p)); } else if (known) { known = false; } draw(); },
+    title(t) { el.querySelector('#bzT').textContent = t; },
+    done() { clearInterval(creep); pct = 100; draw(); setTimeout(() => { el.remove(); if (!document.querySelector('.cfm-wrap, .busyov')) document.body.classList.remove('cfm-open'); }, 250); },
+  };
+  api.title(title); api.set(text);
+  return api;
 }

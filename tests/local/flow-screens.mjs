@@ -109,6 +109,9 @@ if (arg('pdf')) await step('lancar_revisao', async () => {
 // Choosing a category: the sheet with the entry, the search and the suggestions.
 if (arg('pdf')) await step('categoria', async () => { await page.click('#rvRows .catchip'); await page.waitForSelector('.cps'); await page.fill('.cps-q', 'estacion'); await page.waitForTimeout(200); });
 await page.click('.cps .tx').catch(() => {});
+// While a document is read: the symbol building itself, the step and the percentage (shown as it looks halfway).
+await step('lendo', async () => { await page.evaluate(() => import('/js/ui.js').then(m => { const b = m.busy('Lendo a parte 2 de 4...', { title: 'Arquivo 1 de 3' }); b.set('Lendo a parte 2 de 4...', 45); window.__bz = b; })); await page.waitForTimeout(900); });
+await page.evaluate(() => window.__bz?.done()); await page.waitForTimeout(300);
 // Several files at once: the queue on top ("Arquivo 1 de 2") and the review of the first one.
 if (arg('pdf')) await step('varios_arquivos', async () => {
   await page.click('#rvCancel'); await page.click('.cfm [data-y]'); await page.waitForTimeout(200);

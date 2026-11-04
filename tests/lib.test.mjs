@@ -656,3 +656,14 @@ test('insights: quanto dá para gastar por dia no cartão e conta fixa acima do 
   assert.match(insights({ ...base, today: '2026-11-26' }).find(x => x.id === 'perday').text, /28 dias/);
   assert.ok(!insights({ ...base, today: '2026-11-14', nextFatura: { month: '2026-11', total: 5200 } }).some(x => x.id === 'perday'));
 });
+
+import { progressOf } from '../public/js/lib/queue.js';
+test('pop-up de progresso: percentual pelo passo da leitura', () => {
+  assert.equal(progressOf('Lendo fatura.pdf...'), 5);
+  assert.equal(progressOf('Lendo a parte 1 de 4...'), 15);
+  assert.equal(progressOf('Lendo a parte 3 de 4...'), 45);
+  assert.equal(progressOf('Lendo a página 2 de 2...'), 45);
+  assert.equal(progressOf('Fatura do Nubank lida: 7 lançamentos.'), 78);
+  assert.equal(progressOf('Pedindo sugestão de categoria para 3 lançamentos novos...'), 82);
+  assert.equal(progressOf('Tentando de novo...'), null);
+});
