@@ -226,6 +226,17 @@ test('insights: faltam dados, vermelho, economia, gasto alto, cartão, fixas e p
   assert.ok(!bi.includes('missing'));
   // no data at all: nothing to say
   assert.deepEqual(insights({ ...base, months: [], today: '2026-10-10', has: () => false }), []);
+  // the card bill closed (day 24) and is not in the app yet: first, with a link to send it; once sent, gone
+  const c = insights({ ...base, closeDay: 24, today: '2026-11-26', has: (k, src) => !(src === 'cartao' && k === '2026-11') });
+  const cf = c.find(x => x.id === 'fatura'); assert.ok(cf); assert.match(cf.text, /Fechou dia 24\/11.*dinheiro de novembro/); assert.deepEqual(cf.action.go, ['lancar', '#drop']);
+  assert.ok(!c.find(x => x.id === 'missing')?.text.includes('fatura de novembro'));
+  assert.ok(!insights({ ...base, closeDay: 24, today: '2026-11-26', has: () => true }).some(x => x.id === 'fatura'));
+  assert.ok(!insights({ ...base, closeDay: 24, today: '2026-11-24', has: (k, src) => !(src === 'cartao' && k === '2026-11') }).some(x => x.id === 'fatura'), 'not on the closing day itself');
+  assert.ok(!insights({ ...base, closeDay: 24, today: '2026-12-02', has: (k, src) => !(src === 'cartao' && k === '2026-11') }).some(x => x.id === 'fatura'), 'only up to 6 days after');
+  // closing late in the month: still counted in the first days of the next one
+  const e = insights({ ...base, closeDay: 28, today: '2026-12-02', has: (k, src) => !(src === 'cartao' && k === '2026-11') });
+  assert.match(e.find(x => x.id === 'fatura')?.text || '', /Fechou dia 28\/11/);
+  assert.ok(!insights({ ...base, closeDay: 24, today: '2026-11-26', has: (k, src) => src !== 'cartao' }).some(x => x.id === 'fatura'), 'only for families that already sent a card bill');
 });
 
 test('grupos: receita e despesa, fixa, variável ou extra', async () => {
@@ -801,7 +812,7 @@ test('gráfico: sobra acumulada soma mês a mês', async () => {
 });
 
 import { debtNow, installmentSplit, monthlyRate, debtOfAsset, debtForTx, pendingAmortizations, investNow } from '../public/js/lib/debt.js';
-test('financiamento: parcelas abatem pela estimativa e amortização abate na hora', () => {
+test('financiamento: parcelas abatem pela estimativa e amortização abate na hora', async () => {
   assert.ok(Math.abs(monthlyRate(0.12) - 0.009489) < 1e-5);
   const p = installmentSplit(350000, { taxa: 0.12, parcela: 5600 }); assert.equal(p.juros, 3321.08); assert.equal(p.amort, 2278.92);
   const s = installmentSplit(120000, { taxa: 0.12, sistema: 'sac', meses: 120 }); assert.equal(s.amort, 1000);
@@ -813,6 +824,9 @@ test('financiamento: parcelas abatem pela estimativa e amortização abate na ho
   assert.equal(debtNow(d, '2026-10-15').months, 0);
   assert.equal(debtNow({ saldo: 1000, saldoEm: '2026-01-01', taxa: 0, parcela: 600 }, '2026-12-01').saldo, 0);
   assert.equal(debtNow({ saldo: 5000 }, '2026-11-04').saldo, 5000);
+  const { linkFor, parseLink } = await import('../public/js/lib/links.js');
+  assert.equal(linkFor('tela', { tab: 'lancar', sec: 'pdf' }), '/?tab=lancar&sec=pdf'); assert.deepEqual(parseLink('/?tab=lancar&sec=pdf'), { tab: 'lancar', sec: 'pdf' });
+  assert.equal(linkFor('tela', { tab: 'lancar', sec: 'xyz' }), '/?tab=lancar');
   // Typed before the date existed (old data): the payment still counts, nothing is estimated yet.
   assert.equal(debtNow({ saldo: 480000, taxa: 0.12, parcela: 5600, log: [{ date: '2026-11-04', at: '2026-11-04T21:00:00Z', kind: 'amortizacao', value: 130000 }] }, '2026-11-04').saldo, 350000);
   // A balance typed after the payment already includes it.

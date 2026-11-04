@@ -303,4 +303,8 @@ export const RELEASES = [
     { id: 'bug_patrimonio_nao_abatia', title: 'Patrimônio não abatia amortização nem parcelas do financiamento', tipo: 'bug', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Mandou o comprovante de R$ 130 mil de amortização do financiamento da casa e o patrimônio continuou dizendo que faltavam R$ 480 mil; o saldo estava digitado em dois lugares e nada o abatia', cost: false, notes: 'Bem ligado ao financiamento (um saldo só); parcelas abatem por estimativa (Price ou SAC); amortização por comprovante, por pagamento já salvo ou à mão; categoria Amortização de financiamento fora da sobra; histórico; investimentos com valor de hoje estimado.', from: [], where: 'Patrimônio e dívidas; Lançar; Início' },
     { id: 'extrato_do_financiamento', title: 'Ler o PDF do extrato do financiamento', status: 'ideia', origin: 'Luiz', effort: 'M', problem: 'Hoje o saldo real do financiamento é digitado; a estimativa das parcelas só é corrigida à mão', cost: false, notes: 'Reconhecer o extrato do financiamento (saldo devedor, data, parcela, taxa, sistema, prazo) e atualizar o financiamento certo, com confirmação.', from: [] },
   ] },
+  { id: 'r90', version: 'v90', at: '2026-11-04T23:00:00Z', backlog: ['lembrete_mandar_fatura'], news: { id: 'n20261104l', title: 'Lembrete da fatura', items: [
+    'Quando a fatura do cartão fecha, o app avisa no celular para você mandar o PDF, e o aviso já abre o lugar certo para enviar.',
+    'O mesmo lembrete aparece no Início até a fatura chegar. Dá para mandar as faturas de todos os cartões de uma vez.',
+  ] }, updateDocs: [DOC_AVISOS] },
 ];

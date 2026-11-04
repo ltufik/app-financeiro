@@ -57,6 +57,11 @@ test('avisos do dia: escolhe um por aparelho, respeita preferências e não repe
   assert.equal(pick(list, week, { last_sent: { red: '2026-11-01' } }, today, 3).id, 'saved');
   assert.equal(pick(list, week, { last_sent: { red: '2026-10-01' } }, today, 3).id, 'red');
   assert.equal(pick([], week, { prefs: { semanal: false } }, today, 0), null);
+  // the bill that closed comes before anything else, once per bill, and respects "dados"
+  const withBill = [...list, { id: 'fatura', tone: 'warn', title: 'f', text: 'f' }];
+  assert.equal(pick(withBill, week, {}, today, 0).id, 'fatura');
+  assert.equal(pick(withBill, week, { last_sent: { fatura: '2026-11-10' } }, today, 3).id, 'red');
+  assert.equal(pick(withBill, week, { prefs: { dados: false } }, today, 3).id, 'red');
   assert.deepEqual(brToday(Date.parse('2026-11-16T02:00:00Z')), { iso: '2026-11-15', dow: 0 });
   const w = weekly([{ source: 'cartao', date: '2026-11-14', amount: 120, category: 'Mercado' }, { source: 'conta', date: '2026-11-13', amount: -80, category: 'Lazer' }, { source: 'conta', date: '2026-11-01', amount: -999, category: 'Lazer' }], catIndex([{ name: 'Mercado', grp: 'dia' }, { name: 'Lazer', grp: 'dia' }]), today);
   assert.match(w.text, /R\$ 200 em despesas\. Maiores: Mercado R\$ 120, Lazer R\$ 80/);

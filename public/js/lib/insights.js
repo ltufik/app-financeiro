@@ -33,10 +33,22 @@ export function insights(ctx) {
   const cur = today.slice(0, 7), day = +today.slice(8, 10), prev = addM(cur, -1);
   const lastDay = new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate();
 
+  // 0. The card bill just closed (1 to 6 days ago) and is not in the app yet: the monthly habit.
+  // Purchases from the closing day on go to the next bill, so the bill that closed is the closing date's month.
+  const cd = +ctx.closeDay || 0, hadCard = months.some(k => ctx.has(k, 'cartao'));
+  let billOpen = null;
+  if (cd && hadCard) {
+    const prevLast = new Date(+cur.slice(0, 4), +cur.slice(5, 7) - 1, 0).getDate();
+    const closeK = day >= cd ? cur : prev, since = day >= cd ? day - cd : day + prevLast - Math.min(cd, prevLast);
+    if (since >= 1 && since <= 6 && !ctx.has(closeK, 'cartao')) {
+      billOpen = closeK;
+      out.push({ id: 'fatura', tone: 'warn', title: 'A fatura do cartão fechou', text: `Fechou dia ${String(Math.min(cd, closeK === cur ? lastDay : prevLast)).padStart(2, '0')}/${closeK.slice(5)}. Mande o PDF (dá para mandar os de todos os cartões de uma vez) e veja para onde foi o dinheiro de ${mName(closeK)}.`, action: { label: 'Mandar a fatura', go: ['lancar', '#drop'] } });
+    }
+  }
   // 1. Missing data
   const miss = [];
   if (day >= 5 && !ctx.has(prev, 'conta')) miss.push(`o extrato de ${mName(prev)}`);
-  if (day >= 12 && !ctx.has(cur, 'cartao') && months.some(k => ctx.has(k, 'cartao'))) miss.push(`a fatura de ${mName(cur)}`);
+  if (day >= 12 && !ctx.has(cur, 'cartao') && hadCard && billOpen !== cur) miss.push(`a fatura de ${mName(cur)}`);
   if (miss.length && months.length) out.push({ id: 'missing', tone: 'warn', title: 'Faltam dados', text: `Ainda não chegou ${miss.join(' nem ')}. Sem isso, a sobra fica incompleta.`, action: { label: 'Enviar PDF', go: ['lancar', '#drop'] } });
   if (lastDay - day <= 5 && !ctx.manualCount(cur) && !ctx.has(cur, 'conta')) out.push({ id: 'ending', tone: 'info', title: `${mName(cur)[0].toUpperCase() + mName(cur).slice(1)} está acabando`, text: `Faltam ${lastDay - day + 1} dia${lastDay - day ? 's' : ''} e nenhum gasto de ${mName(cur)} foi lançado. Que tal lançar os do pix e do dinheiro agora, enquanto lembra?`, action: { label: 'Lançar gasto', go: ['lancar', '#qText'] } });
 

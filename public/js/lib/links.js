@@ -10,7 +10,7 @@ const ID = /^[A-Za-z0-9_-]{1,64}$/;
 export function linkFor(kind, { id, tab, sec } = {}) {
   if ((kind === 'novidade' || kind === 'recado') && ID.test(String(id ?? ''))) return `/?abrir=${kind}&id=${encodeURIComponent(id)}`;
   if (kind === 'avisos') return '/?abrir=avisos';
-  if (kind === 'tela' && TABS.includes(tab)) return `/?tab=${tab}${tab === 'ajustes' && SECS.test(sec || '') ? '&sec=' + sec : ''}`;
+  if (kind === 'tela' && TABS.includes(tab)) return `/?tab=${tab}${(tab === 'ajustes' && SECS.test(sec || '')) || (tab === 'lancar' && sec === 'pdf') ? '&sec=' + sec : ''}`;
   return '/';
 }
 
@@ -21,6 +21,6 @@ export function parseLink(url, base = 'https://app.local') {
   if ((abrir === 'novidade' || abrir === 'recado') && ID.test(id || '')) return { abrir, id };
   if (abrir === 'avisos') return { abrir };
   const tab = p.get('tab'), sec = p.get('sec');
-  if (TABS.includes(tab)) return { tab, ...(tab === 'ajustes' && SECS.test(sec || '') ? { sec } : {}) };
+  if (TABS.includes(tab)) return { tab, ...((tab === 'ajustes' && SECS.test(sec || '')) || (tab === 'lancar' && sec === 'pdf') ? { sec } : {}) };
   return null;
 }

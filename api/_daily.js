@@ -9,8 +9,8 @@ import { addM } from '../public/js/lib/format.js';
 import { sendPush } from './_webpush.js';
 
 // Which preference turns each message on, and how many days before the same message can repeat.
-export const TYPES = { subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
-const REPEAT = { missing: 7, pending: 7, close: 5, budget: 7, semanal: 6 };
+export const TYPES = { fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
+const REPEAT = { fatura: 20, missing: 7, pending: 7, close: 5, budget: 7, semanal: 6 };
 const days = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
 const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
 
@@ -42,13 +42,14 @@ export function familyInsights({ household, categories, txs }, today) {
     fixedCats: [...idx.values()].filter(c => c.grp === 'dia' && c.recurring).map(c => c.name), closeDay: +st.cardCloseDay || 24,
     goals: g, nextFatura: nf, budgets: budgetsOf(st), recurring: findRecurring(txs, months, { idx }), toClose: (() => { const cur = today.slice(0, 7), cl = st.closed || {}; return months.filter(k => k < cur && !cl[k]).pop() || null; })(),
     etaYears: pmt => { if (!(pmt > 0) || !g.patrimonio) return null; const pts = project({ start: +st.invest?.total || 0, pmt, ret: g.ret ?? 0.05, years: 40 }); const i = pts.findIndex(v => v >= g.patrimonio); return i < 0 ? null : i; },
-  }).map(x => ({ ...x, url: x.action ? linkFor('tela', { tab: x.action.go[0], sec: x.action.go[2] }) : linkFor('tela', { tab: 'resumo' }) }));
+  }).map(x => ({ ...x, url: x.action ? linkFor('tela', { tab: x.action.go[0], sec: x.action.go[0] === 'lancar' && x.action.go[1] === '#drop' ? 'pdf' : x.action.go[2] }) : linkFor('tela', { tab: 'resumo' }) }));
 }
 
 // Pick the one message for a device today, or null.
 export function pick(list, week, sub, today, dow) {
   const prefs = { dados: true, gastos: true, conquistas: true, semanal: true, ...(sub.prefs || {}) }, sent = sub.last_sent || {};
   const ok = x => prefs[TYPES[x.id]] !== false && !(sent[x.id] && days(today, sent[x.id]) < (REPEAT[x.id] || 25));
+  const bill = list.find(x => x.id === 'fatura' && ok(x)); if (bill) return bill; // the monthly habit comes first
   const urgent = list.find(x => (x.tone === 'bad' || x.tone === 'warn') && ok(x));
   if (urgent) return urgent;
   if (dow === 0 && week && ok(week)) return week;
@@ -67,7 +68,8 @@ export async function runDaily({ supabaseUrl, serviceKey, vapid, fetchImpl = fet
       const [household] = await get(`households?id=eq.${hh}&select=id,name,settings`);
       if (!household) continue;
       // Someone who left the family stops getting its notices.
-      const members = new Set((await get(`members?household_id=eq.${hh}&select=user_id`)).map(m => m.user_id));
+      const mrows = await get(`members?household_id=eq.${hh}&select=user_id,display_name`), members = new Set(mrows.map(m => m.user_id));
+      const firstOf = uid => String(mrows.find(m => m.user_id === uid)?.display_name || '').trim().split(/\s+/)[0];
       for (const s of list.filter(s => !members.has(s.user_id))) { await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H }); out.removed++; }
       list.splice(0, list.length, ...list.filter(s => members.has(s.user_id)));
       if (!list.length) continue;
@@ -82,7 +84,8 @@ export async function runDaily({ supabaseUrl, serviceKey, vapid, fetchImpl = fet
       for (const sub of list) {
         const msg = pick(ins, week, sub, today, dow);
         if (!msg) { out.skipped++; continue; }
-        const r = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title: msg.title, body: msg.text.slice(0, 220), url: msg.url, tag: msg.id }, vapid, fetchImpl).catch(() => ({ ok: false }));
+        const nm = firstOf(sub.user_id), title = msg.id === 'fatura' && nm ? `${nm}, a fatura do cartão fechou` : msg.title;
+        const r = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: msg.text.slice(0, 220), url: msg.url, tag: msg.id }, vapid, fetchImpl).catch(() => ({ ok: false }));
         if (r.gone) { await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${sub.id}`, { method: 'DELETE', headers: H }); out.removed++; continue; }
         if (!r.ok) { out.errors++; continue; }
         out.sent++;

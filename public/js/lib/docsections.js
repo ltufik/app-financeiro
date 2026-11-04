@@ -42,6 +42,7 @@ export const DOC_AVISOS = { id: 'notificacoes_doc', title: 'Notificações: do s
 | Quando | Quem recebe |
 | Versão com novidade | Todos com notificação ligada (com o nome); quem pediu o item recebe só o recado personalizado |
 | Item pedido ficou pronto | Quem pediu: recado no app e no celular (bug: pede para tentar de novo) |
+| A fatura do cartão fechou | De 1 a 6 dias depois do fechamento, se a fatura ainda não chegou ao app: "Nome, a fatura do cartão fechou", que abre Lançar já no envio. Vem antes de qualquer outro aviso do dia, uma vez por fatura (preferência "Dados faltando"). Também aparece no Início |
 | Avisos do dia | Fatura fechando, mês acabando, gasto alto, resumo de domingo, lembrete das 21h (um por dia no máximo) |
 | Família | Alguém entrou, importou ou fechou o mês |
 - Horário silencioso: nenhum push automático entre 22h e 8h (Brasília). Uma versão publicada à noite sai na primeira abertura do app depois das 8h, ou na rotina das 9h.
