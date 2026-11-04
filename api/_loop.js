@@ -2,7 +2,7 @@
 // that person gets a personal message (in the app and as a push). Also applies the release manifest.
 import { linkFor } from '../public/js/lib/links.js';
 import { sendPush } from './_webpush.js';
-import { autoReply, newlyDone, replyTitle } from '../public/js/lib/news.js';
+import { autoReply, newlyDone, replyTitle, quietHours } from '../public/js/lib/news.js';
 import { RELEASES } from './_releases.js';
 
 export function rest(URL_, SERVICE, fetchImpl = fetch) {
@@ -38,8 +38,10 @@ export async function closeLoop(db, prevItems, nextItems, vapid, fetchImpl = fet
 
 // Applies release entries not applied yet: publishes the note, marks items done, messages who asked.
 let appliedCache = null;
-export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl = fetch } = {}) {
+export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl = fetch, now = Date.now() } = {}) {
   if (appliedCache && releases.every(r => appliedCache.has(r.id))) return { applied: 0 };
+  // At night nothing goes out: the next opening after 8h (or the 9h daily run) applies the version.
+  if (quietHours(now)) return { applied: 0, quiet: true };
   const state = (await db.board('releases')) || { applied: [] };
   const todo = releases.filter(r => !state.applied.includes(r.id));
   appliedCache = new Set(state.applied);
@@ -61,6 +63,12 @@ export async function applyReleases(db, vapid, { releases = RELEASES, fetchImpl 
   if (newDocs.length) {
     const docs = await db.board('docs');
     if (docs?.items) { let ch = false; for (const d of newDocs) if (!docs.items.some(x => x.id === d.id)) { docs.items.push({ ...d }); ch = true; } if (ch) await db.setBoard('docs', docs); }
+  }
+  // A section a release rewrites (the rule changed): only the releases being applied now, once.
+  const upDocs = todo.flatMap(r => r.updateDocs || []);
+  if (upDocs.length) {
+    const docs = await db.board('docs');
+    if (docs?.items) { for (const d of upDocs) { const i = docs.items.findIndex(x => x.id === d.id); if (i >= 0) docs.items[i] = { ...docs.items[i], ...d }; else docs.items.push({ ...d }); } await db.setBoard('docs', docs); }
   }
   const backlog = await db.board('backlog');
   if (backlog?.items) {

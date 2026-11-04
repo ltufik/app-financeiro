@@ -40,6 +40,7 @@ export const DOC_AVISOS = { id: 'notificacoes_doc', title: 'Notificações: do s
 | Item pedido ficou pronto | Quem pediu: recado no app e no celular (bug: pede para tentar de novo) |
 | Avisos do dia | Fatura fechando, mês acabando, gasto alto, resumo de domingo, lembrete das 21h (um por dia no máximo) |
 | Família | Alguém entrou, importou ou fechou o mês |
+- Horário silencioso: nenhum push automático entre 22h e 8h (Brasília). Uma versão publicada à noite sai na primeira abertura do app depois das 8h, ou na rotina das 9h.
 ## Ligar
 - O app nunca liga sozinho: convida (1 vez por dia, até 7, ao abrir ou ao voltar do bloqueio) e leva para Notificações.
 - Depois de permitir, manda um teste e pergunta se apareceu; se não, mostra os ajustes do celular (iPhone, Samsung, outros Android).

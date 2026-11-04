@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -208,4 +208,12 @@ export const RELEASES = [
       { id: 'caderno_de_testes', title: 'Caderno de testes na Central', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não havia lugar para registrar o que testar num celular de verdade e o resultado', cost: false, notes: 'Casos por funcionalidade, com passos e o que deve acontecer; Passou ou Falhou; Falhou vira bug no backlog. Entra na Definição de pronto.', from: [], where: 'Central → Planejar → Caderno de testes' },
       { id: 'documentacao_das_funcionalidades', title: 'Documentação de Lançar, Categorias, Notificações e Caderno de testes', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'As regras novas estavam só no código e na conversa', cost: false, notes: 'Seções novas em Central → Documentação.', from: [], where: 'Central → Documentação' },
     ] },
+  { id: 'r81', version: 'v81', at: '2026-11-04T13:40:00Z', backlog: [], news: { id: 'n20261104e', title: 'Extrato em mais de um arquivo', items: [
+    'Se o banco dividir o extrato do mês em dois arquivos, mande os dois: o segundo completa o primeiro, entra só o que é novo e nada é apagado.',
+    'O app só diz que vai substituir quando é mesmo o mesmo arquivo de novo, conferindo os lançamentos um a um.',
+    'As novidades do app no celular agora chegam só de dia, a partir das 8h.',
+  ] }, updateDocs: [DOC_AVISOS], addBacklog: [
+    { id: 'horario_silencioso', title: 'Push automático só de dia (22h às 8h, nada sai)', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'O push de uma versão publicada à noite saiu às 06:58, na primeira abertura do app de alguém', cost: false, notes: 'Entre 22h e 8h (Brasília) a versão não é aplicada: nem novidade, nem recado, nem push. A primeira abertura depois das 8h, ou a rotina das 9h, aplica e manda. Central → Versões mostra o horário em que o push saiu.', from: [], where: 'Notificações no celular' },
+    { id: 'regra_correcao_vira_novidade', title: 'Correção que o usuário percebe também vira novidade e push', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A correção do extrato dividido (v79) saiu sem avisar ninguém', cost: false, notes: 'Regra na Definição de pronto: tudo o que o usuário percebe vai com novidade e push para todos; só versões que ninguém além do dono vê ficam sem push, com o motivo em Versões.', from: [], where: 'Central → Versões' },
+  ] },
 ];

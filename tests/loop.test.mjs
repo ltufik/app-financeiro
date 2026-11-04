@@ -17,6 +17,7 @@ test('newlyDone: só itens que viraram feito e vieram de opiniões', () => {
   assert.deepEqual(newlyDone(prev, next).map(x => [x.item.id, x.ids]), [['a', [1, 3]], ['c', [7]]]);
 });
 
+const DAY = Date.parse('2026-11-04T14:00:00Z'); // 11h in Brasília
 // Tiny fake of the Supabase REST API with the tables used here.
 function fakeDb() {
   const T = { feedback: [{ id: 1, user_id: 'u1', kind: 'ideia', text: 'ver por semana', reply: null }, { id: 2, user_id: 'u2', kind: 'erro', text: 'trava', reply: 'já respondido' }],
@@ -47,14 +48,14 @@ test('closeLoop: manda o recado só para quem ainda não recebeu', async () => {
 test('applyReleases: publica a novidade, conclui o item e avisa, uma vez só', async () => {
   const { T, db } = fakeDb();
   const releases = [{ id: 'r1', at: '2026-11-01T12:00:00Z', backlog: [{ id: 'semana', where: 'Gráficos → por semana' }], news: { id: 'n1', title: 'Gasto por semana', items: ['Em Gráficos'] } }];
-  const first = await applyReleases(db, null, { releases });
+  const first = await applyReleases(db, null, { releases, now: DAY });
   assert.deepEqual(first, { applied: 1, replied: 1, pushed: 0, err: 'notificações sem as chaves VAPID na Vercel' });
   assert.deepEqual(T.product_board.find(r => r.key === 'releases').data.log.map(l => [l.id, l.news, l.replied, l.err]), [['r1', true, 1, 'notificações sem as chaves VAPID na Vercel']]);
   const board = k => T.product_board.find(r => r.key === k).data;
   assert.equal(board('news').items[0].title, 'Gasto por semana');
   assert.equal(board('backlog').items[0].status, 'feito');
   assert.match(T.feedback[0].reply, /Onde encontrar: Gráficos → por semana/);
-  const again = await applyReleases(db, null, { releases });
+  const again = await applyReleases(db, null, { releases, now: DAY });
   assert.equal(again.applied, 0);
   assert.equal(board('news').items.length, 1);
 });
@@ -213,8 +214,8 @@ test('applyReleases: seção nova na Documentação da Central, uma vez só', as
   const { T, db } = fakeDb();
   T.product_board.push({ key: 'docs', data: { items: [{ id: 'visao', title: 'Visão geral', body: 'x' }] } });
   const releases = [{ id: 'r9', at: '2026-11-03T12:00:00Z', backlog: [], semNovidade: 'só documentação', addDocs: [{ id: 'estudo', title: 'Estudo dos bugs', body: '## Lições' }] }];
-  await applyReleases(db, null, { releases });
-  await applyReleases(db, null, { releases: [...releases, { id: 'r10', at: '2026-11-04T12:00:00Z', backlog: [], semNovidade: 'x' }] });
+  await applyReleases(db, null, { releases, now: DAY });
+  await applyReleases(db, null, { releases: [...releases, { id: 'r10', at: '2026-11-04T12:00:00Z', backlog: [], semNovidade: 'x' }], now: DAY });
   const docs = T.product_board.find(r => r.key === 'docs').data.items;
   assert.deepEqual(docs.map(d => d.id), ['visao', 'estudo']);
 });
@@ -231,11 +232,31 @@ test('applyReleases: push da versão chega a todos, menos a quem recebeu o recad
   const { rest } = await import('../api/_loop.js');
   const db2 = rest('https://x.supabase.co', 'sb_secret_x', f);
   const releases = [{ id: 'r1', at: '2026-11-01T12:00:00Z', backlog: [{ id: 'semana', where: 'Gráficos' }], news: { id: 'n1', title: 'Gasto por semana', items: ['Em Gráficos'] } }];
-  const out = await applyReleases(db2, { ...generateVapidKeys(), subject: 'mailto:a@b.c' }, { releases, fetchImpl: f });
+  const out = await applyReleases(db2, { ...generateVapidKeys(), subject: 'mailto:a@b.c' }, { releases, fetchImpl: f, now: DAY });
   // u1 asked for it: only the personal message; u2 gets the general one; u3 turned "Novidades" off.
   assert.equal(out.replied, 1); assert.equal(out.pushed, 1); assert.equal(out.err, null);
   assert.deepEqual(sent.sort(), ['u1', 'u2']);
   const log = T.product_board.find(r => r.key === 'releases').data.log[0];
   assert.deepEqual([log.pushed, log.replied, log.err], [1, 1, null]);
   assert.equal(T.product_board.find(r => r.key === 'news').data.items.find(n => n.id === 'n1').pushed_count, 1);
+});
+
+test('versão publicada à noite: nada sai entre 22h e 8h; de manhã sai tudo', async () => {
+  const { quietHours } = await import('../public/js/lib/news.js');
+  assert.equal(quietHours(Date.parse('2026-11-04T09:58:00Z')), true, '06:58 em Brasília');
+  assert.equal(quietHours(Date.parse('2026-11-04T01:30:00Z')), true, '22:30 em Brasília');
+  assert.equal(quietHours(Date.parse('2026-11-04T11:00:00Z')), false, '08:00 em Brasília');
+  const { T, db } = fakeDb();
+  const releases = [{ id: 'rq', at: '2026-11-04T02:00:00Z', backlog: [{ id: 'semana', where: 'Gráficos' }], news: { id: 'nq', title: 'Algo novo', items: ['x'] } }];
+  const night = await applyReleases(db, null, { releases, now: Date.parse('2026-11-04T09:58:00Z') });
+  assert.deepEqual(night, { applied: 0, quiet: true }); assert.equal(T.feedback[0].reply, null);
+  const morning = await applyReleases(db, null, { releases, now: Date.parse('2026-11-04T12:00:00Z') });
+  assert.equal(morning.applied, 1); assert.equal(morning.replied, 1);
+});
+
+test('applyReleases: versão reescreve uma seção da Documentação (só a versão nova)', async () => {
+  const { T, db } = fakeDb();
+  T.product_board.push({ key: 'docs', data: { items: [{ id: 'notificacoes_doc', title: 'Notificações', body: 'antigo' }] } });
+  await applyReleases(db, null, { releases: [{ id: 'ru', at: '2026-11-04T12:00:00Z', backlog: [], semNovidade: 'só documentação', updateDocs: [{ id: 'notificacoes_doc', title: 'Notificações', body: 'novo' }] }], now: DAY });
+  assert.equal(T.product_board.find(r => r.key === 'docs').data.items[0].body, 'novo');
 });

@@ -772,7 +772,7 @@ async function versoes(el) {
   let applied = [], log = []; try { const d = (await api('GET', 'releases')).data || {}; applied = d.applied || []; log = d.log || []; } catch (e) { /* not applied yet */ }
   // What each release did when it reached the users: push to everyone and personal messages.
   const sentTxt = r => { const l = log.filter(x => x.id === r.id).pop(); if (!l) return ''; const parts = [];
-    if (l.news) parts.push(l.err ? `<span class="neg">Push para todos não saiu: ${esc(l.err)}. Mande de novo em Novidades → Mandar no celular.</span>` : l.pushed ? `Push para todos: chegou em ${l.pushed} ${l.pushed === 1 ? 'aparelho' : 'aparelhos'}` : '<span class="neg">Push para todos não chegou a nenhum aparelho. Confira em Avisos no celular e mande de novo em Novidades.</span>');
+    if (l.news) parts.push(l.err ? `<span class="neg">Push para todos não saiu: ${esc(l.err)}. Mande de novo em Novidades → Mandar no celular.</span>` : l.pushed ? `Push para todos: chegou em ${l.pushed} ${l.pushed === 1 ? 'aparelho' : 'aparelhos'}${l.at ? ` em ${new Date(l.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}` : '<span class="neg">Push para todos não chegou a nenhum aparelho. Confira em Avisos no celular e mande de novo em Novidades.</span>');
     if (l.replied) parts.push(`${l.replied} ${l.replied === 1 ? 'recado personalizado' : 'recados personalizados'} para quem pediu`);
     return parts.length ? `<p class="small" style="margin:0">${parts.join(' · ')}</p>` : ''; };
   const byId = new Map((D.backlog?.items || []).map(i => [i.id, i]));

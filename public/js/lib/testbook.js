@@ -65,6 +65,12 @@ export const TESTS = [
   t('push_da_versao', 'Notificações', 'v73', 'ambos', 'Push de cada versão para todos e recado para quem pediu',
     ['Depois de uma versão com novidade, abra o app uma vez.', 'Na Central → Versões, veja a linha da versão.'],
     'Todos com notificação ligada recebem a novidade com o nome; quem pediu recebe só o recado. Versões mostra "chegou em N aparelhos · M recados".'),
+  t('push_de_dia', 'Notificações', 'v81', 'ambos', 'Push da versão só de dia',
+    ['Depois de uma versão publicada à noite, veja a hora em que a novidade chegou no celular.', 'Central → Versões → a linha da versão.'],
+    'Nada chega entre 22h e 8h; a novidade chega na primeira abertura do app depois das 8h (ou às 9h). Versões mostra o horário.'),
+  t('extrato_em_partes_novidade', 'Notificações', 'v81', 'ambos', 'Novidade da correção do extrato chega a todos',
+    ['Abra o app depois da publicação.'],
+    'Pop-up "Extrato em mais de um arquivo" e push para quem tem notificação ligada.'),
   // Menu e telas
   t('menu_grupos', 'Menu e telas', 'v76', 'ambos', 'Menu em grupos',
     ['Abra o menu ☰.', 'Toque em outro grupo.'],

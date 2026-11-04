@@ -17,7 +17,7 @@ Nada sobe sem isto. `tests/release.test.mjs` cobra os itens marcados com (teste)
 1. Testes passando: `npm test`, `sh tests/db/run.sh` e o e2e (`tests/e2e/run.mjs`).
 2. Versão nova: `VERSION` em `public/sw.js` e `APP_VERSION` em `public/js/usage.js`, iguais (teste).
 3. Entrada da versão em `public/js/lib/releases.js` (teste):
-   - `news`: a novidade do pop-up "O que mudou", em palavras simples, sem citar a IA. Sempre que houver algo visível para o usuário. Se não houver, `semNovidade` com o motivo. A novidade também vira push para todos (automático, `applyReleases`); quem pediu o item recebe só o push personalizado.
+   - `news`: a novidade do pop-up "O que mudou", em palavras simples, sem citar a IA. Sempre que houver algo visível para o usuário, inclusive correção que ele percebe (quem não pediu também precisa saber que voltou a funcionar). Só versões que ninguém além do Luiz vê (Central, robô, ajuste interno) usam `semNovidade`. Push automático (versão e recados) nunca sai entre 22h e 8h: o que foi publicado à noite sai a partir das 8h. Se não houver, `semNovidade` com o motivo. A novidade também vira push para todos (automático, `applyReleases`); quem pediu o item recebe só o push personalizado.
    - `backlog`: ids dos itens concluídos (o "Pedir ao Claude" traz o id). Quem pediu recebe o recado personalizado automático.
    - Bug corrigido é fechado na versão que leva a correção, sem esperar quem avisou testar: o recado automático pede para tentar de novo (e, se falhar, contar pelo balão). Nada de avisar um a um.
    - `addBacklog`: itens novos combinados na conversa.

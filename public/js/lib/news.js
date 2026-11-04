@@ -52,3 +52,8 @@ export function unseenNews(items, { seenAt, createdAt } = {}) {
   return (items || []).filter(x => x && x.at && Date.parse(x.at) > after && Date.parse(x.at) <= Date.now() + 864e5)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 3);
 }
+
+// Quiet hours (Brasília time, no daylight saving since 2019): no automatic push between 22h and 8h.
+// A version published at night reaches the phones from 8h on.
+export const QUIET = { from: 22, to: 8 };
+export function quietHours(now = Date.now()) { const h = new Date(now - 3 * 3600e3).getUTCHours(); return h >= QUIET.from || h < QUIET.to; }
