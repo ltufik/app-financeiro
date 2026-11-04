@@ -92,3 +92,31 @@ export const DOC_SONHO = { id: 'sonho_doc', title: 'O sonho e quanto a família 
 ## Ver quanto guardaram
 - Início: escolha o mês no topo para ver a sobra e a porcentagem guardada; o gráfico de barras mostra a taxa de cada mês.
 - Gráficos prontos: "Quanto sobrou em cada mês", "Quanto já guardamos no ano" (acumulado) e "Quanto guardamos da renda".` };
+
+// Study of the main pains in personal finance tracking (web research, nov/2026): what hooks people and backlog ideas.
+export const DOC_DORES = { id: 'pesquisa_dores', title: 'Pesquisa: as dores de quem tenta controlar o dinheiro', body: `Estudo feito em novembro de 2026 em pesquisas da CNDL/SPC Brasil, Serasa, Lina Open X/MindMiners, blogs de educação financeira e reclamações de apps. Serve para a comunicação e para o backlog.
+## Os números
+| Dor | Dado | Fonte |
+| Quase ninguém controla o cartão | 58% dos usuários de cartão não fazem nenhum controle ativo; 14% só descobrem quanto gastaram quando a fatura fecha. Média de 2 cartões por pessoa | CNDL/SPC Brasil, jan/2026 (publicada abr/2026) |
+| Controlar dá trabalho e a pessoa desiste | Quem controla usa caderno (18%) ou planilha (14%). Entre inadimplentes, quem não controla diz que já tentou e não ajudou (18%), falta disciplina (15%), falta tempo (15%), não sabe como (13%) | CNDL/SPC Brasil, 2026 e 2024 |
+| Apps de finanças são pouco usados | Só 18,9% usam app de orçamento; 31,6% anotam à mão e 16,1% não controlam nada. 75,2% gostariam de ver todas as contas num app só | Lina Open X/MindMiners, dez/2025 |
+| Medo de dar acesso ao banco | 76,8% conhecem o Open Finance, mas só 37,1% já compartilharam dados; 56,3% citam segurança e medo de golpe como maior preocupação | Lina Open X/MindMiners, dez/2025 |
+| O mês acaba antes do salário | 53% dos trabalhadores terminam o mês sem dinheiro para todas as contas | Serasa Experian, jun/2026 |
+| Juros invisíveis | 78% não sabem a taxa do rotativo; 26% já pagaram só o mínimo | CNDL/SPC Brasil, jan/2026 |
+| Impulso, não falta de informação | 53% gastam mais do que o orçamento permite; 46% cedem ao impulso; 38% compram para se sentir melhor | CNDL/SPC Brasil, 2024 (inadimplentes) |
+| Dinheiro vivo some do controle | 19,4% dizem que esquecem as compras em dinheiro, que não aparecem no extrato | SPC Brasil (pesquisa antiga, 2015) |
+| Dinheiro gera briga em casa | 48% dos casados discutem por dinheiro: um gasta além do que pode (46%), prioridades diferentes (32%) | SPC Brasil/CNDL, citada pelo blog do Nubank (2021) |
+- Apps concorrentes: as reclamações (Reclame Aqui, Mobills) falam de saldo que não bate e de conexão com o banco que cai depois do Open Finance. Em geral os apps de finanças retêm pouca gente depois de 30 dias (artigos de mercado citam cerca de 7%; dado sem fonte independente).
+- Blogs de finanças: anotar o passado não muda comportamento; o que ajuda é olhar para frente (quanto ainda dá para gastar, metas) e aceitar imprevistos.
+## O que isso diz sobre o Pra Onde Foi
+- A dor número 1 é o trabalho de anotar. O nosso diferencial ataca isso direto: manda o PDF da fatura e do extrato, de qualquer banco, e o app separa tudo. Ninguém digita gasto por gasto.
+- A dor número 2 é a confiança. Não pedimos senha do banco nem conexão (Open Finance); o arquivo é lido no celular e descartado. Isso tem de aparecer cedo e sempre.
+- "Todas as faturas de todos os cartões num lugar só" responde aos 2 cartões por pessoa e aos 75% que querem tudo num app.
+- Fisgar = mostrar valor em minutos: "descubra para onde foi o dinheiro de outubro em 10 minutos".
+## Frases para a comunicação
+- "Sem anotar nada: mande o PDF da fatura e do extrato e veja para onde foi o dinheiro."
+- "Funciona com qualquer banco e nunca pede a senha do banco."
+- "Todas as faturas de todos os cartões num lugar só, e o quanto sobrou no mês."
+- "Quanto dá para gastar por dia até a fatura fechar."
+## Ideias que foram para o backlog
+Lembrete para mandar a fatura quando ela fecha; juros e tarifas da fatura em destaque; saques e dinheiro vivo; ver o resultado antes de criar a conta; selo de confiança na entrada; trazer o histórico de outros apps. As parcelas já comprometidas (já no backlog) ganharam peso com a pesquisa.` };

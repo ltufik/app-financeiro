@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -250,5 +250,13 @@ export const RELEASES = [
   ] },
   { id: 'r86', version: 'v86', at: '2026-11-04T16:56:00Z', backlog: [], semNovidade: 'Só a Central do produto (o dono vê): login e ajustes próprios, separados do app. Para as famílias nada muda.', updateDocs: [DOC_SEGURANCA], addBacklog: [
     { id: 'central_login_proprio', title: 'Central com login e ajustes próprios, separados do app', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A Central usava a mesma sessão e as mesmas chaves do bloqueio do app, e na prática desconectava junto com o app', cost: false, notes: 'Sessão própria (entrar ou sair de um não mexe no outro, e "Sair da conta" agora só fecha o lugar onde foi tocado). Central → Sua conta → Acesso e segurança: tempo de 30 min a 4 h (1 h de fábrica) e digital só para a Central. O e-mail e a senha continuam os da conta de dono.', from: [], where: 'Central → Sua conta' },
+  ] },
+  { id: 'r87', version: 'v87', at: '2026-11-04T17:27:00Z', backlog: [], semNovidade: 'Só a Central do produto (o dono vê): pesquisa das dores de quem controla o dinheiro na Documentação e ideias novas no backlog.', addDocs: [DOC_DORES], addBacklog: [
+    { id: 'lembrete_mandar_fatura', title: 'Lembrete para mandar a fatura quando ela fecha', status: 'ideia', origin: 'Pesquisa de dores (nov/2026)', effort: 'P', problem: 'Apps de finanças perdem a maioria das pessoas em 30 dias; 14% só olham o cartão quando a fatura fecha', cost: false, notes: 'No dia seguinte ao fechamento de cada cartão, push com o nome: "A fatura do cartão X fechou: mande o PDF e veja para onde foi". Cria o hábito mensal sem pedir anotação.', from: [] },
+    { id: 'juros_e_tarifas_da_fatura', title: 'Juros, IOF e tarifas da fatura em destaque', status: 'ideia', origin: 'Pesquisa de dores (nov/2026)', effort: 'M', problem: '78% não sabem a taxa do rotativo e 26% já pagaram só o mínimo (CNDL/SPC 2026)', cost: false, notes: 'Ao ler a fatura, separar juros, IOF, multa, anuidade e pagamento mínimo; mostrar quanto custou no mês e no ano e avisar no Início.', from: [] },
+    { id: 'saques_e_dinheiro_vivo', title: 'Saques e dinheiro vivo: no que foi gasto?', status: 'ideia', origin: 'Pesquisa de dores (nov/2026)', effort: 'P', problem: 'Compras em dinheiro somem do controle (19,4% esquecem, SPC)', cost: false, notes: 'Quando o extrato tem saque, perguntar no que foi gasto (falar ou escrever) e dividir por categoria.', from: [] },
+    { id: 'resultado_antes_da_conta', title: 'Ver o resultado antes de criar a conta', status: 'ideia', origin: 'Pesquisa de dores (nov/2026)', effort: 'G', problem: 'A primeira barreira é o cadastro antes de ver valor; a promessa é "descubra em 10 minutos"', cost: false, notes: 'Mandar uma fatura na página inicial e ver o resumo (categorias, total, maiores gastos) antes de criar a conta; salvar só se criar.', from: [] },
+    { id: 'selo_de_confianca', title: 'Selo de confiança na entrada: sem senha do banco', status: 'ideia', origin: 'Pesquisa de dores (nov/2026)', effort: 'P', problem: 'Só 37% compartilham dados pelo Open Finance; 56% têm medo de golpe (Lina Open X 2025)', cost: false, notes: 'Na página inicial e no primeiro Lançar: "Não pedimos senha do banco nem acesso à conta. O PDF é lido no seu celular e descartado." Com link para Sobre o app.', from: [] },
+    { id: 'historico_de_outros_apps', title: 'Trazer o histórico de outros apps (Mobills, Organizze)', status: 'ideia', origin: 'Pesquisa de dores (nov/2026)', effort: 'P', problem: 'Quem desistiu de outros apps leva o histórico consigo', cost: false, notes: 'Testar a planilha com os arquivos que esses apps exportam (CSV ou Excel) e ajustar as colunas; citar na comunicação.', from: [] },
   ] },
 ];
