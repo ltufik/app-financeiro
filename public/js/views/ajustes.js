@@ -1,11 +1,13 @@
-import { S, settings, goals, reindex, monthKeys, txsOf, presets } from '../state.js';
+import { S, settings, goals, reindex, monthKeys, txsOf, presets, debtsNow } from '../state.js';
+import { SISTEMAS, debtNow, debtOfAsset } from '../lib/debt.js';
+import { renderPendingPayments, applyAmortization } from '../debtpay.js';
 import * as db from '../db.js';
 import { track, APP_VERSION } from '../usage.js';
 import { KINDS, kindOf, kindByKey, byCategory } from '../lib/calc.js';
 import { suggestBudgets, budgetsOf } from '../lib/budget.js';
-import { esc, todayISO, brl } from '../lib/format.js';
+import { esc, todayISO, brl, isoToBr } from '../lib/format.js';
 import { $, toast, validate, invalid, clearInvalid, confirmInline } from '../ui.js';
-import { checkName, checkNumber, checkMonth } from '../lib/validate.js';
+import { checkName, checkNumber, checkMonth, checkDate } from '../lib/validate.js';
 import { installHelpHTML, wireInstall, expandSteps } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
@@ -21,8 +23,8 @@ import { mergeSuggestions, mergeSettings, pairKey } from '../lib/catmerge.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
-  assets: { title: 'Bens (imóveis, veículos)', hint: 'O que a família tem de valor. Ex.: apartamento que vale R$ 500 mil e ainda faltam R$ 200 mil para quitar.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto vale hoje', 'number'], ['debt', 'Quanto falta pagar', 'number']] },
-  debts: { title: 'Financiamentos e dívidas', hint: 'O que vocês ainda estão pagando. Ex.: financiamento do carro. Serve para o assistente calcular quando quita. Os juros são ao ano: escreva 12 para 12%.', cols: [['name', 'O que é', 'text'], ['saldo', 'Quanto falta pagar', 'number'], ['taxa', 'Juros ao ano (%)', 'pct'], ['parcela', 'Parcela por mês', 'number']] },
+  assets: { title: 'Bens (imóveis, veículos)', hint: 'O que a família tem de valor. Se o bem ainda está sendo pago, ligue ao financiamento: o quanto falta passa a vir de lá e diminui a cada parcela e amortização.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto vale hoje', 'number'], ['debtId', 'Financiamento', 'debtlink'], ['debt', 'Quanto falta pagar', 'number']] },
+  debts: { title: 'Financiamentos e dívidas', hint: 'O que vocês ainda estão pagando. Com os juros, a parcela e o tipo de parcela, o app abate o saldo sozinho todo mês (estimado) e cada amortização que vocês confirmarem. Os juros são ao ano: escreva 12 para 12%. Mudou o saldo à mão (pelo extrato do banco)? Ele passa a valer a partir de hoje.', cols: [['name', 'O que é', 'text'], ['saldo', 'Quanto falta pagar', 'number'], ['taxa', 'Juros ao ano (%)', 'pct'], ['parcela', 'Parcela por mês', 'number'], ['sistema', 'Tipo de parcela', 'select', SISTEMAS], ['meses', 'Meses que faltam', 'int']] },
   receivables: { title: 'Dinheiro que alguém está devolvendo', hint: 'Quando vocês emprestaram dinheiro e a pessoa devolve um pouco por mês. Ex.: emprestaram R$ 6.000 para um parente, que devolve R$ 500 por mês em 12 vezes. Se não tem data para acabar, deixe "Quantas vezes" em branco.', cols: [['name', 'Quem está devolvendo', 'text'], ['monthly', 'Quanto por mês', 'number'], ['start', 'Começou em (AAAA-MM)', 'text'], ['n', 'Quantas vezes', 'int']] },
   redemptions: { title: 'Dinheiro que vai entrar numa data', hint: 'Um valor grande que vocês já sabem que vem. Ex.: resgate da previdência, venda do carro.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto', 'number'], ['month', 'Quando (AAAA-MM)', 'text']] },
   recurring: { title: 'Contas fixas no cartão', hint: 'O que cai todo mês no cartão: streaming, seguro, academia. Serve para prever a próxima fatura.', cols: [[0, 'O que é', 'text'], [1, 'Quanto por mês', 'number'], [2, 'Observação', 'text']] },
@@ -75,9 +77,11 @@ export function render(el) {
   <div class="panel stack" data-sec="patrimonio">
     <h2>Patrimônio</h2>
     <div class="grid3">${num('iTotal', 'Investimentos (R$)', st.invest?.total || '')}<label class="f">Data<input type="date" id="iDate" value="${esc(st.invest?.date || '')}"></label></div>
-    <p class="tiny muted">O extrato de investimentos em PDF atualiza este valor sozinho.</p>
+    <p class="tiny muted">O extrato de investimentos em PDF atualiza este valor sozinho. Entre um extrato e outro, o Início mostra o valor de hoje estimado pelo rendimento das Metas; o extrato novo traz o valor real.</p>
     ${Object.entries(LISTS).map(([k, d]) => `<h3 style="margin-top:6px">${d.title}</h3><p class="tiny muted">${d.hint}</p><div class="tw edtable"><table><thead><tr>${d.cols.map(c => `<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody data-list="${k}"></tbody></table></div><div><button class="chip" type="button" data-add="${k}">Adicionar</button></div>`).join('')}
     <div><button class="btn primary" id="pSave" type="button">Salvar patrimônio</button></div>
+    <div class="stack" id="pDebtPay" hidden></div>
+    <div class="stack" id="pDebtNow" hidden></div>
   </div>
 
   <div class="panel stack" data-sec="categorias">
@@ -279,8 +283,14 @@ export function render(el) {
   const data = {}; for (const k in LISTS) data[k] = JSON.parse(JSON.stringify(st[k] || []));
   const drawList = k => {
     const d = LISTS[k], tb = el.querySelector(`[data-list="${k}"]`);
-    tb.innerHTML = data[k].map((r, i) => `<tr>${d.cols.map(([key, , type]) => { let v = r[key]; if (type === 'pct' && v != null && v !== '') v = +(v * 100).toFixed(4); return `<td><input type="${type === 'text' ? 'text' : 'number'}" ${type !== 'text' ? 'step="any"' : ''} data-i="${i}" data-k="${key}" data-t="${type}" value="${esc(v ?? '')}"></td>`; }).join('')}<td><button class="chip" type="button" data-rm="${i}" aria-label="Remover">×</button></td></tr>`).join('') || `<tr><td colspan="${d.cols.length + 1}" class="tiny muted">Nada cadastrado.</td></tr>`;
-    tb.querySelectorAll('input').forEach(inp => inp.onchange = () => { const r = data[k][+inp.dataset.i], t = inp.dataset.t; let v = inp.value; if (t === 'number') v = v === '' ? 0 : +v; else if (t === 'int') v = v === '' ? null : Math.round(+v); else if (t === 'pct') v = v === '' ? null : +v / 100; r[isNaN(+inp.dataset.k) ? inp.dataset.k : +inp.dataset.k] = v; });
+    tb.innerHTML = data[k].map((r, i) => `<tr>${d.cols.map(([key, , type, opts]) => { let v = r[key]; if (type === 'pct' && v != null && v !== '') v = +(v * 100).toFixed(4);
+      if (type === 'select') return `<td><select data-i="${i}" data-k="${key}" data-t="${type}">${opts.map(([o, l]) => `<option value="${o}"${(v || 'price') === o ? ' selected' : ''}>${l}</option>`).join('')}</select></td>`;
+      if (type === 'debtlink') { const cur = debtOfAsset(r, data.debts)?.id || ''; return `<td><select data-i="${i}" data-k="${key}" data-t="${type}"><option value="">Nenhum (quitado ou à parte)</option>${data.debts.filter(x => x.name).map(x => `<option value="${esc(x.id)}"${cur === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></td>`; }
+      if (k === 'assets' && key === 'debt') { const ln = debtOfAsset(r, data.debts); if (ln) return `<td><input type="text" readonly data-i="${i}" data-k="${key}" data-t="linked" value="${esc('R$ ' + Math.round(debtNow(ln, todayISO()).saldo).toLocaleString('pt-BR'))}" title="Vem do financiamento"></td>`; }
+      return `<td><input type="${type === 'text' ? 'text' : 'number'}" ${type !== 'text' ? 'step="any"' : ''} data-i="${i}" data-k="${key}" data-t="${type}" value="${esc(v ?? '')}"></td>`; }).join('')}<td><button class="chip" type="button" data-rm="${i}" aria-label="Remover">×</button></td></tr>`).join('') || `<tr><td colspan="${d.cols.length + 1}" class="tiny muted">Nada cadastrado.</td></tr>`;
+    tb.querySelectorAll('input:not([readonly]), select').forEach(inp => inp.onchange = () => { const r = data[k][+inp.dataset.i], t = inp.dataset.t; let v = inp.value;
+      if (t === 'debtlink') { r.debtId = v || null; if (!v) r.debt = 0; drawList('assets'); return; }
+      if (t === 'number') v = v === '' ? 0 : +v; else if (t === 'int') v = v === '' ? null : Math.round(+v); else if (t === 'pct') v = v === '' ? null : +v / 100; r[isNaN(+inp.dataset.k) ? inp.dataset.k : +inp.dataset.k] = v; });
     tb.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
       const r = data[k][+b.dataset.rm], label = (Array.isArray(r) ? r[0] : r.name) || 'esta linha';
       if (!await confirmInline(b, { text: `Remover "${esc(label)}"? A remoção vale quando você tocar em Salvar patrimônio.`, yes: 'Sim, remover', danger: true })) return;
@@ -288,7 +298,9 @@ export function render(el) {
     });
   };
   for (const k in LISTS) drawList(k);
-  el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const k = b.dataset.add; data[k].push(k === 'recurring' ? ['', 0, ''] : k === 'debts' ? { id: 'd' + Date.now().toString(36), name: '', saldo: 0, taxa: null, parcela: 0 } : {}); drawList(k); });
+  el.querySelector('[data-list="debts"]').addEventListener('change', () => drawList('assets'));
+  drawDebtsNow();
+  el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const k = b.dataset.add; data[k].push(k === 'recurring' ? ['', 0, ''] : k === 'debts' ? { id: 'd' + Date.now().toString(36), name: '', saldo: 0, taxa: null, parcela: 0, sistema: 'price', meses: null } : {}); drawList(k); });
   // Every row of every list must be complete and sensible before saving.
   const checkLists = () => {
     for (const k in LISTS) {
@@ -306,9 +318,49 @@ export function render(el) {
         }
       }
     }
+    // A financing needs what the app uses to take off each installment.
+    const dtb = el.querySelector('[data-list="debts"]');
+    for (let i = 0; i < data.debts.length; i++) {
+      const r = data.debts[i], inp = key => dtb.querySelector(`[data-i="${i}"][data-k="${key}"]`);
+      if (!(+r.parcela > 0) && +r.saldo > 0) return invalid(inp('parcela'), 'Informe a parcela por mês: com ela o app abate o saldo todo mês.');
+      if (r.sistema === 'sac' && !(+r.meses > 0)) return invalid(inp('meses'), 'Nas parcelas que diminuem (SAC), diga quantos meses faltam.');
+    }
+    // A property still being paid without its financing: create it and ask for the data.
+    for (let i = 0; i < data.assets.length; i++) {
+      const a = data.assets[i];
+      if (+a.debt > 0 && !debtOfAsset(a, data.debts)) {
+        const id = 'd' + Date.now().toString(36);
+        data.debts.push({ id, name: 'Financiamento de ' + a.name, saldo: +a.debt, taxa: null, parcela: 0, sistema: 'price', meses: null }); a.debtId = id;
+        drawList('debts'); drawList('assets');
+        return invalid(dtb.querySelector(`[data-i="${data.debts.length - 1}"][data-k="taxa"]`), `${a.name} ainda tem ${'R$ ' + Math.round(a.debt).toLocaleString('pt-BR')} para pagar. Complete o financiamento (juros, parcela e tipo de parcela) para o app ir abatendo sozinho.`);
+      }
+    }
     return validate([[$('#iTotal'), checkNumber($('#iTotal').value, { min: 0, max: 1e10, label: 'Investimentos', allowEmpty: true })]]);
   };
-  $('#pSave').onclick = () => { clearInvalid(el); if (checkLists()) save({ ...data, invest: { ...(st.invest || {}), total: val('iTotal'), date: $('#iDate').value || todayISO() } }, 'Patrimônio salvo'); };
+  // Balances typed by hand count from today; old ones get today's date so the installments start counting.
+  const stampDebts = () => { const prev = new Map((st.debts || []).map(d => [d.id, d])), now = new Date().toISOString();
+    data.debts = data.debts.map(d => { const p = prev.get(d.id); const changed = !p || Math.abs((+p.saldo || 0) - (+d.saldo || 0)) >= 0.01; return changed ? { ...d, saldoEm: todayISO(), saldoAt: now, log: p ? d.log : [] } : { ...d, saldoEm: d.saldoEm || todayISO() }; });
+    data.assets = data.assets.map(a => { const ln = debtOfAsset(a, data.debts); return ln ? { ...a, debtId: ln.id, debt: 0 } : { ...a, debtId: null }; }); };
+  // Each financing today: balance, what came off and when; register an extra payment by hand.
+  function drawDebtsNow() {
+    const box = $('#pDebtNow'); if (!box) return;
+    const ds = debtsNow().filter(d => d.name);
+    box.hidden = !ds.length;
+    box.innerHTML = ds.length ? `<h3>Como está cada financiamento hoje</h3>${ds.map(d => `<div class="dnow"><p class="small"><strong>${esc(d.name)}</strong>: faltam <strong>${brl(d.now.saldo)}</strong>${d.now.months ? ' (estimado)' : ''}</p>
+      <ul class="tiny muted">${d.now.history.map(h => `<li>${h.kind === 'inicio' ? `${isoToBr(h.date)}: saldo informado ${brl(h.value)}` : h.kind === 'amortizacao' ? `${isoToBr(h.date)}: amortização −${brl(h.value)}${h.note ? ' (' + esc(h.note) + ')' : ''}` : `${esc(h.note)}: −${brl(h.value)}`}</li>`).join('')}</ul>
+      <details class="help"><summary>Registrar uma amortização</summary><div class="grid3">${num('am' + d.id, 'Valor (R$)', '')}<label class="f">Data<input type="date" id="amd${esc(d.id)}" value="${todayISO()}"></label></div><button class="btn" type="button" data-amort="${esc(d.id)}">Abater do saldo</button></details></div>`).join('')}
+      <p class="tiny muted">Com o comprovante, é mais fácil: mande em Lançar e diga que é amortização. Quando chegar o extrato do financiamento, digite o saldo dele acima e salve.</p>` : '';
+    box.querySelectorAll('[data-amort]').forEach(b => b.onclick = async () => {
+      const id = b.dataset.amort, v = +String($('#am' + id).value).replace(',', '.'), dt = $('#amd' + id).value;
+      const e = checkNumber(v, { min: 1, max: 1e9, label: 'Valor' }); if (e) return invalid($('#am' + id), e);
+      const de = checkDate(dt); if (de) return invalid($('#amd' + id), de);
+      const d = ds.find(x => x.id === id);
+      if (!await confirmInline(b, { title: 'Abater do financiamento?', text: `${brl(v)} saem do saldo do ${esc(d.name)} e o patrimônio líquido sobe o mesmo valor.`, yes: 'Sim, abater' })) return;
+      try { const s = await applyAmortization(id, { value: v, date: dt, note: 'registrado à mão' }); toast(`Pronto! O saldo do ${d.name} agora é ${brl(s)}.`); S.render(); } catch (err) { toast('Não foi possível abater agora. ' + db.errorText(err)); }
+    });
+    renderPendingPayments($('#pDebtPay'), { onDone: () => S.render() });
+  }
+  $('#pSave').onclick = async () => { clearInvalid(el); if (!checkLists()) return; stampDebts(); await save({ ...data, invest: { ...(st.invest || {}), total: val('iTotal'), date: $('#iDate').value || todayISO() } }, 'Patrimônio salvo'); S.render(); };
 
   // categories
   let newKind = 'dvar';

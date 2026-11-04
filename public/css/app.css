@@ -612,3 +612,11 @@ label.consent[hidden]{display:none}
 .trust ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 .trust-line{display:flex;align-items:center;gap:6px;margin:4px 0 0;color:var(--accent);font-weight:600}
 .trust-line svg{flex:none}
+
+/* Financing: payments that look like amortization, and each financing today */
+.dpay,.dnow{padding:12px;border-radius:12px;background:var(--sunk);display:flex;flex-direction:column;gap:6px}
+.dpay p,.dnow p{margin:0}
+.dnow ul{margin:0;padding-left:18px}
+.qdebt{padding:12px;border-radius:12px;background:var(--accent-soft);display:flex;flex-direction:column;gap:6px}
+.qdebt p{margin:0}
+.qdebts{margin-top:10px}

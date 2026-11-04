@@ -11,12 +11,13 @@ const MOCK = fs.readFileSync(path.join(HERE, '../e2e/mock-supabase.js'), 'utf8')
 fs.mkdirSync(out, { recursive: true });
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
+let proof = 'pix'; // which receipt the shared file is: an ordinary Pix or paying off part of the financing
 function ai(b) {
   const text = JSON.stringify(b.messages);
   if (String(b.system || '').includes('dúvidas sobre como usar')) return reply('Sim! Abra o mesmo endereço no navegador do computador e entre com o seu e-mail e senha. Os números são os mesmos do celular.');
-  if (text.includes('Transforme a frase')) return reply(JSON.stringify({ itens: [{ descricao: 'Padaria', valor: 45, sentido: 'saida', data: '2026-10-28', meio: 'pix', categoria: 'Mercado' }] }));
+  if (text.includes('Transforme a frase')) return reply(JSON.stringify({ itens: [proof === 'amort' ? { descricao: 'Amortização do financiamento do apartamento', valor: 15000, sentido: 'saida', data: '2026-10-30', meio: 'pix', categoria: 'Investimentos e transferências' } : { descricao: 'Padaria', valor: 45, sentido: 'saida', data: '2026-10-28', meio: 'pix', categoria: 'Mercado' }] }));
   if (text.includes('nota fiscal ou cupom')) return reply(JSON.stringify({ loja: 'Mercado Bom Preço', data: '2026-10-27', total: 186.4, pagamento: 'cartao', itens: [{ descricao: 'Arroz 5 kg', valor: 32.9, categoria: 'Mercado' }, { descricao: 'Detergente', valor: 12.5, categoria: 'Casa' }, { descricao: 'Dipirona', valor: 18, categoria: 'Saúde' }, { descricao: 'Carne', valor: 123, categoria: 'Mercado' }] }));
-  if (text.includes('documento compartilhado')) return reply(JSON.stringify({ tipo: 'comprovante', itens: [{ descricao: 'Pix para João Encanador', valor: 180, sentido: 'saida', data: '2026-10-29', meio: 'conta', categoria: 'Casa' }] }));
+  if (text.includes('documento compartilhado')) return reply(JSON.stringify({ tipo: 'comprovante', itens: [proof === 'amort' ? { descricao: 'Amortização do financiamento do apartamento', valor: 15000, sentido: 'saida', data: '2026-10-30', meio: 'conta', categoria: 'Investimentos e transferências' } : { descricao: 'Pix para João Encanador', valor: 180, sentido: 'saida', data: '2026-10-29', meio: 'conta', categoria: 'Casa' }] }));
   if (text.includes('Classifique lançamentos')) return reply('[]');
   if (text.includes('Extraia os dados')) return reply(JSON.stringify({ tipo: 'fatura', banco: 'Nubank', vencimento: '15/11/2026', valorTotalFatura: 1234.5, cartoes: [], itens: [
     { cartao: '', data: '09/10', descricao: 'Padaria Pao Quente', parcela: '', valor: 45.9 }, { cartao: '', data: '12/10', descricao: 'Posto Shell Av Brasil', parcela: '', valor: 250 },
@@ -139,6 +140,14 @@ await step('lancar_comprovante', async () => {
   await page.evaluate(async () => { const png = await (await fetch('/icons/icon-192.png')).blob(); const c = await caches.open('share'); await c.put('/shared/meta', new Response(JSON.stringify({ text: '', name: 'comprovante.png', type: 'image/png' }))); await c.put('/shared/file', new Response(png, { headers: { 'content-type': 'image/png' } })); });
   await page.goto('https://app.test/?acao=compartilhar'); await page.waitForSelector('#qSave', { timeout: 15000 });
 }, { scrollTo: '#qPreview' });
+// Financing: the receipt asks whether it pays the financing; the payment already saved waits in Patrimônio.
+await step('comprovante_amortizacao', async () => {
+  proof = 'amort'; await page.goto('https://app.test/'); await page.waitForSelector('[data-tab=lancar]');
+  await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="falar"]');
+  await page.fill('#qText', 'mandei 15 mil para amortizar o financiamento do apartamento'); await page.click('#qGo');
+  await page.waitForSelector('#qPreview .qdebt', { timeout: 30000 }); proof = 'pix';
+}, { scrollTo: '#qPreview' });
+await step('patrimonio_financiamento', async () => { await page.click('#qCancel').catch(() => {}); await sec('patrimonio'); await page.waitForSelector('#pDebtNow .dnow'); }, { scrollTo: '#pDebtPay' });
 await step('duvidas_resposta', async () => { await sec('duvidas'); await page.fill('#fqQ', 'consigo usar no computador?'); await page.click('#fqSend'); await page.waitForSelector('#fqAns [data-h]'); }, { scrollTo: '#fqAsk' });
 await step('opiniao_confirmar', async () => { await page.click('#fbBtn'); await page.waitForSelector('#fbText'); await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver quanto gastamos por semana'); await page.click('#fbSend'); await page.waitForSelector('.cfm'); });
 await step('opiniao_enviada', async () => { await page.click('.cfm [data-y]'); await page.waitForSelector('#toast:not([hidden])'); }, { keepToast: true });

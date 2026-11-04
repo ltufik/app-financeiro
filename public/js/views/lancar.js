@@ -1,4 +1,6 @@
 import { S, reindex, closeDay, txsOf, pendingManual, latestCard, latestClosed, monthKeys, settings } from '../state.js';
+import { debtForTx, looksLikeDebtPayment } from '../lib/debt.js';
+import { applyAmortization, AMORT_CAT } from '../debtpay.js';
 import { track } from '../usage.js';
 import * as db from '../db.js';
 import { askJSON, aiErrorText } from '../ai.js';
@@ -335,6 +337,7 @@ function renderQ() {
   const box = $('#qPreview'); box.hidden = false;
   box.innerHTML = `<div class="tw"><table><thead><tr><th>Data</th><th>Descrição</th><th>Onde</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody></tbody></table></div>
   <p class="tiny muted" style="margin-top:6px">Na conta, saída é negativa. No cartão, compra é positiva.</p>
+  <div class="stack qdebts" id="qDebts" hidden></div>
   <div class="rowbtn" style="margin-top:10px"><button class="btn primary" id="qSave" type="button">Salvar ${Q.length > 1 ? Q.length + ' lançamentos' : 'lançamento'}</button><button class="btn" id="qCancel" type="button">Descartar</button></div>`;
   const tb = box.querySelector('tbody');
   Q.forEach((it, i) => {
@@ -347,6 +350,16 @@ function renderQ() {
       else it[f] = f === 'amount' ? +String(inp.value).replace(',', '.') : inp.value;
     });
     tb.append(tr);
+    // A payment that may be paying a financing: ask, with the likely one already chosen.
+    const debts = (settings().debts || []).filter(d => d.name);
+    if (debts.length && it.source === 'conta' && it.amount < 0 && (looksLikeDebtPayment(it) || Math.abs(it.amount) >= 1000)) {
+      if (it.debtId === undefined) it.debtId = debtForTx(it, debts)?.id || '';
+      const dr = document.createElement('div'); dr.className = 'qdebt'; $('#qDebts').hidden = false;
+      dr.innerHTML = `<label class="f">${Q.length > 1 ? esc(it.description) + ': i' : 'I'}sso abate um financiamento?<select data-debt="${i}"><option value="">Não</option>${debts.map(d => `<option value="${esc(d.id)}"${it.debtId === d.id ? ' selected' : ''}>Sim, é amortização do ${esc(d.name)}</option>`).join('')}</select></label>
+        <p class="tiny muted">${it.debtId ? `O valor sai do saldo do financiamento, o patrimônio sobe e o lançamento vai para "${AMORT_CAT}", fora da sobra do mês.` : 'Se for parcela do mês, deixe "Não": as parcelas já são abatidas sozinhas.'}</p>`;
+      dr.querySelector('select').onchange = e => { it.debtId = e.target.value; renderQ(); };
+      $('#qDebts').append(dr);
+    }
   });
   $('#qCancel').onclick = () => { box.hidden = true; Q = null; $('#qStatus').textContent = ''; docDone('descartado'); };
   $('#qSave').onclick = async () => {
@@ -366,6 +379,12 @@ function renderQ() {
       const rows = Q.map(it => ({ household_id: S.hh.id, source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
       const saved = await db.addTransactions(rows); track('lancar.salvar');
       S.txs.push(...saved.map(t => ({ ...t, amount: +t.amount })));
+      // Payments confirmed as amortization come off the financing's balance.
+      for (let i = 0; i < Q.length; i++) if (Q[i].debtId && saved[i]) {
+        const d = (settings().debts || []).find(x => x.id === Q[i].debtId);
+        try { const s = await applyAmortization(Q[i].debtId, { value: Q[i].amount, date: Q[i].date, txId: saved[i].id, note: Q[i].description }); toast(`Pronto! O saldo do ${d?.name || 'financiamento'} agora é ${brl(s)}.`); }
+        catch (e) { toast('O lançamento foi salvo, mas não consegui abater do financiamento. Faça em Patrimônio e dívidas.'); }
+      }
       toast(rows.length > 1 ? 'Lançamentos salvos' : 'Lançamento salvo'); box.hidden = true; Q = null; $('#qText').value = ''; $('#qStatus').textContent = ''; S.render(); docDone('salvo', rows.length > 1 ? rows.length + ' lançamentos' : 'Lançamento');
     } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#qSave').disabled = false; }
   };

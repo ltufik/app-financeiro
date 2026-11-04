@@ -103,6 +103,16 @@ export const TESTS = [
   t('versao_no_menu', 'Menu e telas', 'v85', 'ambos', 'Ver a versão do app e atualizar',
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
+  // Patrimônio
+  t('amortizacao_comprovante', 'Início', 'v89', 'ambos', 'Comprovante de amortização abate o financiamento',
+    ['Lançar → mande o comprovante da amortização (ou fale "amortizei 10 mil do financiamento da casa").', 'Na revisão, confira "Isso abate um financiamento?" com o financiamento certo e salve.', 'Abra o Início e veja o Patrimônio.'],
+    'O saldo cai na hora ("Pronto! O saldo do … agora é R$ …"); o bem mostra "faltam" menor e o patrimônio líquido sobe; o lançamento fica em "Amortização de financiamento", fora da sobra.', true),
+  t('amortizacao_ja_salva', 'Início', 'v89', 'ambos', 'Pagamento já salvo que parece amortização',
+    ['Abra o Início (ou menu ☰ → Família e metas → Patrimônio e dívidas).', 'Em "Pagamentos que parecem amortização", toque em "Sim, abater" e confirme.'],
+    'O pagamento sai da lista, o saldo do financiamento cai e o histórico mostra a amortização. "Não é" faz o app parar de perguntar.'),
+  t('financiamento_dados', 'Início', 'v89', 'ambos', 'Financiamento com juros, parcela e tipo',
+    ['Patrimônio e dívidas → confira o bem ligado ao financiamento (coluna Financiamento).', 'Escolha "Parcelas que diminuem (SAC)" sem preencher os meses e salve.', 'Preencha e salve.', 'Volte depois de virar o mês.'],
+    'Sem os meses, o app pede "quantos meses faltam". Depois de um mês, o saldo aparece menor, com "(estimado)", e o histórico mostra as parcelas.', true),
   // Segurança
   t('aviso_desconectar', 'Segurança', 'v84', 'ambos', 'Aviso antes de desconectar',
     ['Menu ☰ → Dados e conta → Conta → Desconectar depois de: 1 minuto.', 'Deixe o app aberto, sem tocar, por uns 40 segundos.', 'Toque em Continuar no app.', 'Espere de novo, sem tocar, até passar 1 minuto.'],

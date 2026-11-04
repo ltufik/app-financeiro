@@ -2,7 +2,8 @@
 import { catIndex, monthCalc, sumCalcs, schedule, project, needPmt } from './lib/calc.js';
 import { prepareRules } from './lib/categorize.js';
 import { paceScenarios } from './lib/goalplan.js';
-import { addM, diffM, thisMonth } from './lib/format.js';
+import { addM, diffM, thisMonth, todayISO } from './lib/format.js';
+import { debtNow, debtOfAsset, investNow, pendingAmortizations } from './lib/debt.js';
 
 export const S = {
   user: null, hh: null, role: null, members: [],
@@ -52,16 +53,27 @@ export function projOpts(pmt, ext, extra = {}) {
   const years = g.ageGoal && g.ageNow ? g.ageGoal - g.ageNow : (g.years || 10);
   const receivables = (st.receivables || []).map(r => ({ monthly: +r.monthly || 0, left: r.n == null ? null : Math.max(0, +r.n - (r.start ? diffM(r.start, L) + 1 : 0)) }));
   const redemptions = (st.redemptions || []).map(r => ({ value: +r.value || 0, at: diffM(L, r.month) })).filter(r => r.at > 0);
-  return { start: +st.invest?.total || 0, pmt, ext, ret: g.ret ?? 0.05, years, receivables, redemptions, ...extra };
+  return { start: investNow(st.invest, g.ret ?? 0.05, todayISO()).value, pmt, ext, ret: g.ret ?? 0.05, years, receivables, redemptions, ...extra };
 }
 export const projectFor = (pmt, ext, extra) => project(projOpts(pmt, ext, extra));
 export const needPmtFor = (ext, goal, extra) => needPmt(projOpts(0, ext, extra), goal);
 
+// Financings with today's balance: installments taken off by estimate, extra payments the family confirmed.
+export const debtsNow = () => (settings().debts || []).map(d => ({ ...d, now: debtNow(d, todayISO()) }));
+// Big payments that look like paying a financing and still wait for "isso abate o financiamento?".
+export const pendingDebtPayments = () => pendingAmortizations(S.txs, settings().debts || [], settings().debtSkip);
+
+const R0 = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR'), D = d => d.split('-').reverse().join('/');
 export function patrimonio() {
-  const st = settings(), o = projOpts(0, 0);
+  const st = settings(), o = projOpts(0, 0), ds = debtsNow(), used = new Set();
   const rows = [];
-  if (st.invest?.total) rows.push({ name: 'Investimentos', value: +st.invest.total, note: st.invest.date ? 'em ' + st.invest.date.split('-').reverse().join('/') : '' });
-  for (const a of st.assets || []) rows.push({ name: a.name, value: (+a.value || 0) - (+a.debt || 0), note: +a.debt ? `vale R$ ${Math.round(a.value).toLocaleString('pt-BR')}, faltam R$ ${Math.round(a.debt).toLocaleString('pt-BR')}` : 'quitado' });
+  if (st.invest?.total) { const iv = investNow(st.invest, goals().ret ?? 0.05, todayISO()); rows.push({ name: 'Investimentos', value: iv.value, note: iv.estimated ? `${R0(st.invest.total)} no extrato de ${D(st.invest.date)}; hoje, estimado. Mande o extrato novo para o valor real` : st.invest.date ? 'em ' + D(st.invest.date) : '' }); }
+  for (const a of st.assets || []) {
+    const d = debtOfAsset(a, ds); if (d) used.add(d.id);
+    const owe = d ? d.now.saldo : +a.debt || 0;
+    rows.push({ name: a.name, value: (+a.value || 0) - owe, note: owe ? `vale ${R0(+a.value || 0)}, faltam ${R0(owe)}${d?.now.months ? ' (estimado)' : ''}` : 'quitado', debtId: d?.id });
+  }
+  for (const d of ds) if (!used.has(d.id) && d.now.saldo > 0) rows.push({ name: d.name, value: -d.now.saldo, note: `faltam ${R0(d.now.saldo)}${d.now.months ? ' (estimado)' : ''}`, debtId: d.id });
   (st.receivables || []).forEach((r, i) => { const left = o.receivables[i].left; if (left) rows.push({ name: 'A receber de ' + r.name, value: left * r.monthly, note: left + ' parcelas' }); });
   return { total: rows.reduce((a, r) => a + r.value, 0), rows };
 }

@@ -5,6 +5,7 @@ import { budgetStatus, budgetsOf } from '../lib/budget.js';
 import { findRecurring } from '../lib/recurring.js';
 import { settle } from '../lib/settle.js';
 import { settings, closeDay } from '../state.js';
+import { renderPendingPayments } from '../debtpay.js';
 import { mergeSuggestions } from '../lib/catmerge.js';
 import { expandSplits } from '../lib/calc.js';
 import { todayISO } from '../lib/format.js';
@@ -103,6 +104,7 @@ export function render(el) {
         </div>
         <div class="panel" id="goalBox"></div>
       </div>
+      <div class="panel stack" id="debtPayBox" hidden></div>
       <div class="panel" id="subsBox"></div>
       <div class="panel" id="settleBox" hidden></div>
     </div>
@@ -113,6 +115,7 @@ export function render(el) {
   if (cm) cm.onclick = () => { const hid = el.querySelectorAll('#catBars [data-more]'); const show = [...hid].some(x => x.hidden); hid.forEach(x => { x.hidden = !show; }); cm.textContent = show ? 'Mostrar só as 5 maiores' : `Ver todas as ${top.length} categorias`; };
   el.querySelector('#homeMore').ontoggle = e => { try { localStorage.setItem('fin.home.more', e.target.open ? '1' : '0'); } catch (x) { /* storage blocked */ } };
   renderGoal(el.querySelector('#goalBox'), G, pr);
+  renderPendingPayments(el.querySelector('#debtPayBox'), { onDone: () => S.render() });
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);

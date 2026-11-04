@@ -693,6 +693,20 @@ await page.click(mcard + ' [data-mj]'); await page.waitForSelector('.cfm [data-y
 ok('juntar pede confirmação e explica o que acontece', (await txt('.cfm')).includes('deixa de existir'));
 await page.click('.cfm [data-y]'); await page.waitForTimeout(300);
 ok('juntar categorias: a outra some e o aviso diz para onde foram', await page.evaluate(() => !window.__db.categories.some(c => c.name === 'Mercados')) && /passa(ram|u) para Mercado/.test(await txt('#toast')), await txt('#toast'));
+// Patrimônio: the property is linked to its financing; an amortization comes off the balance and the equity goes up.
+await sec('patrimonio');
+ok('patrimônio: a casa fica ligada ao financiamento dela', await page.$eval('[data-list="assets"] tr:nth-child(2) select[data-k="debtId"]', s => s.value) === 'guaratuba' && await page.$eval('[data-list="assets"] tr:nth-child(2) input[data-k="debt"]', i => i.readOnly && i.value.includes('480')));
+await page.selectOption('[data-list="debts"] tr:nth-child(1) select[data-k="sistema"]', 'sac'); await page.click('#pSave');
+ok('patrimônio: parcelas que diminuem (SAC) pedem os meses que faltam', (await txt('#v-ajustes')).includes('quantos meses faltam'));
+await page.selectOption('[data-list="debts"] tr:nth-child(1) select[data-k="sistema"]', 'price'); await page.click('#pSave'); await page.waitForTimeout(200);
+ok('patrimônio salvo: o bem guarda a ligação e o saldo ganha a data', await page.evaluate(() => { const st = window.__db.households[0].settings; return st.assets.find(a => /Guaratuba/.test(a.name)).debtId === 'guaratuba' && !!st.debts.find(d => d.id === 'guaratuba').saldoEm; }));
+await page.click('#pDebtNow .dnow:has-text("Guaratuba") summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]');
+ok('amortização pede confirmação e diz que o patrimônio sobe', (await txt('.cfm')).includes('patrimônio líquido sobe'));
+const patBefore = await page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').saldo);
+await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+ok('amortização registrada no histórico do financiamento', await page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').log.some(e => e.kind === 'amortizacao' && e.value === 130000)) && patBefore === 480000);
+await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
+ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 // product metrics (admin)
 await sec('metricas');
 await page.waitForSelector('#metricsBox .funnel');

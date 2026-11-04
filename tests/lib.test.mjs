@@ -799,3 +799,37 @@ test('gráfico: sobra acumulada soma mês a mês', async () => {
   assert.deepEqual(d.series[0].values, [1000, 800, 3800]); assert.equal(d.unit, 'brl');
   assert.doesNotMatch(chartSVG(d, { title: 'x' }), /NaN|undefined/);
 });
+
+import { debtNow, installmentSplit, monthlyRate, debtOfAsset, debtForTx, pendingAmortizations, investNow } from '../public/js/lib/debt.js';
+test('financiamento: parcelas abatem pela estimativa e amortização abate na hora', () => {
+  assert.ok(Math.abs(monthlyRate(0.12) - 0.009489) < 1e-5);
+  const p = installmentSplit(350000, { taxa: 0.12, parcela: 5600 }); assert.equal(p.juros, 3321.08); assert.equal(p.amort, 2278.92);
+  const s = installmentSplit(120000, { taxa: 0.12, sistema: 'sac', meses: 120 }); assert.equal(s.amort, 1000);
+  const d = { id: 'g', name: 'Financiamento de Guaratuba', saldo: 480000, saldoEm: '2026-09-30', saldoAt: '2026-09-30T12:00:00Z', taxa: 0.12, parcela: 5600, log: [{ date: '2026-11-04', at: '2026-11-04T21:00:00Z', kind: 'amortizacao', value: 130000, txId: 't1' }] };
+  const n = debtNow(d, '2026-11-04');
+  assert.equal(n.months, 1); assert.equal(n.amortized, 130000);
+  const after1 = 480000 - installmentSplit(480000, d).amort; assert.equal(n.saldo, Math.round((after1 - 130000) * 100) / 100);
+  assert.deepEqual(n.history.map(h => h.kind), ['inicio', 'amortizacao', 'parcelas']);
+  assert.equal(debtNow(d, '2026-10-15').months, 0);
+  assert.equal(debtNow({ saldo: 1000, saldoEm: '2026-01-01', taxa: 0, parcela: 600 }, '2026-12-01').saldo, 0);
+  assert.equal(debtNow({ saldo: 5000 }, '2026-11-04').saldo, 5000);
+  // Typed before the date existed (old data): the payment still counts, nothing is estimated yet.
+  assert.equal(debtNow({ saldo: 480000, taxa: 0.12, parcela: 5600, log: [{ date: '2026-11-04', at: '2026-11-04T21:00:00Z', kind: 'amortizacao', value: 130000 }] }, '2026-11-04').saldo, 350000);
+  // A balance typed after the payment already includes it.
+  assert.equal(debtNow({ ...d, saldo: 345000, saldoEm: '2026-11-05', saldoAt: '2026-11-05T10:00:00Z' }, '2026-11-05').saldo, 345000);
+});
+test('financiamento: liga o bem e reconhece o comprovante', () => {
+  const debts = [{ id: 'g', name: 'Financiamento de Guaratuba', saldo: 480000, parcela: 5600 }, { id: 'sp', name: 'Financiamento do apartamento de SP', saldo: 150000, parcela: 2700 }];
+  assert.equal(debtOfAsset({ name: 'Casa de Guaratuba', debt: 480000 }, debts).id, 'g');
+  assert.equal(debtOfAsset({ name: 'Apartamento de São Paulo', debt: 150000 }, debts).id, 'sp');
+  assert.equal(debtOfAsset({ name: 'Honda Civic', debt: 0 }, debts), null);
+  assert.equal(debtOfAsset({ name: 'Casa', debtId: 'sp' }, debts).id, 'sp');
+  assert.equal(debtForTx({ description: 'Pix Caixa', note: 'amortização do financiamento da casa de Guaratuba' }, debts).id, 'g');
+  assert.equal(debtForTx({ description: 'Mercado' }, debts), null);
+  const txs = [{ id: 't1', source: 'conta', amount: -130000, description: 'Amortização Guaratuba' }, { id: 't2', source: 'conta', amount: -5600, description: 'Parcela financiamento Guaratuba' }, { id: 't3', source: 'conta', amount: -90000, description: 'Amortização SP' }];
+  assert.deepEqual(pendingAmortizations(txs, debts, ['t3']).map(x => [x.tx.id, x.debt.id]), [['t1', 'g']]);
+  assert.deepEqual(pendingAmortizations(txs, [{ ...debts[0], log: [{ kind: 'amortizacao', value: 130000, txId: 't1' }] }, debts[1]], ['t3']), []);
+  const iv = investNow({ total: 100000, date: '2025-11-04' }, 0.1, '2026-11-04'); assert.equal(iv.value, 110000); assert.ok(iv.estimated);
+  assert.equal(investNow({ total: 100000, date: '2026-11-04' }, 0.1, '2026-11-04').estimated, false);
+});
+

@@ -126,3 +126,17 @@ export const DOC_DORES = { id: 'pesquisa_dores', title: 'Pesquisa: as dores de q
 - Depois: e-mail próprio (antes de abrir ao público), notificações do banco, e-mail do banco, WhatsApp, Open Finance, lojas, versão web, plano pago, cobrança honesta, parcerias.
 ## Ideias que foram para o backlog
 Lembrete para mandar a fatura quando ela fecha; juros e tarifas da fatura em destaque; saques e dinheiro vivo; ver o resultado antes de criar a conta; selo de confiança na entrada; trazer o histórico de outros apps. As parcelas já comprometidas (já no backlog) ganharam peso com a pesquisa.` };
+
+export const DOC_PATRIMONIO = { id: 'patrimonio_doc', title: 'Patrimônio: financiamentos que diminuem sozinhos', body: `O patrimônio líquido é investimentos + bens − o que falta pagar. Até a v88, o "faltam" era só o número digitado (e ficava em dois lugares: no bem e no financiamento); nem parcelas nem amortizações abatiam. Bug relatado pelo Luiz (amortização de R$ 130 mil da casa de Guaratuba).
+## Como funciona agora
+- O bem é ligado ao financiamento (coluna Financiamento em Bens). O "faltam" vem sempre do financiamento. Bens antigos se ligam sozinhos pelo nome ou pelo mesmo saldo.
+- Bem com "quanto falta pagar" e sem financiamento: ao salvar, o app cria o financiamento e pede juros, parcela e tipo de parcela.
+- Saldo informado + data: a cada mês o app tira a parte da parcela que paga a dívida. Price (parcelas iguais): parcela − juros do mês. SAC (parcelas que diminuem): saldo ÷ meses que faltam. Os juros mensais saem dos anuais: (1 + taxa)^(1/12) − 1. Mostra "(estimado)".
+- Amortização: (1) comprovante em Lançar: a revisão pergunta "Isso abate um financiamento?" (pagamento da conta com palavras como amortização ou financiamento, ou de R$ 1.000 para cima; escolhe sozinho pelo nome); (2) pagamento já salvo: "Pagamentos que parecem amortização" no Início e em Patrimônio (só os bem maiores que uma parcela); (3) à mão, em Registrar uma amortização.
+- Ao abater: o saldo cai na hora, o patrimônio líquido sobe e o lançamento vai para a categoria "Amortização de financiamento" (não conta na sobra: o dinheiro virou patrimônio). "Não é" não pergunta de novo.
+- Saldo digitado de novo (pelo extrato do banco) vale a partir daquele dia; amortizações registradas antes já estão nele.
+- Histórico em Patrimônio e dívidas: saldo informado, amortizações e parcelas estimadas.
+- Investimentos: o Início mostra o valor de hoje estimado pelo rendimento de Metas e pede o extrato novo para o valor real.
+- O assistente (Perguntar) usa o saldo de hoje.
+## Ainda não
+- Ler o PDF do extrato do financiamento (hoje o saldo real é digitado). Item no backlog.` };

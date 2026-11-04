@@ -43,6 +43,8 @@ export const SCREENS = {
   convite_avisos: { title: 'Notificações desligadas', where: 'Ao abrir o app ou voltar do bloqueio, se as notificações estão desligadas (1 vez por dia, até 7 vezes)', key: 'avisos.convite_sim' },
   menu_applepay: { title: 'Atalhos do iPhone', where: 'Menu ☰', key: 'menu.applepay' },
   menu_contexto: { title: 'O que o assistente sabe', where: 'Menu ☰', key: 'menu.contexto' },
+  comprovante_amortizacao: { title: 'Comprovante que abate o financiamento', where: 'Lançar: comprovante de pagamento grande ou com "amortização" no texto', key: 'patrimonio.amortizou' },
+  patrimonio_financiamento: { title: 'Financiamento hoje e pagamentos a confirmar', where: 'Menu ☰ → Família e metas → Patrimônio e dívidas (o mesmo aviso aparece no Início)', key: ['patrimonio.amortizou', 'patrimonio.nao_abate'] },
   lancar_comprovante: { title: 'Comprovante compartilhado', where: 'Compartilhar → Pra Onde Foi (Android; no iPhone, pelo atalho 3)', key: 'lancar.comprovante' },
   menu_duvidas: { title: 'Dúvidas', where: 'Menu ☰', key: 'menu.duvidas' },
   menu_opiniao: { title: 'Dar opinião', where: 'Balão no topo; menu ☰', key: 'menu.opiniao' },
@@ -74,6 +76,7 @@ export const FLOWS = [
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
     { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'convite_avisos', 'avisos_celular', 'sininho'] },
     { title: 'Segurança', screens: ['biometria', 'menu_conta', 'aviso_inatividade', 'bloqueio', 'entrar_digital', 'saiu'] },
+    { title: 'Patrimônio e financiamentos', screens: ['menu_patrimonio', 'comprovante_amortizacao', 'patrimonio_financiamento'] },
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
     st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'), st('biometria', 'Liga a digital ou o rosto (ou "Agora não")'),
@@ -93,6 +96,9 @@ export const FLOWS = [
     st('lancar', 'Abre Lançar'), st('lancar_nota', 'Envia a foto; cada item ganha a sua categoria'), st('lancar_salvo', 'Salva a nota', 'lancar.nota_ok')] },
   { id: 'fechar', title: 'Fechar o mês', desc: 'O ritual mensal que faz a família voltar.', steps: [
     st('inicio', 'Cartão "Hora de fechar o mês"', null), st('fechar', 'Confere o que falta, vê a retrospectiva e fecha')] },
+  { id: 'financiamento', title: 'Financiamento: o saldo que diminui sozinho', desc: 'O bem ligado ao financiamento; as parcelas abatem o saldo todo mês (estimado) e cada amortização confirmada abate na hora; o patrimônio líquido sobe.', steps: [
+    st('menu_patrimonio', 'Cadastra o bem e o financiamento (saldo, juros, parcela, tipo de parcela) e liga um ao outro', 'menu.patrimonio'), st('comprovante_amortizacao', 'Manda o comprovante da amortização; a revisão pergunta "Isso abate um financiamento?"', 'patrimonio.amortizou'),
+    st('patrimonio_financiamento', 'Pagamento já salvo que parece amortização: "Sim, abater" ou "Não é"; o histórico mostra o saldo de cada financiamento', 'patrimonio.nao_abate'), st('inicio', 'O patrimônio do Início mostra quanto falta e o líquido maior', null)] },
   { id: 'metas', title: 'Metas e sonho', desc: 'Combinados da família e a projeção.', steps: [
     st('menu', 'Abre o menu'), st('menu_metas', 'Limite do cartão, quanto guardar, sonho'), st('inicio', 'Selos "Guardaram X% · queriam Y%"', null), st('inicio_mais', 'Projeção do sonho em Mais detalhes', null)] },
   { id: 'semabrir', title: 'Lançar sem abrir o app', desc: 'iPhone: Apple Pay, Siri e Compartilhar pelo app Atalhos. Android: Compartilhar e segurar o ícone.', steps: [
