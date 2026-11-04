@@ -30,7 +30,7 @@ await page.click('[data-s="1"]'); await page.waitForSelector('#obFam'); await pa
 await page.waitForSelector('#obDone'); await page.click('#obDone');
 await page.waitForSelector('.tour'); await page.click('#tourSkip');
 await page.waitForTimeout(800); if (await page.$('.coach')) await page.click('#coachNever');
-await page.click('#menuBtn'); await page.click('#drawer [data-sec="backup"]');
+await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); if (!(await page.isVisible('#drawer [data-sec="backup"]'))) await page.click('#drawer .mgroup[data-g="dados"] .mgh'); await page.click('#drawer [data-sec="backup"]');
 await page.setInputFiles('#dImport', arg('demo')); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => /Pronto/.test(document.querySelector('#bkStatus')?.textContent || ''));
 await page.evaluate(() => { document.querySelector('#toast').hidden = true; document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()); });

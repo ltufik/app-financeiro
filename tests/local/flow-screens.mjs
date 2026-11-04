@@ -88,7 +88,7 @@ await page.waitForTimeout(2500);
 await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
 // Before any data: Início shows a month of a fictional family.
 await step('inicio_exemplo', async () => { await page.click('[data-tab=resumo]'); await page.waitForSelector('#demoCard'); }, { scrollTo: '#demoCard' });
-await page.click('#menuBtn'); await page.click('#drawer [data-sec="backup"]');
+await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); if (!(await page.isVisible('#drawer [data-sec="backup"]'))) await page.click('#drawer .mgroup[data-g="dados"] .mgh'); await page.click('#drawer [data-sec="backup"]');
 await page.setInputFiles('#dImport', arg('demo')); await page.click('.cfm [data-y]');
 await page.waitForFunction(() => /Pronto/.test(document.querySelector('#bkStatus')?.textContent || ''));
 await page.evaluate(() => document.querySelectorAll('.cfm-wrap').forEach(x => x.remove()));
