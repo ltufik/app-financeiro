@@ -929,7 +929,9 @@ const used = await page.evaluate(() => window.__db.usage);
   await mp.reload(); await mp.waitForTimeout(2500);
   ok('"Agora não": o aviso das notificações não volta na abertura seguinte', !(await mp.$('.ann')));
   adminStore.news.items.unshift({ id: 'n2', at: new Date(Date.now() + 1000).toISOString(), title: 'Nova tela de metas', items: ['Ficou mais fácil'] }, { id: 'n3', at: new Date().toISOString(), title: 'Outra melhoria', items: ['Detalhe'] });
-  await mp.reload(); ok('várias novidades viram um pop-up só: a mais nova inteira e as outras pelo título', await seeAnn() && (await mp.textContent('.ann')).includes('Luiz, olha o que tem de novo') && (await mp.textContent('.ann')).includes('Ficou mais fácil') && (await mp.textContent('.ann')).includes('E também') && (await mp.textContent('.ann')).includes('Outra melhoria'));
+  const tNews = Date.now(); await mp.reload(); await mp.waitForSelector('.ann', { timeout: 10000 }).catch(() => {}); const msNews = Date.now() - tNews;
+  ok('pop-up de novidade aparece logo ao abrir (menos de 2 segundos)', msNews < 2000, msNews + ' ms');
+  ok('várias novidades viram um pop-up só: a mais nova inteira e as outras pelo título', await seeAnn() && (await mp.textContent('.ann')).includes('Luiz, olha o que tem de novo') && (await mp.textContent('.ann')).includes('Ficou mais fácil') && (await mp.textContent('.ann')).includes('E também') && (await mp.textContent('.ann')).includes('Outra melhoria'));
   if (shots) await mp.screenshot({ path: path.join(shots, '15-novidades.png') });
   await mp.click('.ann [data-s]'); await mp.waitForSelector('.bellbox');
   const bell = await mp.textContent('.bellbox');
@@ -938,7 +940,7 @@ const used = await page.evaluate(() => window.__db.usage);
   await mp.click('.bellbox .tx'); await mp.waitForTimeout(300);
   ok('depois de abrir o sininho, o contador zera', await mp.evaluate(() => document.querySelector('#bellBtn .bdg').hidden));
   await mp.reload(); await mp.waitForTimeout(2500);
-  ok('novidade não se repete', !(await mp.$('.ann')));
+  ok('novidade não se repete', !(await mp.$('.ann')), await mp.textContent('.ann').catch(() => ''));
   await mctx.close();
 }
 { // Apple Pay on the iPhone: personal code (only its hash is saved) and the steps.

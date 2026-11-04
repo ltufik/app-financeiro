@@ -71,6 +71,9 @@ export const TESTS = [
   t('extrato_em_partes_novidade', 'Notificações', 'v81', 'ambos', 'Novidade da correção do extrato chega a todos',
     ['Abra o app depois da publicação.'],
     'Pop-up "Extrato em mais de um arquivo" e push para quem tem notificação ligada.'),
+  t('novidade_rapida', 'Notificações', 'v82', 'ambos', 'Pop-up de novidade aparece logo ao abrir',
+    ['Depois de uma versão com novidade, feche o app de vez e abra de novo.'],
+    'O pop-up "O que mudou" (ou o recado para você) aparece em 1 a 2 segundos, sem os 10 segundos de espera.', true),
   // Menu e telas
   t('menu_grupos', 'Menu e telas', 'v76', 'ambos', 'Menu em grupos',
     ['Abra o menu ☰.', 'Toque em outro grupo.'],

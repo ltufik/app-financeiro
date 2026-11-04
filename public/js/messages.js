@@ -45,13 +45,24 @@ async function replyPopup(f) {
 }
 
 let newsCache = null;
-export async function loadNews() {
-  if (newsCache) return newsCache;
-  try { const r = await fetch('/api/news'); const j = r.ok ? await r.json() : {}; newsCache = Array.isArray(j.items) && j.items.length ? j.items : NEWS; } catch (e) { newsCache = NEWS; }
-  return newsCache;
+let newsPromise = null, applied = false;
+export function loadNews() {
+  if (newsCache) return Promise.resolve(newsCache);
+  return newsPromise ||= fetch('/api/news').then(r => r.ok ? r.json() : {}).then(j => (newsCache = Array.isArray(j.items) && j.items.length ? j.items : NEWS)).catch(() => (newsCache = NEWS));
+}
+// Called as soon as the person is in: notes and replies start loading together with the family's data, and the
+// server applies a new version on its own (personal replies, push to everyone), without the app waiting for it.
+let repliesPromise = null;
+export function prefetchMessages() {
+  loadNews();
+  // Applying a new version writes the personal replies: wait for it at most 1.5 s, so who asked sees their
+  // message right away, and nobody waits for the push to everyone.
+  const apply = applied ? Promise.resolve() : fetch('/api/news', { method: 'POST', keepalive: true }).catch(() => {}); applied = true;
+  if (!repliesPromise) repliesPromise = Promise.race([apply, new Promise(r => setTimeout(r, 1500))]).then(() => myReplies()).catch(() => []);
 }
 const unseenNotes = async () => unseenNews(await loadNews(), { seenAt: meta().news_seen_at || lsGet('fin.news.' + S.user.id), createdAt: S.user.created_at });
-const markNewsSeen = list => { if (!list.length) return; const at = new Date(Math.min(Date.parse(list[0].at), Date.now())).toISOString(); lsSet('fin.news.' + S.user.id, at); remember({ news_seen_at: at }); list.forEach(n => markShown('n:' + n.id)); };
+// Seen up to the newest note shown (not up to now): a note dated a little ahead does not come back.
+const markNewsSeen = list => { if (!list.length) return; const at = new Date(Math.max(...list.map(n => Date.parse(n.at) || 0))).toISOString(); lsSet('fin.news.' + S.user.id, at); remember({ news_seen_at: at }); list.forEach(n => markShown('n:' + n.id)); };
 // All notes, newest first (menu ☰ → Ajuda).
 export async function showAllNews() { openBell(); }
 // One pop-up for all the new notes: the newest in full, the others by title.
@@ -126,7 +137,7 @@ export async function showMessages() {
   if (window.__noMsgs) { refreshBell(); return; }
   try {
     if (await welcomeAlpha()) { markNewsSeen(await unseenNotes()); return true; }
-    const reply = (await myReplies()).find(f => f.reply && !f.reply_seen);
+    const reply = (await (repliesPromise || myReplies())).find(f => f.reply && !f.reply_seen); repliesPromise = null;
     if (reply) { await replyPopup(reply); return true; }
     const list = await unseenNotes();
     if (list.length) { markNewsSeen(list); await newsPopup(list); return true; }

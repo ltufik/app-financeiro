@@ -260,3 +260,11 @@ test('applyReleases: versão reescreve uma seção da Documentação (só a vers
   await applyReleases(db, null, { releases: [{ id: 'ru', at: '2026-11-04T12:00:00Z', backlog: [], semNovidade: 'só documentação', updateDocs: [{ id: 'notificacoes_doc', title: 'Notificações', body: 'novo' }] }], now: DAY });
   assert.equal(T.product_board.find(r => r.key === 'docs').data.items[0].body, 'novo');
 });
+
+test('novidades respondem na hora: as da versão nova vêm do código, sem esperar o servidor aplicar', async () => {
+  const { mergeNews } = await import('../api/news.js');
+  const rel = [{ id: 'r1', at: '2026-11-01T12:00:00Z', news: { id: 'n1', title: 'Velha' } }, { id: 'r2', at: '2026-11-04T12:00:00Z', news: { id: 'n2', title: 'Nova' } }, { id: 'r3', at: '2026-11-04T13:00:00Z', semNovidade: 'x' }];
+  const out = mergeNews([{ id: 'n1', title: 'Velha (editada na Central)', at: '2026-11-01T12:00:00Z' }], rel);
+  assert.deepEqual(out.map(n => n.title), ['Nova', 'Velha (editada na Central)']);
+  assert.equal(mergeNews(null, rel).length, 2);
+});

@@ -18,7 +18,7 @@ import { checkAdmin, touchActivity } from './metrics.js';
 import { initPrivacy } from './privacy.js';
 import { track, navTo, screenOf } from './usage.js';
 import { TEST_PHASE } from './feedback.js';
-import { showMessages, openBell, refreshBell, openNewsById, openReplyById } from './messages.js';
+import { showMessages, openBell, refreshBell, openNewsById, openReplyById, prefetchMessages } from './messages.js';
 import { photo } from './photos.js';
 import { askInstall, shouldAskInstall, isIOS, isAndroid, isMobile, isStandalone, markNotInstalled, checkStillInstalled } from './install.js';
 import { captureInviteFromUrl, pendingInvite, inviteInfo, startOnboarding, displayName } from './onboarding.js';
@@ -247,6 +247,7 @@ async function doStart() {
     return;
   }
   initLock({ sb: db.sb, user: S.user.id, name: displayName(), email: S.user.email }); // now with the name chosen
+  prefetchMessages(); // what's new and personal replies load together with the family's data
   setFamily(await db.loadFamily(S.hh.id));
   $('#brand').textContent = S.hh.name;
   touchActivity(); checkAdmin();
@@ -260,7 +261,7 @@ async function doStart() {
   if (acao && tourDone()) { runAcao(acao); S.justSignedIn = false; refreshBell(); return; }
   if (!tourDone()) S.showTour();
   else if (shouldCoach(S.user)) setTimeout(() => S.startCoach(), 700);
-  else { setTimeout(afterIntro, 900); }
+  else { setTimeout(afterIntro, 250); }
   if (tourDone() && S.justSignedIn) toast(`Que bom ter você de volta, ${displayName().split(" ")[0]}!`);
   S.justSignedIn = false;
 }

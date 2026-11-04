@@ -112,12 +112,12 @@ export async function pushNews(db, list, skipUsers, vapid, fetchImpl) {
   const subs = await db.get('push_subscriptions?select=id,user_id,endpoint,p256dh,auth,prefs');
   const members = await db.get('members?select=user_id,display_name').catch(() => []);
   const nameOf = id => members.find(m => m.user_id === id)?.display_name || '';
+  // Ten at a time: one slow push service does not hold the others.
+  const todo = subs.filter(s => !skipUsers.has(s.user_id) && s.prefs?.novidades !== false);
   let n = 0;
-  for (const s of subs) {
-    if (skipUsers.has(s.user_id) || s.prefs?.novidades === false) continue;
-    const msg = newsPush(list, nameOf(s.user_id));
-    const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { ...msg, body: msg.body.slice(0, 200) }, vapid, fetchImpl).catch(() => ({ ok: false }));
-    if (r.ok) n++;
+  for (let i = 0; i < todo.length; i += 10) {
+    const rs = await Promise.all(todo.slice(i, i + 10).map(s => { const msg = newsPush(list, nameOf(s.user_id)); return sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { ...msg, body: msg.body.slice(0, 200) }, vapid, fetchImpl).catch(() => ({ ok: false })); }));
+    n += rs.filter(r => r.ok).length;
   }
   return n;
 }
