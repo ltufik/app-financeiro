@@ -2,18 +2,20 @@
 // then the "entrar" screen covers the app. The fingerprint/face (passkey on this device, WebAuthn) is asked only
 // when the person taps Entrar and only if they turned it on; otherwise the password. Also the "Segurança" block
 // in menu ☰ → Conta and the goodbye message after signing out. Used by the app and by the product console
-// (which passes minutes: 60, since it has no family numbers).
+// (scope 'central': its own session, its own time, 30 min to 4 h, and its own fingerprint key; nothing shared).
 // The fingerprint or face never leaves the phone: the app keeps only the id of the device key, on this device.
-import { LOCK_OPTIONS, lockMinutes, isExpired, idleState, lockText, byeMessage, minutesLabel, toB64u, fromB64u, shouldOfferBio } from './lib/lock.js';
+import { LOCK_OPTIONS, CENTRAL_OPTIONS, lockMinutes, isExpired, idleState, lockText, byeMessage, minutesLabel, toB64u, fromB64u, shouldOfferBio } from './lib/lock.js';
 import { esc } from './lib/format.js';
 import { $, toast, announce, confirmInline } from './ui.js';
 import { track } from './usage.js';
 
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
-let L = null; // { sb, user, name, email, minutes }
-const K = { min: () => 'fin.lock.min', last: () => 'fin.lock.last.' + L.user, bio: () => 'fin.bio.' + L.user, ask: () => 'fin.bio.ask.' + L.user };
-export const lockMinutesNow = () => lockMinutes(L?.minutes || lsGet(K.min()));
+let L = null; // { sb, user, name, email, scope }
+const P = () => L?.scope === 'central' ? 'fin.central.' : 'fin.';
+const K = { min: () => P() + 'lock.min', last: () => P() + 'lock.last.' + L.user, bio: () => P() + 'bio.' + L.user, ask: () => P() + 'bio.ask.' + L.user };
+const central = () => L?.scope === 'central';
+export const lockMinutesNow = () => lockMinutes(lsGet(K.min()), L?.scope);
 const touch = () => { if (L && !isLocked()) lsSet(K.last(), String(Date.now())); };
 export const isLocked = () => document.body.classList.contains('locked');
 
@@ -23,9 +25,9 @@ export async function bioSupported() {
 const challenge = () => crypto.getRandomValues(new Uint8Array(32));
 
 // Starts watching. Locks right away when the app was left more than the chosen minutes ago.
-// minutes: fixed time (the product console); otherwise the one chosen in Conta on this device.
-export function initLock({ sb, user, name = '', email = '', minutes = 0 }) {
-  const first = !L; L = { sb, user, name, email, minutes: +minutes || 0 };
+// scope 'central': the product console (own keys and time); otherwise the app, with the time chosen in Conta.
+export function initLock({ sb, user, name = '', email = '', scope = 'app' }) {
+  const first = !L; L = { sb, user, name, email, scope };
   if (isExpired(lsGet(K.last()), Date.now(), lockMinutesNow())) lock('parado'); else touch();
   if (!first) return;
   // Any touch counts as use (and closes the warning); while the warning is up, every touch counts.
@@ -63,14 +65,14 @@ function showWarn(left) {
 }
 const hideWarn = () => $('#lkWarn')?.remove();
 // Called right after an explicit sign-in: the clock starts now.
-export function freshSignIn(user) { lsSet('fin.lock.last.' + user, String(Date.now())); }
+export function freshSignIn(user, scope = 'app') { lsSet((scope === 'central' ? 'fin.central.' : 'fin.') + 'lock.last.' + user, String(Date.now())); }
 
 export async function lock(reason = 'parado') {
   if (!L || isLocked()) return;
   hideWarn(); document.querySelectorAll('.cfm-wrap').forEach(x => x.remove()); document.body.classList.remove('cfm-open');
   document.body.classList.add('locked');
   const bio = lsGet(K.bio()) && await bioSupported();
-  const { hello, title, text } = lockText({ name: L.name, minutes: lockMinutesNow(), reason });
+  const { hello, title, text } = lockText({ name: L.name, minutes: lockMinutesNow(), reason, scope: L.scope });
   const el = document.createElement('div'); el.id = 'lockScreen'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'lkT');
   const finger = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11v3a8 8 0 0 1-1.5 4.7"/><path d="M8.5 8.6A4 4 0 0 1 16 11v1.5"/><path d="M5.5 15.5A12 12 0 0 0 6 11a6 6 0 0 1 9.7-4.7"/><path d="M16 16.5a14 14 0 0 1-1 3.5"/><path d="M19.4 14a16 16 0 0 0 .6-3 8 8 0 0 0-1.1-4"/></svg>';
   el.innerHTML = `<div class="lk-card">
@@ -120,7 +122,9 @@ export const setAfterUnlock = fn => { afterUnlock = fn; };
 export async function signOutSafely(sb = L?.sb) {
   const name = L?.name || '';
   if (L) lsSet(K.last(), null);
-  try { await sb?.auth.signOut(); } catch (e) { /* already out */ }
+  // Only this session: leaving the app does not close the Central, nor the other way round.
+  try { await sb?.auth.signOut({ scope: 'local' }); } catch (e) { /* already out */ }
+  if (central()) { location.reload(); return; }
   // Set after signing out: the sign-out event already drew the front door, and the reload shows the message once.
   try { sessionStorage.setItem('fin.bye', name); } catch (e) { /* storage blocked */ }
   location.reload();
@@ -141,14 +145,14 @@ export async function registerBio() {
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000, attestation: 'none' } });
     lsSet(K.bio(), toB64u(cred.rawId)); track('seguranca.biometria');
-    toast('Da próxima vez, toque em Entrar e use a digital ou o rosto. Para desligar: menu ☰ → Dados e conta → Conta.');
+    toast(`Da próxima vez, toque em Entrar e use a digital ou o rosto. Para desligar: ${central() ? 'Central → Sua conta → Acesso e segurança' : 'menu ☰ → Dados e conta → Conta'}.`);
     return true;
-  } catch (err) { toast('Não foi possível ligar agora. Dá para tentar de novo em menu ☰ → Dados e conta → Conta.', 'info'); return false; }
+  } catch (err) { toast(`Não foi possível ligar agora. Dá para tentar de novo em ${central() ? 'Acesso e segurança' : 'menu ☰ → Dados e conta → Conta'}.`, 'info'); return false; }
 }
 // The app offers the fingerprint/face itself (the phone does not allow turning it on without the person).
 // Returns true when the offer was shown.
 export async function offerBio() {
-  if (!L || window.__noMsgs || isLocked()) return false;
+  if (!L || central() || window.__noMsgs || isLocked()) return false;
   let asks = {}; try { asks = JSON.parse(lsGet(K.ask()) || '{}'); } catch (e) { asks = {}; }
   if (!shouldOfferBio({ supported: await bioSupported(), on: !!lsGet(K.bio()), asks, now: Date.now() })) return false;
   const first = String(L.name || '').trim().split(/\s+/)[0];
@@ -168,15 +172,15 @@ export function noteBioDeclined() { if (!L) return; let a = {}; try { a = JSON.p
 // "Segurança" in menu ☰ → Conta.
 export async function renderSecurity(box) {
   if (!L) { box.innerHTML = ''; return; }
-  const can = await bioSupported(), on = !!lsGet(K.bio()), m = lockMinutesNow();
-  box.innerHTML = `<h3>Segurança</h3>
+  const can = await bioSupported(), on = !!lsGet(K.bio()), m = lockMinutesNow(), where = central() ? 'a Central' : 'o app';
+  box.innerHTML = `<h3>Segurança${central() ? ' da Central' : ''}</h3>
     <label class="f">Desconectar depois de
-      <select id="lkMin">${LOCK_OPTIONS.map(o => `<option value="${o}"${o === m ? ' selected' : ''}>${minutesLabel(o)} sem uso</option>`).join('')}</select></label>
-    <p class="tiny muted">Vale para este aparelho. 30 segundos antes, o app avisa e dá para continuar. Depois, é só tocar em Entrar e usar ${on ? 'a digital ou o rosto (ou a senha)' : 'a senha'}.</p>
+      <select id="lkMin">${(central() ? CENTRAL_OPTIONS : LOCK_OPTIONS).map(o => `<option value="${o}"${o === m ? ' selected' : ''}>${minutesLabel(o)} sem uso</option>`).join('')}</select></label>
+    <p class="tiny muted">Vale para ${central() ? 'a Central, neste aparelho (o app tem o tempo dele, em Conta)' : 'este aparelho'}. 30 segundos antes, ${where} avisa e dá para continuar. Depois, é só tocar em Entrar e usar ${on ? 'a digital ou o rosto (ou a senha)' : 'a senha'}.</p>
     ${can ? `<div class="rowbtn"><button class="btn${on ? '' : ' primary'}" type="button" id="lkBioTgl">${on ? 'Parar de usar a digital ou o rosto' : 'Entrar com a digital ou o rosto'}</button><button class="btn" type="button" id="lkNow">Desconectar agora</button></div>
       <p class="tiny muted">A digital e o rosto ficam no próprio celular: o app nunca recebe nem guarda.</p>`
       : `<div class="rowbtn"><button class="btn" type="button" id="lkNow">Desconectar agora</button></div><p class="tiny muted">Este aparelho não oferece digital ou rosto para apps do navegador. Para entrar de novo, use a senha.</p>`}`;
-  $('#lkMin').onchange = e => { lsSet(K.min(), String(lockMinutes(e.target.value))); track('seguranca.tempo'); toast(`O app agora desconecta depois de ${minutesLabel(lockMinutes(e.target.value))} sem uso.`); renderSecurity(box); };
+  $('#lkMin').onchange = e => { const v = lockMinutes(e.target.value, L.scope); lsSet(K.min(), String(v)); track('seguranca.tempo'); toast(`${central() ? 'A Central' : 'O app'} agora desconecta depois de ${minutesLabel(v)} sem uso.`); renderSecurity(box); };
   $('#lkNow').onclick = () => { track('seguranca.bloquear'); lock('manual'); };
   const tgl = $('#lkBioTgl');
   if (tgl) tgl.onclick = async e => {
@@ -184,7 +188,7 @@ export async function renderSecurity(box) {
       if (!await confirmInline(e.target, { text: 'Parar de usar a digital ou o rosto neste aparelho? Para entrar, passa a ser pela senha.', yes: 'Sim, parar' })) return;
       lsSet(K.bio(), null); toast('Para entrar, agora é pela senha.'); return renderSecurity(box);
     }
-    if (!await confirmInline(e.target, { text: 'Usar a digital ou o rosto deste aparelho para entrar no app? O celular vai pedir para você confirmar.', yes: 'Sim, usar' })) return;
+    if (!await confirmInline(e.target, { text: `Usar a digital ou o rosto deste aparelho para entrar n${central() ? 'a Central' : 'o app'}? O celular vai pedir para você confirmar.`, yes: 'Sim, usar' })) return;
     await registerBio(); renderSecurity(box);
   };
 }

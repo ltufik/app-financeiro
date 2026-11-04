@@ -5,8 +5,9 @@ const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; 
 const T = load('mock.db', { users: [], households: [], members: [], invites: [], categories: [], transactions: [], rules: [], imports: [], studies: [], push_subscriptions: [] });
 T.push_subscriptions ||= []; T.feedback ||= []; T.usage ||= []; T.nav ||= []; T.errors ||= [];
 window.__db = T;
-let session = load('mock.session', null); const listeners = [];
-const persist = () => { localStorage.setItem('mock.db', JSON.stringify(T)); localStorage.setItem('mock.session', JSON.stringify(session)); };
+// Each storageKey keeps its own session (the product console signs in apart from the app).
+let SKEY = 'mock.session', session = load(SKEY, null); const listeners = [];
+const persist = () => { localStorage.setItem('mock.db', JSON.stringify(T)); localStorage.setItem(SKEY, JSON.stringify(session)); };
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const clone = x => JSON.parse(JSON.stringify(x));
@@ -112,7 +113,8 @@ const rpcs = {
   learn_rule({ p_household, p_source, p_pattern, p_category }) { const r = T.rules.find(x => x.household_id === p_household && x.kind === 'exact' && x.source === p_source && x.pattern === p_pattern); if (r) r.category = p_category; else T.rules.push({ id: uid(), household_id: p_household, source: p_source, kind: 'exact', pattern: p_pattern, category: p_category, priority: 10 }); window.__learned = (window.__learned || 0) + 1; return null; },
 };
 
-export function createClient() {
+export function createClient(url, key, opts) {
+  if (opts?.auth?.storageKey) { SKEY = 'mock.session.' + opts.auth.storageKey; session = load(SKEY, null); }
   const emit = ev => listeners.forEach(f => f(ev, session));
   return {
     from: t => new Q(t),
@@ -121,8 +123,8 @@ export function createClient() {
       getSession: async () => ({ data: { session } }),
       getUser: async () => ({ data: { user: session ? (T.users.find(x => x.id === session.user.id) ? { ...session.user, user_metadata: { ...session.user.user_metadata, ...(T.users.find(x => x.id === session.user.id).user_metadata || {}) } } : session.user) : null } }),
       onAuthStateChange: f => { listeners.push(f); return { data: { subscription: { unsubscribe() {} } } }; },
-      signUp: async ({ email, options }) => { if (window.__signupError) return { data: {}, error: { message: window.__signupError } }; const u = { id: uid(), email, user_metadata: options?.data || {} }; T.users.push(u); session = { access_token: 'tok', user: u }; window.__redirect = options?.emailRedirectTo; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
-      signInWithPassword: async ({ email, password }) => { const u = T.users.find(x => x.email === email); if (!u || (window.__badPass && password === window.__badPass)) return { data: {}, error: { message: 'Invalid login credentials' } }; session = { access_token: 'tok', user: u }; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session }, error: null }; },
+      signUp: async ({ email, options }) => { if (window.__signupError) return { data: {}, error: { message: window.__signupError } }; const u = { id: uid(), email, user_metadata: options?.data || {} }; T.users.push(u); session = { access_token: 'tok', user: u }; window.__redirect = options?.emailRedirectTo; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session, user: u }, error: null }; },
+      signInWithPassword: async ({ email, password }) => { const u = T.users.find(x => x.email === email); if (!u || (window.__badPass && password === window.__badPass)) return { data: {}, error: { message: 'Invalid login credentials' } }; session = { access_token: 'tok', user: u }; persist(); setTimeout(() => emit('SIGNED_IN')); return { data: { session, user: u }, error: null }; },
       signOut: async () => { session = null; persist(); emit('SIGNED_OUT'); return { error: null }; },
       resetPasswordForEmail: async () => ({ error: null }),
       updateUser: async ({ data } = {}) => { if (session && data) { session.user.user_metadata = { ...session.user.user_metadata, ...data }; const u = T.users.find(x => x.id === session.user.id); if (u) u.user_metadata = session.user.user_metadata; persist(); } return { data: { user: session?.user }, error: null }; },

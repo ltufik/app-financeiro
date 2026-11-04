@@ -1,7 +1,7 @@
 // Product console (/admin): dashboard, feedback, usage, FAQ, backlog, service matrix, docs, benchmarking, pricing and product design.
 // Only for ADMIN_EMAILS: the data comes from /api/admin and /api/metrics, which check the login.
 import * as db from '../db.js';
-import { initLock } from '../lock.js';
+import { initLock, freshSignIn, signOutSafely, renderSecurity } from '../lock.js';
 import { APP_VERSION } from '../usage.js';
 import { esc } from '../lib/format.js';
 import { $, toast, confirmInline, invalid, clearInvalid, md } from '../ui.js';
@@ -21,7 +21,7 @@ import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS,
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
-const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -77,12 +77,13 @@ async function save(key, msg) {
 }
 
 (async function boot() {
-  try { await db.init(); } catch (e) { $('#aMain').innerHTML = '<div class="panel"><p>O app ainda não foi configurado.</p></div>'; return; }
+  try { await db.init({ storageKey: 'pof-central-auth' }); } catch (e) { $('#aMain').innerHTML = '<div class="panel"><p>O app ainda não foi configurado.</p></div>'; return; }
   const { data } = await db.sb.auth.getSession();
   token = data?.session?.access_token || '';
-  if (!token) { $('#aMain').innerHTML = '<div class="panel stack"><h2>Entre primeiro</h2><p class="small">Abra o app, entre com o seu e-mail e senha e volte para esta página.</p><div><a class="btn primary" href="/">Abrir o app</a></div></div>'; return; }
+  if (!token) return centralLogin();
   $('#aWho').textContent = data.session.user.email + ' · versão ' + APP_VERSION;
-  initLock({ sb: db.sb, user: data.session.user.id, name: data.session.user.user_metadata?.display_name || '', email: data.session.user.email, minutes: 60 }); // no family numbers here: one hour
+  ME = data.session.user;
+  initLock({ sb: db.sb, user: ME.id, name: ME.user_metadata?.display_name || '', email: ME.email, scope: 'central' }); // own time and keys
   try {
     const [b, p, c, f, sv, dc, nw] = await Promise.all(['backlog', 'pricing', 'canvas', 'faq', 'services', 'docs', 'news'].map(k => api('GET', k)));
     D.news = nw.data || { items: JSON.parse(JSON.stringify(NEWS)) };
@@ -103,11 +104,47 @@ async function save(key, msg) {
   const h = location.hash.slice(1); go(TABS.includes(h) ? h : 'painel');
 })();
 
+// The Central has its own login: entering or leaving the app does not open or close it (and the other way round).
+let ME = null;
+function centralLogin() {
+  $('#aMain').innerHTML = `<div class="panel stack alogin"><h2>Entrar na Central do produto</h2>
+    <p class="small muted">A Central tem o login dela, separado do app: entrar ou sair do app não mexe aqui. Use o e-mail de dono do produto.</p>
+    <form id="clForm" class="stack" novalidate>
+      <label class="f">E-mail<input type="email" id="clEmail" autocomplete="username" required></label>
+      <label class="f">Senha<input type="password" id="clPass" autocomplete="current-password" required></label>
+      <button class="btn primary" type="submit" id="clGo">Entrar</button>
+      <p class="small" id="clMsg" role="status"></p>
+    </form>
+    <p class="tiny muted">Esqueceu a senha? Troque pelo app, em Entrar → Esqueci a senha (a conta é a mesma).</p></div>`;
+  const msg = (t, bad) => { $('#clMsg').textContent = t; $('#clMsg').className = 'small' + (bad ? ' err' : ''); };
+  $('#clForm').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#clEmail').value.trim(), pass = $('#clPass').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { invalid($('#clEmail'), 'Digite o e-mail completo.'); return; } clearInvalid($('#clEmail'));
+    if (!pass) { invalid($('#clPass'), 'Digite a senha.'); return; } clearInvalid($('#clPass'));
+    $('#clGo').disabled = true; msg('Conferindo...');
+    const { data, error } = await db.sb.auth.signInWithPassword({ email, password: pass }).catch(err => ({ error: err }));
+    if (error) { $('#clGo').disabled = false; return msg(/invalid/i.test(error.message || '') ? 'E-mail ou senha incorretos.' : 'Não consegui entrar agora. Confira a internet e tente de novo.', true); }
+    freshSignIn((data.user || data.session?.user)?.id, 'central'); location.reload();
+  };
+  $('#clEmail').focus();
+}
+// Acesso e segurança: who is in, the Central's own time and fingerprint, and leaving only the Central.
+function acesso(el) {
+  el.innerHTML = `<div class="ahead"><h1>Acesso e segurança</h1><span class="tiny muted">Só da Central: o app tem login e ajustes próprios</span></div>
+    <div class="panel stack"><h3>Quem está na Central</h3><p class="small">${esc(ME?.email || '')}</p>
+      <p class="tiny muted">Login separado do app. Sair daqui não tira você do app, e sair do app não fecha a Central.</p>
+      <div><button class="btn" type="button" id="clOut">Sair da Central</button></div></div>
+    <div class="panel stack" id="clSec"><p class="small muted">Carregando...</p></div>`;
+  renderSecurity($('#clSec'));
+  $('#clOut').onclick = async e => { if (await confirmInline(e.target, { text: 'Sair da Central neste aparelho? O app continua como está.', yes: 'Sim, sair' })) signOutSafely(db.sb); };
+}
+
 function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho })[t]($('#aMain'));
+  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -132,6 +169,7 @@ const NAV = [
   { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
   { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
+  { id: 'conta', title: 'Sua conta', icon: IC('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), items: [['acesso', 'Acesso e segurança']] },
 ];
 const CHEV = IC('<path d="M9 6l6 6-6 6"/>');
 function drawNav() {

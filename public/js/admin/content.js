@@ -43,7 +43,7 @@ export const SERVICES = [
   sv('applepay', 'Compras com Apple Pay', 'Cada compra por aproximação no iPhone entra sozinha (atalho do app Atalhos)', 'Menu ☰ → Atalhos do iPhone', 'teste', 'gratis', 'nao', 'App Atalhos do iPhone', ['applepay.codigo', 'menu.applepay']),
   sv('siri', 'Lançar com a Siri', '"E aí Siri, gastei" e o gasto falado vira lançamento', 'Menu ☰ → Atalhos do iPhone', 'teste', 'pago', 'sim', 'App Atalhos do iPhone; IA (rápida)', []),
   sv('compartilhar_ios', 'Compartilhar no iPhone', 'Comprovante do banco → Compartilhar → Pra Onde Foi vira lançamento; fatura, extrato e nota são mandados para o app', 'Menu ☰ → Atalhos do iPhone', 'teste', 'pago', 'sim', 'App Atalhos do iPhone; IA (rápida) lê PDF e imagem', []),
-  sv('bloqueio', 'Desconectar por inatividade e biometria', 'Como nos apps de banco: 30 s antes avisa e conta os segundos; depois, tela de entrada com Entrar (digital ou rosto só se ligou, e só ao tocar) ou senha. Central: 1 hora', 'Todo o app e a Central; menu ☰ → Dados e conta → Conta', 'no_ar', 'gratis', 'nao', 'WebAuthn (chave do próprio celular); Supabase Auth para a senha', ['seguranca.biometria', 'seguranca.desbloqueio_bio', 'seguranca.desbloqueio_senha', 'seguranca.aviso', 'seguranca.continuar', 'seguranca.desconectar']),
+  sv('bloqueio', 'Desconectar por inatividade e biometria', 'Como nos apps de banco: 30 s antes avisa e conta os segundos; depois, tela de entrada com Entrar (digital ou rosto só se ligou, e só ao tocar) ou senha. Central: login e tempo próprios (30 min a 4 h, 1 h de fábrica)', 'Todo o app; menu ☰ → Dados e conta → Conta. Central → Sua conta → Acesso e segurança', 'no_ar', 'gratis', 'nao', 'WebAuthn (chave do próprio celular); Supabase Auth para a senha', ['seguranca.biometria', 'seguranca.desbloqueio_bio', 'seguranca.desbloqueio_senha', 'seguranca.aviso', 'seguranca.continuar', 'seguranca.desconectar']),
   sv('anotacao', 'Anotação pessoal no lançamento', 'O que o lançamento realmente foi (ex.: cabeleireiro Lily), lembrado para o mesmo nome nas próximas faturas', 'Extrato → Anotar', 'no_ar', 'gratis', 'nao', 'Coluna note em transactions; lembranças em households.settings.memos', ['extrato.anotacao']),
   sv('push_novidade', 'Push de novidade', 'A cada versão com novidade, um push para todos, com o nome; quem pediu recebe só o personalizado. Também pela Central: Novidades → publicar com "Mandar também no celular" (uma vez por novidade)', 'Notificações no celular', 'no_ar', 'gratis', 'nao', 'Web Push (VAPID), na primeira abertura depois da publicação', []),
   sv('icone', 'Atalhos no ícone', 'Segurar o ícone abre direto falar, nota ou PDF', 'Ícone do app (Android)', 'no_ar', 'gratis', 'nao', '—', ['atalho.voz', 'atalho.nota', 'atalho.pdf']),
@@ -85,7 +85,7 @@ A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e 
 ## O que nunca guardamos
 - Arquivo do PDF, senha do PDF, senha de banco, foto da nota, áudio.
 ## Quem vê o quê
-- A Central do produto e as métricas: só os e-mails em ADMIN_EMAILS.
+- A Central do produto e as métricas: só os e-mails em ADMIN_EMAILS. A Central tem login próprio (sessão separada da do app) e tempo próprio para desconectar.
 - Excluir a conta apaga a pessoa; opiniões ficam sem nome.` },
   { id: 'infra', title: 'Infraestrutura e custos', body: `| Serviço | Para que | Custo hoje |
 | Vercel | Hospeda o app e as funções do servidor | Grátis (Hobby) |

@@ -71,7 +71,10 @@ export const DOC_SEGURANCA = { id: 'seguranca_doc', title: 'Segurança: desconec
 | Não é a pessoa | "Não é você? Sair da conta" sai de vez e mostra a mensagem de segurança. |
 ## Regras
 - Tempo no app: 1, 3, 5 (de fábrica), 15 ou 30 minutos, em menu ☰ → Dados e conta → Conta; vale para o aparelho. Não existe "nunca".
-- Central do produto: 1 hora fixa (não tem números da família).
+## Central do produto (separada do app)
+- Login próprio: a Central guarda a sessão dela, à parte. Entrar no app não abre a Central; sair do app não fecha a Central, e sair da Central não tira ninguém do app. O e-mail e a senha são os da mesma conta (dono em ADMIN_EMAILS).
+- Ajustes próprios em Central → Sua conta → Acesso e segurança: tempo para desconectar (30 minutos, 1 hora de fábrica, 2 ou 4 horas) e digital ou rosto, só para a Central.
+- O mesmo aviso de 30 s e a mesma tela de entrada, com o texto da Central.
 - A conta continua conectada por baixo (o login não cai): entrar de novo é só confirmar que é a pessoa. A digital e o rosto ficam no celular; o app guarda só a identificação da chave do aparelho.` };
 
 export const NEW_DOCS = [DOC_LANCAR, DOC_CATEGORIAS, DOC_AVISOS, DOC_TESTES];

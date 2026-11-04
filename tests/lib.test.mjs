@@ -444,8 +444,10 @@ test('bloqueio: tempo sem uso, textos de segurança e chave da digital', () => {
   assert.equal(isExpired(null, now, 1), false, 'acabou de entrar: não bloqueia');
   assert.equal(isExpired(now + 60e3, now, 1), false, 'relógio adiantado não bloqueia em loop');
   assert.equal(lockText({ name: 'Ana Souza', minutes: 1 }).hello, 'Olá, Ana'); assert.match(lockText({ minutes: 1 }).title, /desconectado por inatividade/); assert.match(lockText({ minutes: 1 }).text, /Ficou 1 minuto sem uso/);
-  assert.match(lockText({ reason: 'manual' }).title, /Você saiu/); assert.match(lockText({ minutes: 60 }).text, /Ficou 1 hora sem uso/);
-  assert.equal(lockMinutes(60), 60); assert.equal(lockMinutes(45), 5);
+  assert.match(lockText({ reason: 'manual' }).title, /Você saiu/); assert.match(lockText({ minutes: 60, scope: 'central' }).text, /Ficou 1 hora sem uso\. Para proteger a Central/);
+  assert.match(lockText({ minutes: 240, scope: 'central' }).text, /4 horas/); assert.match(lockText({ reason: 'manual', scope: 'central' }).title, /saiu da Central/);
+  assert.equal(lockMinutes(60), 5); assert.equal(lockMinutes(45), 5);
+  assert.equal(lockMinutes(undefined, 'central'), 60); assert.equal(lockMinutes('120', 'central'), 120); assert.equal(lockMinutes('5', 'central'), 60);
   const t0 = 1e12;
   assert.deepEqual(idleState(t0, t0 + 10e3, 1), { phase: 'ok', left: 50 });
   assert.deepEqual(idleState(t0, t0 + 35e3, 1), { phase: 'warn', left: 25 });

@@ -5,12 +5,13 @@ import { uniqueRules } from './lib/categorize.js';
 export let sb = null;
 export let config = {};
 
-export async function init() {
+// storageKey: the product console keeps its own session (its own login), apart from the app's.
+export async function init({ storageKey } = {}) {
   const r = await fetch('/api/config');
   if (!r.ok) throw new Error('config');
   const cfg = await r.json(); config = cfg;
   if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) throw new Error('config_missing');
-  sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+  sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: !storageKey, ...(storageKey ? { storageKey } : {}) } });
   return sb;
 }
 

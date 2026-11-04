@@ -248,4 +248,7 @@ export const RELEASES = [
   ] }, updateDocs: [DOC_TESTES], addBacklog: [
     { id: 'versao_visivel_e_atualizar', title: 'Versão do app à vista e atualização sem precisar fechar o app', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'No teste da v84 o celular ainda rodava a versão anterior (o app estava aberto quando a nova saiu) e não havia como ver qual versão estava no celular', cost: false, notes: 'Versão no fim do menu, em Sobre o app e no topo da Central. Com versão nova: botão "atualizar agora" no menu e, ao voltar ao app depois de 1 minuto fora sem nada em andamento (fora de Lançar, sem pop-up nem revisão aberta), abre sozinho na nova.', from: [], where: 'Menu ☰' },
   ] },
+  { id: 'r86', version: 'v86', at: '2026-11-04T16:56:00Z', backlog: [], semNovidade: 'Só a Central do produto (o dono vê): login e ajustes próprios, separados do app. Para as famílias nada muda.', updateDocs: [DOC_SEGURANCA], addBacklog: [
+    { id: 'central_login_proprio', title: 'Central com login e ajustes próprios, separados do app', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A Central usava a mesma sessão e as mesmas chaves do bloqueio do app, e na prática desconectava junto com o app', cost: false, notes: 'Sessão própria (entrar ou sair de um não mexe no outro, e "Sair da conta" agora só fecha o lugar onde foi tocado). Central → Sua conta → Acesso e segurança: tempo de 30 min a 4 h (1 h de fábrica) e digital só para a Central. O e-mail e a senha continuam os da conta de dono.', from: [], where: 'Central → Sua conta' },
+  ] },
 ];

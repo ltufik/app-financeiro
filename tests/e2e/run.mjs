@@ -709,9 +709,15 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   const actx = await browser.newContext({ viewport: { width: 1280, height: 900 }, storageState: await page.context().storageState() }); const ap = await actx.newPage(); await addRoutes(ap);
   ap.on('pageerror', e => errors.push('admin: ' + e.message));
   await ap.goto('https://app.test/admin.html');
+  // Its own login: the app's session does not open the Central.
+  await ap.waitForSelector('#clForm', { timeout: 10000 }).catch(() => {});
+  ok('central: login próprio, separado do app', await ap.isVisible('#clForm') && !(await ap.isVisible('#aNav')));
+  await ap.click('#clGo');
+  ok('central: login valida o e-mail', !!(await ap.$('#clEmail[aria-invalid="true"]')) || !!(await ap.$('.ferr')));
+  await ap.fill('#clEmail', 'luiz@test.com'); await ap.fill('#clPass', 'senha-forte-123'); await ap.click('#clGo');
   await ap.waitForSelector('#aNav:not([hidden])', { timeout: 10000 });
   const atab = async t => { if (await ap.isVisible('#aMenu')) { await ap.click('#aMenu'); await ap.waitForTimeout(300); } const g = await ap.$(`#aNav [data-t="${t}"]`); if (!(await g.isVisible())) await ap.click(`#aNav .agroup:has([data-t="${t}"]) .agh`); await ap.click(`#aNav [data-t="${t}"]`); };
-  ok('central: menu com 3 grupos e só o grupo atual aberto', (await ap.$$('#aNav .agroup')).length === 3 && (await ap.$$('#aNav .agl:not([hidden])')).length === 1 && await ap.isVisible('#aNav [data-t="painel"]') && !(await ap.isVisible('#aNav [data-t="bench"]')));
+  ok('central: menu com 4 grupos e só o grupo atual aberto', (await ap.$$('#aNav .agroup')).length === 4 && (await ap.$$('#aNav .agl:not([hidden])')).length === 1 && await ap.isVisible('#aNav [data-t="painel"]') && !(await ap.isVisible('#aNav [data-t="bench"]')));
   await ap.click('#aNav [data-g="estrategia"] .agh');
   ok('central: tocar no grupo abre e fecha o outro', await ap.isVisible('#aNav [data-t="bench"]') && !(await ap.isVisible('#aNav [data-t="painel"]')));
   await ap.click('#aNav [data-g="estrategia"] .agh');
@@ -877,24 +883,32 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
-  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho'];
+  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
   for (const [w, h, name] of [[390, 844, 'celular'], [800, 1334, 'tablet em pé'], [1334, 800, 'tablet deitado']]) {
     await ap.setViewportSize({ width: w, height: h }); await ap.waitForTimeout(250);
     const wide = [];
     for (const t of TABS) { await atab(t); await ap.waitForTimeout(250); if (!(await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))) wide.push(t); }
     ok(`central (${name}): nenhuma página rola para o lado`, !wide.length, wide.join(', '));
     const drawerMode = await ap.isVisible('#aMenu');
-    ok(`central (${name}): menu ${w < 1024 ? 'no botão ☰' : 'na lateral'}`, w < 1024 ? drawerMode && (await txt2(ap, '#aCur')) === 'Desenho do produto' : !drawerMode && await ap.isVisible('#aNav [data-t="desenho"]'));
+    ok(`central (${name}): menu ${w < 1024 ? 'no botão ☰' : 'na lateral'}`, w < 1024 ? drawerMode && (await txt2(ap, '#aCur')) === 'Acesso e segurança' : !drawerMode && await ap.isVisible('#aNav [data-t="acesso"]'));
     if (shots) { await atab('uso'); await ap.waitForTimeout(300); await ap.screenshot({ path: path.join(shots, `admin-resp-${w}-uso.png`), fullPage: true }); }
   }
   await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('#aMenu'); await ap.waitForTimeout(300);
-  ok('central no celular: ☰ abre o menu com os três grupos e fecha ao tocar fora', await ap.evaluate(() => document.body.classList.contains('navopen') && document.querySelector('#aNav').getBoundingClientRect().left >= 0) && (await ap.$$('#aNav .agroup')).length === 3);
+  ok('central no celular: ☰ abre o menu com os quatro grupos e fecha ao tocar fora', await ap.evaluate(() => document.body.classList.contains('navopen') && document.querySelector('#aNav').getBoundingClientRect().left >= 0) && (await ap.$$('#aNav .agroup')).length === 4);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-resp-390-menu.png') });
   await ap.mouse.click(380, 400); await ap.waitForTimeout(300);
   ok('central no celular: topo cabe numa linha, com botões curtos', (await ap.innerText('#aCopy')).trim() === 'Resumo p/ Claude' && await ap.evaluate(() => document.querySelector('.atop').offsetHeight < 80), await ap.evaluate(() => document.querySelector('.atop').offsetHeight + 'px ' + document.querySelector('.atop').innerText.replace(/\s+/g, ' ')));
   ok('central no celular: menu fecha ao tocar fora', !(await ap.evaluate(() => document.body.classList.contains('navopen'))));
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central no celular: tabela vira cartões com o nome de cada coluna', await ap.evaluate(() => { const td = document.querySelector('table.atable tbody td:nth-child(2)'); return getComputedStyle(td).display === 'flex' && !!td.dataset.label && getComputedStyle(document.querySelector('table.atable thead')).display === 'none'; }));
+  // Acesso e segurança: the Central's own time (1 hour by default, up to 4 hours) and leaving only the Central.
+  await ap.setViewportSize({ width: 1280, height: 900 }); await atab('acesso'); await ap.waitForSelector('#clSec #lkMin');
+  ok('central: tempo próprio, 1 hora de fábrica, de 30 minutos a 4 horas', (await ap.inputValue('#lkMin')) === '60' && (await ap.$$eval('#lkMin option', o => o.map(x => x.value).join(','))) === '30,60,120,240');
+  const appMin = await ap.evaluate(() => localStorage.getItem('fin.lock.min'));
+  await ap.selectOption('#lkMin', '120');
+  ok('central: mudar o tempo da Central não mexe no do app', await ap.evaluate(() => localStorage.getItem('fin.central.lock.min')) === '120' && await ap.evaluate(() => localStorage.getItem('fin.lock.min')) === appMin);
+  await ap.click('#clOut'); await ap.click('.cfm [data-y]'); await ap.waitForSelector('#clForm', { timeout: 10000 }).catch(() => {});
+  ok('central: sair da Central volta ao login dela e o app continua conectado', await ap.isVisible('#clForm') && await ap.evaluate(() => !!JSON.parse(localStorage.getItem('mock.session'))));
   await actx.close();
 }
 // Test phase: feedback and FAQ in the app.
