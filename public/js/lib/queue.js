@@ -38,3 +38,16 @@ export function progressOf(text = '') {
   if (/^(Lendo|Abrindo) /i.test(t)) return 5;
   return null;
 }
+
+// What the person has to do now, in one line (shown on top of the queue).
+export function nowHint(what) {
+  return ({
+    revisao: 'Agora: confira a revisão abaixo e toque em Salvar. Se não for para entrar, toque em Descartar.',
+    senha: 'Agora: este PDF tem senha. Digite a senha abaixo e toque em Abrir.',
+    escolher: 'Agora: diga abaixo o que é este documento.',
+    lancamento: 'Agora: confira o lançamento abaixo e toque em Salvar.',
+    nota: 'Agora: confira a nota abaixo e toque em Salvar nota.',
+  })[what] || '';
+}
+// Files that could not be read, to try again at the end.
+export const failedIndexes = q => q.items.map((x, i) => x.status === 'erro' ? i : -1).filter(i => i >= 0);

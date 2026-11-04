@@ -1,3 +1,4 @@
+import os from 'os';
 // Browser test of the whole app with Supabase and Claude mocked.
 // node tests/e2e/run.mjs --playwright <playwright index.mjs> --pdfjs <pdfjs legacy build dir> [--backup file.json] [--fatura file.pdf] [--shots dir]
 // --browser webkit --smoke: the iPhone browser engine (Safari), as an iPhone, only the parts that do not need real family data (GitHub Actions).
@@ -462,7 +463,7 @@ if (fatura && backup) {
   await page.setInputFiles('#pdfIn', fatura);
   await page.waitForSelector('.busyov', { timeout: 5000 }).catch(() => {});
   const bz = await page.evaluate(() => { const b = document.querySelector('.busyov'); return b ? { t: b.querySelector('#bzT').textContent, s: b.querySelector('#bzS').textContent, p: b.querySelector('.bzpct').textContent, logo: !!b.querySelector('.bzlogo .b4') } : null; });
-  ok('enquanto lê o PDF, aparece o pop-up com o símbolo, o passo e o percentual', !!bz && bz.t === 'Lendo o documento' && /Lendo|Abrindo/.test(bz.s) && /^\d+%$/.test(bz.p) && bz.logo, JSON.stringify(bz));
+  ok('enquanto lê o PDF, aparece o pop-up com o símbolo, o passo e o percentual', !!bz && bz.t === 'Lendo o documento' && bz.s.length > 5 && /^\d+%$/.test(bz.p) && bz.logo, JSON.stringify(bz));
   if (shots) await page.screenshot({ path: path.join(shots, '05a-lendo.png') });
   await page.waitForSelector('#rvSave', { timeout: 30000 });
   const log = await txt('#pdfLog');
@@ -514,19 +515,24 @@ if (outra) {
   const lg = await txt('#pdfLog');
   ok('fatura longa lida em partes, com nova tentativa quando uma parte falha', /Lendo a parte 1 de [2-9]/.test(lg) && lg.includes('Tentando de novo') && lg.includes('250 lançamentos') && lg.includes('A soma confere'), lg.slice(150, 600));
   await page.click('#rvCancel'); await page.click('.cfm [data-y]').catch(() => {});
-  // Several files at once: one review at a time ("1 de 2"), the next starts by itself, a summary at the end.
+  // Several files at once: one review at a time ("1 de 3") with what to do now, a file that cannot be read
+  // says why, the next starts by itself, and the summary offers to try the failed one again.
+  const txtFile = path.join(os.tmpdir(), 'anotacoes.txt'); fs.writeFileSync(txtFile, 'isto não é uma fatura');
   await page.click('.ltile[data-mode="pdf"]');
-  await page.setInputFiles('#pdfIn', [path.join(ROOT, '../tests/fixtures/fatura-ficticia.pdf'), path.join(ROOT, '../tests/fixtures/comprovante-ficticio.pdf')]);
+  await page.setInputFiles('#pdfIn', [path.join(ROOT, '../tests/fixtures/fatura-ficticia.pdf'), txtFile, path.join(ROOT, '../tests/fixtures/comprovante-ficticio.pdf')]);
   await page.waitForSelector('.busyov', { timeout: 5000 }).catch(() => {});
-  ok('vários arquivos: o pop-up diz qual arquivo está sendo lido', (await page.textContent('.busyov #bzT').catch(() => '')) === 'Arquivo 1 de 2');
+  ok('vários arquivos: o pop-up diz qual arquivo está sendo lido', (await page.textContent('.busyov #bzT').catch(() => '')) === 'Arquivo 1 de 3');
   await page.waitForSelector('#rvSave', { timeout: 60000 }).catch(() => {});
   ok('pop-up some quando a leitura termina', !(await page.$('.busyov')) || (await page.waitForSelector('.busyov', { state: 'detached', timeout: 2000 }).then(() => true).catch(() => false)));
-  ok('vários arquivos: mostra a fila e revisa o primeiro', (await txt('#qBar')).includes('Arquivo 1 de 2') && (await txt('#qBar')).includes('fatura-ficticia.pdf') && await page.isVisible('#review'), await txt('#qBar'));
+  ok('vários arquivos: mostra a fila e diz o que fazer agora', (await txt('#qBar')).includes('Arquivo 1 de 3') && (await txt('#qBar .qnow')).includes('confira a revisão abaixo e toque em Salvar') && await page.isVisible('#review'), await txt('#qBar'));
+  ok('revisão explica o que fazer, passo a passo', (await txt('#review .rvguide')).includes('Arquivo 1 de 3: o que fazer') && (await txt('#review .rvguide')).includes('O próximo arquivo começa sozinho'), await txt('#review .rvguide'));
   await page.click('#rvSave'); await page.click('.cfm [data-y]');
   await page.waitForFunction(() => /João Encanador/.test([...document.querySelectorAll('#qPreview input')].map(i => i.value).join(' ')), null, { timeout: 30000 }).catch(() => {});
-  ok('vários arquivos: ao salvar, o próximo começa sozinho', (await txt('#qBar')).includes('Arquivo 2 de 2') && /Fatura de .* salvo|Fatura de/.test(await txt('#qBar')) && await page.isVisible('#qPreview'), await txt('#qBar'));
+  const qb = await txt('#qBar');
+  ok('vários arquivos: o que não deu para ler diz o motivo e a fila segue sozinha', qb.includes('Arquivo 3 de 3') && qb.includes('Não deu para ler: Esse tipo de arquivo não dá para ler') && (await txt('#qBar .qnow')).includes('confira o lançamento abaixo') && await page.isVisible('#qPreview'), qb);
   await page.click('#quSkip'); await page.waitForTimeout(300);
-  ok('vários arquivos: resumo no fim, sem nada aberto embaixo', (await txt('#qBar')).includes('Pronto: 1 salvo e 1 pulado.') && await page.isVisible('#quClose') && !(await page.isVisible('#qPreview')), await txt('#qBar'));
+  ok('vários arquivos: resumo no fim, sem nada aberto embaixo', (await txt('#qBar')).includes('Pronto: 1 salvo, 1 pulado e 1 não lido.') && await page.isVisible('#quClose') && !(await page.isVisible('#qPreview')), await txt('#qBar'));
+  ok('vários arquivos: oferece tentar de novo o que falhou, com a dica do print', await page.isVisible('#quRetry') && (await txt('#qBar')).includes('mande um print ou uma foto'));
   await shot('05c-varios-arquivos');
   await page.click('#quClose');
   ok('vários arquivos: fechar o resumo limpa a fila', !(await page.isVisible('#qBar')));

@@ -13,7 +13,7 @@ import { receiptPrompt, normalizeReceipt, splitByCategory, findMatches } from '.
 import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js';
 import { docKeys, compareStatement, docsText } from '../lib/statements.js';
 import { applyMemos } from '../lib/memo.js';
-import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX, progressOf } from '../lib/queue.js';
+import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX, progressOf, nowHint, failedIndexes } from '../lib/queue.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
 let Q = null;          // quick-entry preview items
@@ -206,25 +206,45 @@ const waiting = () => ['#review', '#pwBox', '#qPreview', '#rcReview'].some(s => 
 async function runCurrent() {
   renderQueue();
   const f = QFILES[QU.i];
+  $('#toast').hidden = true; $('#pdfLog').innerHTML = ''; $('#rcLog').innerHTML = '';
   await withBusy(`Lendo ${f.name}...`, () => routeFile(f, 'fila'), resultArea, `Arquivo ${position(QU)}`).catch(err => plog('Não consegui ler este arquivo (' + (err?.message || err) + ').', 'var(--bad)'));
-  if (QU && !isDone(QU) && QFILES[QU.i] === f && !waiting()) docDone('erro');
+  if (QU && !isDone(QU) && QFILES[QU.i] === f && !waiting()) docDone('erro', failReason());
+  else renderQueue();
 }
+// Why the file could not be read: the last problem the reading wrote, or the message it showed.
+function failReason() {
+  const lines = [...document.querySelectorAll('#pdfLog div, #rcLog div')].filter(d => /--(bad|warn)/.test(d.style.color)).map(d => d.textContent.trim());
+  const t = !$('#toast').hidden ? ($('#toast .tt > span')?.textContent || '').trim() : '';
+  return (lines.pop() || t || 'Não reconheci o documento.').replace(/\s+/g, ' ').slice(0, 140);
+}
+// What the person has to do now, from what is on screen.
+const nowWhat = () => !$('#review').hidden ? 'revisao' : !$('#pwBox').hidden ? 'senha' : $('#pdfLog .chips') ? 'escolher' : !$('#qPreview').hidden ? 'lancamento' : !$('#rcReview').hidden ? 'nota' : '';
+const nowTarget = { revisao: '#review', senha: '#pwBox', escolher: '#pdfLog', lancamento: '#qPreview', nota: '#rcReview' };
 // Called when the current document was saved, discarded or could not be read. Does nothing outside a queue.
 function docDone(status, label = '') {
   if (!QU || isDone(QU)) return;
+  const name = QU.items[QU.i]?.name;
   advance(QU, status, label);
   ['#review', '#pwBox', '#qPreview', '#rcReview'].forEach(s => { if ($(s)) $(s).hidden = true; });
+  if (status === 'erro' && !isDone(QU)) toast(`${name} não deu para ler. Seguindo para o próximo; no fim dá para tentar de novo.`, 'info');
   if (isDone(QU)) { renderQueue(); toast(queueSummary(QU).head.replace(/^Pronto:\s*/, 'Arquivos lidos: ')); $('#qBar').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   setTimeout(runCurrent, 400);
 }
 function renderQueue() {
   const bar = $('#qBar'); if (!bar) return;
+  // While files are being read and reviewed, the upload area steps aside so the review sits right below.
+  document.querySelector('#v-lancar [data-panel="pdf"]')?.classList.toggle('inqueue', !!QU && !isDone(QU));
   if (!QU) { bar.hidden = true; return; }
   const done = isDone(QU), s = queueSummary(QU);
   bar.hidden = false;
+  const what = done ? '' : nowWhat(), failed = done ? failedIndexes(QU) : [];
   bar.innerHTML = `<div class="qbar-h"><h3>${done ? esc(s.head) : `Arquivo ${position(QU)}`}</h3>${done ? '<button class="btn" type="button" id="quClose">Fechar</button>' : '<button class="btn" type="button" id="quSkip">Pular este arquivo</button>'}</div>
-    <ol class="qlist small">${s.lines.map((x, i) => `<li class="q-${x.status}${!done && i === QU.i ? ' now' : ''}"><span>${esc(x.name)}</span><span class="tiny muted">${esc(x.label || STATUS_LABEL[x.status])}</span></li>`).join('')}</ol>
-    ${done ? '' : '<p class="tiny muted">Revise e salve cada um. Ao salvar ou descartar, o próximo começa sozinho.</p>'}`;
+    ${what ? `<p class="qnow">${esc(nowHint(what))} <button class="linkbtn small" type="button" id="quGo">Ver ↓</button></p>` : ''}
+    <ol class="qlist small">${s.lines.map((x, i) => `<li class="q-${x.status}${!done && i === QU.i ? ' now' : ''}"><span>${esc(x.name)}</span><span class="tiny ${x.status === 'erro' ? 'qerr' : 'muted'}">${esc(x.status === 'erro' ? 'Não deu para ler' + (x.label ? ': ' + x.label : '') : x.label || STATUS_LABEL[x.status])}</span></li>`).join('')}</ol>
+    ${failed.length ? `<p class="small">Tente de novo. Se continuar sem ler, mande um print ou uma foto da fatura: o app lê imagens também.</p><div><button class="btn primary" type="button" id="quRetry">Tentar de novo ${failed.length > 1 ? `os ${failed.length} que falharam` : `o que falhou`}</button></div>` : ''}
+    ${done ? '' : '<p class="tiny muted">Cada arquivo tem a sua revisão. Ao salvar ou descartar, o próximo começa sozinho.</p>'}`;
+  if (what) $('#quGo').onclick = () => $(nowTarget[what])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (failed.length) $('#quRetry').onclick = () => { const fs = failed.map(i => QFILES[i]); QU = null; QFILES = []; $('#pdfLog').innerHTML = ''; startFiles(fs, 'pdf'); };
   if (done) $('#quClose').onclick = () => { QU = null; QFILES = []; renderQueue(); $('#pdfLog').innerHTML = ''; };
   else $('#quSkip').onclick = () => { R = null; Q = null; RC = null; $('#pdfLog').innerHTML = ''; docDone('pulado'); };
 }
@@ -563,10 +583,14 @@ function renderReview() {
   ${info.ok === false ? `<p class="banner no" style="margin-top:10px">A soma não bateu com o total do documento. Confira os valores com a fatura ou o extrato antes de salvar; se faltar algum lançamento, você pode lançar à mão depois.</p>` : ''}
   ${exist ? `<p class="banner at" style="margin-top:10px">${source === 'cartao' ? 'Esta fatura' : 'Este extrato'}${thisDoc ? ` (${esc(thisDoc)})` : ''} já foi ${source === 'cartao' ? 'enviada' : 'enviado'} para ${mLong(R.month)}. Salvar troca ${source === 'cartao' ? 'a anterior' : 'o anterior'} por ${source === 'cartao' ? 'esta' : 'este'}${otherDocs ? `; ${esc(otherDocs)} continua como está` : ''}.</p>` : ''}
   ${cmp.mode === 'alongside' ? `<p class="banner ok" style="margin-top:10px">${Month} já tem ${esc(otherDocs || docsText(source, ['']))}. ${source === 'cartao' ? 'Esta fatura é de outro cartão' : 'Este extrato é de outra conta'}${thisDoc ? ` (${esc(thisDoc)})` : ''} e entra junto, sem apagar nada.</p>` : ''}
+  <div class="rvguide"><strong>${QU && !isDone(QU) ? `Arquivo ${position(QU)}: o que fazer` : 'O que fazer'}</strong><ol class="small">
+    <li>${info.ok === false ? 'A soma não bateu: confira os valores com o documento.' : 'A soma foi conferida com o total do documento.'}</li>
+    <li>${rows.filter(r => r.pending).length ? `Toque na categoria dos <strong>${rows.filter(r => r.pending).length} marcados "a classificar"</strong> (no topo da lista) e escolha a certa. O app aprende.` : 'Todas as categorias já estão escolhidas. Se quiser trocar alguma, toque nela.'}</li>
+    <li>Toque em <strong>Salvar</strong>${QU && !isDone(QU) && QU.i < QU.items.length - 1 ? '. O próximo arquivo começa sozinho' : ''}.</li></ol></div>
   <p class="small" style="margin-top:10px"><span class="pill at">${rows.filter(r => r.pending).length} a classificar</span> <span class="tiny muted">Toque na categoria para trocar. O app aprende.</span></p>
   <div class="tw" style="margin-top:8px;max-height:520px;overflow:auto"><table class="rvcards"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="rvRows"></tbody></table></div>
   <div id="rvPend" style="margin-top:12px"></div>
-  <div class="rowbtn" style="margin-top:12px"><button class="btn primary" id="rvSave" type="button">Salvar</button><button class="btn" id="rvCancel" type="button">Descartar</button></div>`;
+  <div class="rowbtn rvactions" style="margin-top:12px"><button class="btn primary" id="rvSave" type="button">Salvar ${source === 'cartao' ? 'a fatura' : 'o extrato'}</button><button class="btn" id="rvCancel" type="button">Descartar</button></div>`;
   const tb = $('#rvRows');
   rows.map((r, i) => [r, i]).sort((a, b) => (b[0].pending ? 1 : 0) - (a[0].pending ? 1 : 0)).forEach(([r]) => {
     const tr = document.createElement('tr'); if (r.pending) tr.className = 'pend';

@@ -667,3 +667,14 @@ test('pop-up de progresso: percentual pelo passo da leitura', () => {
   assert.equal(progressOf('Pedindo sugestão de categoria para 3 lançamentos novos...'), 82);
   assert.equal(progressOf('Tentando de novo...'), null);
 });
+
+import { nowHint, failedIndexes } from '../public/js/lib/queue.js';
+test('vários arquivos: o que fazer agora e o que tentar de novo', () => {
+  assert.match(nowHint('revisao'), /toque em Salvar/);
+  assert.match(nowHint('senha'), /senha/);
+  assert.equal(nowHint('nada'), '');
+  const q = makeQueue([{ name: 'a.pdf' }, { name: 'b.pdf' }, { name: 'c.pdf' }]);
+  advance(q, 'erro', 'Não deu para responder agora.'); advance(q, 'salvo'); advance(q, 'erro');
+  assert.deepEqual(failedIndexes(q), [0, 2]);
+  assert.equal(queueSummary(q).lines[0].label, 'Não deu para responder agora.');
+});

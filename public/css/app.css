@@ -558,3 +558,11 @@ label.consent[hidden]{display:none}
 .bzbar span{display:block;height:100%;width:3%;border-radius:6px;background:var(--accent);transition:width .4s ease}
 .bzpct{margin:0;font-variant-numeric:tabular-nums;font-weight:600}
 @media (prefers-reduced-motion:reduce){.bzb{animation:none;opacity:1;transform:none}.bzbar span{transition:none}.busyov{animation:none}}
+.qnow{margin:0;padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--ink);font-weight:600}
+.qerr{color:var(--bad)}
+.rvguide{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--sunk)}
+.rvguide ol{margin:6px 0 0;padding-left:20px;display:grid;gap:4px}
+/* Save and Discard always in reach while reviewing on the phone */
+.rvactions{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:3;background:var(--card);padding:10px 0;box-shadow:0 -8px 12px -8px rgba(0,0,0,.15)}
+.qlist li.q-erro{flex-direction:column;gap:2px}.qlist li.q-erro span:first-child{white-space:normal}
+[data-panel="pdf"].inqueue > h2,[data-panel="pdf"].inqueue > p.muted,[data-panel="pdf"].inqueue #drop,[data-panel="pdf"].inqueue > details.help{display:none}

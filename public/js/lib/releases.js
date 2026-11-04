@@ -172,4 +172,7 @@ export const RELEASES = [
     'Enquanto o app lê uma fatura, um extrato ou uma nota, aparece o que ele está fazendo e quanto falta, em porcentagem.',
     'Com vários arquivos, mostra qual está sendo lido: "Arquivo 2 de 3".',
   ] } },
+  { id: 'r75', version: 'v75', at: '2026-11-04T03:00:00Z', backlog: [], semNovidade: 'Ajustes no envio de vários arquivos (o que fazer agora, motivo de quem não foi lido, tentar de novo, botões Salvar e Descartar sempre à vista); a novidade dos vários arquivos já foi contada na v72.', updateBacklog: [
+    { id: 'varios_arquivos_de_uma_vez', set: { notes: 'Escolher ou compartilhar até 10 PDFs, fotos ou prints. Pop-up de leitura com "Arquivo 2 de 3", o passo e o percentual. No topo, a fila diz o que fazer agora ("confira a revisão abaixo e toque em Salvar") e a área de envio sai da frente. A revisão tem um passo a passo curto e Salvar/Descartar sempre à vista. Arquivo que não dá para ler mostra o motivo, a fila segue sozinha e no fim há "Tentar de novo", com a dica de mandar print ou foto.' } },
+  ] },
 ];
