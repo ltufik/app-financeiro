@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -240,5 +240,12 @@ export const RELEASES = [
     { id: 'central_uma_hora', title: 'Central do produto desconecta só depois de 1 hora', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A Central bloqueava em 5 minutos, como o app, mas não tem números da família', cost: false, notes: 'Tempo fixo de 1 hora na Central, com o mesmo aviso antes; o app continua com o tempo escolhido em Conta.', from: [], where: 'Central' },
     { id: 'menu_configuracoes', title: 'Menu: "Organizar o app" passa a ser "Configurações"', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'O nome do grupo não dizia o que tinha dentro', cost: false, notes: 'Grupo com Categorias, Notificações, Atalhos do iPhone e O que o assistente sabe.', from: [], where: 'Menu ☰' },
     { id: 'lancar_varios_claro', title: 'Lançar: deixar claro que dá para mandar vários arquivos e planilha', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A opção de mandar vários arquivos e a planilha existiam, mas ficavam escondidas num texto pequeno', cost: false, notes: 'Selo "Vários de uma vez" no botão; caixa "O que dá para mandar" com os 4 casos; botão "Escolher arquivos (um ou vários)"; ajuda de como marcar vários no iPhone e no Android.', from: [], where: 'Lançar → Fatura ou extrato' },
+  ] },
+  { id: 'r85', version: 'v85', at: '2026-11-04T16:46:00Z', backlog: [], news: { id: 'n20261104i', title: 'A versão do app à vista', items: [
+    'No fim do menu ☰ aparece a versão do app (por exemplo, "versão v85"). Também está em Sobre o app.',
+    'Saiu uma versão nova com o app aberto? O fim do menu mostra "Tem versão nova: atualizar agora".',
+    'E, ao voltar para o app depois de um tempo fora, ele já abre na versão nova, sem atrapalhar um envio ou uma revisão.',
+  ] }, updateDocs: [DOC_TESTES], addBacklog: [
+    { id: 'versao_visivel_e_atualizar', title: 'Versão do app à vista e atualização sem precisar fechar o app', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'No teste da v84 o celular ainda rodava a versão anterior (o app estava aberto quando a nova saiu) e não havia como ver qual versão estava no celular', cost: false, notes: 'Versão no fim do menu, em Sobre o app e no topo da Central. Com versão nova: botão "atualizar agora" no menu e, ao voltar ao app depois de 1 minuto fora sem nada em andamento (fora de Lançar, sem pop-up nem revisão aberta), abre sozinho na nova.', from: [], where: 'Menu ☰' },
   ] },
 ];

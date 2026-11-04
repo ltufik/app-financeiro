@@ -248,6 +248,8 @@ const backup = arg('backup');
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
 ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 15 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 ok('menu em 4 grupos, só o primeiro aberto', (await page.$$('#drawer .mgroup')).length === 4 && (await page.$$('#drawer .drawer-list:not([hidden])')).length === 1 && await page.isVisible('#drawer [data-sec="metas"]') && !(await page.isVisible('#drawer [data-sec="backup"]')));
+{ const v = (fs.readFileSync(path.join(ROOT, 'js/usage.js'), 'utf8').match(/APP_VERSION = '([^']+)'/) || [])[1];
+  ok('fim do menu mostra a versão do app', !!v && (await txt('#appVer')).includes('versão ' + v) && !(await page.$('#updNow'))); }
 await page.click('#drawer .mgroup[data-g="dados"] .mgh');
 ok('tocar num grupo abre ele e fecha o outro', await page.isVisible('#drawer [data-sec="backup"]') && !(await page.isVisible('#drawer [data-sec="metas"]')));
 await page.click('#drawer .mgroup[data-g="fam"] .mgh');

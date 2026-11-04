@@ -286,7 +286,17 @@ configureCatPicker({
 (async function boot() {
   // Registered first thing: Android only offers a real install (our icon and name) once the service worker is active.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    const hadSW = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('/sw.js').then(r => { document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update().catch(() => {}); }); }).catch(() => {});
+    // A new version took over (the app was open while it was published): the menu offers it, and coming back to
+    // the app after a while with nothing in progress loads it by itself.
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW) S.updateReady = true; });
+    let hiddenAt = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { hiddenAt = Date.now(); return; }
+      const busy = document.querySelector('.busyov, .cfm-wrap, .ann, #review:not([hidden]), #shReview:not([hidden]), #rcReview:not([hidden]), #pwBox:not([hidden])') || S.tab === 'lancar';
+      if (S.updateReady && hiddenAt && Date.now() - hiddenAt > 60e3 && !busy) location.reload();
+    });
     navigator.serviceWorker.addEventListener('message', e => { if (e.data?.type === 'open' && S.hh) openLink(parseLink(e.data.url)); });
   }
   captureInviteFromUrl();

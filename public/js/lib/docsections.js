@@ -57,6 +57,7 @@ export const DOC_AVISOS = { id: 'notificacoes_doc', title: 'Notificações: do s
 
 export const DOC_TESTES = { id: 'caderno_doc', title: 'Caderno de testes', body: `- Planejar → Caderno de testes lista o que testar num celular de verdade, por funcionalidade: passos e o que deve acontecer.
 - "Robô também testa": o teste automático já confere a cada mudança (navegador do computador e Safari do iPhone).
+- Antes de testar, confira a versão no fim do menu ☰ do celular ("versão v85"). Ela tem de ser a mesma da versão em teste; se for anterior, toque em "Tem versão nova: atualizar agora" ou feche o app de vez e abra de novo. A Central mostra a versão no topo, ao lado do e-mail.
 - Marque Passou ou Falhou. Falhou vira bug no backlog, em Agora, com o que aconteceu.
 - Toda versão com algo visível precisa trazer seus casos (Definição de pronto; o teste automático bloqueia a publicação sem eles).` };
 

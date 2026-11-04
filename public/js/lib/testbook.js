@@ -97,6 +97,9 @@ export const TESTS = [
     'Um lançamento por linha, com acentos certos, valores com vírgula e a coluna "Cartão ou conta".'),
   t('menu_configuracoes', 'Menu e telas', 'v84', 'ambos', 'Grupo Configurações no menu',
     ['Abra o menu ☰.'], 'O grupo com Categorias, Notificações, Atalhos do iPhone e O que o assistente sabe se chama Configurações.', true),
+  t('versao_no_menu', 'Menu e telas', 'v85', 'ambos', 'Ver a versão do app e atualizar',
+    ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
+    'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Segurança
   t('aviso_desconectar', 'Segurança', 'v84', 'ambos', 'Aviso antes de desconectar',
     ['Menu ☰ → Dados e conta → Conta → Desconectar depois de: 1 minuto.', 'Deixe o app aberto, sem tocar, por uns 40 segundos.', 'Toque em Continuar no app.', 'Espere de novo, sem tocar, até passar 1 minuto.'],

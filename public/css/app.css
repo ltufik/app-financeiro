@@ -261,7 +261,8 @@ body.cfm-open{overflow:hidden}
 .drawer-list .di{flex:none;width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
 .drawer-list button[aria-current] .di{background:var(--accent);color:var(--accent-ink)}
 .drawer-list .di svg{width:20px;height:20px}
-.drawer-foot{margin-top:auto;padding:14px 8px 0}
+.drawer-foot{margin-top:auto;padding:14px 8px 0;display:flex;flex-direction:column;gap:8px}
+.drawer-foot p{margin:0}
 .subhead{display:flex;align-items:center;gap:12px}
 .subhead h2{margin:0}
 @media (prefers-reduced-motion:reduce){.drawer,.drawer-bg{transition:none}}

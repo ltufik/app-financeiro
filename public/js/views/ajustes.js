@@ -1,6 +1,6 @@
 import { S, settings, goals, reindex, monthKeys, txsOf, presets } from '../state.js';
 import * as db from '../db.js';
-import { track } from '../usage.js';
+import { track, APP_VERSION } from '../usage.js';
 import { KINDS, kindOf, kindByKey, byCategory } from '../lib/calc.js';
 import { suggestBudgets, budgetsOf } from '../lib/budget.js';
 import { esc, todayISO, brl } from '../lib/format.js';
@@ -100,7 +100,7 @@ export function render(el) {
 
   <div class="panel stack" data-sec="sobre">
     <h2>Sobre o app</h2>
-    <p class="small"><strong>Pra Onde Foi</strong> mostra para onde vai o dinheiro da família: lê faturas e extratos em PDF de qualquer banco, confere os totais e separa por categoria. Versão de teste com família e amigos.</p>
+    <p class="small"><strong>Pra Onde Foi</strong> mostra para onde vai o dinheiro da família: lê faturas e extratos em PDF de qualquer banco, confere os totais e separa por categoria. Versão de teste com família e amigos. Este celular está na versão <strong id="aboutVer">${APP_VERSION}</strong> (aparece também no fim do menu ☰).</p>
     <h3>O que o app guarda</h3>
     <ul class="small">
       <li>Os lançamentos, as categorias, as metas e os ajustes da sua família. Só quem está na família vê.</li>

@@ -3,6 +3,7 @@ import { S } from './state.js';
 import { $ } from './ui.js';
 import { esc } from './lib/format.js';
 import { menuNote } from './lib/pushask.js';
+import { APP_VERSION, track } from './usage.js';
 
 const I = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 export const SECTIONS = [
@@ -52,12 +53,13 @@ export function openMenu() {
       return `<div class="mgroup${open ? ' open' : ''}" data-g="${g.id}"><button type="button" class="mgh" aria-expanded="${open}" aria-controls="mg-${g.id}"><span class="di">${g.icon}</span><strong>${g.title}</strong>${alert && !open ? '<span class="mdot" aria-label="Notificações desligadas"></span>' : ''}<span class="mchev" aria-hidden="true">${I('<path d="M9 6l6 6-6 6"/>')}</span></button>
       <ul class="drawer-list" id="mg-${g.id}"${open ? '' : ' hidden'}>${items.map(x => `<li><button type="button" data-sec="${x.key}" ${S.tab === 'ajustes' && S.sec === x.key ? 'aria-current="page"' : ''}>
         <span><strong>${x.title}</strong><br><span class="tiny muted">${x.desc}</span>${x.key === 'avisos' && menuNote(S.pushStatus) ? `<br><span class="tiny dnote">${menuNote(S.pushStatus)}: toque para ligar</span>` : ''}</span></button></li>`).join('')}</ul></div>`; }).join('')}</div>
-    <p class="tiny muted drawer-foot">Pra Onde Foi · versão de teste</p>`;
+    <div class="drawer-foot">${S.updateReady ? '<button class="btn primary" type="button" id="updNow">Tem versão nova: atualizar agora</button>' : ''}<p class="tiny muted" id="appVer">Pra Onde Foi · versão ${APP_VERSION} (de teste)</p></div>`;
   lastFocus = document.activeElement;
   dr.hidden = bg.hidden = false; document.body.style.overflow = 'hidden';
   requestAnimationFrame(() => { dr.classList.add('open'); bg.classList.add('open'); });
   $('#menuBtn').setAttribute('aria-expanded', 'true');
   $('#drawerX').onclick = () => closeMenu();
+  if ($('#updNow')) $('#updNow').onclick = () => { track('app.atualizar'); location.reload(); };
   dr.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => { S.sec = b.dataset.sec; closeMenu(false); S.go('ajustes'); });
   // One group open at a time; tapping the open one closes it.
   dr.querySelectorAll('.mgh').forEach(h => h.onclick = () => {
