@@ -2,7 +2,7 @@
 import * as db from './db.js';
 import { S, setFamily, reindex, monthKeys, latestClosed } from './state.js';
 import { mLong, mShort, thisMonth } from './lib/format.js';
-import { $, $$, toast, validate, clearInvalid, configureCatPicker } from './ui.js';
+import { $, $$, toast, validate, clearInvalid, configureCatPicker, announce } from './ui.js';
 import { checkEmail, checkPassword, checkName } from './lib/validate.js';
 import * as resumo from './views/resumo.js';
 import * as lancar from './views/lancar.js';
@@ -291,12 +291,24 @@ configureCatPicker({
     navigator.serviceWorker.register('/sw.js').then(r => { document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update().catch(() => {}); }); }).catch(() => {});
     // A new version took over (the app was open while it was published): the menu offers it, and coming back to
     // the app after a while with nothing in progress loads it by itself.
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW) S.updateReady = true; });
+    // Nobody needs to close and open the app: on the "entrar" screen the new version is announced and entering
+    // already opens it; with the app open and nothing in progress, a pop-up offers to update now.
+    const busy = () => document.querySelector('.busyov, .cfm-wrap, .ann, #wrapped, #review:not([hidden]), #shReview:not([hidden]), #rcReview:not([hidden]), #pwBox:not([hidden])') || S.tab === 'lancar';
+    navigator.serviceWorker.addEventListener('controllerchange', async () => {
+      if (!hadSW || S.updateReady) return;
+      S.updateReady = window.__updateReady = true;
+      try { window.__updateVersion = ((await (await fetch('/sw.js', { cache: 'no-store' })).text()).match(/VERSION = '([^']+)'/) || [])[1] || ''; } catch (e) { /* offline */ }
+      dispatchEvent(new Event('app-update'));
+      if (document.hidden || document.body.classList.contains('locked') || busy() || !S.hh) return;
+      track('app.aviso_atualizar');
+      const ok = await announce({ eyebrow: 'Versão nova', title: `Tem uma versão nova do app${window.__updateVersion ? ' (' + window.__updateVersion + ')' : ''}`, html: '<p class="small">Atualizar leva um segundo e você continua de onde estava. O que mudou aparece logo depois.</p>', primary: 'Atualizar agora', secondary: 'Depois' });
+      if (ok) { track('app.atualizar'); location.reload(); }
+    });
     let hiddenAt = 0;
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { hiddenAt = Date.now(); return; }
-      const busy = document.querySelector('.busyov, .cfm-wrap, .ann, #review:not([hidden]), #shReview:not([hidden]), #rcReview:not([hidden]), #pwBox:not([hidden])') || S.tab === 'lancar';
-      if (S.updateReady && hiddenAt && Date.now() - hiddenAt > 60e3 && !busy) location.reload();
+      // Locked: the "entrar" screen handles it (entering opens the new version).
+      if (S.updateReady && hiddenAt && Date.now() - hiddenAt > 60e3 && !busy() && !document.body.classList.contains('locked')) location.reload();
     });
     navigator.serviceWorker.addEventListener('message', e => { if (e.data?.type === 'open' && S.hh) openLink(parseLink(e.data.url)); });
   }

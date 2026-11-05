@@ -691,3 +691,5 @@ label.consent[hidden]{display:none}
 #wrapped.w-confetti::after{content:'🎉 ✨ 🎊 ✨ 🎉';position:absolute;top:64px;left:0;right:0;text-align:center;font-size:30px;letter-spacing:12px;animation:wConf 1.2s ease-out both;pointer-events:none}
 @keyframes wConf{from{transform:translateY(-30px) scale(.6);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){#wrapped.w-confetti::after{animation:none}}
+
+#lockScreen .lk-upd{margin:0;padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-weight:600}

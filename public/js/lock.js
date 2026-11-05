@@ -84,12 +84,16 @@ export async function lock(reason = 'parado') {
       <label class="f">Senha de ${esc(L.email || 'sua conta')}<input type="password" id="lkPass" autocomplete="current-password" required></label>
       <button class="btn primary lk-big" type="submit" id="lkGo">Entrar</button>
     </form>
+    <p class="small lk-upd" id="lkUpd" hidden></p>
     <p class="small" id="lkMsg" role="status">${bio ? 'Ao tocar em Entrar, o celular pede a digital ou o rosto.' : ''}</p>
     <div class="lk-links">${bio ? '<button class="linkbtn" type="button" id="lkUsePass">Entrar com a senha</button>' : ''}<span class="small muted">Não é você? <button class="linkbtn" type="button" id="lkOut">Sair da conta</button></span></div>
   </div>`;
   document.body.append(el);
   const msg = (t, bad) => { $('#lkMsg').textContent = t; $('#lkMsg').className = 'small' + (bad ? ' err' : ''); };
-  const done = () => { el.remove(); document.body.classList.remove('locked'); touch(); setTimeout(() => afterUnlock(), 300); };
+  // A new version arrived while the app was open: entering already opens it (no need to close and open the app).
+  const done = () => { if (window.__updateReady) { touch(); track('app.atualizar_ao_entrar'); location.reload(); return; } el.remove(); document.body.classList.remove('locked'); touch(); setTimeout(() => afterUnlock(), 300); };
+  const upd = () => { const p = el.querySelector('#lkUpd'); if (p && window.__updateReady) { p.hidden = false; p.textContent = `Tem versão nova do app${window.__updateVersion ? ' (' + window.__updateVersion + ')' : ''}: ao entrar, ela já abre atualizada.`; } };
+  addEventListener('app-update', upd); upd();
   if (bio) {
     // Only on the tap: nothing pops up by itself when the app opens.
     $('#lkBio').onclick = async () => {

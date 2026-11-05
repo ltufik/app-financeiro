@@ -1096,6 +1096,9 @@ const used = await page.evaluate(() => window.__db.usage);
   // Desconectar agora: the "entrar" screen; the fingerprint is asked only after tapping Entrar.
   await page.click('#lkNow'); await page.waitForSelector('#lockScreen', { timeout: 5000 }).catch(() => {});
   await page.waitForTimeout(1200);
+  await page.evaluate(() => { window.__updateReady = true; window.__updateVersion = 'v999'; dispatchEvent(new Event('app-update')); });
+  ok('tela de entrada avisa a versão nova: ao entrar, ela já abre atualizada', await page.isVisible('#lkUpd') && (await txt('#lkUpd')).includes('v999') && (await txt('#lkUpd')).includes('ao entrar, ela já abre atualizada'));
+  await page.evaluate(() => { window.__updateReady = false; });
   ok('desconectado: tela de entrada com "Olá" e Entrar, sem pedir a digital sozinha', await page.isVisible('#lockScreen') && (await txt('#lockScreen')).includes('Olá, Luiz') && await page.isVisible('#lkBio') && (await txt('#lkBio')).includes('Entrar') && await page.isVisible('#lkUsePass') && (await txt('#lockScreen')).includes('Não é você?'));
   if (shots) await page.screenshot({ path: path.join(shots, '19a-entrar-digital.png') });
   await page.click('#lkBio');

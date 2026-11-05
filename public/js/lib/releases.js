@@ -363,4 +363,10 @@ export const RELEASES = [
   ] }, updateDocs: [DOC_GASTOS_ANO], addBacklog: [
     { id: 'ipva_pelo_veiculo', title: 'IPVA pelo veículo do patrimônio e pelo estado de registro', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'O IPVA supunha São Paulo; o carro do Luiz é registrado no ES (2%, 15% à vista em abril)', cost: false, notes: 'Tipo e estado de cada bem no Patrimônio (obrigatório para veículo); IPVA = valor × alíquota do estado; "De qual veículo?" no pagamento achado; sugestão de incluir os veículos sem IPVA.', from: [], where: 'Patrimônio; Gastos do ano' },
   ] },
+  { id: 'r100', version: 'v100', at: '2026-11-05T15:41:00Z', backlog: [], news: { id: 'n20261105j', title: 'Atualizar sem fechar o app', items: [
+    'Quando sair uma versão nova com o app aberto, aparece um aviso com "Atualizar agora". Não precisa mais fechar e abrir o app.',
+    'Se o app estiver na tela de entrada, ao entrar ele já abre a versão nova.',
+  ] }, updateDocs: [DOC_TESTES], addBacklog: [
+    { id: 'atualizar_sem_fechar', title: 'Versão nova sem fechar o app: pop-up e atualização ao entrar', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Para testar cada versão era preciso fechar e abrir o app', cost: false, notes: 'Pop-up "Tem uma versão nova do app" (Atualizar agora/Depois) quando não há nada em andamento; na tela de entrada, aviso e entrar já abre a versão nova.', from: [], where: 'Todo o app' },
+  ] },
 ];
