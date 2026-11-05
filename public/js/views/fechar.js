@@ -18,7 +18,7 @@ const cap = s => s[0].toUpperCase() + s.slice(1);
 function renderYear(el, year) {
   const r = yearRetro({ year, txs: S.txs, idx: S.catIdx, goals: goals(), fees: feesOf(S.txs.filter(t => t.month.startsWith(year + '-'))), closed: settings().closed || {} });
   const MES = k => mLong(k).split(' de ')[0];
-  track('retro.ano');
+  track('retro.ano'); try { localStorage.setItem(`fin.retro.${S.hh?.id || ''}.${year}`, '1'); } catch (e) { /* private mode */ }
   el.innerHTML = `<button class="linkbtn small" type="button" data-back>← Voltar ao Início</button>
   <section class="panel stack retro yretro">
     <span class="tiny muted">Retrospectiva</span><h2>${year} ${/^fam[ií]lia\b/i.test(S.hh.name || '') ? 'da ' + esc(S.hh.name) : 'da família ' + esc(S.hh.name || '')}</h2>

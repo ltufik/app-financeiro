@@ -153,7 +153,7 @@ export const DOC_TARIFAS = { id: 'tarifas_doc', title: 'Quanto o banco cobrou', 
 - Parcelas já comprometidas: validadas com os dados reais; o próximo mês bate (fev e mar exatos) e fica um pouco abaixo quando há compras parceladas novas, o que a tela explica.` };
 
 export const DOC_RETRO_INICIO = { id: 'retro_inicio_doc', title: 'Retrospectiva do ano e Início dinâmico', body: `## Retrospectiva do ano
-- Cartão no Início em dezembro e janeiro; o ano todo em Início → Mais detalhes → Retrospectiva do ano.
+- Com 3 meses completos ou mais no ano, aparece no topo do Início ("A retrospectiva de 2026 está pronta") até a família abrir uma vez (neste aparelho). Depois, fica em Início → Mais detalhes → Retrospectiva do ano, e volta como cartão no topo em dezembro e janeiro.
 - Só meses completos (com o extrato da conta): guardaram (soma das sobras) e a % da renda contra a meta, em quantos meses bateram a meta, receitas, despesas, o que o banco cobrou, melhor e pior mês, maior gasto do dia a dia (sem fixas nem financiamento), lançamentos, meses fechados e as 5 categorias que mais pesaram.
 - Validado com os dados reais: a soma bate mês a mês.
 - Compartilhar: só a porcentagem guardada e o convite para o app, sem valores (WhatsApp ou copiar).

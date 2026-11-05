@@ -323,4 +323,9 @@ export const RELEASES = [
     { id: 'inicio_dinamico', title: 'Início dinâmico: o que é novo sobe para o topo', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'O Início tinha muita coisa e não destacava o que mudou depois de lançar', cost: false, notes: 'Avisos no topo; novo ou mudou desde a última visita sobe com a marca; recado depois de salvar em Lançar.', from: [], where: 'Início' },
     { id: 'risco_meta_do_mes', title: 'Aviso de risco de não bater a meta no mês (olhando para frente)', status: 'ideia', origin: 'Luiz', effort: 'M', problem: 'Hoje os avisos de meta olham o mês que passou; falta prever no meio do mês', cost: false, notes: 'Precisa de uma conta validada com dados reais (renda média, fatura prevista, fixas) antes de ir ao ar.', from: [] },
   ] },
+  { id: 'r94', version: 'v94', at: '2026-11-05T02:34:00Z', backlog: [], news: { id: 'n20261105d', title: 'A retrospectiva do ano está no topo', items: [
+    'A retrospectiva de 2026 agora aparece no topo do Início até você abrir. Depois, ela fica em Início → Mais detalhes.',
+  ] }, updateDocs: [DOC_RETRO_INICIO], addBacklog: [
+    { id: 'retro_no_topo', title: 'Retrospectiva aparece no topo do Início até ser aberta', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A retrospectiva ficava escondida em Mais detalhes e ninguém sabia que existia', cost: false, notes: 'Aviso "A retrospectiva de 2026 está pronta" no topo, com 3 meses completos ou mais, até abrir uma vez.', from: [], where: 'Início' },
+  ] },
 ];

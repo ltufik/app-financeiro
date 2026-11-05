@@ -139,7 +139,7 @@ const ICON = { good: '<path d="M5 12l5 5 9-10"/>', warn: '<path d="M12 8v5M12 16
 // The home notices, the same way for the screen and for "tem novidade no Início" after saving.
 export function homeInsights() {
   const G = goals(), idx = S.catIdx;
-  return insights({
+  return retroNotice().concat(insights({
     today: todayISO(), months: monthKeys(), calc: calcMonth,
     cats: k => byCategory(txsOf(k), idx),
     fixed: k => expandSplits(txsOf(k)).reduce((a, t) => { const c = idx.get(t.category); return c && c.grp === 'dia' && c.recurring ? a + (t.source === 'conta' ? -t.amount : +t.amount) : a; }, 0),
@@ -151,7 +151,14 @@ export function homeInsights() {
     ...(() => { const u = {}; for (const t of S.txs) for (const c of (t.splits?.length ? t.splits.map(x => x.category) : [t.category])) if (c) u[c] = (u[c] || 0) + 1; const m = mergeSuggestions(S.categories, u, settings().catKeepApart || []); return { catMerge: m.length, catMergeText: m[0] ? `"${m[0].drop}" e "${m[0].keep}" parecem a mesma coisa. Juntar deixa os gráficos e o orçamento mais claros.` : '' }; })(),
     goals: G, nextFatura: nextFatura(), budgets: budgetsOf(settings()), recurring: findRecurring(S.txs, monthKeys(), { idx }), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
-  }).filter(x => x.id !== 'close');
+  }).filter(x => x.id !== 'close'));
+}
+// Until the family opens it once: "A retrospectiva de 2026 está pronta", on top (it is new) with the way to it.
+export const retroKey = y => `fin.retro.${S.hh?.id || ''}.${y}`;
+function retroNotice() {
+  const y = todayISO().slice(0, 4), n = new Set(S.txs.filter(t => t.month.startsWith(y + '-') && t.source === 'conta' && !t.manual).map(t => t.month)).size;
+  let seen = false; try { seen = localStorage.getItem(retroKey(y)) === '1'; } catch (e) { /* private mode */ }
+  return n >= 3 && !seen ? [{ id: 'retro', tone: 'good', title: `A retrospectiva de ${y} está pronta`, text: `${n} meses em uma página: quanto vocês guardaram, o melhor mês, para onde mais foi o dinheiro e o que o banco cobrou.`, action: { label: 'Ver a retrospectiva', go: ['retro', y] } }] : [];
 }
 // What the family saw last time (per family, on this device): what is new or changed goes to the top.
 const SEEN = () => 'fin.feed.' + (S.hh?.id || '');
@@ -175,7 +182,7 @@ function renderInsights(box) {
   box.innerHTML = shown.map(x => `<article class="insight ${x.tone}${FRESH.has(x.id) ? ' fresh' : ''}">${FRESH.has(x.id) ? `<span class="newtag">${after ? 'Depois do que vocês lançaram' : 'Novo'}</span>` : ''}<span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
     <div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p>${x.action ? `<button class="linkbtn small" type="button" data-go='${esc(JSON.stringify(x.action.go))}'>${esc(x.action.label)} →</button>` : ''}</div></article>`).join('');
   if (list.length > base) { box.insertAdjacentHTML('beforeend', `<button class="linkbtn small" type="button" id="insMore">${showAllInsights ? 'Mostrar menos avisos' : 'Ver mais ' + (list.length - base) + (list.length - base > 1 ? ' avisos' : ' aviso')}</button>`); box.querySelector('#insMore').onclick = () => { showAllInsights = !showAllInsights; renderInsights(box); }; }
-  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
+  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'retro') { S.closeMonth = 'ano:' + g[1]; S.go('fechar'); return; } if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
 }
 
 // What the bank charged in the last 12 months: interest, IOF, annual fee and account fees, with the biggest ones.

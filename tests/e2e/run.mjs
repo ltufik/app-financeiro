@@ -713,6 +713,10 @@ ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans
 await page.evaluate(() => localStorage.setItem('fin.feed.' + window.__db.households[0].id, '{}'));
 await page.click('[data-tab=extrato]'); await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início dinâmico: aviso novo no topo, marcado', !!(await page.$('#insights .insight.fresh:first-child .newtag')) && await page.evaluate(() => document.querySelector('#insights').compareDocumentPosition(document.querySelector('.hero')) & 4));
+ok('retrospectiva pronta aparece no topo do Início até ser aberta', (await txt('#insights')).includes('A retrospectiva de 2026 está pronta'));
+await page.click('#insights [data-go*="retro"]'); await page.waitForSelector('.yretro', { timeout: 5000 }).catch(() => {});
+await page.click('[data-back]'); await page.waitForTimeout(300);
+ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).includes('A retrospectiva de 2026 está pronta'));
 // Year retrospective, from "Mais detalhes".
 await page.evaluate(() => { document.querySelector('#homeMore').open = true; }); await page.click('#homeMore [data-retro]');
 await page.waitForSelector('.yretro', { timeout: 5000 }).catch(() => {});
