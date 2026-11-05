@@ -139,7 +139,7 @@ await page.click('#catMerge .mergecard [data-mj]').catch(() => {}); await page.c
 await page.keyboard.press('Escape').catch(() => {});
 await step('menu', async () => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); await page.waitForTimeout(300); });
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-for (const k of ['familia', 'divisao', 'metas', 'patrimonio', 'categorias', 'avisos', 'applepay', 'contexto', 'duvidas', 'opiniao', 'ajuda', 'backup', 'sobre', 'conta']) await step('menu_' + k, () => sec(k));
+for (const k of ['familia', 'divisao', 'metas', 'gastos_ano', 'patrimonio', 'categorias', 'avisos', 'applepay', 'contexto', 'duvidas', 'opiniao', 'ajuda', 'backup', 'sobre', 'conta']) await step('menu_' + k, () => sec(k));
 await step('lancar_comprovante', async () => {
   await page.evaluate(async () => { const png = await (await fetch('/icons/icon-192.png')).blob(); const c = await caches.open('share'); await c.put('/shared/meta', new Response(JSON.stringify({ text: '', name: 'comprovante.png', type: 'image/png' }))); await c.put('/shared/file', new Response(png, { headers: { 'content-type': 'image/png' } })); });
   await page.goto('https://app.test/?acao=compartilhar'); await page.waitForSelector('#qSave', { timeout: 15000 });
@@ -151,6 +151,7 @@ await step('comprovante_amortizacao', async () => {
   await page.fill('#qText', 'mandei 15 mil para amortizar o financiamento do apartamento'); await page.click('#qGo');
   await page.waitForSelector('#qPreview .qdebt', { timeout: 30000 }); proof = 'pix';
 }, { scrollTo: '#qPreview' });
+await step('gastos_ano_calendario', async () => { await sec('gastos_ano'); for (let k = 0; k < 4 && await page.$('#anBox [data-yes]'); k++) { await page.click('#anBox [data-yes]'); await page.waitForTimeout(400); } await page.waitForSelector('#anCal'); }, { scrollTo: '#anCal' });
 await step('patrimonio_financiamento', async () => { await page.click('#qCancel').catch(() => {}); await sec('patrimonio'); await page.waitForSelector('#pDebtNow .dnow'); }, { scrollTo: '#pDebtPay' });
 await step('duvidas_resposta', async () => { await sec('duvidas'); await page.fill('#fqQ', 'consigo usar no computador?'); await page.click('#fqSend'); await page.waitForSelector('#fqAns [data-h]'); }, { scrollTo: '#fqAsk' });
 await step('opiniao_confirmar', async () => { await page.click('#fbBtn'); await page.waitForSelector('#fbText'); await page.click('[data-kind="ideia"]'); await page.fill('#fbText', 'Queria ver quanto gastamos por semana'); await page.click('#fbSend'); await page.waitForSelector('.cfm'); });

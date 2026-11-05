@@ -9,6 +9,7 @@ import { renderPendingPayments } from '../debtpay.js';
 import { installmentPlan } from '../lib/parcelas.js';
 import { rankFeed } from '../lib/homefeed.js';
 import { retroVersion, retroSeen } from '../wrapped.js';
+import { annualPlan } from '../annual.js';
 import { feesOf, FEE_LABEL } from '../lib/bankfees.js';
 import { addM } from '../lib/format.js';
 import { mergeSuggestions } from '../lib/catmerge.js';
@@ -138,7 +139,7 @@ const ICON = { good: '<path d="M5 12l5 5 9-10"/>', warn: '<path d="M12 8v5M12 16
 // The home notices, the same way for the screen and for "tem novidade no Início" after saving.
 export function homeInsights() {
   const G = goals(), idx = S.catIdx;
-  return retroNotice().concat(insights({
+  return retroNotice().concat(annualNotice(), insights({
     today: todayISO(), months: monthKeys(), calc: calcMonth,
     cats: k => byCategory(txsOf(k), idx),
     fixed: k => expandSplits(txsOf(k)).reduce((a, t) => { const c = idx.get(t.category); return c && c.grp === 'dia' && c.recurring ? a + (t.source === 'conta' ? -t.amount : +t.amount) : a; }, 0),
@@ -154,6 +155,16 @@ export function homeInsights() {
 }
 // Until the family opens it once: "A retrospectiva de 2026 está pronta", on top (it is new) with the way to it.
 export const retroKey = y => `fin.retro.${S.hh?.id || ''}.${y}`;
+// Gastos do ano on Início: payments found to confirm; then, when the next 3 months carry R$ 500 or more of them,
+// how much comes and how much to set aside per month (warn when the first one is next month).
+function annualNotice() {
+  let P; try { P = annualPlan(); } catch (e) { return []; }
+  const go = { label: 'Ver os gastos do ano', go: ['ajustes', null, 'gastos_ano'] };
+  if (P.found.length && !P.items.length) return [{ id: 'ano_achou', tone: 'info', title: 'Gastos que voltam todo ano', text: `Achamos ${P.found.length} no histórico (${P.found.slice(0, 2).map(f => esc(f.name)).join(', ')}${P.found.length > 2 ? '…' : ''}). Confirmem e o app avisa com antecedência quanto separar.`, action: go }];
+  if (P.next3 < 500) return [];
+  const firstM = P.cal.find(m => m.total > 0), soon = P.cal[0].total > 0;
+  return [{ id: 'ano_previsto', tone: soon ? 'warn' : 'info', title: soon ? `${mLong(P.cal[0].month)[0].toUpperCase() + mLong(P.cal[0].month).slice(1)} tem ${brl0(P.cal[0].total)} de gastos do ano` : 'Gastos do ano chegando', text: `${brl0(P.next3)} nos próximos 3 meses, a partir de ${mLong(firstM.month)}. Separem ${brl0(P.aside)} por mês para não apertar.`, action: go }];
+}
 function retroNotice() {
   const td = todayISO(), out = [];
   // In January, the year that ended (year-end edition); during the year, the current one up to the last closed month.

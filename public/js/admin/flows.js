@@ -40,6 +40,8 @@ export const SCREENS = {
   menu_divisao: { title: 'Quem paga o quê', where: 'Menu ☰', key: 'menu.divisao' },
   menu_metas: { title: 'Metas', where: 'Menu ☰', key: 'menu.metas' },
   menu_patrimonio: { title: 'Patrimônio e dívidas', where: 'Menu ☰', key: 'menu.patrimonio' },
+  menu_gastos_ano: { title: 'Gastos do ano: achados no histórico', where: 'Menu ☰ → Família e metas → Gastos do ano (e o aviso no Início)', key: ['menu.gastos_ano', 'ano.confirmou', 'ano.nao_volta'] },
+  gastos_ano_calendario: { title: 'Gastos do ano: calendário, quanto separar e como pagar', where: 'Gastos do ano, depois de confirmar', key: ['ano.editou', 'ano.adicionou'] },
   menu_categorias: { title: 'Categorias', where: 'Menu ☰', key: 'menu.categorias' },
   menu_avisos: { title: 'Notificações', where: 'Menu ☰', key: 'menu.avisos' },
   avisos_celular: { title: 'Ajustes do celular para os avisos', where: 'Notificações → depois de ativar, se o aviso de teste não apareceu', key: 'avisos.teste_nao_chegou' },
@@ -74,11 +76,12 @@ export const FLOWS = [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
     { title: 'Dentro das abas', screens: ['inicio_mais', 'retro_evolucao', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
-    { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
+    { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_gastos_ano', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
     { title: 'Mensagens ao abrir', screens: ['alpha', 'recado', 'novidades', 'convite_avisos', 'avisos_celular', 'sininho'] },
     { title: 'Segurança', screens: ['biometria', 'menu_conta', 'aviso_inatividade', 'bloqueio', 'entrar_digital', 'saiu'] },
+    { title: 'Gastos do ano', screens: ['menu_gastos_ano', 'gastos_ano_calendario'] },
     { title: 'Patrimônio e financiamentos', screens: ['menu_patrimonio', 'comprovante_amortizacao', 'patrimonio_financiamento'] },
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
@@ -99,6 +102,9 @@ export const FLOWS = [
     st('lancar', 'Abre Lançar'), st('lancar_nota', 'Envia a foto; cada item ganha a sua categoria'), st('lancar_salvo', 'Salva a nota', 'lancar.nota_ok')] },
   { id: 'fechar', title: 'Fechar o mês', desc: 'O ritual mensal que faz a família voltar.', steps: [
     st('inicio', 'Cartão "Hora de fechar o mês"', null), st('fechar', 'Confere o que falta, vê a retrospectiva e fecha')] },
+  { id: 'gastos_ano', title: 'Gastos do ano: IPVA, IPTU e escola sem susto', desc: 'O app acha no histórico, a família confirma, e ele mostra o calendário, quanto separar por mês e se vale pagar à vista ou parcelar.', steps: [
+    st('inicio', 'O Início avisa: "Gastos que voltam todo ano: achamos N no histórico"', null), st('menu_gastos_ano', 'Confirma o que volta todo ano (e o estado do veículo) ou diz que foi só uma vez', 'ano.confirmou'),
+    st('gastos_ano_calendario', 'Vê os próximos 6 meses, "separem R$ X por mês" e a sugestão de à vista ou parcelado; ajusta valor, mês e forma de pagar', 'ano.editou')] },
   { id: 'financiamento', title: 'Financiamento: o saldo que diminui sozinho', desc: 'O bem ligado ao financiamento; as parcelas abatem o saldo todo mês (estimado) e cada amortização confirmada abate na hora; o patrimônio líquido sobe.', steps: [
     st('menu_patrimonio', 'Cadastra o bem e o financiamento (saldo, juros, parcela, tipo de parcela) e liga um ao outro', 'menu.patrimonio'), st('comprovante_amortizacao', 'Manda o comprovante da amortização; a revisão pergunta "Isso abate um financiamento?"', 'patrimonio.amortizou'),
     st('patrimonio_financiamento', 'Pagamento já salvo que parece amortização: "Sim, abater" ou "Não é"; o histórico mostra o saldo de cada financiamento', 'patrimonio.nao_abate'), st('inicio', 'O patrimônio do Início mostra quanto falta e o líquido maior', null)] },

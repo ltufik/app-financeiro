@@ -916,3 +916,31 @@ test('retrospectiva: onde dá para melhorar e evolução no ano', async () => {
   assert.match(o[0].title, /3 meses no vermelho/); assert.match(o[2].title, /Lazer subiu R\$ 2\.500 por mês/);
   const e = yearEvolution(r); assert.ok(e.first > 0.19 && e.second < 0);
 });
+
+test('gastos do ano: acha, põe no calendário, quanto separar e à vista ou parcelado', async () => {
+  const { detectAnnual, calendar, setAside, payAdvice, fipeFromIpva, nextValue, kindOfTx } = await import('../public/js/lib/annual.js');
+  const txs = [{ source: 'conta', month: '2026-04', date: '2026-04-01', amount: -2285.34, description: 'Detran' }, { source: 'conta', month: '2026-04', date: '2026-04-01', amount: -237.04, description: 'Detran' },
+    { source: 'conta', month: '2026-07', date: '2026-07-03', amount: -367, description: 'Detran' }, { source: 'conta', month: '2026-03', date: '2026-03-20', amount: -871.18, description: 'PIX Ministerio da Fazenda' },
+    ...['02', '03', '04'].map(m => ({ source: 'conta', month: '2026-' + m, date: `2026-${m}-10`, amount: -114.37, description: 'IPTU PMSP' })), { source: 'conta', month: '2026-05', date: '2026-05-14', amount: -18000, description: 'Tributos Prefeitura de Bertioga' }];
+  const d = detectAnnual(txs, '2026-11-05');
+  assert.deepEqual(d.map(x => [x.kind, x.total, x.mode]), [['iptu', 18000, 'avista'], ['ipva', 2285.34, 'avista'], ['iptu', 343.11, 'parcelado']]);
+  assert.equal(d[0].once, true); assert.equal(kindOfTx({ description: 'PIX Ministerio da Fazenda' }), null);
+  assert.equal(detectAnnual(txs, '2026-11-05', [d[0].key]).length, 2, 'dismissed ones do not come back');
+  assert.equal(fipeFromIpva(2285.34, 'SP'), 57133.5);
+  assert.deepEqual(nextValue({ lastPaid: 1000 }), { value: 1000, low: 950, high: 1050 });
+  const cal = calendar([{ name: 'IPVA', value: 2400, mode: 'avista', start: 1, desc: 0.03 }, { name: 'IPTU', value: 1400, mode: 'parcelado', parcelas: 10, start: 2 }], [{ category: 'Escola', month: 2, extra: 1800 }], '2026-11-05', 6);
+  assert.deepEqual(cal.map(m => [m.month, m.total]), [['2026-12', 0], ['2027-01', 2328], ['2027-02', 1940], ['2027-03', 140], ['2027-04', 140], ['2027-05', 140]]);
+  assert.equal(setAside(cal), 1430, 'enough by February: (2328 + 1940) / 3 months');
+  const it = { value: 2400, desc: 0.03, parcelas: 5, monthsTo: 2 };
+  assert.equal(payAdvice(it, { invest: 100000, reserve: 30000, avgLeft: 3000, redMonths: 0, interest: 0, ret: 0.1 }).pick, 'avista');
+  assert.match(payAdvice(it, { invest: 0, reserve: 30000, avgLeft: 3000, redMonths: 2, interest: 0 }).why, /2 meses no vermelho/);
+  assert.match(payAdvice(it, { invest: 0, reserve: 30000, avgLeft: 2000, redMonths: 0, interest: 0 }).why, /Separem R\$ 1\.170 por mês/);
+  assert.equal(payAdvice(it, { invest: 0, reserve: 30000, avgLeft: 300, redMonths: 0, interest: 0 }).pick, 'parcelado');
+  assert.equal(payAdvice(it, { invest: 31000, reserve: 30000, avgLeft: 300, redMonths: 0, interest: 0 }).pick, 'parcelado', 'would drop the emergency reserve');
+});
+
+test('gastos do ano: pago no ano', async () => {
+  const { paidThisYear } = await import('../public/js/lib/annual.js');
+  const txs = [{ source: 'conta', month: '2026-04', amount: -2285.34, description: 'Detran' }, { source: 'conta', month: '2026-04', amount: -237.04, description: 'Detran' }, { source: 'conta', month: '2025-04', amount: -2100, description: 'Detran' }];
+  assert.deepEqual(paidThisYear({ kind: 'ipva', from: 'Detran' }, txs, '2026-11-05'), { total: 2285.34, months: ['2026-04'] });
+});

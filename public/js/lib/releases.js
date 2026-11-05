@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -347,5 +347,14 @@ export const RELEASES = [
     'Em janeiro vem o fechamento do ano, completo.',
   ] }, updateDocs: [DOC_HISTORIAS], addBacklog: [
     { id: 'retro_mensal_fechamento', title: 'Retrospectiva do ano atualizada a cada mês fechado, fechamento do ano e onde melhorar', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'A retrospectiva aparecia uma vez só e não mostrava a evolução nem o que fazer para melhorar', cost: false, notes: 'Edição nova a cada mês fechado (3 meses completos ou mais); fechamento do ano em janeiro; tela de primeira vez; evolução; oportunidades.', from: [], where: 'Início' },
+  ] },
+  { id: 'r98', version: 'v98', at: '2026-11-05T14:29:00Z', backlog: ['gastos_anuais_previstos_ipva_iptu_matric'], news: { id: 'n20261105h', title: 'Gastos do ano: IPVA, IPTU e escola sem susto', items: [
+    'O app acha no histórico o IPVA, o IPTU e outros gastos que voltam todo ano. Vocês confirmam e ele mostra o calendário dos próximos meses.',
+    'Diz quanto separar por mês para não apertar e se vale pagar à vista ou parcelar, olhando a situação de vocês.',
+    'Fica em menu ☰ → Família e metas → Gastos do ano.',
+  ] }, addDocs: [DOC_GASTOS_ANO], addBacklog: [
+    { id: 'boleto_ipva_carne_iptu', title: 'Ler o boleto do IPVA e o carnê do IPTU', status: 'ideia', origin: 'Luiz', effort: 'M', problem: 'O valor do ano seguinte é estimado pelo que foi pago; o real só chega no fim do ano', cost: false, notes: 'Foto ou PDF do aviso do estado ou do carnê: troca a estimativa pelo valor de verdade, com as datas.', from: [] },
+    { id: 'fipe_automatica', title: 'Valor FIPE automático pela marca e modelo do veículo', status: 'ideia', origin: 'Luiz', effort: 'M', problem: 'Hoje o valor do veículo sai do IPVA pago', cost: false, notes: 'Depende de um serviço de fora; ver custo e termos.', from: [] },
+    { id: 'push_gastos_ano', title: 'Aviso no celular 60 dias antes dos gastos do ano', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'Hoje o aviso aparece no Início, não no celular', cost: false, notes: 'Levar o cálculo dos gastos do ano para a rotina diária do servidor.', from: [] },
   ] },
 ];

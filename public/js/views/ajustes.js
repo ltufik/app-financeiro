@@ -15,6 +15,7 @@ import { renderMetrics } from '../metrics.js';
 import { renderFeedback, renderDuvidas } from '../feedback.js';
 import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
+import { renderAnnual } from '../annual.js';
 import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
 import { platformOf, phoneSteps, testOutcome } from '../lib/pushask.js';
@@ -74,6 +75,7 @@ export function render(el) {
     <div><button class="btn primary" id="bSave" type="button">Salvar orçamento</button></div>
   </div>
 
+  <div class="panel stack" data-sec="gastos_ano"><div id="anBox" class="stack"></div></div>
   <div class="panel stack" data-sec="patrimonio">
     <h2>Patrimônio</h2>
     <div class="grid3">${num('iTotal', 'Investimentos (R$)', st.invest?.total || '')}<label class="f">Data<input type="date" id="iDate" value="${esc(st.invest?.date || '')}"></label></div>
@@ -184,6 +186,7 @@ export function render(el) {
   }
   if (sec.key === 'duvidas') renderDuvidas($('#faqBox'));
   if (sec.key === 'applepay') renderApplePay($('#apBox'));
+  if (sec.key === 'gastos_ano') renderAnnual($('#anBox'));
   if (sec.key === 'conta') renderSecurity($('#secBox'));
   if (sec.key === 'opiniao') renderFeedback($('#fbBox'));
   // help

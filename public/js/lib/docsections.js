@@ -186,3 +186,26 @@ export const DOC_HISTORIAS = { id: 'retro_historias_doc', title: 'Retrospectiva 
 - No vermelho, as fotos mudam: casal preocupado com as contas (quanto guardaram, melhor mês negativo) e pessoa preocupada no Ponto de partida.
 - O app não sabe se quem está usando é homem ou mulher (não perguntamos e não adivinhamos pelo nome), por isso as fotos mostram casais e famílias.
 - Sem internet, aparece a ilustração do app no lugar.` };
+
+export const DOC_GASTOS_ANO = { id: 'gastos_ano_doc', title: 'Gastos do ano: IPVA, IPTU e escola', body: `Menu ☰ → Família e metas → Gastos do ano. O Início avisa quando acha pagamentos que voltam todo ano e, depois, quando os próximos 3 meses têm R$ 500 ou mais deles.
+## Como o app acha
+- Nos últimos 12 meses, pelo recebedor (o banco não escreve "IPVA"): Detran, Sefaz, Secretaria da Fazenda, DARE, GARE = IPVA (só pagamentos de R$ 400 ou mais; os menores são taxas ou multas); licenciamento; IPTU, prefeitura, tributos municipais = IPTU; matrícula, material e uniforme escolar. Ministério da Fazenda, Receita Federal e DAS ficam de fora (impostos federais e de empresa).
+- A família confirma: "Sim, volta todo ano" (com o estado do veículo) ou "Não". Valor alto de prefeitura pago uma vez (ex.: ITBI de R$ 18 mil) vem marcado "pode ter sido só uma vez".
+- Meses com gasto extra que se repete: só categorias de natureza sazonal (escola, presentes, viagem, férias), porque com um ano de histórico não dá para saber o que se repete.
+## Calendário e quanto separar
+- Próximos 6 meses com cada pagamento: à vista no mês de início com o desconto; parcelado dividido pelas parcelas a partir do mês de início.
+- "Separem R$ X por mês" = o menor valor mensal que, guardado a partir de agora, cobre cada mês quando ele chega.
+- Valor do ano seguinte: o que foi pago no último ano, com faixa de ±5% (em SP, os valores dos veículos subiram 2,51% em 2026; não dá para supor que só caem). Valor digitado pela família vale como está.
+- Pelo IPVA pago e a alíquota do estado, o app mostra o valor do veículo na tabela do estado (ex.: R$ 2.285 ÷ 4% = R$ 57 mil).
+- Pago no ano: ✓ com o valor e o mês, e a diferença do previsto.
+## À vista ou parcelado (pela situação da família)
+| Situação | Sugestão |
+| Juros na fatura nos últimos 3 meses, ou 2+ meses no vermelho nos últimos 6 | Parcelar sem juros (não usar cartão ou cheque especial para pagar à vista) |
+| Investimentos cobrem o pagamento e a reserva (3 meses de despesas) continua | À vista se o desconto vale mais que o rendimento até a última parcela; senão, parcelar |
+| A sobra média dos últimos 3 meses, até o mês do pagamento, cobre o valor à vista | Separar por mês e pagar à vista |
+| Pagar à vista baixaria a reserva | Parcelar |
+## Regras do IPVA 2026 (início, parcelas, desconto à vista)
+SP jan, 5x, 3% (carro 4%, moto 2%) · RJ jan, 3x, 3% · MG fev, 3x, 3% · PR jan, 5x, 6% (1,9%) · SC jan, 3x · RS jan, 3% · DF fev, 6x, 10% · ES abr, 6x, 15% · BA fev, 5x, 15% · GO jan, 10x, 8% · PE fev, 10x, 7% · CE jan, 5x, 10% · MS jan, 5x, 15% · AM jan, 3x, 10% · AP mar, 6x, 20% · MA fev, 3x, 10% · MT mar, 8x, 5% · PA jan, 6x, 5% · PB mar, 3x, 10% · PI jan, 3x, 15% · RN mar, 7x · RR fev, 10x, 10% · SE mar, 10% · AC 5x, 10% · RO 5%. Fontes: Agência SP (Sefaz-SP), Terra e Exame (dez/2025–jan/2026). Rever todo ano.
+- IPTU: depende da cidade; exemplo de São Paulo 2026 (3% à vista, até 10x, a partir de fevereiro), editável.
+## Depois
+- Ler o boleto do IPVA ou o carnê do IPTU (foto ou PDF) para trocar a estimativa pelo valor de verdade; FIPE automática pela marca e modelo; aviso no celular 60 dias antes.` };

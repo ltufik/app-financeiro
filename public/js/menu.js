@@ -10,6 +10,7 @@ export const SECTIONS = [
   { key: 'familia', title: 'Família e convites', desc: 'Nome da família, quem participa, convidar', group: 'fam', icon: I('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/>') },
   { key: 'divisao', title: 'Quem paga o quê', desc: 'Cartões e conta de cada pessoa, e o acerto do mês', group: 'fam', icon: I('<path d="M7 7h13M7 7l3-3M7 7l3 3M17 17H4M17 17l-3-3M17 17l-3 3"/>') },
   { key: 'metas', title: 'Metas', desc: 'Limite do cartão, quanto guardar e o sonho de vocês', group: 'fam', icon: I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>') },
+  { key: 'gastos_ano', title: 'Gastos do ano', desc: 'IPVA, IPTU, escola: quanto separar e como pagar', group: 'fam', icon: I('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/>') },
   { key: 'patrimonio', title: 'Patrimônio e dívidas', desc: 'Investimentos, bens, dívidas e dinheiro a receber', group: 'fam', icon: I('<path d="M3 10l9-6 9 6M5 10v9h14v-9M10 19v-5h4v5"/>') },
   { key: 'categorias', title: 'Categorias', desc: 'Criar categorias e decidir como contam', group: 'app', icon: I('<path d="M4 6h16M4 12h10M4 18h7"/>') },
   { key: 'avisos', title: 'Notificações', desc: 'Avisos no celular: fatura, gastos, resumo', group: 'app', icon: I('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>') },

@@ -248,7 +248,7 @@ await shot('02-vazio');
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 15 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 16 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 ok('menu em 4 grupos, só o primeiro aberto', (await page.$$('#drawer .mgroup')).length === 4 && (await page.$$('#drawer .drawer-list:not([hidden])')).length === 1 && await page.isVisible('#drawer [data-sec="metas"]') && !(await page.isVisible('#drawer [data-sec="backup"]')));
 { const v = (fs.readFileSync(path.join(ROOT, 'js/usage.js'), 'utf8').match(/APP_VERSION = '([^']+)'/) || [])[1];
   ok('fim do menu mostra a versão do app', !!v && (await txt('#appVer')).includes('versão ' + v) && !(await page.$('#updNow'))); }
@@ -709,6 +709,14 @@ await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
+// Gastos do ano: found in the history (the April Detran payment is the IPVA), confirmed, on the calendar.
+ok('Início: avisa os gastos que voltam todo ano', (await txt('#insights')).includes('Gastos que voltam todo ano') || (await page.evaluate(() => { document.querySelector('#insMore')?.click(); return true; }) && (await txt('#insights')).includes('Gastos que voltam todo ano')));
+await sec('gastos_ano');
+ok('gastos do ano: acha o IPVA (Detran de abril) e o IPTU parcelado', /Detran: R\$ 2\.285 em abril\. É o IPVA\?/.test(await txt('#anBox')) && /IPTU PMSP: R\$ \d[\d.]* em \d+ parcelas/.test(await txt('#anBox')), (await txt('#anBox')).slice(0, 400));
+await page.click('#anBox .dpay:has-text("Detran: R$ 2.285") [data-yes]'); await page.waitForTimeout(400);
+ok('gastos do ano: confirmado entra no calendário com quanto separar, sugestão e pago no ano', (await txt('#anBox')).includes('Nos próximos 6 meses') && /separem R\$ [\d.]+ por mês/.test(await txt('#anBox')) && /Sugestão: (à vista|parcelar)\./.test(await txt('#anBox')) && /✓ Em 2026: pago R\$ 2\.285 em abril/.test(await txt('#anBox')) && await page.evaluate(() => window.__db.households[0].settings.annual?.[0]?.kind === 'ipva'));
+if (shots) await page.screenshot({ path: path.join(shots, '05g-gastos-ano.png'), fullPage: true });
+await page.click('[data-tab=resumo]'); await page.waitForTimeout(200);
 // Dynamic home: what is new since the last visit goes to the top, marked.
 await page.evaluate(() => localStorage.setItem('fin.feed.' + window.__db.households[0].id, '{}'));
 await page.click('[data-tab=extrato]'); await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
