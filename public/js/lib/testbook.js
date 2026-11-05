@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('saldo_fin_hoje', 'Menu e telas', 'v101', 'ambos', 'Saldo do financiamento de hoje no Patrimônio',
+    ['Menu ☰ → Patrimônio e dívidas → Financiamentos e dívidas.', 'Veja "Quanto falta hoje" e compare com "Como está cada financiamento hoje" logo abaixo.', 'Toque em Salvar patrimônio sem mexer em nada.'],
+    'Os dois valores são iguais (já sem as parcelas e amortizações). Depois de salvar, o histórico do financiamento continua lá.'),
   t('amortizacao_comprovante', 'Início', 'v89', 'ambos', 'Comprovante de amortização abate o financiamento',
     ['Lançar → mande o comprovante da amortização (ou fale "amortizei 10 mil do financiamento da casa").', 'Na revisão, confira "Isso abate um financiamento?" com o financiamento certo e salve.', 'Abra o Início e veja o Patrimônio.'],
     'O saldo cai na hora ("Pronto! O saldo do … agora é R$ …"); o bem mostra "faltam" menor e o patrimônio líquido sobe; o lançamento fica em "Amortização de financiamento", fora da sobra.', true),

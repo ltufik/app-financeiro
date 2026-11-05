@@ -710,6 +710,10 @@ ok('amortização pede confirmação e diz que o patrimônio sobe', (await txt('
 const patBefore = await page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').saldo);
 await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 ok('amortização registrada no histórico do financiamento', await page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').log.some(e => e.kind === 'amortizacao' && e.value === 130000)) && patBefore === 480000);
+const dRow = await page.evaluate(() => [...document.querySelectorAll('[data-list="debts"] tr')].findIndex(tr => /Guaratuba/.test(tr.querySelector('input[data-k="name"]')?.value || '')) + 1);
+ok('patrimônio: "Quanto falta hoje" já vem com a amortização descontada', await page.$eval(`[data-list="debts"] tr:nth-child(${dRow}) input[data-k="saldo"]`, i => +i.value) === 350000);
+await page.click('#pSave'); await page.waitForTimeout(300);
+ok('salvar sem mexer no saldo não apaga o histórico do financiamento', await page.evaluate(() => { const d = window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba'); return d.saldo === 480000 && d.log.some(e => e.value === 130000); }));
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));

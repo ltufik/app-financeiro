@@ -26,7 +26,7 @@ import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePus
 
 const LISTS = {
   assets: { title: 'Bens (imóveis, veículos)', hint: 'O que a família tem de valor. Para carro e moto, o estado onde estão registrados decide o IPVA (o app calcula pelo valor e pela alíquota do estado). Trocou de carro ou de casa? Atualize aqui. Se o bem ainda está sendo pago, ligue ao financiamento: o quanto falta passa a vir de lá e diminui a cada parcela e amortização.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto vale hoje', 'number'], ['tipo', 'Tipo', 'select', ASSET_TYPES], ['uf', 'Estado (registro do veículo, onde fica o imóvel)', 'select', [['', '—'], ...UFS.map(u => [u, u])]], ['debtId', 'Financiamento', 'debtlink'], ['debt', 'Quanto falta pagar', 'number']] },
-  debts: { title: 'Financiamentos e dívidas', hint: 'O que vocês ainda estão pagando. Com os juros, a parcela e o tipo de parcela, o app abate o saldo sozinho todo mês (estimado) e cada amortização que vocês confirmarem. Os juros são ao ano: escreva 12 para 12%. Mudou o saldo à mão (pelo extrato do banco)? Ele passa a valer a partir de hoje.', cols: [['name', 'O que é', 'text'], ['saldo', 'Quanto falta pagar', 'number'], ['taxa', 'Juros ao ano (%)', 'pct'], ['parcela', 'Parcela por mês', 'number'], ['sistema', 'Tipo de parcela', 'select', SISTEMAS], ['meses', 'Meses que faltam', 'int']] },
+  debts: { title: 'Financiamentos e dívidas', hint: 'O que vocês ainda estão pagando. Com os juros, a parcela e o tipo de parcela, o app abate o saldo sozinho todo mês (estimado) e cada amortização que vocês confirmarem. Os juros são ao ano: escreva 12 para 12%. "Quanto falta hoje" já vem atualizado. Se o extrato do banco mostrar outro saldo, digite por cima: ele passa a valer a partir de hoje.', cols: [['name', 'O que é', 'text'], ['saldo', 'Quanto falta hoje', 'number'], ['taxa', 'Juros ao ano (%)', 'pct'], ['parcela', 'Parcela por mês', 'number'], ['sistema', 'Tipo de parcela', 'select', SISTEMAS], ['meses', 'Meses que faltam', 'int']] },
   receivables: { title: 'Dinheiro que alguém está devolvendo', hint: 'Quando vocês emprestaram dinheiro e a pessoa devolve um pouco por mês. Ex.: emprestaram R$ 6.000 para um parente, que devolve R$ 500 por mês em 12 vezes. Se não tem data para acabar, deixe "Quantas vezes" em branco.', cols: [['name', 'Quem está devolvendo', 'text'], ['monthly', 'Quanto por mês', 'number'], ['start', 'Começou em (AAAA-MM)', 'text'], ['n', 'Quantas vezes', 'int']] },
   redemptions: { title: 'Dinheiro que vai entrar numa data', hint: 'Um valor grande que vocês já sabem que vem. Ex.: resgate da previdência, venda do carro.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto', 'number'], ['month', 'Quando (AAAA-MM)', 'text']] },
   recurring: { title: 'Contas fixas no cartão', hint: 'O que cai todo mês no cartão: streaming, seguro, academia. Serve para prever a próxima fatura.', cols: [[0, 'O que é', 'text'], [1, 'Quanto por mês', 'number'], [2, 'Observação', 'text']] },
@@ -285,6 +285,9 @@ export function render(el) {
 
   // lists
   const data = {}; for (const k in LISTS) data[k] = JSON.parse(JSON.stringify(st[k] || []));
+  // The balance field shows what is left TODAY (installments and amortizations already off); typing another value replaces it from today.
+  const shownSaldo = new Map(data.debts.map(d => [d.id, d.saldoEm ? debtNow(d, todayISO()).saldo : (+d.saldo || 0)]));
+  data.debts.forEach(d => { d.saldo = shownSaldo.get(d.id); });
   const drawList = k => {
     const d = LISTS[k], tb = el.querySelector(`[data-list="${k}"]`);
     tb.innerHTML = data[k].map((r, i) => `<tr>${d.cols.map(([key, , type, opts]) => { let v = r[key]; if (type === 'pct' && v != null && v !== '') v = +(v * 100).toFixed(4);
@@ -346,7 +349,7 @@ export function render(el) {
   };
   // Balances typed by hand count from today; old ones get today's date so the installments start counting.
   const stampDebts = () => { const prev = new Map((st.debts || []).map(d => [d.id, d])), now = new Date().toISOString();
-    data.debts = data.debts.map(d => { const p = prev.get(d.id); const changed = !p || Math.abs((+p.saldo || 0) - (+d.saldo || 0)) >= 0.01; return changed ? { ...d, saldoEm: todayISO(), saldoAt: now, log: p ? d.log : [] } : { ...d, saldoEm: d.saldoEm || todayISO() }; });
+    data.debts = data.debts.map(d => { const p = prev.get(d.id); const changed = !p || Math.abs((shownSaldo.get(d.id) ?? (+p.saldo || 0)) - (+d.saldo || 0)) >= 0.01; return changed ? { ...d, saldoEm: todayISO(), saldoAt: now, log: p ? d.log : [] } : { ...d, saldo: p.saldo, saldoEm: d.saldoEm || todayISO() }; });
     data.assets = data.assets.map(a => { const ln = debtOfAsset(a, data.debts); return ln ? { ...a, debtId: ln.id, debt: 0 } : { ...a, debtId: null }; }); };
   // Each financing today: balance, what came off and when; register an extra payment by hand.
   function drawDebtsNow() {

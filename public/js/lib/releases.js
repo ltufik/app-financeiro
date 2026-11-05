@@ -369,4 +369,9 @@ export const RELEASES = [
   ] }, updateDocs: [DOC_TESTES], addBacklog: [
     { id: 'atualizar_sem_fechar', title: 'Versão nova sem fechar o app: pop-up e atualização ao entrar', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Para testar cada versão era preciso fechar e abrir o app', cost: false, notes: 'Pop-up "Tem uma versão nova do app" (Atualizar agora/Depois) quando não há nada em andamento; na tela de entrada, aviso e entrar já abre a versão nova.', from: [], where: 'Todo o app' },
   ] },
+  { id: 'r101', version: 'v101', at: '2026-11-05T16:04:00Z', backlog: [], news: { id: 'n20261105k', title: 'Financiamento em dia no Patrimônio', items: [
+    'Em Patrimônio e dívidas, "Quanto falta hoje" já mostra o saldo com as parcelas e as amortizações descontadas. Antes ficava o valor digitado no começo.',
+  ] }, addBacklog: [
+    { id: 'saldo_fin_atualizado', title: 'Saldo do financiamento desatualizado na tabela do Patrimônio', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A tabela mostrava o saldo digitado no começo (R$ 480 mil), não o de hoje', cost: false, notes: 'O campo mostra o saldo de hoje; salvar sem mexer não apaga o histórico; digitar outro valor vale a partir de hoje.', from: [], where: 'Patrimônio e dívidas' },
+  ] },
 ];
