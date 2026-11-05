@@ -679,3 +679,9 @@ label.consent[hidden]{display:none}
 .w-medal{font-size:96px;line-height:1}
 .w-btns{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 #wrapped .w-btns .btn{min-height:50px;font-size:17px}
+
+.w-photo{flex:none;max-height:38vh;margin-bottom:6px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.w-photo img{max-height:38vh}
+#wrapped .w-slide:has(.w-photo){justify-content:flex-start;padding-top:54px}
+#wrapped .w-slide:has(.w-photo) .w-medal{font-size:56px}
+#wrapped .w-slide:has(.w-photo) .w-big{font-size:clamp(36px,11vw,64px)}

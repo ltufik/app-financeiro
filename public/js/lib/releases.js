@@ -336,4 +336,9 @@ export const RELEASES = [
     { id: 'cores_por_nivel', title: 'Cores do app (ou dos banners) pelo nível de economia', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'O nível poderia aparecer no dia a dia, não só na retrospectiva', cost: false, notes: 'Começar por um selo no Início e nos banners; mudar a cor do app inteiro só depois de ver a reação (vermelho e verde já têm significado nos avisos).', from: [] },
     { id: 'nivel_ao_longo_do_ano', title: 'Aviso "faltam X pontos para o ouro" ao longo do ano', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'O nível só aparece no fim do ano', cost: false, notes: 'Mostrar no Início o nível até agora e quanto falta para o próximo.', from: [] },
   ] },
+  { id: 'r96', version: 'v96', at: '2026-11-05T03:34:00Z', backlog: [], news: { id: 'n20261105f', title: 'A retrospectiva ganhou fotos', items: [
+    'Cada tela da retrospectiva do ano tem agora uma foto que combina com o momento de vocês: das conquistas aos meses difíceis.',
+  ] }, updateDocs: [DOC_HISTORIAS], addBacklog: [
+    { id: 'retro_fotos', title: 'Fotos nas telas da retrospectiva', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'As telas da retrospectiva só tinham texto e cor', cost: false, notes: 'Uma foto por tela, positiva ou de preocupação conforme os números; casais e famílias (o app não sabe o gênero de quem usa).', from: [], where: 'Retrospectiva do ano' },
+  ] },
 ];

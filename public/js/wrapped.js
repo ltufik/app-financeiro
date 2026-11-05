@@ -6,6 +6,7 @@ import { yearRetro, yearLevel, yearMilestones } from './lib/closing.js';
 import { feesOf } from './lib/bankfees.js';
 import { brl0, pct, esc, mLong } from './lib/format.js';
 import { toast } from './ui.js';
+import { photo } from './photos.js';
 import { track } from './usage.js';
 
 const MES = k => mLong(k).split(' de ')[0];
@@ -18,11 +19,11 @@ export function wrappedSlides(year) {
   const lv = yearLevel(r), ms = yearMilestones({ year, per: r.per, txs: S.txs, idx: S.catIdx, debts: st.debts || [] });
   const fam = /^fam[ií]lia\b/i.test(S.hh.name || '') ? S.hh.name : 'família ' + (S.hh.name || '');
   const slides = [];
-  slides.push({ bg: 'w-intro', html: `<p class="w-k">Retrospectiva</p><h2 class="w-h">O ${year} da ${esc(fam)}</h2><p class="w-t">${r.n === 12 ? 'O ano inteiro' : `${r.n} meses`} de números de verdade: ${r.count.toLocaleString('pt-BR')} lançamentos, ${r.closedCount ? `${r.closedCount} ${r.closedCount > 1 ? 'meses fechados' : 'mês fechado'}` : 'sem anotar nada à mão'}.</p><p class="w-tap">Toque para continuar →</p>` });
-  slides.push({ bg: r.res >= 0 ? 'w-green' : 'w-red', html: `<p class="w-k">Vocês guardaram</p><div class="w-big">${brl0(r.res)}</div><p class="w-t">${pct(r.tx)} do que ganharam${r.meta ? `. A meta era ${pct(r.meta)}` : ''}.</p><p class="w-t">Em ${r.positive} de ${r.n} meses sobrou dinheiro.</p>` });
-  if (r.best) slides.push({ bg: 'w-blue', html: `<p class="w-k">O melhor mês</p><div class="w-big">${cap(MES(r.best.month))}</div><p class="w-t">${brl0(r.best.res)} de sobra.</p>${r.worst && r.worst.month !== r.best.month ? `<p class="w-t w-dim">O mais difícil foi ${MES(r.worst.month)} (${brl0(r.worst.res)}).</p>` : ''}` });
-  if (r.top.length) slides.push({ bg: 'w-orange', html: `<p class="w-k">Para onde mais foi</p><div class="w-big w-mid">${esc(r.top[0].name)}</div><p class="w-t">${brl0(r.top[0].value)}, ${pct(r.top[0].share)} das despesas.</p><ol class="w-list">${r.top.slice(1, 5).map(t => `<li>${esc(t.name)} <span>${brl0(t.value)}</span></li>`).join('')}</ol>` });
-  if (r.big || r.fees) slides.push({ bg: 'w-purple', html: `${r.big ? `<p class="w-k">O maior gasto do dia a dia</p><div class="w-big w-mid">${brl0(r.big.value)}</div><p class="w-t">${esc(r.big.description)}, em ${MES(r.big.month)}.</p>` : ''}${r.fees ? `<p class="w-k" style="margin-top:22px">O banco cobrou</p><div class="w-big w-mid">${brl0(r.fees)}</div><p class="w-t w-dim">em juros, IOF, anuidade e tarifas.</p>` : ''}` });
+  slides.push({ bg: 'w-intro', img: 'y_intro', html: `<p class="w-k">Retrospectiva</p><h2 class="w-h">O ${year} da ${esc(fam)}</h2><p class="w-t">${r.n === 12 ? 'O ano inteiro' : `${r.n} meses`} de números de verdade: ${r.count.toLocaleString('pt-BR')} lançamentos, ${r.closedCount ? `${r.closedCount} ${r.closedCount > 1 ? 'meses fechados' : 'mês fechado'}` : 'sem anotar nada à mão'}.</p><p class="w-tap">Toque para continuar →</p>` });
+  slides.push({ bg: r.res >= 0 ? 'w-green' : 'w-red', img: r.res >= 0 ? 'y_saved' : 'y_red', html: `<p class="w-k">Vocês guardaram</p><div class="w-big">${brl0(r.res)}</div><p class="w-t">${pct(r.tx)} do que ganharam${r.meta ? `. A meta era ${pct(r.meta)}` : ''}.</p><p class="w-t">Em ${r.positive} de ${r.n} meses sobrou dinheiro.</p>` });
+  if (r.best) slides.push({ bg: 'w-blue', img: r.best.res > 0 ? 'y_best' : 'y_red', html: `<p class="w-k">O melhor mês</p><div class="w-big">${cap(MES(r.best.month))}</div><p class="w-t">${brl0(r.best.res)} de sobra.</p>${r.worst && r.worst.month !== r.best.month ? `<p class="w-t w-dim">O mais difícil foi ${MES(r.worst.month)} (${brl0(r.worst.res)}).</p>` : ''}` });
+  if (r.top.length) slides.push({ bg: 'w-orange', img: 'y_where', html: `<p class="w-k">Para onde mais foi</p><div class="w-big w-mid">${esc(r.top[0].name)}</div><p class="w-t">${brl0(r.top[0].value)}, ${pct(r.top[0].share)} das despesas.</p><ol class="w-list">${r.top.slice(1, 5).map(t => `<li>${esc(t.name)} <span>${brl0(t.value)}</span></li>`).join('')}</ol>` });
+  if (r.big || r.fees) slides.push({ bg: 'w-purple', img: 'y_bank', html: `${r.big ? `<p class="w-k">O maior gasto do dia a dia</p><div class="w-big w-mid">${brl0(r.big.value)}</div><p class="w-t">${esc(r.big.description)}, em ${MES(r.big.month)}.</p>` : ''}${r.fees ? `<p class="w-k" style="margin-top:22px">O banco cobrou</p><div class="w-big w-mid">${brl0(r.fees)}</div><p class="w-t w-dim">em juros, IOF, anuidade e tarifas.</p>` : ''}` });
   // Equity and the dream: where they stand and whether this year's pace takes them there.
   const P = patrimonio();
   if (P.rows.length || G.patrimonio) {
@@ -33,13 +34,13 @@ export function wrappedSlides(year) {
       dream = end >= G.patrimonio ? `<p class="w-t">No ritmo de ${year} (${brl0(pace)} por mês), vocês chegam ao sonho de ${brl0(G.patrimonio)}${G.ageGoal ? ` aos ${G.ageGoal} anos` : ''}. Estão no caminho.</p>`
         : `<p class="w-t">No ritmo de ${year} (${brl0(pace)} por mês), chegam a ${brl0(end)}${G.ageGoal ? ` aos ${G.ageGoal} anos` : ''}. Para o sonho de ${brl0(G.patrimonio)}, o ritmo precisa ser de ${brl0(need)} por mês.</p>`;
     }
-    slides.push({ bg: 'w-teal', html: `<p class="w-k">O patrimônio de vocês hoje</p><div class="w-big">${brl0(P.total)}</div>${inv ? `<p class="w-t w-dim">Investimentos: ${brl0(inv.value)}${/estimado/.test(inv.note) ? ' (estimado)' : ''}.</p>` : ''}${dream}` });
+    slides.push({ bg: 'w-teal', img: 'y_home', html: `<p class="w-k">O patrimônio de vocês hoje</p><div class="w-big">${brl0(P.total)}</div>${inv ? `<p class="w-t w-dim">Investimentos: ${brl0(inv.value)}${/estimado/.test(inv.note) ? ' (estimado)' : ''}.</p>` : ''}${dream}` });
   }
-  if (ms.length) slides.push({ bg: 'w-pink', html: `<p class="w-k">Os marcos do ano</p><ul class="w-ms">${ms.map(m => `<li><span class="w-mi">${m.icon}</span><span><strong>${esc(m.title)}</strong><br>${esc(m.text)}</span></li>`).join('')}</ul>` });
+  if (ms.length) slides.push({ bg: 'w-pink', img: 'y_moments', html: `<p class="w-k">Os marcos do ano</p><ul class="w-ms">${ms.map(m => `<li><span class="w-mi">${m.icon}</span><span><strong>${esc(m.title)}</strong><br>${esc(m.text)}</span></li>`).join('')}</ul>` });
   // The level: the high point.
   const nxt = lv.next ? (lv.next.level === 'ouro' ? `Para o ouro: guardar ${pct(r.meta || 0.2)} da renda${lv.next.steady ? '' : ' e ter sobra em 3 de cada 4 meses'}. Faltam ${Math.max(1, Math.round(lv.next.points * 100))} pontos.` : lv.next.level === 'prata' ? `Para a prata: guardar 10% da renda. Faltam ${Math.max(1, Math.round(lv.next.points * 100))} pontos.` : 'O próximo passo é fechar o ano com sobra. Dá para começar este mês.') : 'O nível mais alto. Vocês bateram a meta e foram constantes.';
-  slides.push({ bg: 'w-lv-' + lv.level, html: `<p class="w-k">O nível de vocês em ${year}</p><div class="w-medal" aria-hidden="true">${{ ouro: '🥇', prata: '🥈', bronze: '🥉', inicio: '🌱' }[lv.level]}</div><div class="w-big">${lv.label}</div><p class="w-t">${pct(r.tx)} da renda guardada, sobra em ${r.positive} de ${r.n} meses.</p><p class="w-t w-dim">${nxt}</p>` });
-  slides.push({ bg: 'w-end', html: `<p class="w-k">Compartilhe</p><h2 class="w-h">${lv.level === 'inicio' ? 'Um ano de começo.' : `${lv.label} em ${year}.`}</h2><p class="w-t">Só o nível e a porcentagem guardada vão junto, sem valores.</p><div class="w-btns"><button class="btn primary" type="button" id="wShare">Compartilhar</button><button class="btn" type="button" id="wPage">Ver tudo numa página</button></div>` });
+  slides.push({ bg: 'w-lv-' + lv.level, img: lv.level === 'inicio' ? 'y_start' : 'y_level', html: `<p class="w-k">O nível de vocês em ${year}</p><div class="w-medal" aria-hidden="true">${{ ouro: '🥇', prata: '🥈', bronze: '🥉', inicio: '🌱' }[lv.level]}</div><div class="w-big">${lv.label}</div><p class="w-t">${pct(r.tx)} da renda guardada, sobra em ${r.positive} de ${r.n} meses.</p><p class="w-t w-dim">${nxt}</p>` });
+  slides.push({ bg: 'w-end', img: 'y_end', html: `<p class="w-k">Compartilhe</p><h2 class="w-h">${lv.level === 'inicio' ? 'Um ano de começo.' : `${lv.label} em ${year}.`}</h2><p class="w-t">Só o nível e a porcentagem guardada vão junto, sem valores.</p><div class="w-btns"><button class="btn primary" type="button" id="wShare">Compartilhar</button><button class="btn" type="button" id="wPage">Ver tudo numa página</button></div>` });
   return { r, lv, slides };
 }
 
@@ -47,6 +48,8 @@ export function openWrapped(year) {
   const { r, lv, slides } = wrappedSlides(year);
   if (!slides.length) { toast('Ainda não há meses completos (com o extrato da conta) neste ano.', 'info'); return; }
   track('retro.ano'); try { localStorage.setItem(`fin.retro.${S.hh?.id || ''}.${year}`, '1'); } catch (e) { /* private mode */ }
+  // Load every photo now, so each screen shows its picture right away.
+  const tmp = document.createElement('div'); slides.forEach(s => { if (s.img) { tmp.innerHTML = photo(s.img, { w: 900 }); const im = tmp.querySelector('img'); if (im) { const p = new Image(); p.srcset = im.srcset; p.sizes = im.sizes; p.src = im.src; } } });
   let i = 0;
   const el = document.createElement('div'); el.id = 'wrapped'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', `Retrospectiva de ${year}`);
   el.innerHTML = `<div class="w-bars">${slides.map(() => '<span><i></i></span>').join('')}</div><button class="w-x" type="button" aria-label="Fechar">×</button><div class="w-slide" aria-live="polite"></div><button class="w-prev" type="button" aria-label="Anterior"></button><button class="w-next" type="button" aria-label="Próxima"></button>`;
@@ -54,7 +57,7 @@ export function openWrapped(year) {
   const close = () => { el.remove(); document.body.classList.remove('cfm-open'); document.removeEventListener('keydown', key); };
   const show = n => {
     i = Math.max(0, Math.min(slides.length - 1, n));
-    el.className = slides[i].bg; el.querySelector('.w-slide').innerHTML = slides[i].html;
+    el.className = slides[i].bg; el.querySelector('.w-slide').innerHTML = (slides[i].img ? photo(slides[i].img, { w: 900, ratio: '4 / 3', fallback: 'family', cls: 'w-photo' }) : '') + slides[i].html;
     el.querySelectorAll('.w-bars i').forEach((b, k) => b.style.width = k <= i ? '100%' : '0');
     const sh = el.querySelector('#wShare');
     if (sh) sh.onclick = async e => {

@@ -16,6 +16,18 @@ export const PHOTOS = {
   talk:    { id: '6963918', by: 'Mikhail Nilov', alt: 'Casal conversando sobre o planejamento financeiro' },
   family:  { id: '6297624', by: 'Kampus Production', alt: 'Mãe e filha juntas à mesa da sala' },
   happy:   { id: '4308016', by: 'Ketut Subiyanto', alt: 'Homem sorrindo com as contas em dia e a esposa ao lado' },
+  // Year retrospective (stories): the feeling of each screen; worried ones only when the numbers are in the red.
+  y_intro:   { id: '5779171', by: 'Pexels', alt: 'Família sorrindo junta para a câmera' },
+  y_saved:   { id: '1602726', by: 'Pexels', alt: 'Moeda entrando no cofrinho' },
+  y_red:     { id: '6964127', by: 'Mikhail Nilov', alt: 'Homem preocupado à mesa com as contas, ao lado da esposa' },
+  y_best:    { id: '4262169', by: 'Pexels', alt: 'Família jantando e comemorando' },
+  y_where:   { id: '6963056', by: 'Mikhail Nilov', alt: 'Casal conversando sobre as finanças na mesa da cozinha' },
+  y_bank:    { id: '7735783', by: 'Pexels', alt: 'Casal fazendo o orçamento' },
+  y_home:    { id: '7642037', by: 'Pexels', alt: 'Família na sala da casa nova segurando as chaves' },
+  y_moments: { id: '7414910', by: 'Pexels', alt: 'Família se mudando para a casa nova' },
+  y_level:   { id: '7743567', by: 'Pexels', alt: 'Família alegre se divertindo na praia' },
+  y_start:   { id: '6964083', by: 'Mikhail Nilov', alt: 'Homem com as mãos no rosto, preocupado com as contas' },
+  y_end:     { id: '30675902', by: 'Pexels', alt: 'Família caminhando na praia ao pôr do sol' },
 };
 
 // photo(key, {w, ratio, fallback}) -> HTML of a figure with credit and an SVG fallback.

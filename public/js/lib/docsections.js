@@ -173,4 +173,9 @@ export const DOC_HISTORIAS = { id: 'retro_historias_doc', title: 'Retrospectiva 
 ## Marcos (só o que os dados provam; até 3)
 - Amortização do financiamento no ano; dinheiro posto em categoria de investimento (só "começaram" se havia meses antes sem investir; categorias que misturam transferências entre contas ficam de fora); o mês em que saíram do vermelho; o grande gasto extra do ano (R$ 3.000 ou mais, despesa extra); a maior sequência de meses no azul (3 ou mais).
 - Validado com os dados reais: Prata (12,8%, 8 de 9 meses no azul), "Em julho, saíram do vermelho" e o maior gasto extra de abril.
-- Compartilhar: o nível e a porcentagem, sem valores.` };
+- Compartilhar: o nível e a porcentagem, sem valores.
+## Fotos (v96)
+- Cada tela tem uma foto do Pexels (grátis, cada foto usada uma vez no app) que lembra o que o texto diz: família sorrindo na abertura, cofrinho quando guardaram, família comemorando no melhor mês, família com as chaves da casa no patrimônio, mudança nos marcos, praia no nível e no fim.
+- No vermelho, as fotos mudam: casal preocupado com as contas (quanto guardaram, melhor mês negativo) e pessoa preocupada no Ponto de partida.
+- O app não sabe se quem está usando é homem ou mulher (não perguntamos e não adivinhamos pelo nome), por isso as fotos mostram casais e famílias.
+- Sem internet, aparece a ilustração do app no lugar.` };
