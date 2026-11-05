@@ -903,3 +903,16 @@ test('retrospectiva: nível por porcentagem e marcos do ano', async () => {
   assert.deepEqual(yearMilestones({ year: '2026', per, txs: txs.slice(2), idx }).map(x => x.id), ['saiu_vermelho', 'compra', 'sequencia']);
   assert.match(yearMilestones({ year: '2026', per, txs: txs.slice(1), idx })[0].title, /^Investiram R\$ 2\.000/, 'no earlier data: cannot say they started');
 });
+
+test('retrospectiva: onde dá para melhorar e evolução no ano', async () => {
+  const { yearRetro, yearOpportunities, yearEvolution } = await import('../public/js/lib/closing.js');
+  const { catIndex } = await import('../public/js/lib/calc.js');
+  const idx = catIndex([{ name: 'Salário', grp: 'renda', recurring: true }, { name: 'Lazer', grp: 'dia' }, { name: 'Tarifas', grp: 'dia', recurring: true }]);
+  const txs = [];
+  ['01', '02', '03', '04', '05', '06'].forEach((m, i) => { const k = '2026-' + m; txs.push({ source: 'conta', month: k, date: k + '-05', amount: 10000, category: 'Salário', description: 'Salário' }, { source: 'conta', month: k, date: k + '-10', amount: -(i < 3 ? 8000 : 10500), category: 'Lazer', description: 'Lazer' }, { source: 'conta', month: k, date: k + '-11', amount: -30, category: 'Tarifas', description: 'Tarifa pacote servicos' }); });
+  const r = yearRetro({ year: '2026', txs, idx, goals: { savings: 0.2 }, fees: { total: 180 } });
+  const o = yearOpportunities({ r, txs, idx });
+  assert.deepEqual(o.map(x => x.id), ['vermelho', 'meta', 'subiu']);
+  assert.match(o[0].title, /3 meses no vermelho/); assert.match(o[2].title, /Lazer subiu R\$ 2\.500 por mês/);
+  const e = yearEvolution(r); assert.ok(e.first > 0.19 && e.second < 0);
+});

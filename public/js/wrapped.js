@@ -2,7 +2,7 @@
 // One idea per screen, big number, its own color; tap right/left (or swipe) to move, progress bars on top.
 // The level (bronze, silver, gold, by percentage) is the high point; the last screen shares without amounts.
 import { S, goals, settings, patrimonio, projectFor, needPmtFor } from './state.js';
-import { yearRetro, yearLevel, yearMilestones } from './lib/closing.js';
+import { yearRetro, yearLevel, yearMilestones, yearOpportunities, yearEvolution } from './lib/closing.js';
 import { feesOf } from './lib/bankfees.js';
 import { brl0, pct, esc, mLong } from './lib/format.js';
 import { toast } from './ui.js';
@@ -12,14 +12,33 @@ import { track } from './usage.js';
 const MES = k => mLong(k).split(' de ')[0];
 const cap = s => s[0].toUpperCase() + s.slice(1);
 
+// The month that closes the year so far ("até outubro"), and whether the year is complete (the year-end edition).
+export const retroUpTo = r => r.months[r.months.length - 1];
+const firstTime = () => { try { return !Object.keys(localStorage).some(k => k.startsWith(`fin.retro.${S.hh?.id || ''}.`)); } catch (e) { return false; } };
+
+// Which edition the family has to see: it changes every time a month of the year is closed ("até outubro").
+// Without any closed month, the first one appears once there are 3 complete months.
+export function retroVersion(year) { return Object.keys(settings().closed || {}).filter(k => k.startsWith(year + '-')).sort().pop() || 'base'; }
+export function retroSeen(year) { try { return localStorage.getItem(`fin.retro.${S.hh?.id || ''}.${year}`) === retroVersion(year); } catch (e) { return false; } }
+
+// Savings rate per month, with the goal line: the year's evolution at a glance.
+function evoSVG(e, meta) {
+  const W = 320, H = 150, n = e.months.length, bw = W / n * 0.62, mx = Math.max(0.3, ...e.months.map(m => m.tx)), mn = Math.min(0, ...e.months.map(m => m.tx));
+  const y = v => 10 + (mx - v) / (mx - mn) * (H - 30), z = y(0);
+  return `<svg class="w-evo" viewBox="0 0 ${W} ${H}" role="img" aria-label="Quanto guardaram em cada mês">${meta ? `<line x1="0" x2="${W}" y1="${y(meta)}" y2="${y(meta)}" stroke="currentColor" stroke-dasharray="4 4" opacity=".6"/>` : ''}<line x1="0" x2="${W}" y1="${z}" y2="${z}" stroke="currentColor" opacity=".5"/>
+    ${e.months.map((m, i) => { const x = i * W / n + (W / n - bw) / 2, top = Math.min(y(m.tx), z), h = Math.max(2, Math.abs(y(m.tx) - z)); return `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${m.tx < 0 ? '#FFB4B4' : 'currentColor'}"/><text x="${(x + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="11" fill="currentColor">${MES(m.month).slice(0, 1).toUpperCase()}</text>`; }).join('')}</svg>`;
+}
+
 export function wrappedSlides(year) {
   const G = goals(), st = settings();
   const r = yearRetro({ year, txs: S.txs, idx: S.catIdx, goals: G, fees: feesOf(S.txs.filter(t => t.month.startsWith(year + '-'))), closed: st.closed || {} });
   if (!r.n) return { r, slides: [] };
   const lv = yearLevel(r), ms = yearMilestones({ year, per: r.per, txs: S.txs, idx: S.catIdx, debts: st.debts || [] });
   const fam = /^fam[ií]lia\b/i.test(S.hh.name || '') ? S.hh.name : 'família ' + (S.hh.name || '');
-  const slides = [];
-  slides.push({ bg: 'w-intro', img: 'y_intro', html: `<p class="w-k">Retrospectiva</p><h2 class="w-h">O ${year} da ${esc(fam)}</h2><p class="w-t">${r.n === 12 ? 'O ano inteiro' : `${r.n} meses`} de números de verdade: ${r.count.toLocaleString('pt-BR')} lançamentos, ${r.closedCount ? `${r.closedCount} ${r.closedCount > 1 ? 'meses fechados' : 'mês fechado'}` : 'sem anotar nada à mão'}.</p><p class="w-tap">Toque para continuar →</p>` });
+  const slides = [], final = r.n === 12 || (retroUpTo(r) === year + '-12'), upTo = MES(retroUpTo(r)), first = firstTime();
+  // First time: what this is and how it works, before any number.
+  if (first) slides.push({ bg: 'w-intro', img: 'y_intro', html: `<p class="w-k">A primeira retrospectiva de vocês</p><h2 class="w-h">O que os seus meses contam</h2><p class="w-t">Com os meses que vocês já mandaram, o app montou o ano até aqui: quanto guardaram, os marcos, o nível e onde dá para melhorar.</p><p class="w-t w-dim">A cada mês fechado, ela se atualiza. Em janeiro vem o fechamento do ano, completo.</p><p class="w-tap">Toque para continuar →</p>` });
+  slides.push({ bg: final ? 'w-final' : 'w-intro', img: first ? null : 'y_intro', html: `<p class="w-k">${final ? 'Fechamento do ano' : `Retrospectiva até ${upTo}`}</p><h2 class="w-h">O ${year} da ${esc(fam)}</h2><p class="w-t">${r.n === 12 ? 'O ano inteiro' : `${r.n} meses`} de números de verdade: ${r.count.toLocaleString('pt-BR')} lançamentos, ${r.closedCount ? `${r.closedCount} ${r.closedCount > 1 ? 'meses fechados' : 'mês fechado'}` : 'sem anotar nada à mão'}.</p><p class="w-tap">Toque para continuar →</p>` });
   slides.push({ bg: r.res >= 0 ? 'w-green' : 'w-red', img: r.res >= 0 ? 'y_saved' : 'y_red', html: `<p class="w-k">Vocês guardaram</p><div class="w-big">${brl0(r.res)}</div><p class="w-t">${pct(r.tx)} do que ganharam${r.meta ? `. A meta era ${pct(r.meta)}` : ''}.</p><p class="w-t">Em ${r.positive} de ${r.n} meses sobrou dinheiro.</p>` });
   if (r.best) slides.push({ bg: 'w-blue', img: r.best.res > 0 ? 'y_best' : 'y_red', html: `<p class="w-k">O melhor mês</p><div class="w-big">${cap(MES(r.best.month))}</div><p class="w-t">${brl0(r.best.res)} de sobra.</p>${r.worst && r.worst.month !== r.best.month ? `<p class="w-t w-dim">O mais difícil foi ${MES(r.worst.month)} (${brl0(r.worst.res)}).</p>` : ''}` });
   if (r.top.length) slides.push({ bg: 'w-orange', img: 'y_where', html: `<p class="w-k">Para onde mais foi</p><div class="w-big w-mid">${esc(r.top[0].name)}</div><p class="w-t">${brl0(r.top[0].value)}, ${pct(r.top[0].share)} das despesas.</p><ol class="w-list">${r.top.slice(1, 5).map(t => `<li>${esc(t.name)} <span>${brl0(t.value)}</span></li>`).join('')}</ol>` });
@@ -37,17 +56,23 @@ export function wrappedSlides(year) {
     slides.push({ bg: 'w-teal', img: 'y_home', html: `<p class="w-k">O patrimônio de vocês hoje</p><div class="w-big">${brl0(P.total)}</div>${inv ? `<p class="w-t w-dim">Investimentos: ${brl0(inv.value)}${/estimado/.test(inv.note) ? ' (estimado)' : ''}.</p>` : ''}${dream}` });
   }
   if (ms.length) slides.push({ bg: 'w-pink', img: 'y_moments', html: `<p class="w-k">Os marcos do ano</p><ul class="w-ms">${ms.map(m => `<li><span class="w-mi">${m.icon}</span><span><strong>${esc(m.title)}</strong><br>${esc(m.text)}</span></li>`).join('')}</ul>` });
+  // Evolution through the year (4 months or more).
+  const evo = yearEvolution(r);
+  if (evo) { const better = evo.second > evo.first + 0.01, worse = evo.second < evo.first - 0.01; slides.push({ bg: 'w-blue', html: `<p class="w-k">A evolução no ano</p>${evoSVG(evo, r.meta)}<p class="w-t">${better ? `Melhoraram: de ${pct(evo.first)} para ${pct(evo.second)} da renda guardada, da primeira para a segunda metade.` : worse ? `Caiu de ${pct(evo.first)} para ${pct(evo.second)} da renda guardada, da primeira para a segunda metade.` : `Constantes: cerca de ${pct(evo.second)} da renda guardada nas duas metades.`}</p>${r.meta ? '<p class="w-t w-dim">A linha tracejada é a meta de vocês.</p>' : ''}` }); }
+  // Where they can do better: for everyone, first for whoever was in the red.
+  const ops = yearOpportunities({ r, txs: S.txs, idx: S.catIdx });
+  if (ops.length) slides.push({ bg: r.res < 0 || r.positive < r.n ? 'w-orange' : 'w-teal', html: `<p class="w-k">${r.res < 0 ? 'O caminho para sair do vermelho' : 'Onde dá para melhorar'}</p><ul class="w-ms">${ops.map(o => `<li><span class="w-mi">${o.icon}</span><span><strong>${esc(o.title)}</strong><br>${esc(o.text)}</span></li>`).join('')}</ul>` });
   // The level: the high point.
   const nxt = lv.next ? (lv.next.level === 'ouro' ? `Para o ouro: guardar ${pct(r.meta || 0.2)} da renda${lv.next.steady ? '' : ' e ter sobra em 3 de cada 4 meses'}. Faltam ${Math.max(1, Math.round(lv.next.points * 100))} pontos.` : lv.next.level === 'prata' ? `Para a prata: guardar 10% da renda. Faltam ${Math.max(1, Math.round(lv.next.points * 100))} pontos.` : 'O próximo passo é fechar o ano com sobra. Dá para começar este mês.') : 'O nível mais alto. Vocês bateram a meta e foram constantes.';
-  slides.push({ bg: 'w-lv-' + lv.level, img: lv.level === 'inicio' ? 'y_start' : 'y_level', html: `<p class="w-k">O nível de vocês em ${year}</p><div class="w-medal" aria-hidden="true">${{ ouro: '🥇', prata: '🥈', bronze: '🥉', inicio: '🌱' }[lv.level]}</div><div class="w-big">${lv.label}</div><p class="w-t">${pct(r.tx)} da renda guardada, sobra em ${r.positive} de ${r.n} meses.</p><p class="w-t w-dim">${nxt}</p>` });
+  slides.push({ bg: 'w-lv-' + lv.level + (final && lv.level !== 'inicio' ? ' w-confetti' : ''), img: lv.level === 'inicio' ? 'y_start' : 'y_level', html: `<p class="w-k">${final ? 'O nível de vocês em' : 'O nível até agora em'} ${year}</p><div class="w-medal" aria-hidden="true">${{ ouro: '🥇', prata: '🥈', bronze: '🥉', inicio: '🌱' }[lv.level]}</div><div class="w-big">${lv.label}</div><p class="w-t">${pct(r.tx)} da renda guardada, sobra em ${r.positive} de ${r.n} meses.</p><p class="w-t w-dim">${nxt}</p>` });
   slides.push({ bg: 'w-end', img: 'y_end', html: `<p class="w-k">Compartilhe</p><h2 class="w-h">${lv.level === 'inicio' ? 'Um ano de começo.' : `${lv.label} em ${year}.`}</h2><p class="w-t">Só o nível e a porcentagem guardada vão junto, sem valores.</p><div class="w-btns"><button class="btn primary" type="button" id="wShare">Compartilhar</button><button class="btn" type="button" id="wPage">Ver tudo numa página</button></div>` });
-  return { r, lv, slides };
+  return { r, lv, slides, final };
 }
 
 export function openWrapped(year) {
-  const { r, lv, slides } = wrappedSlides(year);
+  const { r, lv, slides, final } = wrappedSlides(year);
   if (!slides.length) { toast('Ainda não há meses completos (com o extrato da conta) neste ano.', 'info'); return; }
-  track('retro.ano'); try { localStorage.setItem(`fin.retro.${S.hh?.id || ''}.${year}`, '1'); } catch (e) { /* private mode */ }
+  track('retro.ano'); try { localStorage.setItem(`fin.retro.${S.hh?.id || ''}.${year}`, retroVersion(year)); } catch (e) { /* private mode */ }
   // Load every photo now, so each screen shows its picture right away.
   const tmp = document.createElement('div'); slides.forEach(s => { if (s.img) { tmp.innerHTML = photo(s.img, { w: 900 }); const im = tmp.querySelector('img'); if (im) { const p = new Image(); p.srcset = im.srcset; p.sizes = im.sizes; p.src = im.src; } } });
   let i = 0;

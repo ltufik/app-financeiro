@@ -112,3 +112,28 @@ export function yearMilestones({ year, per, txs, idx, debts = [] }) {
   if (best[0] >= 3) out.push({ id: 'sequencia', icon: '🔥', title: `${best[0]} meses seguidos no azul`, text: `de ${mN(per[best[1] - best[0] + 1].month)} a ${mN(per[best[1]].month)}.` });
   return out.slice(0, 3);
 }
+
+// Where the family can do better, from the year's own numbers (up to 3, the most useful first):
+// months in the red, the gap to the goal, a category that grew from the first to the second half, the bank's charges.
+export function yearOpportunities({ r, txs, idx }) {
+  const out = [], of = k => txs.filter(t => t.month === k), meta = r.meta || 0.2;
+  const red = (r.per || []).filter(c => c.res < 0);
+  if (red.length) out.push({ id: 'vermelho', icon: '🧭', title: `${red.length} ${red.length > 1 ? 'meses' : 'mês'} no vermelho`, text: `${(s => s[0].toUpperCase() + s.slice(1))(red.map(c => MES[+c.month.slice(5) - 1]).join(', '))}. Combinar um limite por categoria (menu ☰ → Família e metas → Metas) avisa antes de passar.` });
+  if (r.renda > 0 && r.tx < meta && r.n) { const gap = (meta * r.renda - r.res) / r.n; out.push({ id: 'meta', icon: '🎯', title: `Para a meta de ${Math.round(meta * 100)}%, faltaram ${R0(gap)} por mês`, text: 'É quanto precisaria sobrar a mais em cada mês. Cortar um pouco das duas categorias que mais pesam costuma bastar.' }); }
+  // A day-to-day category (not fixed) that grew from the first to the second half of the year.
+  if (r.n >= 4) {
+    const h = Math.floor(r.n / 2), a = r.months.slice(0, h), b = r.months.slice(h), avg = (ks, n) => ks.reduce((s, k) => s + (byCategory(of(k), idx)[n] || 0), 0) / ks.length;
+    const names = [...new Set(txs.filter(t => r.months.includes(t.month)).map(t => t.category))].filter(n => { const c = idx.get(n); return c && c.grp === 'dia' && !c.recurring && !c.financing && !/financ/i.test(n); });
+    const up = names.map(n => ({ n, a: avg(a, n), b: avg(b, n) })).filter(x => x.a >= 200 && x.b - x.a >= 100 && x.b >= x.a * 1.15).sort((x, y) => (y.b - y.a) - (x.b - x.a))[0];
+    if (up) out.push({ id: 'subiu', icon: '📊', title: `${up.n} subiu ${R0(up.b - up.a)} por mês`, text: `De ${R0(up.a)} para ${R0(up.b)} por mês, da primeira para a segunda metade do ano. Voltar ao que era deixa ${R0((up.b - up.a) * 12)} a mais por ano.` });
+  }
+  if (r.fees >= 100) out.push({ id: 'banco', icon: '🏦', title: `${R0(r.fees)} para o banco`, text: 'Em juros, IOF, anuidade e tarifas. Pedir isenção da anuidade e trocar o pacote de tarifas costuma zerar boa parte.' });
+  return out.slice(0, 3);
+}
+
+// Evolution in the year: savings rate per month and the first half against the second.
+export function yearEvolution(r) {
+  if (!r.per || r.per.length < 4) return null;
+  const h = Math.floor(r.per.length / 2), rate = ps => { const res = ps.reduce((a, c) => a + c.res, 0), renda = ps.reduce((a, c) => a + (c.tx ? c.res / c.tx : 0), 0); return renda > 0 ? res / renda : 0; };
+  return { first: rate(r.per.slice(0, h)), second: rate(r.per.slice(h)), months: r.per.map(c => ({ month: c.month, tx: c.tx })) };
+}

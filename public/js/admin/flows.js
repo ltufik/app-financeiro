@@ -14,6 +14,7 @@ export const SCREENS = {
   inicio_exemplo: { title: 'Mês de exemplo', where: 'Início, enquanto a família não tem dados', key: null },
   inicio: { title: 'Início', where: 'Aba Início', key: 'aba.inicio' },
   inicio_mais: { title: 'Mais detalhes', where: 'Início → fim da tela', key: 'aba.inicio' },
+  retro_evolucao: { title: 'Retrospectiva: evolução e onde melhorar', where: 'Telas da retrospectiva, antes do nível', key: 'retro.ano' },
   retro_historias: { title: 'Retrospectiva em histórias (nível)', where: 'Início: aviso "A retrospectiva está pronta" ou Mais detalhes → Retrospectiva do ano', key: ['retro.ano', 'retro.compartilhar'] },
   retro_ano: { title: 'Retrospectiva do ano', where: 'Início → Mais detalhes → Retrospectiva do ano (em dezembro e janeiro, cartão no topo)', key: ['retro.ano', 'retro.compartilhar'] },
   fechar: { title: 'Fechar o mês', where: 'Cartão "Hora de fechar o mês" no Início', key: 'aba.fechar' },
@@ -72,7 +73,7 @@ export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
-    { title: 'Dentro das abas', screens: ['inicio_mais', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
+    { title: 'Dentro das abas', screens: ['inicio_mais', 'retro_evolucao', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },

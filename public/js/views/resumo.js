@@ -8,6 +8,7 @@ import { settings, closeDay } from '../state.js';
 import { renderPendingPayments } from '../debtpay.js';
 import { installmentPlan } from '../lib/parcelas.js';
 import { rankFeed } from '../lib/homefeed.js';
+import { retroVersion, retroSeen } from '../wrapped.js';
 import { feesOf, FEE_LABEL } from '../lib/bankfees.js';
 import { addM } from '../lib/format.js';
 import { mergeSuggestions } from '../lib/catmerge.js';
@@ -127,9 +128,7 @@ export function render(el) {
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas'); });
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
-  // The year retrospective: a card in December and January; in "Mais detalhes" the whole year.
-  const td = todayISO(), ry = td.slice(5, 7) === '01' ? String(+td.slice(0, 4) - 1) : td.slice(0, 4), rc = el.querySelector('#retroCard');
-  if (rc && /^(12|01)$/.test(td.slice(5, 7)) && ks.some(k => k.startsWith(ry))) rc.innerHTML = `<article class="closecard"><div><span class="tiny">Retrospectiva</span><h3>O ${ry} de vocês</h3><p class="small">Quanto guardaram, o melhor mês, para onde mais foi e o que o banco cobrou.</p></div><button class="btn primary" type="button" data-retro="${ry}">Ver a retrospectiva</button></article>`;
+  // The year retrospective: on top while there is a new edition (retroNotice); always in "Mais detalhes".
   el.querySelectorAll('[data-retro]').forEach(b => b.onclick = () => import('../wrapped.js').then(m => m.openWrapped(b.dataset.retro)));
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);
 }
@@ -156,9 +155,16 @@ export function homeInsights() {
 // Until the family opens it once: "A retrospectiva de 2026 está pronta", on top (it is new) with the way to it.
 export const retroKey = y => `fin.retro.${S.hh?.id || ''}.${y}`;
 function retroNotice() {
-  const y = todayISO().slice(0, 4), n = new Set(S.txs.filter(t => t.month.startsWith(y + '-') && t.source === 'conta' && !t.manual).map(t => t.month)).size;
-  let seen = false; try { seen = localStorage.getItem(retroKey(y)) === '1'; } catch (e) { /* private mode */ }
-  return n >= 3 && !seen ? [{ id: 'retro', tone: 'good', title: `A retrospectiva de ${y} está pronta`, text: `${n} meses em uma página: quanto vocês guardaram, o melhor mês, para onde mais foi o dinheiro e o que o banco cobrou.`, action: { label: 'Ver a retrospectiva', go: ['retro', y] } }] : [];
+  const td = todayISO(), out = [];
+  // In January, the year that ended (year-end edition); during the year, the current one up to the last closed month.
+  for (const y of td.slice(5, 7) === '01' ? [String(+td.slice(0, 4) - 1), td.slice(0, 4)] : [td.slice(0, 4)]) {
+    const ms = [...new Set(S.txs.filter(t => t.month.startsWith(y + '-') && t.source === 'conta' && !t.manual).map(t => t.month))].sort();
+    if (ms.length < 3 || retroSeen(y)) continue;
+    const last = ms[ms.length - 1], full = last === y + '-12', upTo = mLong(last).split(' de ')[0];
+    out.push({ id: 'retro', tone: 'good', title: full ? `O fechamento de ${y} está pronto` : `A retrospectiva de ${y} até ${upTo} está pronta`, text: full ? 'O ano completo: quanto guardaram, a evolução mês a mês, os marcos, o nível e onde dá para melhorar em ' + (+y + 1) + '.' : `${ms.length} meses em telas: quanto guardaram, a evolução, os marcos, o nível até agora e onde dá para melhorar. Ela se atualiza a cada mês fechado.`, action: { label: 'Ver a retrospectiva', go: ['retro', y] } });
+    break;
+  }
+  return out;
 }
 // What the family saw last time (per family, on this device): what is new or changed goes to the top.
 const SEEN = () => 'fin.feed.' + (S.hh?.id || '');

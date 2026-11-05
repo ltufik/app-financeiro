@@ -18,7 +18,7 @@ const cap = s => s[0].toUpperCase() + s.slice(1);
 function renderYear(el, year) {
   const r = yearRetro({ year, txs: S.txs, idx: S.catIdx, goals: goals(), fees: feesOf(S.txs.filter(t => t.month.startsWith(year + '-'))), closed: settings().closed || {} });
   const MES = k => mLong(k).split(' de ')[0];
-  track('retro.ano'); try { localStorage.setItem(`fin.retro.${S.hh?.id || ''}.${year}`, '1'); } catch (e) { /* private mode */ }
+  track('retro.ano');
   el.innerHTML = `<button class="linkbtn small" type="button" data-back>← Voltar ao Início</button>
   <section class="panel stack retro yretro">
     <span class="tiny muted">Retrospectiva</span><h2>${year} ${/^fam[ií]lia\b/i.test(S.hh.name || '') ? 'da ' + esc(S.hh.name) : 'da família ' + esc(S.hh.name || '')}</h2>
@@ -149,7 +149,7 @@ export function render(el) {
     const by = (S.user?.user_metadata?.display_name || '').split(' ')[0];
     await save({ closed: { ...(settings().closed || {}), [m]: { at: todayISO(), by, res: round2(r.res), tx: Math.round(r.tx * 1000) / 1000 } } });
     notifyFamily('closed', { month: m });
-    track('fechar.mes'); toast(r.hitGoal ? 'Mês fechado. Vocês guardaram o que queriam!' : 'Mês fechado'); S.closeMonth = m; S.render();
+    track('fechar.mes'); toast((r.hitGoal ? 'Mês fechado. Vocês guardaram o que queriam!' : 'Mês fechado.') + (new Set(S.txs.filter(t => t.month.startsWith(m.slice(0, 4)) && t.source === 'conta' && !t.manual).map(t => t.month)).size >= 3 ? ' A retrospectiva do ano foi atualizada no Início.' : '')); S.closeMonth = m; S.render();
   };
   const reopen = $('#clReopen');
   if (reopen) reopen.onclick = async e => {

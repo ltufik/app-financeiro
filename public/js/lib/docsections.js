@@ -162,7 +162,14 @@ export const DOC_RETRO_INICIO = { id: 'retro_inicio_doc', title: 'Retrospectiva 
 - Depois de salvar em Lançar (comprovante, fatura, extrato ou planilha), se surgiu um aviso importante ou bom, o app diz: "<título>. Veja no Início."
 - Riscos que já sobem: fatura acima do limite, orçamento estourado ou perto, guardaram menos que a meta, mês no vermelho, juros na fatura. Um aviso de risco de não bater a meta no mês, olhando para frente, ainda precisa de uma conta validada (backlog).` };
 
-export const DOC_HISTORIAS = { id: 'retro_historias_doc', title: 'Retrospectiva em histórias e níveis de economia', body: `- A retrospectiva abre em telas cheias, uma ideia por tela (toque à direita ou deslize para avançar; à esquerda volta): abertura, quanto guardaram, melhor e pior mês, para onde mais foi, maior gasto e o que o banco cobrou, patrimônio e o sonho (se o ritmo do ano leva até lá ou quanto precisa por mês), marcos do ano, o nível e compartilhar. "Ver tudo numa página" abre a página.
+export const DOC_HISTORIAS = { id: 'retro_historias_doc', title: 'Retrospectiva em histórias e níveis de economia', body: `## Quando aparece (v97)
+- É do ano e se atualiza mês a mês: só com 3 meses completos (extrato da conta) ou mais. Cada mês fechado gera uma edição nova ("A retrospectiva de 2026 até outubro está pronta"), que sobe no topo do Início até ser aberta. Sem nenhum mês fechado, a primeira aparece com 3 meses completos. Ao fechar o mês, o aviso diz que a retrospectiva foi atualizada.
+- Em janeiro: "O fechamento de 2026 está pronto", a edição completa e chamativa (fundo especial, confete no nível), com a evolução e onde melhorar para o ano seguinte.
+- Primeira vez: uma tela antes dos números explica o que é e que ela se atualiza a cada mês fechado.
+## Telas
+- A retrospectiva abre em telas cheias, uma ideia por tela (toque à direita ou deslize para avançar; à esquerda volta): abertura, quanto guardaram, melhor e pior mês, para onde mais foi, maior gasto e o que o banco cobrou, patrimônio e o sonho (se o ritmo do ano leva até lá ou quanto precisa por mês), marcos do ano, o nível e compartilhar. "Ver tudo numa página" abre a página.
+- Evolução (4 meses ou mais): barras da % guardada em cada mês, com a linha da meta, e a comparação da primeira com a segunda metade do ano.
+- Onde dá para melhorar (até 3, para todos; "O caminho para sair do vermelho" para quem fechou no vermelho): meses no vermelho e o limite por categoria; quanto faltou por mês para a meta; a categoria do dia a dia que mais subiu da primeira para a segunda metade (sem fixas, financiamento ou categorias novas); o que o banco cobrou (a partir de R$ 100). Validado com os dados reais: junho no vermelho, R$ 3.330 por mês para a meta de 20%, Transporte de R$ 1.399 para R$ 1.982.
 ## Níveis (por porcentagem, justo para qualquer renda)
 | Nível | Regra |
 | Ouro | Guardaram a meta da família (ex.: 20%) ou mais e tiveram sobra em pelo menos 3 de cada 4 meses |

@@ -341,4 +341,11 @@ export const RELEASES = [
   ] }, updateDocs: [DOC_HISTORIAS], addBacklog: [
     { id: 'retro_fotos', title: 'Fotos nas telas da retrospectiva', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'As telas da retrospectiva só tinham texto e cor', cost: false, notes: 'Uma foto por tela, positiva ou de preocupação conforme os números; casais e famílias (o app não sabe o gênero de quem usa).', from: [], where: 'Retrospectiva do ano' },
   ] },
+  { id: 'r97', version: 'v97', at: '2026-11-05T04:53:00Z', backlog: [], news: { id: 'n20261105g', title: 'A retrospectiva do ano, mês a mês', items: [
+    'A retrospectiva agora se atualiza a cada mês fechado e sobe no Início para vocês verem o ano até ali.',
+    'Ganhou a evolução mês a mês e "onde dá para melhorar", com sugestões a partir dos números de vocês.',
+    'Em janeiro vem o fechamento do ano, completo.',
+  ] }, updateDocs: [DOC_HISTORIAS], addBacklog: [
+    { id: 'retro_mensal_fechamento', title: 'Retrospectiva do ano atualizada a cada mês fechado, fechamento do ano e onde melhorar', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'A retrospectiva aparecia uma vez só e não mostrava a evolução nem o que fazer para melhorar', cost: false, notes: 'Edição nova a cada mês fechado (3 meses completos ou mais); fechamento do ano em janeiro; tela de primeira vez; evolução; oportunidades.', from: [], where: 'Início' },
+  ] },
 ];

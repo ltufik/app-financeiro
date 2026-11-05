@@ -685,3 +685,9 @@ label.consent[hidden]{display:none}
 #wrapped .w-slide:has(.w-photo){justify-content:flex-start;padding-top:54px}
 #wrapped .w-slide:has(.w-photo) .w-medal{font-size:56px}
 #wrapped .w-slide:has(.w-photo) .w-big{font-size:clamp(36px,11vw,64px)}
+
+#wrapped.w-final{background:linear-gradient(160deg,#1B1035,#6B2E8F 55%,#E0742E)}
+.w-evo{width:100%;max-width:420px;height:auto;margin:6px 0 4px}
+#wrapped.w-confetti::after{content:'🎉 ✨ 🎊 ✨ 🎉';position:absolute;top:64px;left:0;right:0;text-align:center;font-size:30px;letter-spacing:12px;animation:wConf 1.2s ease-out both;pointer-events:none}
+@keyframes wConf{from{transform:translateY(-30px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#wrapped.w-confetti::after{animation:none}}
