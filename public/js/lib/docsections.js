@@ -161,3 +161,16 @@ export const DOC_RETRO_INICIO = { id: 'retro_inicio_doc', title: 'Retrospectiva 
 - Os avisos ficam no topo, antes da sobra. O que é novo ou mudou desde a última visita (neste aparelho) sobe e ganha a marca "Novo", ou "Depois do que vocês lançaram" até 30 minutos depois de salvar. Aparecem até 3 quando há novidade.
 - Depois de salvar em Lançar (comprovante, fatura, extrato ou planilha), se surgiu um aviso importante ou bom, o app diz: "<título>. Veja no Início."
 - Riscos que já sobem: fatura acima do limite, orçamento estourado ou perto, guardaram menos que a meta, mês no vermelho, juros na fatura. Um aviso de risco de não bater a meta no mês, olhando para frente, ainda precisa de uma conta validada (backlog).` };
+
+export const DOC_HISTORIAS = { id: 'retro_historias_doc', title: 'Retrospectiva em histórias e níveis de economia', body: `- A retrospectiva abre em telas cheias, uma ideia por tela (toque à direita ou deslize para avançar; à esquerda volta): abertura, quanto guardaram, melhor e pior mês, para onde mais foi, maior gasto e o que o banco cobrou, patrimônio e o sonho (se o ritmo do ano leva até lá ou quanto precisa por mês), marcos do ano, o nível e compartilhar. "Ver tudo numa página" abre a página.
+## Níveis (por porcentagem, justo para qualquer renda)
+| Nível | Regra |
+| Ouro | Guardaram a meta da família (ex.: 20%) ou mais e tiveram sobra em pelo menos 3 de cada 4 meses |
+| Prata | Guardaram 10% da renda ou mais |
+| Bronze | Fecharam o ano com sobra |
+| Ponto de partida | No vermelho: mensagem de incentivo |
+- A tela do nível diz quantos pontos faltam para o próximo. Cada nível tem a sua cor na tela.
+## Marcos (só o que os dados provam; até 3)
+- Amortização do financiamento no ano; dinheiro posto em categoria de investimento (só "começaram" se havia meses antes sem investir; categorias que misturam transferências entre contas ficam de fora); o mês em que saíram do vermelho; o grande gasto extra do ano (R$ 3.000 ou mais, despesa extra); a maior sequência de meses no azul (3 ou mais).
+- Validado com os dados reais: Prata (12,8%, 8 de 9 meses no azul), "Em julho, saíram do vermelho" e o maior gasto extra de abril.
+- Compartilhar: o nível e a porcentagem, sem valores.` };

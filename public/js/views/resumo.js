@@ -130,7 +130,7 @@ export function render(el) {
   // The year retrospective: a card in December and January; in "Mais detalhes" the whole year.
   const td = todayISO(), ry = td.slice(5, 7) === '01' ? String(+td.slice(0, 4) - 1) : td.slice(0, 4), rc = el.querySelector('#retroCard');
   if (rc && /^(12|01)$/.test(td.slice(5, 7)) && ks.some(k => k.startsWith(ry))) rc.innerHTML = `<article class="closecard"><div><span class="tiny">Retrospectiva</span><h3>O ${ry} de vocês</h3><p class="small">Quanto guardaram, o melhor mês, para onde mais foi e o que o banco cobrou.</p></div><button class="btn primary" type="button" data-retro="${ry}">Ver a retrospectiva</button></article>`;
-  el.querySelectorAll('[data-retro]').forEach(b => b.onclick = () => { S.closeMonth = 'ano:' + b.dataset.retro; S.go('fechar'); });
+  el.querySelectorAll('[data-retro]').forEach(b => b.onclick = () => import('../wrapped.js').then(m => m.openWrapped(b.dataset.retro)));
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);
 }
 
@@ -182,7 +182,7 @@ function renderInsights(box) {
   box.innerHTML = shown.map(x => `<article class="insight ${x.tone}${FRESH.has(x.id) ? ' fresh' : ''}">${FRESH.has(x.id) ? `<span class="newtag">${after ? 'Depois do que vocês lançaram' : 'Novo'}</span>` : ''}<span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
     <div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p>${x.action ? `<button class="linkbtn small" type="button" data-go='${esc(JSON.stringify(x.action.go))}'>${esc(x.action.label)} →</button>` : ''}</div></article>`).join('');
   if (list.length > base) { box.insertAdjacentHTML('beforeend', `<button class="linkbtn small" type="button" id="insMore">${showAllInsights ? 'Mostrar menos avisos' : 'Ver mais ' + (list.length - base) + (list.length - base > 1 ? ' avisos' : ' aviso')}</button>`); box.querySelector('#insMore').onclick = () => { showAllInsights = !showAllInsights; renderInsights(box); }; }
-  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'retro') { S.closeMonth = 'ano:' + g[1]; S.go('fechar'); return; } if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
+  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'retro') { import('../wrapped.js').then(m => m.openWrapped(g[1])); return; } if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
 }
 
 // What the bank charged in the last 12 months: interest, IOF, annual fee and account fees, with the biggest ones.

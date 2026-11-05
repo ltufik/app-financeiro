@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -327,5 +327,13 @@ export const RELEASES = [
     'A retrospectiva de 2026 agora aparece no topo do Início até você abrir. Depois, ela fica em Início → Mais detalhes.',
   ] }, updateDocs: [DOC_RETRO_INICIO], addBacklog: [
     { id: 'retro_no_topo', title: 'Retrospectiva aparece no topo do Início até ser aberta', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A retrospectiva ficava escondida em Mais detalhes e ninguém sabia que existia', cost: false, notes: 'Aviso "A retrospectiva de 2026 está pronta" no topo, com 3 meses completos ou mais, até abrir uma vez.', from: [], where: 'Início' },
+  ] },
+  { id: 'r95', version: 'v95', at: '2026-11-05T03:11:00Z', backlog: [], news: { id: 'n20261105e', title: 'O ano de vocês, em histórias', items: [
+    'A retrospectiva agora é uma sequência de telas: quanto guardaram, o melhor mês, para onde mais foi, o patrimônio e o sonho, os marcos do ano.',
+    'E o nível de vocês no ano: bronze, prata ou ouro, pela porcentagem que guardaram. Dá para compartilhar sem mostrar valores.',
+  ] }, addDocs: [DOC_HISTORIAS], addBacklog: [
+    { id: 'retro_historias_niveis', title: 'Retrospectiva em histórias, com níveis de economia e marcos', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'A retrospectiva era uma página comum; faltava algo chamativo e um motivo para compartilhar', cost: false, notes: 'Telas cheias com uma ideia cada; patrimônio e sonho; marcos que os dados provam; níveis por porcentagem (bronze 0%+, prata 10%+, ouro meta e constância).', from: [], where: 'Início' },
+    { id: 'cores_por_nivel', title: 'Cores do app (ou dos banners) pelo nível de economia', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'O nível poderia aparecer no dia a dia, não só na retrospectiva', cost: false, notes: 'Começar por um selo no Início e nos banners; mudar a cor do app inteiro só depois de ver a reação (vermelho e verde já têm significado nos avisos).', from: [] },
+    { id: 'nivel_ao_longo_do_ano', title: 'Aviso "faltam X pontos para o ouro" ao longo do ano', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'O nível só aparece no fim do ano', cost: false, notes: 'Mostrar no Início o nível até agora e quanto falta para o próximo.', from: [] },
   ] },
 ];

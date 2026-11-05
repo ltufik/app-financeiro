@@ -884,3 +884,22 @@ test('Início dinâmico: o aviso novo ou que mudou sobe para o topo', async () =
   assert.deepEqual(r.fresh, ['saved', 'card']); assert.deepEqual(r.list.map(x => x.id), ['card', 'saved', 'red']);
   assert.deepEqual(rankFeed([a, b, c], r.seen).fresh, []);
 });
+
+test('retrospectiva: nível por porcentagem e marcos do ano', async () => {
+  const { yearLevel, yearMilestones } = await import('../public/js/lib/closing.js');
+  const { catIndex } = await import('../public/js/lib/calc.js');
+  assert.equal(yearLevel({ n: 9, positive: 8, res: 53494, tx: 0.128, meta: 0.2 }).level, 'prata');
+  assert.ok(Math.abs(yearLevel({ n: 9, positive: 8, res: 53494, tx: 0.128, meta: 0.2 }).next.points - 0.072) < 1e-9);
+  assert.equal(yearLevel({ n: 12, positive: 10, res: 90000, tx: 0.22, meta: 0.2 }).level, 'ouro');
+  assert.equal(yearLevel({ n: 12, positive: 7, res: 90000, tx: 0.22, meta: 0.2 }).level, 'prata', 'gold also needs steady months');
+  assert.equal(yearLevel({ n: 12, positive: 6, res: 3000, tx: 0.03, meta: 0.2 }).level, 'bronze');
+  assert.equal(yearLevel({ n: 12, positive: 3, res: -3000, tx: -0.03, meta: 0.2 }).level, 'inicio');
+  const idx = catIndex([{ name: 'Investimentos', grp: 'neutro' }, { name: 'Carro', grp: 'fora' }, { name: 'Mercado', grp: 'dia' }]);
+  const per = [{ month: '2026-05', res: 100 }, { month: '2026-06', res: -5078 }, { month: '2026-07', res: 1253 }, { month: '2026-08', res: 6942 }, { month: '2026-09', res: 2658 }];
+  const txs = [{ source: 'conta', amount: -10, category: 'Mercado', month: '2025-12', date: '2025-12-10' }, { source: 'conta', amount: -2000, category: 'Investimentos', month: '2026-03', date: '2026-03-10' }, { source: 'conta', amount: -45000, category: 'Carro', description: 'Carro novo', month: '2026-04', date: '2026-04-02' }];
+  const m = yearMilestones({ year: '2026', per, txs, idx, debts: [{ name: 'Financiamento de Guaratuba', log: [{ kind: 'amortizacao', date: '2026-11-04', value: 130000 }] }] });
+  assert.deepEqual(m.map(x => x.id), ['amortizou', 'investiu', 'saiu_vermelho']);
+  assert.match(m[0].title, /130\.000/); assert.match(m[1].title, /Começaram a investir em março/); assert.match(m[2].text, /−R\$ 5\.078/);
+  assert.deepEqual(yearMilestones({ year: '2026', per, txs: txs.slice(2), idx }).map(x => x.id), ['saiu_vermelho', 'compra', 'sequencia']);
+  assert.match(yearMilestones({ year: '2026', per, txs: txs.slice(1), idx })[0].title, /^Investiram R\$ 2\.000/, 'no earlier data: cannot say they started');
+});

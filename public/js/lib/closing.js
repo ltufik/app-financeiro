@@ -69,8 +69,46 @@ export function yearRetro({ year, txs, idx, goals = {}, fees = null, closed = {}
   return {
     year, months, n: months.length, renda, receitas, despesas, res, tx: renda > 0 ? res / renda : 0, meta: goals.savings || 0,
     hitGoal: !!goals.savings && renda > 0 && res / renda >= goals.savings, good: per.filter(c => goals.savings ? c.tx >= goals.savings : c.res > 0).length,
+    positive: per.filter(c => c.res > 0).length, per: per.map(c => ({ month: c.month, res: c.res, tx: c.tx })),
     best: byRes[0] ? { month: byRes[0].month, res: byRes[0].res } : null, worst: byRes.length > 1 ? { month: byRes[byRes.length - 1].month, res: byRes[byRes.length - 1].res } : null,
     top: top.slice(0, 5).map(([name, v]) => ({ name, value: Math.round(v * 100) / 100, share: v / tot })), big,
     fees: fees ? fees.total : 0, closedCount: months.filter(k => closed[k]).length, count: months.reduce((a, k) => a + of(k).length, 0),
   };
+}
+
+// The family's level in the year, by percentage (fair for any income): gold = their own goal and in the blue
+// at least 3 of every 4 months; silver = 10% of income or more; bronze = the year in the blue.
+export const LEVELS = { ouro: 'Ouro', prata: 'Prata', bronze: 'Bronze', inicio: 'Ponto de partida' };
+export function yearLevel(r) {
+  const steady = r.n ? r.positive / r.n >= 0.75 : false, meta = r.meta || 0.2;
+  const level = r.res > 0 && r.tx >= meta && steady ? 'ouro' : r.tx >= 0.10 ? 'prata' : r.res > 0 ? 'bronze' : 'inicio';
+  // What is missing for the next level, in percentage points of income (and the steady months for gold).
+  const next = level === 'ouro' ? null : level === 'prata' ? { level: 'ouro', points: Math.max(0, meta - r.tx), steady } : level === 'bronze' ? { level: 'prata', points: 0.10 - r.tx } : { level: 'bronze', points: null };
+  return { level, label: LEVELS[level], next };
+}
+
+// Up to 3 milestones of the year, from what the data shows: an extra payment on a financing, starting or growing
+// investments, getting out of the red, a big one-off purchase, the longest streak in the blue.
+const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const mN = k => MES[+k.slice(5) - 1];
+const R0 = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
+const INVEST = /invest|aplica|poupan|previd|tesouro|\bcdb\b|a[cç][oõ]es/i;
+export function yearMilestones({ year, per, txs, idx, debts = [] }) {
+  const out = [], inYear = t => String(t.date || t.month || '').startsWith(year + '-');
+  // Extra payments on financings.
+  for (const d of debts) { const v = (d.log || []).filter(e => e.kind === 'amortizacao' && String(e.date).startsWith(year + '-')).reduce((a, e) => a + (+e.value || 0), 0); if (v > 0) out.push({ id: 'amortizou', icon: '🏠', title: `Amortizaram ${R0(v)}`, text: `do ${d.name}. A dívida ficou menor e o patrimônio, maior.` }); }
+  // Money put into investments (account outflows to an investment category).
+  // Only categories that are investments alone (not "transfers between own accounts", which mix both).
+  const inv = txs.filter(t => t.source === 'conta' && +t.amount < 0 && INVEST.test(t.category || '') && !/conta|transfer/i.test(t.category || '') && idx.get(t.category)?.grp === 'neutro');
+  const invYear = inv.filter(inYear), hadBefore = txs.some(t => String(t.month) < year + '-01'), invBefore = inv.some(t => String(t.month) < year + '-01');
+  if (invYear.length) { const v = -invYear.reduce((a, t) => a + +t.amount, 0), first = invYear.map(t => t.month).sort()[0]; out.push({ id: 'investiu', icon: '📈', title: hadBefore && !invBefore ? `Começaram a investir em ${mN(first)}` : `Investiram ${R0(v)}`, text: hadBefore && !invBefore ? `e puseram ${R0(v)} em aplicações até agora.` : 'em aplicações durante o ano.' }); }
+  // Out of the red: a month in the blue right after one in the red.
+  for (let i = 1; i < per.length; i++) if (per[i - 1].res < 0 && per[i].res > 0) { out.push({ id: 'saiu_vermelho', icon: '💪', title: `Em ${mN(per[i].month)}, saíram do vermelho`, text: `${mN(per[i - 1].month)[0].toUpperCase() + mN(per[i - 1].month).slice(1)} tinha fechado em −${R0(per[i - 1].res)}; ${mN(per[i].month)} fechou com ${R0(per[i].res)} de sobra.` }); break; }
+  // A big one-off purchase (extra expense).
+  let big = null; for (const t of txs.filter(inYear)) { const c = idx.get(t.category); if (c?.grp !== 'fora') continue; const v = t.source === 'conta' ? -t.amount : +t.amount; if (v >= 3000 && (!big || v > big.v)) big = { v, t }; }
+  if (big) out.push({ id: 'compra', icon: '🎯', title: `O grande gasto do ano: ${R0(big.v)}`, text: `${big.t.category} em ${mN(big.t.month)} (${big.t.description}), fora das contas do dia a dia.` });
+  // Longest streak in the blue (3 months or more).
+  let best = [0, 0], cur = 0; per.forEach((c, i) => { cur = c.res > 0 ? cur + 1 : 0; if (cur > best[0]) best = [cur, i]; });
+  if (best[0] >= 3) out.push({ id: 'sequencia', icon: '🔥', title: `${best[0]} meses seguidos no azul`, text: `de ${mN(per[best[1] - best[0] + 1].month)} a ${mN(per[best[1]].month)}.` });
+  return out.slice(0, 3);
 }
