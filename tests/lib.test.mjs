@@ -847,3 +847,15 @@ test('financiamento: liga o bem e reconhece o comprovante', () => {
   assert.equal(investNow({ total: 100000, date: '2026-11-04' }, 0.1, '2026-11-04').estimated, false);
 });
 
+
+test('parcelas já comprometidas: por mês, as que mais pesam e quando acabam', async () => {
+  const { installmentPlan } = await import('../public/js/lib/parcelas.js');
+  const txs = [{ description: 'Geladeira', amount: 400, installment: '02/10', day: '05/09' }, { description: 'Curso', amount: 300, installment: '11/12', day: '01/09' },
+    { description: 'Tênis', amount: 100, installment: '03/03' }, { description: 'Mercado', amount: 500 },
+    { description: 'Dup', amount: 50, installment: '01/02', day: '01/10' }, { description: 'Dup', amount: 50, installment: '01/02', day: '01/10' }];
+  const p = installmentPlan(txs, '2026-10', 12);
+  assert.deepEqual(p.months.slice(0, 3), [{ month: '2026-11', total: 700 }, { month: '2026-12', total: 400 }, { month: '2027-01', total: 400 }]);
+  assert.equal(p.months.length, 8); assert.equal(p.items[0].description, 'Geladeira'); assert.equal(p.items[0].ends, '2027-06');
+  assert.equal(p.total, 400 * 8 + 300); assert.equal(p.last, '2027-06');
+  assert.deepEqual(installmentPlan([], '2026-10').items, []);
+});

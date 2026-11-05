@@ -155,7 +155,7 @@ test('novidade publicada vira push para todos; quem pediu recebe só o personali
   };
   const db = rest2('https://x.supabase.co', 'sb_secret_x', fetchImpl);
   const releases = [{ id: 'rp1', at: '2026-11-03T12:00:00Z', backlog: ['semana'], news: { id: 'np1', title: 'Gasto por semana', items: ['Em Gráficos, escolha por semana.'] } }];
-  const out = await applyReleases(db, { ...generateVapidKeys(), subject: 'https://praondefoi.app.br' }, { releases, fetchImpl });
+  const out = await applyReleases(db, { ...generateVapidKeys(), subject: 'https://praondefoi.app.br' }, { releases, fetchImpl, now: Date.parse('2026-11-04T15:00:00Z') });
   assert.equal(out.replied, 1); assert.equal(out.pushed, 1);
   assert.deepEqual(sent.sort(), ['u1', 'u2'], 'u1: o recado com o nome; u2: a novidade; u3 desligou as novidades');
   assert.equal(newsPush([{ id: 'a', title: 'X', items: ['Y'] }, { id: 'b', title: 'Z' }]).body, 'Y E mais 1 novidade no sininho.');

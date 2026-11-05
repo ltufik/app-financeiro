@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -307,4 +307,8 @@ export const RELEASES = [
     'Quando a fatura do cartão fecha, o app avisa no celular para você mandar o PDF, e o aviso já abre o lugar certo para enviar.',
     'O mesmo lembrete aparece no Início até a fatura chegar. Dá para mandar as faturas de todos os cartões de uma vez.',
   ] }, updateDocs: [DOC_AVISOS] },
+  { id: 'r91', version: 'v91', at: '2026-11-05T01:05:00Z', backlog: ['parcelas_ja_comprometidas_nos_proximos_m'], news: { id: 'n20261105a', title: 'Parcelas dos próximos meses', items: [
+    'No Início, em Próxima fatura, veja quanto dos próximos meses já está comprometido com parcelas e até quando.',
+    'Em "As que mais pesam", as compras parceladas com quantas parcelas faltam.',
+  ] }, addDocs: [DOC_PARCELAS] },
 ];

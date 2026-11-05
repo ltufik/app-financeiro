@@ -6,6 +6,7 @@ import { findRecurring } from '../lib/recurring.js';
 import { settle } from '../lib/settle.js';
 import { settings, closeDay } from '../state.js';
 import { renderPendingPayments } from '../debtpay.js';
+import { installmentPlan } from '../lib/parcelas.js';
 import { mergeSuggestions } from '../lib/catmerge.js';
 import { expandSplits } from '../lib/calc.js';
 import { todayISO } from '../lib/format.js';
@@ -86,7 +87,7 @@ export function render(el) {
       ${nf ? `<p class="muted small">${mLong(nf.month)}: parcelas já contratadas + recorrentes${nf.manuais ? ' + lançados' : ''}</p>
       <div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(nf.total)}</div>
       ${meter(nf.total, G.cardMonthly, 0)}
-      <p class="tiny muted" style="margin-top:6px">Parcelas ${brl0(nf.parcelas)} · recorrentes ${brl0(nf.recorrentes)}${nf.manuais ? ' · lançados ' + brl0(nf.manuais) : ''}${G.cardMonthly ? '. Ainda cabe no limite: ' + brl0(G.cardMonthly - nf.total) : ''}.</p>` : '<p class="muted small">Aparece quando houver uma fatura importada.</p>'}
+      <p class="tiny muted" style="margin-top:6px">Parcelas ${brl0(nf.parcelas)} · recorrentes ${brl0(nf.recorrentes)}${nf.manuais ? ' · lançados ' + brl0(nf.manuais) : ''}${G.cardMonthly ? '. Ainda cabe no limite: ' + brl0(G.cardMonthly - nf.total) : ''}.</p>${plansHTML(nf)}` : '<p class="muted small">Aparece quando houver uma fatura importada.</p>'}
     </div>
   </div>
   <details class="more" id="homeMore"${moreOpen() ? ' open' : ''}>
@@ -116,6 +117,7 @@ export function render(el) {
   el.querySelector('#homeMore').ontoggle = e => { try { localStorage.setItem('fin.home.more', e.target.open ? '1' : '0'); } catch (x) { /* storage blocked */ } };
   renderGoal(el.querySelector('#goalBox'), G, pr);
   renderPendingPayments(el.querySelector('#debtPayBox'), { onDone: () => S.render() });
+  el.querySelector('#plansMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.parcelas'); });
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);
@@ -149,6 +151,17 @@ function renderInsights(box) {
     <div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p>${x.action ? `<button class="linkbtn small" type="button" data-go='${esc(JSON.stringify(x.action.go))}'>${esc(x.action.label)} →</button>` : ''}</div></article>`).join('');
   if (list.length > 2) { box.insertAdjacentHTML('beforeend', `<button class="linkbtn small" type="button" id="insMore">${showAllInsights ? 'Mostrar menos avisos' : 'Ver mais ' + (list.length - 2) + (list.length - 2 > 1 ? ' avisos' : ' aviso')}</button>`); box.querySelector('#insMore').onclick = () => { showAllInsights = !showAllInsights; renderInsights(box); }; }
   box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
+}
+
+// Installments already taken for the next months, from the latest bill: bars per month and what weighs the most.
+const yy = k => mShort(k) + '/' + k.slice(2, 4);
+function plansHTML(nf) {
+  const p = installmentPlan(txsOf(nf.from).filter(t => t.source === 'cartao'), nf.from, 12);
+  if (!p.items.length) return '';
+  const max = Math.max(...p.months.map(x => x.total), 1), first = p.months.slice(0, 6);
+  return `<div class="plans" id="plans"><p class="small"><strong>Parcelas já comprometidas</strong>: ${brl0(p.total)} até ${yy(p.last)}</p>
+    <ul class="pbars">${first.map(x => `<li><span class="pm">${mShort(x.month)}</span><span class="pb"><i style="width:${Math.round(x.total / max * 100)}%"></i></span><span class="pv num">${brl0(x.total)}</span></li>`).join('')}</ul>
+    <details class="help" id="plansMore"><summary>As que mais pesam (${p.items.length})</summary><ul class="small">${p.items.slice(0, 8).map(x => `<li>${esc(x.description)}: ${brl0(x.amount)} por mês, faltam ${x.left} (até ${yy(x.ends)})</li>`).join('')}</ul></details></div>`;
 }
 
 function renderGoal(box, G, pr) {

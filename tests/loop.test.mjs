@@ -107,7 +107,7 @@ test('versão publicada pode trazer itens novos para o backlog, uma vez só', as
     if (m === 'POST') { const b = JSON.parse(o.body), i = T[table].findIndex(r => r.key === b.key); if (i >= 0) T[table][i] = b; else T[table].push(b); return json([b]); } return json([]); };
   const db = rest('https://x.supabase.co', 'sb_secret_x', fetchImpl);
   const rel = [{ id: 'rz', at: '2026-10-30T00:00:00Z', backlog: [], addBacklog: [{ id: 'novo', title: 'Novo', status: 'proximo' }, { id: 'x', title: 'X repetido' }] }];
-  await applyReleases(db, null, { releases: rel });
+  await applyReleases(db, null, { releases: rel, now: DAY });
   const items = T.product_board.find(r => r.key === 'backlog').data.items;
   assert.deepEqual(items.map(i => i.id), ['novo', 'x']);
 });
@@ -202,7 +202,7 @@ test('cada versão nova repõe o que a Central desfez das versões anteriores (i
   const db = rest('https://x.supabase.co', 'sb_secret_x', fetchImpl);
   const rel = [{ id: 'r1', at: '2026-11-01T00:00:00Z', backlog: ['exemplo'], addBacklog: [{ id: 'pesquisa', title: 'Pesquisa', status: 'proximo' }] },
     { id: 'r2', at: '2026-11-03T00:00:00Z', backlog: [], updateBacklog: [{ id: 'bug1', set: { tipo: 'bug' } }] }];
-  const out = await applyReleases(db, null, { releases: rel });
+  const out = await applyReleases(db, null, { releases: rel, now: DAY });
   const items = T.product_board.find(r => r.key === 'backlog').data.items;
   assert.equal(out.applied, 1);
   assert.equal(items.find(i => i.id === 'exemplo').status, 'feito');

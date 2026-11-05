@@ -141,3 +141,7 @@ export const DOC_PATRIMONIO = { id: 'patrimonio_doc', title: 'Patrimônio: finan
 - O assistente (Perguntar) usa o saldo de hoje.
 ## Ainda não
 - Ler o PDF do extrato do financiamento (hoje o saldo real é digitado). Item no backlog.` };
+
+export const DOC_PARCELAS = { id: 'parcelas_doc', title: 'Parcelas já comprometidas', body: `- Início → Próxima fatura: total das parcelas que ainda vão vir (da última fatura) e até quando; barras dos próximos 6 meses; "As que mais pesam" com valor por mês, quantas faltam e o mês da última.
+- Conta como a próxima fatura: compra "03/10" soma nos 7 meses seguintes; a mesma compra repetida na fatura não conta duas vezes.
+- Origem: dor da pesquisa (14% só descobrem o gasto quando a fatura fecha).` };

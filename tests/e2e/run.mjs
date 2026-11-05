@@ -707,6 +707,7 @@ await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 ok('amortização registrada no histórico do financiamento', await page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').log.some(e => e.kind === 'amortizacao' && e.value === 130000)) && patBefore === 480000);
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
+ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
 // product metrics (admin)
 await sec('metricas');
 await page.waitForSelector('#metricsBox .funnel');

@@ -620,3 +620,13 @@ label.consent[hidden]{display:none}
 .qdebt{padding:12px;border-radius:12px;background:var(--accent-soft);display:flex;flex-direction:column;gap:6px}
 .qdebt p{margin:0}
 .qdebts{margin-top:10px}
+
+/* Installments already taken for the next months (Início) */
+.plans{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.plans p{margin:0}
+.pbars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.pbars li{display:grid;grid-template-columns:32px 1fr auto;gap:8px;align-items:center;font-size:13px}
+.pbars .pb{height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
+.pbars .pb i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.pbars .pv{font-variant-numeric:tabular-nums;min-width:70px;text-align:right}
+.plans details ul{margin:6px 0 0;padding-left:18px}
