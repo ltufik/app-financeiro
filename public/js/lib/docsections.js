@@ -151,3 +151,13 @@ export const DOC_TARIFAS = { id: 'tarifas_doc', title: 'Quanto o banco cobrou', 
 - Avisos (Início e celular, um de cada vez): juros ou multa no último mês com dados, em vermelho; senão, as tarifas do mês e dos 12 meses (no celular, no máximo a cada 60 dias).
 - Origem: dor da pesquisa (78% não sabem a taxa do rotativo).
 - Parcelas já comprometidas: validadas com os dados reais; o próximo mês bate (fev e mar exatos) e fica um pouco abaixo quando há compras parceladas novas, o que a tela explica.` };
+
+export const DOC_RETRO_INICIO = { id: 'retro_inicio_doc', title: 'Retrospectiva do ano e Início dinâmico', body: `## Retrospectiva do ano
+- Cartão no Início em dezembro e janeiro; o ano todo em Início → Mais detalhes → Retrospectiva do ano.
+- Só meses completos (com o extrato da conta): guardaram (soma das sobras) e a % da renda contra a meta, em quantos meses bateram a meta, receitas, despesas, o que o banco cobrou, melhor e pior mês, maior gasto do dia a dia (sem fixas nem financiamento), lançamentos, meses fechados e as 5 categorias que mais pesaram.
+- Validado com os dados reais: a soma bate mês a mês.
+- Compartilhar: só a porcentagem guardada e o convite para o app, sem valores (WhatsApp ou copiar).
+## Início dinâmico
+- Os avisos ficam no topo, antes da sobra. O que é novo ou mudou desde a última visita (neste aparelho) sobe e ganha a marca "Novo", ou "Depois do que vocês lançaram" até 30 minutos depois de salvar. Aparecem até 3 quando há novidade.
+- Depois de salvar em Lançar (comprovante, fatura, extrato ou planilha), se surgiu um aviso importante ou bom, o app diz: "<título>. Veja no Início."
+- Riscos que já sobem: fatura acima do limite, orçamento estourado ou perto, guardaram menos que a meta, mês no vermelho, juros na fatura. Um aviso de risco de não bater a meta no mês, olhando para frente, ainda precisa de uma conta validada (backlog).` };

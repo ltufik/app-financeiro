@@ -875,3 +875,12 @@ test('quanto o banco cobrou: juros, IOF, anuidade e tarifas', async () => {
     { source: 'cartao', amount: -10, description: 'ESTORNO ANUIDADE', month: '2026-09' }, { source: 'conta', amount: -37.49, description: 'Tarifa pacote servicos', month: '2026-09' }, { source: 'cartao', amount: 80, description: 'Mercado', month: '2026-09' }]);
   assert.deepEqual(f.by, { juros: 0, iof: 67.72, anuidade: 115, tarifa: 37.49 }); assert.equal(f.total, 220.21); assert.equal(f.items[0].description, 'Mastercard anuidade'); assert.equal(f.items.length, 3);
 });
+
+test('Início dinâmico: o aviso novo ou que mudou sobe para o topo', async () => {
+  const { rankFeed, sig } = await import('../public/js/lib/homefeed.js');
+  const a = { id: 'red', tone: 'bad', text: 'a' }, b = { id: 'saved', tone: 'good', text: 'b' }, c = { id: 'card', tone: 'warn', text: 'c' };
+  assert.deepEqual(rankFeed([a, b, c], null).fresh, [], 'first visit: nothing is new');
+  const r = rankFeed([a, b, c], { red: sig(a), card: 'card|old' });
+  assert.deepEqual(r.fresh, ['saved', 'card']); assert.deepEqual(r.list.map(x => x.id), ['card', 'saved', 'red']);
+  assert.deepEqual(rankFeed([a, b, c], r.seen).fresh, []);
+});

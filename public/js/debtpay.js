@@ -50,7 +50,7 @@ export function renderPendingPayments(box, { onDone } = {}) {
     const { tx, debt } = list[+b.dataset.yes], before = debtsNow().find(d => d.id === debt.id)?.now.saldo || 0;
     if (!await confirmInline(b, { title: 'Abater do financiamento?', text: `${brl0(Math.abs(tx.amount))} saem do saldo do ${esc(debt.name)} (de ${brl0(before)} para ${brl0(Math.max(0, before - Math.abs(tx.amount)))}) e o patrimônio líquido sobe o mesmo valor. O lançamento passa para "${AMORT_CAT}", fora da sobra do mês.`, yes: 'Sim, abater' })) return;
     b.disabled = true;
-    try { const s = await applyAmortization(debt.id, { value: tx.amount, date: tx.date, txId: tx.id, note: tx.note || tx.description }); toast(`Pronto! O saldo do ${debt.name} agora é ${brl0(s)}.`); onDone?.(); }
+    try { const s = await applyAmortization(debt.id, { value: tx.amount, date: tx.date, txId: tx.id, note: tx.note || tx.description }); toast(`O saldo do ${debt.name} agora é ${brl0(s)}.`); onDone?.(); }
     catch (e) { b.disabled = false; toast('Não foi possível abater agora. ' + db.errorText(e)); }
   });
   box.querySelectorAll('[data-no]').forEach(b => b.onclick = async () => {

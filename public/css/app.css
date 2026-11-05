@@ -630,3 +630,10 @@ label.consent[hidden]{display:none}
 .pbars .pb i{display:block;height:100%;background:var(--accent);border-radius:4px}
 .pbars .pv{font-variant-numeric:tabular-nums;min-width:70px;text-align:right}
 .plans details ul{margin:6px 0 0;padding-left:18px}
+
+/* Dynamic home: a new notice on top, marked */
+.insight.fresh{position:relative;box-shadow:0 0 0 2px var(--accent);animation:freshIn .5s ease;margin-top:8px}
+.insight .newtag{position:absolute;top:-10px;left:14px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;letter-spacing:.02em;padding:2px 8px;border-radius:999px}
+@keyframes freshIn{from{transform:translateY(-6px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.insight.fresh{animation:none}}
+.yretro h2{margin:0}

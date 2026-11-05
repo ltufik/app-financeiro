@@ -50,3 +50,27 @@ export function retrospective({ month: m, txs, idx, goals = {} }) {
     top: cats.slice(0, 5).map(([name, v]) => ({ name, value: Math.round(v * 100) / 100, share: v / total })),
   };
 }
+
+// Year retrospective: the months of the year with the account statement (complete), what came in, went out and
+// stayed; the best and the hardest month; where most of the money went; the biggest expense; what the bank charged.
+// fees: feesOf() of the year's rows (lib/bankfees.js). Only complete months count, so the numbers match the months.
+export function yearRetro({ year, txs, idx, goals = {}, fees = null, closed = {} }) {
+  const of = k => txs.filter(t => t.month === k);
+  const months = [...new Set(txs.filter(t => t.month.startsWith(year + '-') && t.source === 'conta' && !t.manual).map(t => t.month))].sort();
+  const per = months.map(k => ({ month: k, ...monthCalc(of(k), idx) }));
+  const sum = f => Math.round(per.reduce((a, c) => a + (+f(c) || 0), 0) * 100) / 100;
+  const renda = sum(c => c.renda), receitas = sum(c => c.E), despesas = sum(c => c.out), res = sum(c => c.res);
+  const cats = {}; for (const k of months) for (const [n, v] of Object.entries(byCategory(of(k), idx))) cats[n] = (cats[n] || 0) + v;
+  const top = Object.entries(cats).filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]), tot = top.reduce((a, e) => a + e[1], 0) || 1;
+  const byRes = [...per].sort((a, b) => b.res - a.res);
+  // Biggest single day-to-day expense (not extras, not transfers): what the family will remember.
+  let big = null;
+  for (const k of months) for (const t of expandSplits(of(k))) { const c = idx.get(t.category); if (!c || c.grp !== 'dia' || c.recurring || c.financing) continue; const v = t.source === 'conta' ? -t.amount : +t.amount; if (v > 0 && (!big || v > big.value)) big = { description: t.description, value: Math.round(v * 100) / 100, month: k, category: t.category }; }
+  return {
+    year, months, n: months.length, renda, receitas, despesas, res, tx: renda > 0 ? res / renda : 0, meta: goals.savings || 0,
+    hitGoal: !!goals.savings && renda > 0 && res / renda >= goals.savings, good: per.filter(c => goals.savings ? c.tx >= goals.savings : c.res > 0).length,
+    best: byRes[0] ? { month: byRes[0].month, res: byRes[0].res } : null, worst: byRes.length > 1 ? { month: byRes[byRes.length - 1].month, res: byRes[byRes.length - 1].res } : null,
+    top: top.slice(0, 5).map(([name, v]) => ({ name, value: Math.round(v * 100) / 100, share: v / tot })), big,
+    fees: fees ? fees.total : 0, closedCount: months.filter(k => closed[k]).length, count: months.reduce((a, k) => a + of(k).length, 0),
+  };
+}

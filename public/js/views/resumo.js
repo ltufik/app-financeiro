@@ -7,6 +7,7 @@ import { settle } from '../lib/settle.js';
 import { settings, closeDay } from '../state.js';
 import { renderPendingPayments } from '../debtpay.js';
 import { installmentPlan } from '../lib/parcelas.js';
+import { rankFeed } from '../lib/homefeed.js';
 import { feesOf, FEE_LABEL } from '../lib/bankfees.js';
 import { addM } from '../lib/format.js';
 import { mergeSuggestions } from '../lib/catmerge.js';
@@ -60,6 +61,7 @@ export function render(el) {
   if (goalPreset >= pr.length) goalPreset = 0;
 
   el.innerHTML = `<p class="hello">Olá, ${esc(first())}.</p>
+  <div id="insights" class="insights"></div>
   <div class="panel hero">
     <p class="muted small">Sobra ${yr ? 'em ' + S.m.slice(4) + ' até agora' : 'em ' + mLong(S.m)}</p>
     <div class="big num" style="color:${a.res < 0 ? 'var(--bad)' : 'var(--ink)'}">${brl(a.res)}</div>
@@ -67,7 +69,7 @@ export function render(el) {
     <div class="row" style="margin-top:14px">${[['Receitas', a.E], ['Despesas', a.out], ['Extras (fora da sobra)', a.EX - a.DX]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
   </div>
   <div id="closeCard"></div>
-  <div id="insights" class="insights"></div>
+  <div id="retroCard"></div>
   <div class="panel" id="stepsBox" hidden></div>
   <div class="panel" id="budgetBox" hidden></div>
   <div class="panel">
@@ -96,6 +98,7 @@ export function render(el) {
   <details class="more" id="homeMore"${moreOpen() ? ' open' : ''}>
     <summary><span><strong>Mais detalhes</strong><br><span class="tiny muted">Assinaturas, quem paga o quê, quanto guardaram mês a mês, patrimônio e o sonho de vocês</span></span></summary>
     <div class="stack">
+      <div class="panel"><h3>Retrospectiva do ano</h3><p class="small muted">O ano em uma página, com os meses que já têm o extrato da conta.</p><button class="btn" type="button" data-retro="${todayISO().slice(0, 4)}">Ver ${todayISO().slice(0, 4)} até agora</button></div>
       <div class="panel">
         <h3>Quanto guardaram, mês a mês</h3>
         <p class="muted small">Quanto da renda sobrou em cada mês. A linha tracejada é quanto vocês combinaram guardar.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
@@ -124,14 +127,19 @@ export function render(el) {
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas'); });
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
+  // The year retrospective: a card in December and January; in "Mais detalhes" the whole year.
+  const td = todayISO(), ry = td.slice(5, 7) === '01' ? String(+td.slice(0, 4) - 1) : td.slice(0, 4), rc = el.querySelector('#retroCard');
+  if (rc && /^(12|01)$/.test(td.slice(5, 7)) && ks.some(k => k.startsWith(ry))) rc.innerHTML = `<article class="closecard"><div><span class="tiny">Retrospectiva</span><h3>O ${ry} de vocês</h3><p class="small">Quanto guardaram, o melhor mês, para onde mais foi e o que o banco cobrou.</p></div><button class="btn primary" type="button" data-retro="${ry}">Ver a retrospectiva</button></article>`;
+  el.querySelectorAll('[data-retro]').forEach(b => b.onclick = () => { S.closeMonth = 'ano:' + b.dataset.retro; S.go('fechar'); });
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);
 }
 
 // Home insights: what happened this month and what to do about it.
 const ICON = { good: '<path d="M5 12l5 5 9-10"/>', warn: '<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>', bad: '<path d="M12 5v10M7 10l5 5 5-5"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>' };
-function renderInsights(box) {
+// The home notices, the same way for the screen and for "tem novidade no Início" after saving.
+export function homeInsights() {
   const G = goals(), idx = S.catIdx;
-  const list = insights({
+  return insights({
     today: todayISO(), months: monthKeys(), calc: calcMonth,
     cats: k => byCategory(txsOf(k), idx),
     fixed: k => expandSplits(txsOf(k)).reduce((a, t) => { const c = idx.get(t.category); return c && c.grp === 'dia' && c.recurring ? a + (t.source === 'conta' ? -t.amount : +t.amount) : a; }, 0),
@@ -144,6 +152,17 @@ function renderInsights(box) {
     goals: G, nextFatura: nextFatura(), budgets: budgetsOf(settings()), recurring: findRecurring(S.txs, monthKeys(), { idx }), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
   }).filter(x => x.id !== 'close');
+}
+// What the family saw last time (per family, on this device): what is new or changed goes to the top.
+const SEEN = () => 'fin.feed.' + (S.hh?.id || '');
+const readSeen = () => { try { return JSON.parse(localStorage.getItem(SEEN()) || 'null'); } catch (e) { return null; } };
+const FRESH = new Set(); // new in this session: stays marked until the app is opened again
+export function freshNotices() { const r = rankFeed(homeInsights(), readSeen()); return r.list.filter(x => r.fresh.includes(x.id)); }
+function renderInsights(box) {
+  const r = rankFeed(homeInsights(), readSeen());
+  r.fresh.forEach(id => FRESH.add(id)); try { localStorage.setItem(SEEN(), JSON.stringify(r.seen)); } catch (e) { /* private mode */ }
+  const list = [...r.list.filter(x => FRESH.has(x.id)), ...r.list.filter(x => !FRESH.has(x.id))];
+  if (list.some(x => FRESH.has(x.id))) track('inicio.novo_aviso');
   const cc = document.getElementById('closeCard'), m2c = monthToClose(monthKeys(), settings().closed || {}, todayISO());
   if (cc) {
     cc.innerHTML = m2c ? `<article class="closecard"><div><span class="tiny">Hora de fechar o mês</span><h3>${esc(mLong(m2c))}</h3><p class="small">Confira se falta algo e veja a retrospectiva. Leva poucos minutos.</p></div><button class="btn primary" type="button" id="goClose">Fechar ${esc(mLong(m2c).split(' ')[0])}</button></article>` : '';
@@ -151,10 +170,11 @@ function renderInsights(box) {
   }
   if (!list.length) { box.hidden = true; return; }
   box.hidden = false;
-  const shown = showAllInsights ? list : list.slice(0, 2);
-  box.innerHTML = shown.map(x => `<article class="insight ${x.tone}"><span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
+  const nFresh = list.filter(x => FRESH.has(x.id)).length, base = Math.max(2, Math.min(3, nFresh)), shown = showAllInsights ? list : list.slice(0, base);
+  const after = S.savedAt && Date.now() - S.savedAt < 30 * 60e3;
+  box.innerHTML = shown.map(x => `<article class="insight ${x.tone}${FRESH.has(x.id) ? ' fresh' : ''}">${FRESH.has(x.id) ? `<span class="newtag">${after ? 'Depois do que vocês lançaram' : 'Novo'}</span>` : ''}<span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
     <div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p>${x.action ? `<button class="linkbtn small" type="button" data-go='${esc(JSON.stringify(x.action.go))}'>${esc(x.action.label)} →</button>` : ''}</div></article>`).join('');
-  if (list.length > 2) { box.insertAdjacentHTML('beforeend', `<button class="linkbtn small" type="button" id="insMore">${showAllInsights ? 'Mostrar menos avisos' : 'Ver mais ' + (list.length - 2) + (list.length - 2 > 1 ? ' avisos' : ' aviso')}</button>`); box.querySelector('#insMore').onclick = () => { showAllInsights = !showAllInsights; renderInsights(box); }; }
+  if (list.length > base) { box.insertAdjacentHTML('beforeend', `<button class="linkbtn small" type="button" id="insMore">${showAllInsights ? 'Mostrar menos avisos' : 'Ver mais ' + (list.length - base) + (list.length - base > 1 ? ' avisos' : ' aviso')}</button>`); box.querySelector('#insMore').onclick = () => { showAllInsights = !showAllInsights; renderInsights(box); }; }
   box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
 }
 

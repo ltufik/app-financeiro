@@ -1,6 +1,11 @@
 import { S, reindex, closeDay, txsOf, pendingManual, latestCard, latestClosed, monthKeys, settings } from '../state.js';
 import { debtForTx, looksLikeDebtPayment } from '../lib/debt.js';
 import { applyAmortization, AMORT_CAT } from '../debtpay.js';
+// After saving: if the home has news because of it (a warning, a good one), say so.
+function homeNews() {
+  S.savedAt = Date.now();
+  setTimeout(() => import('./resumo.js').then(m => { const x = m.freshNotices().find(n => n.tone !== 'info'); if (x) toast(`${x.title}. Veja no Início.`, x.tone === 'good' ? 'ok' : 'info'); }).catch(() => {}), 3200);
+}
 import { track } from '../usage.js';
 import * as db from '../db.js';
 import { askJSON, aiErrorText } from '../ai.js';
@@ -377,12 +382,12 @@ function renderQ() {
     $('#qSave').disabled = true;
     try {
       const rows = Q.map(it => ({ household_id: S.hh.id, source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
-      const saved = await db.addTransactions(rows); track('lancar.salvar');
+      const saved = await db.addTransactions(rows); track('lancar.salvar'); homeNews();
       S.txs.push(...saved.map(t => ({ ...t, amount: +t.amount })));
       // Payments confirmed as amortization come off the financing's balance.
       for (let i = 0; i < Q.length; i++) if (Q[i].debtId && saved[i]) {
         const d = (settings().debts || []).find(x => x.id === Q[i].debtId);
-        try { const s = await applyAmortization(Q[i].debtId, { value: Q[i].amount, date: Q[i].date, txId: saved[i].id, note: Q[i].description }); toast(`Pronto! O saldo do ${d?.name || 'financiamento'} agora é ${brl(s)}.`); }
+        try { const s = await applyAmortization(Q[i].debtId, { value: Q[i].amount, date: Q[i].date, txId: saved[i].id, note: Q[i].description }); toast(`O saldo do ${d?.name || 'financiamento'} agora é ${brl(s)}.`); }
         catch (e) { toast('O lançamento foi salvo, mas não consegui abater do financiamento. Faça em Patrimônio e dívidas.'); }
       }
       toast(rows.length > 1 ? 'Lançamentos salvos' : 'Lançamento salvo'); box.hidden = true; Q = null; $('#qText').value = ''; $('#qStatus').textContent = ''; S.render(); docDone('salvo', rows.length > 1 ? rows.length + ' lançamentos' : 'Lançamento');
@@ -662,7 +667,7 @@ async function saveReview(pend) {
   try {
     const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending, ...(r.note ? { note: r.note } : {}) }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month) + (R.cmp?.mode === 'complement' ? ' (parte)' : '');
-    track('lancar.pdf_ok'); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
+    track('lancar.pdf_ok'); homeNews(); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
@@ -773,7 +778,7 @@ function renderSheet() {
       const rows = keep.map(x => ({ household_id: S.hh.id, source: x.source, month: x.month, date: x.date, day: x.day, description: x.description, amount: x.amount, category: x.category, pending: x.category === 'A classificar', manual: false }));
       const label = 'Planilha ' + SH.file.replace(/\.[^.]+$/, '');
       await db.importSheet(S.hh.id, rows, { label, file: SH.file, onStep: (n, t) => BUSY.set(`Salvando: ${n} de ${t}...`, 10 + 85 * n / t) });
-      track('lancar.planilha'); await S.reload();
+      track('lancar.planilha'); await S.reload(); homeNews();
       toast(`Planilha salva: ${rows.length} lançamentos.`); box.hidden = true; SH = null; $('#pdfLog').innerHTML = ''; S.render(); docDone('salvo', label);
     } catch (err) { toast('Não foi possível salvar. ' + db.errorText(err), 'err'); e.target.disabled = false; }
     finally { BUSY?.done(); BUSY = null; }

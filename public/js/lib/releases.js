@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -315,4 +315,12 @@ export const RELEASES = [
     'No Início, veja quanto foi de juros, IOF, anuidade e tarifas nos últimos 12 meses, e o que foi cobrado.',
     'Se aparecer juros ou multa na fatura, o app avisa: pagar a fatura inteira, no dia, evita esse custo.',
   ] }, addDocs: [DOC_TARIFAS] },
+  { id: 'r93', version: 'v93', at: '2026-11-05T01:58:00Z', backlog: ['retrospectiva_do_ano'], news: { id: 'n20261105c', title: 'Retrospectiva do ano e um Início que mostra o que mudou', items: [
+    'A retrospectiva do ano: quanto guardaram, o melhor mês, para onde mais foi o dinheiro e o que o banco cobrou. Em Início → Mais detalhes, e em dezembro num cartão no topo.',
+    'Os avisos agora ficam no topo do Início. O que é novo sobe e ganha a marca "Novo".',
+    'Lançou algo e surgiu um aviso? O app conta na hora.',
+  ] }, addDocs: [DOC_RETRO_INICIO], addBacklog: [
+    { id: 'inicio_dinamico', title: 'Início dinâmico: o que é novo sobe para o topo', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'O Início tinha muita coisa e não destacava o que mudou depois de lançar', cost: false, notes: 'Avisos no topo; novo ou mudou desde a última visita sobe com a marca; recado depois de salvar em Lançar.', from: [], where: 'Início' },
+    { id: 'risco_meta_do_mes', title: 'Aviso de risco de não bater a meta no mês (olhando para frente)', status: 'ideia', origin: 'Luiz', effort: 'M', problem: 'Hoje os avisos de meta olham o mês que passou; falta prever no meio do mês', cost: false, notes: 'Precisa de uma conta validada com dados reais (renda média, fatura prevista, fixas) antes de ir ao ar.', from: [] },
+  ] },
 ];

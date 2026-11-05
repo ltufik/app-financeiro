@@ -70,7 +70,7 @@ async function save(key, msg) {
     if (patch && res?.data?.items) { const d = D[key]; d.items.splice(0, d.items.length, ...res.data.items); for (const k in res.data) if (k !== 'items') d[k] = res.data[k]; }
     snap(key);
     const n = res?.loop?.replied || 0;
-    if (n) { toast(`Pronto! Recado automático enviado para ${n} ${n > 1 ? 'pessoas que pediram' : 'pessoa que pediu'}.`); FB = null; }
+    if (n) { toast(`Recado automático enviado para ${n} ${n > 1 ? 'pessoas que pediram' : 'pessoa que pediu'}.`); FB = null; }
     else if (msg) toast(msg);
     return res;
   } catch (e) { toast('Não foi possível salvar. ' + errText(e), 'err'); return null; }

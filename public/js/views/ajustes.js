@@ -356,7 +356,7 @@ export function render(el) {
       const de = checkDate(dt); if (de) return invalid($('#amd' + id), de);
       const d = ds.find(x => x.id === id);
       if (!await confirmInline(b, { title: 'Abater do financiamento?', text: `${brl(v)} saem do saldo do ${esc(d.name)} e o patrimônio líquido sobe o mesmo valor.`, yes: 'Sim, abater' })) return;
-      try { const s = await applyAmortization(id, { value: v, date: dt, note: 'registrado à mão' }); toast(`Pronto! O saldo do ${d.name} agora é ${brl(s)}.`); S.render(); } catch (err) { toast('Não foi possível abater agora. ' + db.errorText(err)); }
+      try { const s = await applyAmortization(id, { value: v, date: dt, note: 'registrado à mão' }); toast(`O saldo do ${d.name} agora é ${brl(s)}.`); S.render(); } catch (err) { toast('Não foi possível abater agora. ' + db.errorText(err)); }
     });
     renderPendingPayments($('#pDebtPay'), { onDone: () => S.render() });
   }

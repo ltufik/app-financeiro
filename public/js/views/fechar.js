@@ -2,7 +2,8 @@
 // fixed expenses that didn't show up, then the month's retrospective.
 import { S, settings, monthKeys, goals, closeDay, reindex } from '../state.js';
 import { track } from '../usage.js';
-import { checklist, retrospective, monthToClose } from '../lib/closing.js';
+import { checklist, retrospective, monthToClose, yearRetro } from '../lib/closing.js';
+import { feesOf } from '../lib/bankfees.js';
 import { brl, brl0, pct, esc, mLong, todayISO, isoToBr, norm, round2, cycleMonth } from '../lib/format.js';
 import * as db from '../db.js';
 import { notifyFamily } from '../push.js';
@@ -13,7 +14,42 @@ import { checkNumber, checkDate } from '../lib/validate.js';
 const ck = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>';
 const cap = s => s[0].toUpperCase() + s.slice(1);
 
+// "Retrospectiva de 2026": the year in one page, with a way to share how much the family put aside (no amounts).
+function renderYear(el, year) {
+  const r = yearRetro({ year, txs: S.txs, idx: S.catIdx, goals: goals(), fees: feesOf(S.txs.filter(t => t.month.startsWith(year + '-'))), closed: settings().closed || {} });
+  const MES = k => mLong(k).split(' de ')[0];
+  track('retro.ano');
+  el.innerHTML = `<button class="linkbtn small" type="button" data-back>← Voltar ao Início</button>
+  <section class="panel stack retro yretro">
+    <span class="tiny muted">Retrospectiva</span><h2>${year} ${/^fam[ií]lia\b/i.test(S.hh.name || '') ? 'da ' + esc(S.hh.name) : 'da família ' + esc(S.hh.name || '')}</h2>
+    ${!r.n ? '<p class="small">Ainda não há meses completos (com o extrato da conta) neste ano.</p>' : `
+    <p class="small muted">${r.n === 12 ? 'O ano inteiro' : `${r.n} ${r.n > 1 ? 'meses' : 'mês'} com o extrato da conta (${MES(r.months[0])} a ${MES(r.months[r.n - 1])})`}.</p>
+    <div class="retro-big ${r.res < 0 ? 'neg' : ''}"><span class="tiny">Guardaram</span><span class="num">${brl0(r.res)}</span><span class="small">${pct(r.tx)} do que ganharam${r.meta ? ` · a meta era ${pct(r.meta)}` : ''}</span></div>
+    <p class="small">${r.hitGoal ? 'Bateram a meta do ano. ' : r.res > 0 ? 'Sobrou dinheiro no ano. ' : 'O ano está no vermelho até aqui. '}${r.meta ? `Em ${r.good} de ${r.n} meses guardaram a meta ou mais.` : ''}</p>
+    <div class="row">${[['Receitas', r.receitas], ['Despesas', r.despesas], ['O banco cobrou', r.fees]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
+    <ul class="list small">
+      ${r.best ? `<li><span>Melhor mês</span><span class="amt">${MES(r.best.month)}: ${brl0(r.best.res)}</span></li>` : ''}
+      ${r.worst ? `<li><span>Mês mais difícil</span><span class="amt">${MES(r.worst.month)}: ${brl0(r.worst.res)}</span></li>` : ''}
+      ${r.big ? `<li><span>Maior gasto do dia a dia<br><span class="tiny muted">${esc(r.big.description)} (${MES(r.big.month)})</span></span><span class="amt">${brl0(r.big.value)}</span></li>` : ''}
+      <li><span>Lançamentos no ano</span><span class="amt">${r.count.toLocaleString('pt-BR')}</span></li>
+      <li><span>Meses fechados</span><span class="amt">${r.closedCount} de ${r.n}</span></li>
+    </ul>
+    ${r.top.length ? `<h4 class="small" style="margin:6px 0 0">Para onde mais foi</h4><ul class="list small">${r.top.map(t => `<li><span>${esc(t.name)}</span><span class="amt">${brl0(t.value)} <span class="tiny muted">${pct(t.share)}</span></span></li>`).join('')}</ul>` : ''}
+    <div class="rowbtn"><button class="btn primary" type="button" id="yrShare">Compartilhar</button></div>
+    <p class="tiny muted">Compartilha só a porcentagem guardada e o convite para o app, sem valores.</p>`}
+  </section>`;
+  el.querySelector('[data-back]').onclick = () => { S.closeMonth = null; S.go('resumo'); };
+  const sh = el.querySelector('#yrShare');
+  if (sh) sh.onclick = async () => {
+    const text = `Em ${year}, a nossa família ${r.res > 0 ? `guardou ${pct(r.tx)} do que ganhou` : 'descobriu para onde foi cada real'} com o Pra Onde Foi. Sem anotar nada e sem senha do banco: https://praondefoi.app.br`;
+    track('retro.compartilhar');
+    try { if (navigator.share) { await navigator.share({ title: `Retrospectiva ${year}`, text }); return; } await navigator.clipboard.writeText(text); toast('Texto copiado. É só colar no WhatsApp.'); }
+    catch (e) { if (e?.name !== 'AbortError') toast('Não foi possível compartilhar agora.'); }
+  };
+}
+
 export function render(el) {
+  if (String(S.closeMonth || '').startsWith('ano:')) return renderYear(el, S.closeMonth.slice(4));
   const st = settings(), closed = st.closed || {};
   const m = S.closeMonth && monthKeys().includes(S.closeMonth) ? S.closeMonth : monthToClose(monthKeys(), closed, todayISO());
   if (!m) {

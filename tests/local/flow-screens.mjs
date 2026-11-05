@@ -97,6 +97,8 @@ await page.evaluate(() => document.querySelectorAll('.cfm-wrap').forEach(x => x.
 await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09');
 await step('inicio', () => page.waitForSelector('.hero'));
 await step('inicio_mais', async () => { await page.evaluate(() => { const d = document.querySelector('#homeMore'); d.open = true; }); }, { scrollTo: '#homeMore' });
+await step('retro_ano', async () => { await page.click('#homeMore [data-retro]'); await page.waitForSelector('.yretro'); });
+await page.click('[data-back]').catch(() => {}); await page.waitForSelector('#homeMore').catch(() => {});
 await step('fechar', async () => { await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09'); const b = await page.$('#goClose'); if (!b) throw new Error('sem cartão de fechar'); await b.click(); await page.waitForSelector('#v-fechar:not([hidden])'); });
 await step('lancar', async () => { await page.click('[data-tab=lancar]'); await page.waitForSelector('.ltiles'); });
 await step('lancar_falar', async () => { await page.click('.ltile[data-mode="falar"]'); await page.fill('#qText', 'gastei 45 na padaria no pix'); await page.click('#qGo'); await page.waitForSelector('#qSave'); }, { scrollTo: '.ltiles' });

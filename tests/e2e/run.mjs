@@ -390,7 +390,7 @@ if (backup) {
   await page.selectOption('#monthSel', '2026-09');
   const ins = await txt('#insights');
   ok('início mostra insights do mês', (await page.$$('#insights .insight')).length >= 1, ins.slice(0, 200));
-  ok('início mostra só 2 avisos, com "ver mais"', (await page.$$('#insights .insight')).length === 2 && await page.isVisible('#insMore'));
+  ok('início mostra só 2 avisos (3 quando há novidade), com "ver mais"', (await page.$$('#insights .insight')).length <= 3 && (await page.$$('#insights .insight')).length >= 2 && await page.isVisible('#insMore'));
   ok('régua fica compacta depois de 40%', await page.isVisible('#stepsBox.regua-mini') && (await page.$$('#stepsBox .steps li')).length === 0);
   ok('para onde foi mostra as 5 maiores', (await page.$$eval('#catBars .catbar', b => b.filter(x => !x.hidden).length)) === 5 && await page.isVisible('#catMore'));
   ok('detalhes (poupança, patrimônio, meta) ficam recolhidos', await page.evaluate(() => !document.querySelector('#homeMore').open));
@@ -709,6 +709,16 @@ await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
+// Dynamic home: what is new since the last visit goes to the top, marked.
+await page.evaluate(() => localStorage.setItem('fin.feed.' + window.__db.households[0].id, '{}'));
+await page.click('[data-tab=extrato]'); await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
+ok('Início dinâmico: aviso novo no topo, marcado', !!(await page.$('#insights .insight.fresh:first-child .newtag')) && await page.evaluate(() => document.querySelector('#insights').compareDocumentPosition(document.querySelector('.hero')) & 4));
+// Year retrospective, from "Mais detalhes".
+await page.evaluate(() => { document.querySelector('#homeMore').open = true; }); await page.click('#homeMore [data-retro]');
+await page.waitForSelector('.yretro', { timeout: 5000 }).catch(() => {});
+ok('retrospectiva do ano: guardaram, melhor e pior mês, para onde mais foi', /Guardaram/.test(await txt('.yretro')) && /Melhor mês/.test(await txt('.yretro')) && /Mês mais difícil/.test(await txt('.yretro')) && (await page.$$('.yretro .list')).length === 2);
+if (shots) await page.screenshot({ path: path.join(shots, '03e-retro-ano.png'), fullPage: true });
+await page.click('.yretro ~ * [data-back], [data-back]');
 // product metrics (admin)
 await sec('metricas');
 await page.waitForSelector('#metricsBox .funnel');
