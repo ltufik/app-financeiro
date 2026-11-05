@@ -8,6 +8,7 @@ import { findRecurring } from '../public/js/lib/recurring.js';
 import { addM } from '../public/js/lib/format.js';
 import { feesOf } from '../public/js/lib/bankfees.js';
 import { sendPush } from './_webpush.js';
+import { forecast, sundayAsk } from '../public/js/lib/monthend.js';
 
 // Which preference turns each message on, and how many days before the same message can repeat.
 export const TYPES = { juros: 'gastos', tarifas: 'gastos', fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
@@ -123,6 +124,44 @@ export async function runReminder({ supabaseUrl, serviceKey, vapid, fetchImpl = 
       if (!r.ok) { out.errors++; continue; }
       out.sent++;
       await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ last_sent: { ...(s.last_sent || {}), lembrete: today } }) });
+    } catch (e) { out.errors++; }
+  }
+  return out;
+}
+
+// Sunday 19h in Brazil: the month forecast and the ask for the open card bill (one number from the bank app).
+// At most once a week per device; after two asks in a row with no answer, every other week (sundayAsk).
+export async function runForecastAsk({ supabaseUrl, serviceKey, vapid, fetchImpl = fetch, now = Date.now() }) {
+  const H = { apikey: serviceKey, 'content-type': 'application/json', ...(serviceKey.startsWith('sb_') ? {} : { authorization: `Bearer ${serviceKey}` }) };
+  const get = async path => { const r = await fetchImpl(`${supabaseUrl}/rest/v1/${path}`, { headers: H }); if (!r.ok) throw new Error(`supabase ${r.status} ${path.split('?')[0]}`); return r.json(); };
+  const { iso: today } = brToday(now), from = addM(today.slice(0, 7), -5);
+  const subs = (await get('push_subscriptions?select=*')).filter(s => s.prefs?.previsao !== false);
+  const byHh = {}; for (const s of subs) (byHh[s.household_id] ||= []).push(s);
+  const out = { families: 0, sent: 0, skipped: 0, removed: 0, errors: 0 };
+  for (const [hh, list] of Object.entries(byHh)) {
+    try {
+      const [household] = await get(`households?id=eq.${hh}&select=id,name,settings`);
+      if (!household) continue;
+      const mrows = await get(`members?household_id=eq.${hh}&select=user_id,display_name`);
+      const categories = await get(`categories?household_id=eq.${hh}&select=name,grp,financing,recurring`);
+      let txs = [];
+      for (let off = 0; ; off += 1000) {
+        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=source,month,date,day,description,amount,category,installment,manual,pending,splits&order=id&limit=1000&offset=${off}`);
+        txs = txs.concat(page.map(t => ({ ...t, amount: +t.amount }))); if (page.length < 1000) break;
+      }
+      const st = household.settings || {}, f = forecast({ txs, categories, settings: st, today });
+      if (!f || f.basis === 'fatura') { out.skipped += list.length; continue; }
+      out.families++;
+      for (const sub of list) {
+        if (!mrows.some(m => m.user_id === sub.user_id)) { out.skipped++; continue; }
+        const ask = sundayAsk(f, { name: mrows.find(m => m.user_id === sub.user_id)?.display_name, sent: sub.last_sent || {}, checkins: st.checkins, today });
+        if (!ask) { out.skipped++; continue; }
+        const r = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { ...ask.msg, url: linkFor('tela', { tab: 'resumo', sec: 'previsao' }) }, vapid, fetchImpl).catch(() => ({ ok: false }));
+        if (r.gone) { await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${sub.id}`, { method: 'DELETE', headers: H }); out.removed++; continue; }
+        if (!r.ok) { out.errors++; continue; }
+        out.sent++;
+        await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${sub.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ last_sent: { ...(sub.last_sent || {}), previsao: today, previsao_miss: ask.miss } }) });
+      }
     } catch (e) { out.errors++; }
   }
   return out;

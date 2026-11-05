@@ -12,6 +12,7 @@ export const PUSH_TYPES = [
   { key: 'familia', label: 'Família', hint: 'Na hora em que alguém entra na família, importa uma fatura ou fecha o mês.' },
   { key: 'semanal', label: 'Resumo da semana', hint: 'Aos domingos, quanto saiu nos últimos 7 dias.' },
   { key: 'novidades', label: 'Novidades do app', hint: 'Quando o app ganhar algo novo; se foi pedido seu, o aviso vem com o seu nome.' },
+  { key: 'previsao', label: 'Previsão do mês', hint: 'Aos domingos, às 19h: como o mês deve fechar e o pedido da fatura aberta (um número do app do banco).' },
   { key: 'lembrete', label: 'Lembrete do fim do dia', hint: 'Às 21h, só se você não lançou nada no dia: um toque abre o microfone.' },
 ];
 export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);

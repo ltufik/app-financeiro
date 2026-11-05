@@ -957,3 +957,40 @@ test('gastos do ano: IPVA pelo veículo do patrimônio e o estado dele', async (
   assert.equal(effectiveItems([{ kind: 'ipva', assetName: 'Carro vendido' }], [civic])[0].gone, true);
   assert.deepEqual(vehicleSuggestions([], [civic, { name: 'Scooter', value: 17000, tipo: 'moto' }]).map(x => x.asset.name), [civic.name], 'without a state there is no estimate yet');
 });
+
+import { forecast, forecastText, checkinTarget, sundayAsk, closeDateOf } from '../public/js/lib/monthend.js';
+test('month-end forecast: history, open bill check-in and the Sunday ask', () => {
+  const categories = [{ name: 'Salário', grp: 'renda' }, { name: 'Aluguel', grp: 'dia' }, { name: 'Mercado', grp: 'dia' }, { name: 'Obra', grp: 'fora' }];
+  const txs = [];
+  for (const k of ['2026-07', '2026-08', '2026-09']) txs.push(
+    { month: k, source: 'conta', amount: 10000, category: 'Salário' }, { month: k, source: 'conta', amount: -3000, category: 'Aluguel' },
+    { month: k, source: 'cartao', amount: 4000, category: 'Mercado' }, { month: k, source: 'cartao', amount: 1000, category: 'Obra' });
+  const settings = { goals: { savings: 0.2 }, cardCloseDay: 24 };
+  assert.equal(forecast({ txs: txs.filter(t => t.month === '2026-09'), categories, settings, today: '2026-10-10' }), null, 'needs two complete months');
+  const f = forecast({ txs, categories, settings, today: '2026-10-10' });
+  // income 10.000, account 3.000, bill 5.000 of which 80% counts -> 4.000; leftover 3.000; goal 2.000
+  assert.equal(f.res, 3000); assert.equal(f.meta, 2000); assert.equal(f.status, 'ok'); assert.equal(f.basis, 'historico');
+  assert.equal(f.usual, Math.round(5000 / 30 * 0.8)); assert.equal(f.daysLeft, 22);
+  assert.equal(f.perDay, Math.round(5000 / 30 * 0.8 + 1000 / 22));
+  // A high open bill on day 20 (4 days to close) moves the forecast: (7.000 + 4 days of usual pace) * 0.8
+  const g = forecast({ txs, categories, settings: { ...settings, checkins: [{ date: '2026-10-20', month: '2026-10', value: 7000 }] }, today: '2026-10-20' });
+  assert.equal(g.basis, 'checkin'); assert.equal(g.card, Math.round((7000 + 4 * 5000 / 30) * 0.8)); assert.equal(g.status, 'risco');
+  assert.match(forecastText(g).line, /Outubro pode fechar abaixo da meta: a previsão é sobrar R\$/); assert.match(forecastText(g).head, /^A previsão é sobrar R\$/);
+  const red = forecast({ txs, categories, settings: { ...settings, checkins: [{ date: '2026-10-20', month: '2026-10', value: 12000 }] }, today: '2026-10-20' });
+  assert.equal(red.status, 'vermelho'); assert.match(forecastText(red).title, /vermelho/);
+  // With the bill already in the app, it counts as it is.
+  const withBill = forecast({ txs: [...txs, { month: '2026-10', source: 'cartao', amount: 2000, category: 'Mercado' }], categories, settings, today: '2026-10-26' });
+  assert.equal(withBill.basis, 'fatura'); assert.equal(withBill.card, 2000);
+  // Which bill to ask about
+  assert.deepEqual(checkinTarget('2026-10-10', 24, false), { month: '2026-10', closed: false, closeDate: '2026-10-24' });
+  assert.deepEqual(checkinTarget('2026-10-26', 24, false), { month: '2026-10', closed: true, closeDate: '2026-10-24' });
+  assert.equal(checkinTarget('2026-10-26', 24, true).month, '2026-11');
+  assert.equal(closeDateOf('2026-02', 30), '2026-02-28');
+  // Sunday: asks with the name; not again within the week; after two unanswered asks, every other week.
+  const a = sundayAsk(f, { name: 'Luiz Tufik', sent: {}, checkins: [], today: '2026-10-11' });
+  assert.equal(a.msg.title, 'Luiz, quanto está a fatura aberta?'); assert.ok(a.msg.body.length <= 220); assert.equal(a.miss, 0);
+  assert.equal(sundayAsk(f, { sent: {}, checkins: [{ date: '2026-10-10', value: 1 }], today: '2026-10-11' }), null, 'just answered');
+  assert.equal(sundayAsk(f, { sent: { previsao: '2026-10-11', previsao_miss: 1 }, checkins: [], today: '2026-10-18' }), null, 'two in a row unanswered: skip a week');
+  assert.equal(sundayAsk(f, { sent: { previsao: '2026-10-11', previsao_miss: 1 }, checkins: [], today: '2026-10-25' }).miss, 2);
+  assert.equal(sundayAsk(f, { sent: { previsao: '2026-10-11', previsao_miss: 1 }, checkins: [{ date: '2026-10-12', value: 1 }], today: '2026-10-18' }).miss, 0, 'answered: back to weekly');
+});

@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('previsao_mes', 'Início', 'v102', 'ambos', 'Previsão do mês e a fatura aberta',
+    ['Abra o Início e veja o bloco "Previsão do mês".', 'Toque em "Informar a fatura aberta", digite o valor que aparece no app do banco e toque em Atualizar a previsão; confirme.', 'No domingo, às 19h, toque no aviso "quanto está a fatura aberta?".'],
+    'O bloco diz como o mês deve fechar e quanto cabe por dia. Depois de informar, aparece "Pronto!" com o novo valor por dia e o bloco diz "Com a fatura aberta de R$ … informada em …". O aviso de domingo abre o Início já no campo do valor.'),
   t('saldo_fin_hoje', 'Menu e telas', 'v101', 'ambos', 'Saldo do financiamento de hoje no Patrimônio',
     ['Menu ☰ → Patrimônio e dívidas → Financiamentos e dívidas.', 'Veja "Quanto falta hoje" e compare com "Como está cada financiamento hoje" logo abaixo.', 'Toque em Salvar patrimônio sem mexer em nada.'],
     'Os dois valores são iguais (já sem as parcelas e amortizações). Depois de salvar, o histórico do financiamento continua lá.'),

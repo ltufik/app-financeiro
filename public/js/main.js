@@ -57,6 +57,7 @@ async function openLink(l) {
   if (l.abrir === 'recado') { S.go('resumo'); await openReplyById(l.id); return; }
   if (l.abrir === 'avisos') { S.go('ajustes', '#pushBox', 'avisos'); return; }
   if (l.tab === 'lancar' && l.sec === 'pdf') { S.go('lancar'); lancar.openMode('pdf', true); return; }
+  if (l.tab === 'resumo' && l.sec === 'previsao') { S.openForecast = true; S.go('resumo', '#fcAmount'); return; }
   if (l.tab) S.go(l.tab, null, l.sec);
 }
 let inviting = false;

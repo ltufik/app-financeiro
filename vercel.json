@@ -40,6 +40,10 @@
     {
       "path": "/api/push-cron?tipo=lembrete",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/push-cron?tipo=previsao",
+      "schedule": "0 22 * * 0"
     }
   ],
   "redirects": [

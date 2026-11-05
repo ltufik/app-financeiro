@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -373,5 +373,12 @@ export const RELEASES = [
     'Em Patrimônio e dívidas, "Quanto falta hoje" já mostra o saldo com as parcelas e as amortizações descontadas. Antes ficava o valor digitado no começo.',
   ] }, addBacklog: [
     { id: 'saldo_fin_atualizado', title: 'Saldo do financiamento desatualizado na tabela do Patrimônio', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A tabela mostrava o saldo digitado no começo (R$ 480 mil), não o de hoje', cost: false, notes: 'O campo mostra o saldo de hoje; salvar sem mexer não apaga o histórico; digitar outro valor vale a partir de hoje.', from: [], where: 'Patrimônio e dívidas' },
+  ] },
+  { id: 'r102', version: 'v102', at: '2026-11-05T17:37:00Z', backlog: ['previsao_do_fim_do_mes_vai_sobrar', 'risco_meta_do_mes'], news: { id: 'n20261105l', title: 'Previsão do mês', items: [
+    'No Início, a previsão mostra como o mês deve fechar e quanto cabe por dia nas compras novas para bater a meta.',
+    'Para ficar mais certa, informe a fatura aberta: um número só, que aparece no app do banco. Aos domingos, às 19h, o app lembra (dá para desligar em Notificações).',
+  ] }, addDocs: [DOC_PREVISAO], addBacklog: [
+    { id: 'previsao_checkin_domingo', title: 'Pedido de domingo: a fatura aberta em um número', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'A previsão precisa de dados do mês sem pedir PDF parcial toda semana', cost: false, notes: 'Push domingo 19h com a previsão; a cada 2 semanas para quem não responde. Medir a taxa de resposta (meta: 30% ou mais).', from: [], where: 'Início; notificação' },
+    { id: 'previsao_nivel_semanas', title: 'Semanas com a fatura aberta em dia contam para o nível do ano', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'Dar motivo para manter o hábito de domingo', cost: false, notes: 'Combinado em 05/11.', from: [], where: 'Retrospectiva' },
   ] },
 ];

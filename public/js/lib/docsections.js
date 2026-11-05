@@ -214,3 +214,22 @@ SP jan, 5x, 3% (carro 4%, moto 2%) · RJ jan, 3x, 3% · MG fev, 3x, 3% · PR jan
 - IPTU: depende da cidade; exemplo de São Paulo 2026 (3% à vista, até 10x, a partir de fevereiro), editável.
 ## Depois
 - Ler o boleto do IPVA ou o carnê do IPTU (foto ou PDF) para trocar a estimativa pelo valor de verdade; FIPE automática pela marca e modelo; aviso no celular 60 dias antes.` };
+export const DOC_PREVISAO = { id: 'previsao_doc', title: 'Previsão do mês e o pedido de domingo', body: `Início → "Previsão do mês": como o mês deve fechar e quanto cabe por dia para bater a meta.
+## Como calcula (lib/monthend.js)
+- Base: os últimos 3 meses completos (com extrato e fatura); precisa de pelo menos 2.
+- Conta: o extrato do mês, se já veio; senão, a mediana dos meses anteriores (ou o já lançado, se for maior).
+- Cartão (conta pelo mês da fatura): a fatura do mês, se já veio; senão, a fatura aberta informada + o ritmo normal de compras novas até o fechamento; sem nada, a mediana das faturas. Só a parte que entra na sobra (o resto é extra ou não conta).
+- Meta: o percentual combinado em Metas sobre a renda fixa de sempre.
+- Por dia: o ritmo normal de compras novas (cartão, sem parcelas e assinaturas) mais a folga acima da meta dividida pelos dias que faltam. Se não dá para bater a meta, mostra quanto cabe para não fechar no vermelho.
+## A fatura aberta
+- Um número só, do app do banco (soma dos cartões). Fica em households.settings.checkins; não vira lançamento.
+- Se a fatura do mês já fechou e não veio o PDF, o app pergunta quanto veio.
+## Domingo às 19h
+- Push "Luiz, quanto está a fatura aberta?" com a previsão; o toque abre o Início no campo.
+- Não pede se informou nos últimos 2 dias ou se a fatura do mês já está no app.
+- Duas semanas seguidas sem resposta: passa a pedir a cada 2 semanas; respondeu, volta a ser semanal.
+- Liga e desliga em Notificações → Previsão do mês.
+## Validação com dados reais (abr. a set. de 2026)
+- Com a fatura aberta do dia 20, o resultado (acima da meta, abaixo ou no vermelho) bateu em 5 de 6 meses; o erro típico da sobra ficou entre R$ 0,4 mil e R$ 4 mil (abril, com IPVA e extras, errou mais).
+## Medir
+- Central: "Informou a fatura aberta" contra "Tocou no aviso de domingo". Abaixo de 30% de resposta, mudar o jeito de pedir.` };

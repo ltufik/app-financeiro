@@ -21,6 +21,7 @@ import { meter, pill } from '../ui.js';
 import { renderSteps } from '../steps.js';
 import { demoSummary, DEMO_FAMILY, DEMO_MONTH } from '../lib/demo.js';
 import { track } from '../usage.js';
+import { renderForecast } from '../forecast.js';
 
 let goalPreset = 0, showAllInsights = false;
 const moreOpen = () => { try { return localStorage.getItem('fin.home.more') === '1'; } catch (e) { return false; } };
@@ -70,6 +71,7 @@ export function render(el) {
     <div class="chips" style="margin-top:10px">${pill('Guardaram', a.tx, G.savings)}${fin ? pill('Sem contar o financiamento', a.tx2, G.savingsNoFin) : ''}${nMan ? `<span class="pill at">inclui ${nMan} lançamento${nMan > 1 ? 's' : ''} manual${nMan > 1 ? 'is' : ''}</span>` : ''}</div>
     <div class="row" style="margin-top:14px">${[['Receitas', a.E], ['Despesas', a.out], ['Extras (fora da sobra)', a.EX - a.DX]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
   </div>
+  <div class="panel" id="fcBox" hidden></div>
   <div id="closeCard"></div>
   <div id="retroCard"></div>
   <div class="panel" id="stepsBox" hidden></div>
@@ -129,6 +131,7 @@ export function render(el) {
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas'); });
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
+  if (!yr) renderForecast(el.querySelector('#fcBox'));
   // The year retrospective: on top while there is a new edition (retroNotice); always in "Mais detalhes".
   el.querySelectorAll('[data-retro]').forEach(b => b.onclick = () => import('../wrapped.js').then(m => m.openWrapped(b.dataset.retro)));
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);

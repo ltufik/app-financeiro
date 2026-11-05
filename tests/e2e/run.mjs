@@ -365,6 +365,13 @@ if (backup) {
   ok('importar o mesmo backup de novo não duplica (pula os meses)', (await txt('.cfm')).includes('Importar 0 lançamentos') && (await txt('.cfm')).includes('serão pulados'), (await txt('.cfm')).slice(0, 120));
   await page.click('.cfm [data-n]');
   await page.click('[data-tab=resumo]');
+  ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
+  await page.click('#fcMore summary'); await page.click('#fcSave');
+  ok('previsão: fatura aberta vazia é recusada com aviso', await page.isVisible('#fcBox .invalid, #fcBox [aria-invalid="true"]'));
+  await page.fill('#fcAmount', '30000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]');
+  ok('previsão: pede confirmação antes de usar a fatura aberta', (await txt('.cfm')).includes('R$ 30.000'));
+  await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+  ok('previsão: com a fatura aberta, a previsão muda e diz de quando é', (await txt('#fcBox')).includes('fatura aberta de R$ 30.000 informada em') && await page.evaluate(() => (window.__db.households[0].settings.checkins || []).some(c => c.value === 30000)), await txt('#fcBox'));
   await page.selectOption('#monthSel', '2026-09');
   const hero = await txt('#v-resumo .big');
   ok('setembro: sobra R$ 2.658,50', hero.includes('2.658,50'), hero);
@@ -716,6 +723,8 @@ await page.click('#pSave'); await page.waitForTimeout(300);
 ok('salvar sem mexer no saldo não apaga o histórico do financiamento', await page.evaluate(() => { const d = window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba'); return d.saldo === 480000 && d.log.some(e => e.value === 130000); }));
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
+ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')), await txt('#fcBox'));
+ok('previsão: com a fatura do mês no app, conta a fatura e não pede a aberta', (await txt('#fcBox')).includes('já no app') && !(await page.$('#fcSave')));
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
 // Gastos do ano: found in the history (the April Detran payment is the IPVA), confirmed, on the calendar.
@@ -1214,7 +1223,7 @@ ok('menu mostra "Desligadas neste celular" em Notificações', (await txt('#draw
 await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 await sec('avisos');
 await page.waitForSelector('#pOn');
-ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 7 && (await txt('#pushBox')).includes('Resumo da semana'));
+ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 8 && (await txt('#pushBox')).includes('Resumo da semana') && (await txt('#pushBox')).includes('Previsão do mês'));
 await page.uncheck('#pushBox [data-pt="semanal"]');
 await page.evaluate(() => { window.__permAnswer = 'default'; });
 await page.click('#pOn');
@@ -1240,7 +1249,7 @@ ok('"Não apareceu" (mas chegou): explica que são os ajustes do celular e abre 
 await shot('08b-avisos');
 await page.check('#pushBox [data-pt="semanal"]'); await page.waitForTimeout(150);
 ok('mudar o tipo de aviso salva na hora', await page.evaluate(() => window.__db.push_subscriptions[0].prefs.semanal === true));
-for (const k of ['dados', 'gastos', 'conquistas', 'familia', 'novidades', 'lembrete']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
+for (const k of ['dados', 'gastos', 'conquistas', 'familia', 'novidades', 'lembrete', 'previsao']) await page.uncheck('#pushBox [data-pt="' + k + '"]');
 await page.click('#pushBox [data-pt="semanal"]');
 ok('não deixa desmarcar todos os tipos', (await txt('#pMsg')).includes('pelo menos um') && await page.isChecked('#pushBox [data-pt="semanal"]'));
 await page.click('#pOff'); await page.waitForSelector('.cfm [data-y]');
