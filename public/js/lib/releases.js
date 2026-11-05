@@ -357,4 +357,10 @@ export const RELEASES = [
     { id: 'fipe_automatica', title: 'Valor FIPE automático pela marca e modelo do veículo', status: 'ideia', origin: 'Luiz', effort: 'M', problem: 'Hoje o valor do veículo sai do IPVA pago', cost: false, notes: 'Depende de um serviço de fora; ver custo e termos.', from: [] },
     { id: 'push_gastos_ano', title: 'Aviso no celular 60 dias antes dos gastos do ano', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'Hoje o aviso aparece no Início, não no celular', cost: false, notes: 'Levar o cálculo dos gastos do ano para a rotina diária do servidor.', from: [] },
   ] },
+  { id: 'r99', version: 'v99', at: '2026-11-05T15:14:00Z', backlog: [], news: { id: 'n20261105i', title: 'IPVA pelo carro e pelo estado dele', items: [
+    'Em Patrimônio, cada bem agora tem o tipo (imóvel, carro, moto) e o estado. O IPVA é calculado pelo valor do veículo e pela alíquota do estado onde ele é registrado.',
+    'Em Gastos do ano aparecem o valor do ano, o à vista com desconto e as parcelas do seu estado. Trocou de carro? É só atualizar o Patrimônio.',
+  ] }, updateDocs: [DOC_GASTOS_ANO], addBacklog: [
+    { id: 'ipva_pelo_veiculo', title: 'IPVA pelo veículo do patrimônio e pelo estado de registro', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'O IPVA supunha São Paulo; o carro do Luiz é registrado no ES (2%, 15% à vista em abril)', cost: false, notes: 'Tipo e estado de cada bem no Patrimônio (obrigatório para veículo); IPVA = valor × alíquota do estado; "De qual veículo?" no pagamento achado; sugestão de incluir os veículos sem IPVA.', from: [], where: 'Patrimônio; Gastos do ano' },
+  ] },
 ];

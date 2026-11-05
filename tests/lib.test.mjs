@@ -944,3 +944,16 @@ test('gastos do ano: pago no ano', async () => {
   const txs = [{ source: 'conta', month: '2026-04', amount: -2285.34, description: 'Detran' }, { source: 'conta', month: '2026-04', amount: -237.04, description: 'Detran' }, { source: 'conta', month: '2025-04', amount: -2100, description: 'Detran' }];
   assert.deepEqual(paidThisYear({ kind: 'ipva', from: 'Detran' }, txs, '2026-11-05'), { total: 2285.34, months: ['2026-04'] });
 });
+
+test('gastos do ano: IPVA pelo veículo do patrimônio e o estado dele', async () => {
+  const { guessAssetType, ipvaOf, effectiveItems, vehicleSuggestions } = await import('../public/js/lib/annual.js');
+  assert.equal(guessAssetType('Honda Civic Touring 2020'), 'carro'); assert.equal(guessAssetType('Scooter de São Paulo'), 'moto');
+  assert.equal(guessAssetType('Casa de Guaratuba'), 'imovel'); assert.equal(guessAssetType('Apartamento de São Paulo'), 'imovel');
+  const civic = { name: 'Honda Civic Touring 2020', value: 139000, tipo: 'carro', uf: 'ES' };
+  assert.deepEqual(ipvaOf(civic), { base: 2780, rate: 0.02, desc: 0.15, atOnce: 2363, parc: 6, start: 4 });
+  assert.equal(ipvaOf({ ...civic, uf: 'SP' }).base, 5560);
+  const [e] = effectiveItems([{ kind: 'ipva', name: 'IPVA', assetName: civic.name, mode: 'avista', value: 2285 }], [civic]);
+  assert.equal(e.value, 2780); assert.equal(e.uf, 'ES'); assert.equal(e.start, 4); assert.equal(e.desc, 0.15);
+  assert.equal(effectiveItems([{ kind: 'ipva', assetName: 'Carro vendido' }], [civic])[0].gone, true);
+  assert.deepEqual(vehicleSuggestions([], [civic, { name: 'Scooter', value: 17000, tipo: 'moto' }]).map(x => x.asset.name), [civic.name], 'without a state there is no estimate yet');
+});

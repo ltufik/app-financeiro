@@ -124,3 +124,35 @@ export function paidThisYear(item, txs, today) {
   const rows = txs.filter(t => String(t.month || '').startsWith(y + '-') && cost(t) > 0 && kindOfTx(t) === item.kind && (!who || payee(t) === who) && !(item.kind === 'ipva' && cost(t) < 400));
   return { total: r2(rows.reduce((a, t) => a + cost(t), 0)), months: [...new Set(rows.map(t => t.month))].sort() };
 }
+
+// Properties from Patrimônio: what kind (property, car, motorcycle) and where they are registered decide the tax.
+export const ASSET_TYPES = [['imovel', 'Imóvel'], ['carro', 'Carro'], ['moto', 'Moto'], ['outro', 'Outro']];
+export function guessAssetType(name) {
+  const p = plain(name);
+  if (/\b(casa|apartamento|apto|ap|terreno|sala|imovel|sitio|chacara|loja|kitnet|cobertura)\b/.test(p)) return 'imovel';
+  if (/\b(moto|motocicleta|scooter|biz|cg|titan|fan|pcx|lead|nmax|xre|bros)\b/.test(p)) return 'moto';
+  if (/\b(carro|civic|corolla|gol|onix|hb20|compass|renegade|hilux|polo|t-cross|tcross|creta|kicks|tracker|hr-v|hrv|fit|city|sandero|kwid|argo|mobi|toro|strada|ranger|s10|byd|dolphin|jeep|toyota|hyundai|fiat|chevrolet|volkswagen|vw|ford|renault|nissan|bmw|audi|mercedes|volvo|peugeot|citroen|kia|mitsubishi|suv|sedan|picape|caminhonete)\b/.test(p)) return 'carro';
+  return 'outro';
+}
+export const isVehicle = a => ['carro', 'moto'].includes(a?.tipo || guessAssetType(a?.name));
+// IPVA of a vehicle from its value and the rate of its state: a year, at once (with the state's discount), each installment.
+export function ipvaOf(asset) {
+  const r = IPVA_RULES[asset?.uf] || {}, rate = (a => a === 'moto' ? r.moto : r.car)(asset?.tipo || guessAssetType(asset?.name));
+  if (!rate || !(+asset?.value > 0)) return null;
+  const base = r2(+asset.value * rate);
+  return { base, rate, desc: r.desc || 0, atOnce: r2(base * (1 - (r.desc || 0))), parc: r.parc || 1, start: r.start || 1 };
+}
+// Items as they count today: an IPVA linked to a vehicle of Patrimônio takes its value, state and rules from it.
+export function effectiveItems(items, assets) {
+  return (items || []).map(it => {
+    const a = it.assetName ? (assets || []).find(x => x.name === it.assetName) : null;
+    if (it.kind !== 'ipva' || !a) return { ...it, asset: a || null, gone: !!it.assetName && !a };
+    const q = ipvaOf(a); if (!q) return { ...it, asset: a, uf: a.uf || it.uf };
+    return { ...it, asset: a, uf: a.uf, tipo: a.tipo || guessAssetType(a.name), value: q.base, desc: q.desc, start: q.start, maxParc: q.parc, parcelas: it.mode === 'parcelado' ? Math.min(it.parcelas || q.parc, q.parc) : q.parc, typed: true, fromAsset: q };
+  });
+}
+// Vehicles of Patrimônio without an IPVA item: "IPVA do Honda Civic (ES): R$ 2.780 por ano".
+export function vehicleSuggestions(items, assets, skip = []) {
+  const has = new Set((items || []).map(i => i.assetName).filter(Boolean)), sk = new Set(skip);
+  return (assets || []).filter(a => isVehicle(a) && a.uf && !has.has(a.name) && !sk.has('veic|' + a.name)).map(a => ({ key: 'veic|' + a.name, asset: a, q: ipvaOf(a) })).filter(x => x.q);
+}

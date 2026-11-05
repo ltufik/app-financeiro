@@ -695,6 +695,11 @@ await page.click('.cfm [data-y]'); await page.waitForTimeout(300);
 ok('juntar categorias: a outra some e o aviso diz para onde foram', await page.evaluate(() => !window.__db.categories.some(c => c.name === 'Mercados')) && /passa(ram|u) para Mercado/.test(await txt('#toast')), await txt('#toast'));
 // Patrimônio: the property is linked to its financing; an amortization comes off the balance and the equity goes up.
 await sec('patrimonio');
+await page.click('#pSave'); await page.waitForTimeout(200);
+ok('patrimônio pede o estado de registro do veículo', /Em que estado Honda Civic Touring 2020 é registrado\?/.test(await txt('#v-ajustes')));
+const vrow = async n => page.evaluate(n => [...document.querySelectorAll('[data-list="assets"] tr')].findIndex(tr => tr.querySelector('input[data-k="name"]')?.value === n), n);
+await page.selectOption(`[data-list="assets"] tr:nth-child(${(await vrow('Honda Civic Touring 2020')) + 1}) select[data-k="uf"]`, 'ES');
+await page.selectOption(`[data-list="assets"] tr:nth-child(${(await vrow('Scooter de São Paulo')) + 1}) select[data-k="uf"]`, 'SP');
 ok('patrimônio: a casa fica ligada ao financiamento dela', await page.$eval('[data-list="assets"] tr:nth-child(2) select[data-k="debtId"]', s => s.value) === 'guaratuba' && await page.$eval('[data-list="assets"] tr:nth-child(2) input[data-k="debt"]', i => i.readOnly && i.value.includes('480')));
 await page.selectOption('[data-list="debts"] tr:nth-child(1) select[data-k="sistema"]', 'sac'); await page.click('#pSave');
 ok('patrimônio: parcelas que diminuem (SAC) pedem os meses que faltam', (await txt('#v-ajustes')).includes('quantos meses faltam'));
@@ -711,10 +716,14 @@ ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox'
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
 // Gastos do ano: found in the history (the April Detran payment is the IPVA), confirmed, on the calendar.
 ok('Início: avisa os gastos que voltam todo ano', (await txt('#insights')).includes('Gastos que voltam todo ano') || (await page.evaluate(() => { document.querySelector('#insMore')?.click(); return true; }) && (await txt('#insights')).includes('Gastos que voltam todo ano')));
+// The car's state decides the IPVA: Patrimônio asks it (the Civic is registered in ES, 2%, 15% at once in April).
+ok('patrimônio salva tipo e estado de cada bem', await page.evaluate(() => { const a = window.__db.households[0].settings.assets; const c = a.find(x => /Civic/.test(x.name)), s = a.find(x => /Scooter/.test(x.name)), g = a.find(x => /Guaratuba/.test(x.name)); return c.tipo === 'carro' && c.uf === 'ES' && s.tipo === 'moto' && g.tipo === 'imovel'; }));
 await sec('gastos_ano');
+ok('gastos do ano: IPVA do carro pela alíquota do estado dele', /IPVA do Honda Civic Touring 2020 \(ES\): R\$ 2\.780 por ano \(2% de R\$ 139\.000\), ou R\$ 2\.363 à vista em abril com 15% de desconto/.test(await txt('#anBox')), (await txt('#anBox')).slice(0, 500));
 ok('gastos do ano: acha o IPVA (Detran de abril) e o IPTU parcelado', /Detran: R\$ 2\.285 em abril\. É o IPVA\?/.test(await txt('#anBox')) && /IPTU PMSP: R\$ \d[\d.]* em \d+ parcelas/.test(await txt('#anBox')), (await txt('#anBox')).slice(0, 400));
+ok('gastos do ano: o Detran pergunta de qual veículo, já com o Civic', await page.$eval('#anBox .dpay:has-text("Detran: R$ 2.285") select[data-veh]', s => s.value) === 'Honda Civic Touring 2020');
 await page.click('#anBox .dpay:has-text("Detran: R$ 2.285") [data-yes]'); await page.waitForTimeout(400);
-ok('gastos do ano: confirmado entra no calendário com quanto separar, sugestão e pago no ano', (await txt('#anBox')).includes('Nos próximos 6 meses') && /separem R\$ [\d.]+ por mês/.test(await txt('#anBox')) && /Sugestão: (à vista|parcelar)\./.test(await txt('#anBox')) && /✓ Em 2026: pago R\$ 2\.285 em abril/.test(await txt('#anBox')) && await page.evaluate(() => window.__db.households[0].settings.annual?.[0]?.kind === 'ipva'));
+ok('gastos do ano: confirmado entra no calendário com quanto separar, sugestão e pago no ano', (await txt('#anBox')).includes('Nos próximos 6 meses') && /separem R\$ [\d.]+ por mês/.test(await txt('#anBox')) && /Sugestão: (à vista|parcelar)\./.test(await txt('#anBox')) && /✓ Em 2026: pago R\$ 2\.285 em abril/.test(await txt('#anBox')) && /alíquota de ES \(2%\): R\$ 2\.780 por ano; à vista em abril, com 15% de desconto: R\$ 2\.363/.test(await txt('#anBox')) && await page.evaluate(() => window.__db.households[0].settings.annual?.[0]?.assetName === 'Honda Civic Touring 2020'), (await txt('#anBox')).slice(0, 900));
 if (shots) await page.screenshot({ path: path.join(shots, '05g-gastos-ano.png'), fullPage: true });
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(200);
 // Dynamic home: what is new since the last visit goes to the top, marked.

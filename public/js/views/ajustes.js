@@ -16,6 +16,7 @@ import { renderFeedback, renderDuvidas } from '../feedback.js';
 import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
 import { renderAnnual } from '../annual.js';
+import { ASSET_TYPES, UFS, guessAssetType, isVehicle, ipvaOf } from '../lib/annual.js';
 import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
 import { platformOf, phoneSteps, testOutcome } from '../lib/pushask.js';
@@ -24,7 +25,7 @@ import { mergeSuggestions, mergeSettings, pairKey } from '../lib/catmerge.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
-  assets: { title: 'Bens (imóveis, veículos)', hint: 'O que a família tem de valor. Se o bem ainda está sendo pago, ligue ao financiamento: o quanto falta passa a vir de lá e diminui a cada parcela e amortização.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto vale hoje', 'number'], ['debtId', 'Financiamento', 'debtlink'], ['debt', 'Quanto falta pagar', 'number']] },
+  assets: { title: 'Bens (imóveis, veículos)', hint: 'O que a família tem de valor. Para carro e moto, o estado onde estão registrados decide o IPVA (o app calcula pelo valor e pela alíquota do estado). Trocou de carro ou de casa? Atualize aqui. Se o bem ainda está sendo pago, ligue ao financiamento: o quanto falta passa a vir de lá e diminui a cada parcela e amortização.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto vale hoje', 'number'], ['tipo', 'Tipo', 'select', ASSET_TYPES], ['uf', 'Estado (registro do veículo, onde fica o imóvel)', 'select', [['', '—'], ...UFS.map(u => [u, u])]], ['debtId', 'Financiamento', 'debtlink'], ['debt', 'Quanto falta pagar', 'number']] },
   debts: { title: 'Financiamentos e dívidas', hint: 'O que vocês ainda estão pagando. Com os juros, a parcela e o tipo de parcela, o app abate o saldo sozinho todo mês (estimado) e cada amortização que vocês confirmarem. Os juros são ao ano: escreva 12 para 12%. Mudou o saldo à mão (pelo extrato do banco)? Ele passa a valer a partir de hoje.', cols: [['name', 'O que é', 'text'], ['saldo', 'Quanto falta pagar', 'number'], ['taxa', 'Juros ao ano (%)', 'pct'], ['parcela', 'Parcela por mês', 'number'], ['sistema', 'Tipo de parcela', 'select', SISTEMAS], ['meses', 'Meses que faltam', 'int']] },
   receivables: { title: 'Dinheiro que alguém está devolvendo', hint: 'Quando vocês emprestaram dinheiro e a pessoa devolve um pouco por mês. Ex.: emprestaram R$ 6.000 para um parente, que devolve R$ 500 por mês em 12 vezes. Se não tem data para acabar, deixe "Quantas vezes" em branco.', cols: [['name', 'Quem está devolvendo', 'text'], ['monthly', 'Quanto por mês', 'number'], ['start', 'Começou em (AAAA-MM)', 'text'], ['n', 'Quantas vezes', 'int']] },
   redemptions: { title: 'Dinheiro que vai entrar numa data', hint: 'Um valor grande que vocês já sabem que vem. Ex.: resgate da previdência, venda do carro.', cols: [['name', 'O que é', 'text'], ['value', 'Quanto', 'number'], ['month', 'Quando (AAAA-MM)', 'text']] },
@@ -287,7 +288,7 @@ export function render(el) {
   const drawList = k => {
     const d = LISTS[k], tb = el.querySelector(`[data-list="${k}"]`);
     tb.innerHTML = data[k].map((r, i) => `<tr>${d.cols.map(([key, , type, opts]) => { let v = r[key]; if (type === 'pct' && v != null && v !== '') v = +(v * 100).toFixed(4);
-      if (type === 'select') return `<td><select data-i="${i}" data-k="${key}" data-t="${type}">${opts.map(([o, l]) => `<option value="${o}"${(v || 'price') === o ? ' selected' : ''}>${l}</option>`).join('')}</select></td>`;
+      if (type === 'select') { if (key === 'tipo' && !v) v = r.tipo = guessAssetType(r.name); return `<td><select data-i="${i}" data-k="${key}" data-t="${type}">${opts.map(([o, l]) => `<option value="${o}"${(v || opts[0][0]) === o ? ' selected' : ''}>${l}</option>`).join('')}</select></td>`; }
       if (type === 'debtlink') { const cur = debtOfAsset(r, data.debts)?.id || ''; return `<td><select data-i="${i}" data-k="${key}" data-t="${type}"><option value="">Nenhum (quitado ou à parte)</option>${data.debts.filter(x => x.name).map(x => `<option value="${esc(x.id)}"${cur === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></td>`; }
       if (k === 'assets' && key === 'debt') { const ln = debtOfAsset(r, data.debts); if (ln) return `<td><input type="text" readonly data-i="${i}" data-k="${key}" data-t="linked" value="${esc('R$ ' + Math.round(debtNow(ln, todayISO()).saldo).toLocaleString('pt-BR'))}" title="Vem do financiamento"></td>`; }
       return `<td><input type="${type === 'text' ? 'text' : 'number'}" ${type !== 'text' ? 'step="any"' : ''} data-i="${i}" data-k="${key}" data-t="${type}" value="${esc(v ?? '')}"></td>`; }).join('')}<td><button class="chip" type="button" data-rm="${i}" aria-label="Remover">×</button></td></tr>`).join('') || `<tr><td colspan="${d.cols.length + 1}" class="tiny muted">Nada cadastrado.</td></tr>`;
@@ -328,6 +329,9 @@ export function render(el) {
       if (!(+r.parcela > 0) && +r.saldo > 0) return invalid(inp('parcela'), 'Informe a parcela por mês: com ela o app abate o saldo todo mês.');
       if (r.sistema === 'sac' && !(+r.meses > 0)) return invalid(inp('meses'), 'Nas parcelas que diminuem (SAC), diga quantos meses faltam.');
     }
+    // A car or motorcycle needs its state: the IPVA rate and calendar depend on it.
+    const atb = el.querySelector('[data-list="assets"]');
+    for (let i = 0; i < data.assets.length; i++) { const a = data.assets[i]; if (a.name && isVehicle(a) && !a.uf) return invalid(atb.querySelector(`[data-i="${i}"][data-k="uf"]`), `Em que estado ${a.name} é registrado? O IPVA depende disso (a alíquota vai de 1% a 4%).`); }
     // A property still being paid without its financing: create it and ask for the data.
     for (let i = 0; i < data.assets.length; i++) {
       const a = data.assets[i];

@@ -188,6 +188,11 @@ export const DOC_HISTORIAS = { id: 'retro_historias_doc', title: 'Retrospectiva 
 - Sem internet, aparece a ilustração do app no lugar.` };
 
 export const DOC_GASTOS_ANO = { id: 'gastos_ano_doc', title: 'Gastos do ano: IPVA, IPTU e escola', body: `Menu ☰ → Família e metas → Gastos do ano. O Início avisa quando acha pagamentos que voltam todo ano e, depois, quando os próximos 3 meses têm R$ 500 ou mais deles.
+## Veículos e imóveis vêm do Patrimônio (v99)
+- Cada bem tem tipo (imóvel, carro, moto, outro; o app sugere pelo nome) e estado (onde o veículo é registrado, onde o imóvel fica). Carro ou moto sem estado não salva: o IPVA depende dele. Trocou de carro ou de casa? Atualiza no Patrimônio e os gastos do ano acompanham.
+- IPVA de cada veículo = valor do Patrimônio × alíquota do estado; à vista com o desconto do estado no mês de início; ou nas parcelas do estado. Ex.: Honda Civic de R$ 139 mil no ES (2%): R$ 2.780 no ano, R$ 2.363 à vista em abril (15%), ou 6x de R$ 463.
+- Veículos do Patrimônio sem IPVA na lista aparecem como "Incluir nos gastos do ano?" (ou "Não paga IPVA", para isentos). Pagamento ao Detran achado no histórico pergunta "De qual veículo?", já com o mais provável.
+- O estado usa a tabela FIPE do fim do ano anterior, por isso o pago pode diferir um pouco do calculado pelo valor de hoje.
 ## Como o app acha
 - Nos últimos 12 meses, pelo recebedor (o banco não escreve "IPVA"): Detran, Sefaz, Secretaria da Fazenda, DARE, GARE = IPVA (só pagamentos de R$ 400 ou mais; os menores são taxas ou multas); licenciamento; IPTU, prefeitura, tributos municipais = IPTU; matrícula, material e uniforme escolar. Ministério da Fazenda, Receita Federal e DAS ficam de fora (impostos federais e de empresa).
 - A família confirma: "Sim, volta todo ano" (com o estado do veículo) ou "Não". Valor alto de prefeitura pago uma vez (ex.: ITBI de R$ 18 mil) vem marcado "pode ter sido só uma vez".
@@ -205,7 +210,7 @@ export const DOC_GASTOS_ANO = { id: 'gastos_ano_doc', title: 'Gastos do ano: IPV
 | A sobra média dos últimos 3 meses, até o mês do pagamento, cobre o valor à vista | Separar por mês e pagar à vista |
 | Pagar à vista baixaria a reserva | Parcelar |
 ## Regras do IPVA 2026 (início, parcelas, desconto à vista)
-SP jan, 5x, 3% (carro 4%, moto 2%) · RJ jan, 3x, 3% · MG fev, 3x, 3% · PR jan, 5x, 6% (1,9%) · SC jan, 3x · RS jan, 3% · DF fev, 6x, 10% · ES abr, 6x, 15% · BA fev, 5x, 15% · GO jan, 10x, 8% · PE fev, 10x, 7% · CE jan, 5x, 10% · MS jan, 5x, 15% · AM jan, 3x, 10% · AP mar, 6x, 20% · MA fev, 3x, 10% · MT mar, 8x, 5% · PA jan, 6x, 5% · PB mar, 3x, 10% · PI jan, 3x, 15% · RN mar, 7x · RR fev, 10x, 10% · SE mar, 10% · AC 5x, 10% · RO 5%. Fontes: Agência SP (Sefaz-SP), Terra e Exame (dez/2025–jan/2026). Rever todo ano.
+SP jan, 5x, 3% (carro 4%, moto 2%) · RJ jan, 3x, 3% · MG fev, 3x, 3% · PR jan, 5x, 6% (1,9%) · SC jan, 3x · RS jan, 3% · DF fev, 6x, 10% · ES abr, 6x (abr a set), 15% na cota única até a 1ª data (carro 2%, moto 1%; Detran-ES) · BA fev, 5x, 15% · GO jan, 10x, 8% · PE fev, 10x, 7% · CE jan, 5x, 10% · MS jan, 5x, 15% · AM jan, 3x, 10% · AP mar, 6x, 20% · MA fev, 3x, 10% · MT mar, 8x, 5% · PA jan, 6x, 5% · PB mar, 3x, 10% · PI jan, 3x, 15% · RN mar, 7x · RR fev, 10x, 10% · SE mar, 10% · AC 5x, 10% · RO 5%. Fontes: Agência SP (Sefaz-SP), Terra e Exame (dez/2025–jan/2026). Rever todo ano.
 - IPTU: depende da cidade; exemplo de São Paulo 2026 (3% à vista, até 10x, a partir de fevereiro), editável.
 ## Depois
 - Ler o boleto do IPVA ou o carnê do IPTU (foto ou PDF) para trocar a estimativa pelo valor de verdade; FIPE automática pela marca e modelo; aviso no celular 60 dias antes.` };
