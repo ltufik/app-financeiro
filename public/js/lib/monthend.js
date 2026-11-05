@@ -3,6 +3,7 @@
 // person types (a "check-in": the number shown in the bank app). Pure, tested in tests/lib.test.mjs.
 import { catIndex, monthCalc, expandSplits, schedule } from './calc.js';
 import { addM, cycleMonth } from './format.js';
+import { pendingAmortizations } from './debt.js';
 
 const r0 = v => Math.round(v);
 const median = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return !n ? 0 : n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
@@ -16,8 +17,9 @@ export const closeDateOf = (k, closeDay = 24) => `${k}-${String(Math.min(+closeD
 // Which bill the check-in asks about today: the open one; but when this month's bill already closed and is not in
 // the app yet, that one ("quanto veio a fatura"), because it decides this month.
 export function checkinTarget(today, closeDay = 24, billImported = false) {
-  const cur = today.slice(0, 7), open = cycleMonth(today, closeDay);
+  const cur = today.slice(0, 7); let open = cycleMonth(today, closeDay);
   if (open !== cur && !billImported) return { month: cur, closed: true, closeDate: closeDateOf(cur, closeDay) };
+  if (open === cur && billImported) open = addM(cur, 1); // the bill closed earlier than the day set in Metas
   return { month: open, closed: false, closeDate: closeDateOf(open, closeDay) };
 }
 
@@ -27,7 +29,11 @@ export function checkinTarget(today, closeDay = 24, billImported = false) {
     checkin, card, conta, entradas, hist: [months used] }
   settings: households.settings ({ goals: {savings}, cardCloseDay, checkins: [{date, month, value}] }).
 */
-export function forecast({ txs, categories, settings = {}, today }) {
+export function forecast({ txs: all, categories, settings = {}, today }) {
+  // A big payment that looks like paying off a financing and is not confirmed yet does not count: once confirmed it
+  // goes to "Amortização de financiamento" (only the equity changes), so it never is the month's spending.
+  const pend = new Set(pendingAmortizations(all, settings.debts || [], settings.debtSkip).map(x => x.tx.id));
+  const txs = pend.size ? all.filter(t => !pend.has(t.id)) : all;
   const idx = catIndex(categories), cur = today.slice(0, 7), day = +today.slice(8, 10), cd = +settings.cardCloseDay || 24;
   const of = k => txs.filter(t => t.month === k), has = (k, src) => txs.some(t => t.month === k && t.source === src && !t.manual);
   const hist = [...new Set(txs.map(t => t.month))].filter(k => k < cur && has(k, 'conta') && has(k, 'cartao')).sort().slice(-3);
@@ -59,9 +65,18 @@ export function forecast({ txs, categories, settings = {}, today }) {
   // the days left. Fixed bills are already in the forecast, so this is what fits for the day-to-day.
   const res = E - D - card, daysLeft = lastDayOf(cur) - day + 1, usual = pace * share;
   const perDay = Math.max(0, usual + (daysLeft > 0 ? (res - meta) / daysLeft : 0)), perDayZero = Math.max(0, usual + (daysLeft > 0 ? res / daysLeft : 0));
+  // This month's bill is already in (it closed): the open one is next month's. The check-in then forecasts that bill.
+  let nextBill = null;
+  if (basis === 'fatura') {
+    // The real closing day shows in the bill itself: the day after its last purchase in that month (installments aside).
+    const lastBuy = Math.max(0, ...of(cur).filter(t => t.source === 'cartao' && !t.manual && !t.installment && /^\d{2}\/\d{2}$/.test(t.day || '') && t.day.slice(3) === cur.slice(5)).map(t => +t.day.slice(0, 2)));
+    const nm = cycleMonth(today, cd) > cur ? cycleMonth(today, cd) : addM(cur, 1), nc = closeDateOf(nm, lastBuy ? Math.min(28, lastBuy + 1) : cd);
+    const ckn = (settings.checkins || []).filter(c => c && c.month === nm && +c.value >= 0 && c.date <= today).sort((a, b) => a.date < b.date ? -1 : 1).pop() || null;
+    nextBill = { month: nm, closeDate: nc, usual: r0(medTotal), checkin: ckn, value: ckn ? r0(+ckn.value + pace * Math.max(0, dayDiff(ckn.date, nc))) : null };
+  }
   const status = res >= meta ? 'ok' : res >= 0 ? 'risco' : 'vermelho';
   return { month: cur, res: r0(res), meta: r0(meta), renda: r0(renda), goal, status, perDay: r0(perDay), perDayZero: r0(perDayZero), usual: r0(usual), daysLeft, basis, checkin: ck, closeDate,
-    card: r0(card), conta: r0(D), entradas: r0(E), hist };
+    card: r0(card), conta: r0(D), entradas: r0(E), hist, nextBill, ignored: pend.size };
 }
 
 // The text of the forecast, the same on Início, in the toast after a check-in and in the Sunday push.
@@ -77,7 +92,9 @@ export function forecastText(f) {
     : `Para não fechar no vermelho, segure as compras novas até o fim do mês: faltam ${R(-f.res)}.`;
   // On screen the title already says it: the line under it only carries the numbers.
   const short = f.status === 'ok' ? head : f.status === 'risco' ? `A previsão é sobrar ${R(f.res)}, e a meta é ${R(f.meta)}.` : `A previsão é faltar ${R(-f.res)}.`;
-  return { line: head, head: short, title: f.status === 'ok' ? `${M} no caminho da meta` : f.status === 'risco' ? `${M} pode fechar abaixo da meta` : `${M} pode fechar no vermelho`, day };
+  const nb = f.nextBill, nm = nb && MES[+nb.month.slice(5) - 1];
+  const next = nb?.value != null ? `Fatura de ${nm}: com ${R(nb.checkin.value)} até ${nb.checkin.date.slice(8, 10)}/${nb.checkin.date.slice(5, 7)}, deve fechar em uns ${R(nb.value)} (o normal de vocês é ${R(nb.usual)}).` : '';
+  return { next, line: head, head: short, title: f.status === 'ok' ? `${M} no caminho da meta` : f.status === 'risco' ? `${M} pode fechar abaixo da meta` : `${M} pode fechar no vermelho`, day };
 }
 
 // Sunday 19h push: whether to ask this device, and the message. Asks at most once a week; after two asks in a row

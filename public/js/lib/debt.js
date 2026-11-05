@@ -65,20 +65,22 @@ export function debtOfAsset(asset, debts = []) {
 const PAY = /amortiz|financiament|quita[cç]|saldo devedor|abatimento|habitacional|\bsfh\b|cr[eé]dito imobili/;
 export function debtForTx(tx, debts = []) {
   if (!debts.length || !tx) return null;
-  const text = plain(`${tx.description || ''} ${tx.note || ''}`), words = new Set(text.split(/[^a-z0-9]+/));
+  const text = plain(`${tx.description || ''} ${tx.note || ''} ${tx.category || ''}`), words = new Set(text.split(/[^a-z0-9]+/));
   const byName = debts.find(d => nameWords(d.name).some(x => words.has(x)));
   if (byName && (PAY.test(text) || /parcela|pagamento|pix|ted|transf/.test(text))) return byName;
   if (PAY.test(text)) return byName || (debts.length === 1 ? debts[0] : null);
   return null;
 }
-export const looksLikeDebtPayment = tx => PAY.test(plain(`${tx?.description || ''} ${tx?.note || ''}`));
+export const looksLikeDebtPayment = tx => PAY.test(plain(`${tx?.description || ''} ${tx?.note || ''} ${tx?.category || ''}`));
 
 // Extra payments still to confirm: money out, much bigger than one installment, that looks like paying a financing,
 // not yet linked (log txId) nor dismissed.
 export function pendingAmortizations(txs = [], debts = [], dismissed = []) {
   const linked = new Set(debts.flatMap(d => (d.log || []).map(e => e.txId).filter(Boolean))), skip = new Set(dismissed || []);
   return txs.filter(t => t.source === 'conta' && +t.amount < 0 && !linked.has(t.id) && !skip.has(t.id) && looksLikeDebtPayment(t))
-    .map(t => ({ tx: t, debt: debtForTx(t, debts) })).filter(x => x.debt && Math.abs(+x.tx.amount) > Math.max(1000, 1.5 * (+x.debt.parcela || 0)));
+    .map(t => ({ tx: t, debt: debtForTx(t, debts) }))
+    // Not sure which financing (two of them, the text names neither): still ask, and the person picks.
+    .filter(x => Math.abs(+x.tx.amount) > Math.max(1000, 1.5 * (x.debt ? +x.debt.parcela || 0 : Math.max(0, ...debts.map(d => +d.parcela || 0)))));
 }
 
 // The investments, brought to today with the family's yearly return (they are worth more than on the statement date).

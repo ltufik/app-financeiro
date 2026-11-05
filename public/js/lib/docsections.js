@@ -222,6 +222,8 @@ export const DOC_PREVISAO = { id: 'previsao_doc', title: 'Previsão do mês e o 
 - Meta: o percentual combinado em Metas sobre a renda fixa de sempre.
 - Por dia: o ritmo normal de compras novas (cartão, sem parcelas e assinaturas) mais a folga acima da meta dividida pelos dias que faltam. Se não dá para bater a meta, mostra quanto cabe para não fechar no vermelho.
 ## A fatura aberta
+- Se a fatura do mês já está no app, o pedido é da fatura aberta do mês seguinte (dia de fechamento tirado da última compra da fatura) e a previsão mostra quanto ela deve fechar.
+- Pagamento que parece amortização e ainda não foi confirmado não entra na previsão.
 - Um número só, do app do banco (soma dos cartões). Fica em households.settings.checkins; não vira lançamento.
 - Se a fatura do mês já fechou e não veio o PDF, o app pergunta quanto veio.
 ## Domingo às 19h

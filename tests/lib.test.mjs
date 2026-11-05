@@ -849,6 +849,11 @@ test('financiamento: liga o bem e reconhece o comprovante', () => {
   const txs = [{ id: 't1', source: 'conta', amount: -130000, description: 'Amortização Guaratuba' }, { id: 't2', source: 'conta', amount: -5600, description: 'Parcela financiamento Guaratuba' }, { id: 't3', source: 'conta', amount: -90000, description: 'Amortização SP' }];
   assert.deepEqual(pendingAmortizations(txs, debts, ['t3']).map(x => [x.tx.id, x.debt.id]), [['t1', 'g']]);
   assert.deepEqual(pendingAmortizations(txs, [{ ...debts[0], log: [{ kind: 'amortizacao', value: 130000, txId: 't1' }] }, debts[1]], ['t3']), []);
+  // Real case: the text says Bertioga, the category says Guaratuba; the regular installment is not asked.
+  const real = [{ id: 'r1', source: 'conta', amount: -99000, description: 'PIX financiamento Bertioga (Caixa)', category: 'Guaratuba: financiamento (Caixa)' }, { id: 'r2', source: 'conta', amount: -5600, description: 'PIX financiamento Bertioga (Caixa)', category: 'Guaratuba: financiamento (Caixa)' }];
+  assert.deepEqual(pendingAmortizations(real, debts).map(x => [x.tx.id, x.debt.id]), [['r1', 'g']]);
+  // Names neither: still asked, without a financing (the person picks).
+  assert.deepEqual(pendingAmortizations([{ id: 'r3', source: 'conta', amount: -99000, description: 'Amortização Caixa' }], debts).map(x => [x.tx.id, x.debt]), [['r3', null]]);
   const iv = investNow({ total: 100000, date: '2025-11-04' }, 0.1, '2026-11-04'); assert.equal(iv.value, 110000); assert.ok(iv.estimated);
   assert.equal(investNow({ total: 100000, date: '2026-11-04' }, 0.1, '2026-11-04').estimated, false);
 });
@@ -981,6 +986,14 @@ test('month-end forecast: history, open bill check-in and the Sunday ask', () =>
   // With the bill already in the app, it counts as it is.
   const withBill = forecast({ txs: [...txs, { month: '2026-10', source: 'cartao', amount: 2000, category: 'Mercado' }], categories, settings, today: '2026-10-26' });
   assert.equal(withBill.basis, 'fatura'); assert.equal(withBill.card, 2000);
+  // Bill already in (closed early): the open one is next month's; a check-in forecasts it.
+  const early = forecast({ txs: [...txs, { month: '2026-10', source: 'cartao', amount: 2000, category: 'Mercado', day: '03/10' }], categories, settings: { ...settings, checkins: [{ date: '2026-10-05', month: '2026-11', value: 3000 }] }, today: '2026-10-05' });
+  assert.equal(early.nextBill.month, '2026-11'); assert.equal(early.nextBill.closeDate, '2026-11-04'); assert.equal(early.nextBill.value, Math.round(3000 + 30 * 5000 / 30));
+  assert.match(forecastText(early).next, /^Fatura de novembro: com R\$ 3\.000 até 05\/10, deve fechar em uns R\$ /);
+  assert.equal(checkinTarget('2026-10-05', 24, true).month, '2026-11');
+  // An unconfirmed payoff of a financing (R$ 99 mil) does not count as the month's spending.
+  const payoff = forecast({ txs: [...txs, { id: 'x', month: '2026-10', source: 'conta', amount: -99000, description: 'PIX financiamento Bertioga (Caixa)', category: 'Guaratuba: financiamento (Caixa)' }], categories, settings: { ...settings, debts: [{ id: 'g', name: 'Financiamento de Guaratuba', parcela: 5600 }] }, today: '2026-10-10' });
+  assert.equal(payoff.res, 3000); assert.equal(payoff.ignored, 1);
   // Which bill to ask about
   assert.deepEqual(checkinTarget('2026-10-10', 24, false), { month: '2026-10', closed: false, closeDate: '2026-10-24' });
   assert.deepEqual(checkinTarget('2026-10-26', 24, false), { month: '2026-10', closed: true, closeDate: '2026-10-24' });

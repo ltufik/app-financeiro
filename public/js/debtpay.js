@@ -44,10 +44,12 @@ export function renderPendingPayments(box, { onDone } = {}) {
   box.hidden = !list.length; if (!list.length) { box.innerHTML = ''; return; }
   box.innerHTML = `<h3>Pagamentos que parecem amortização</h3>
     ${list.map(({ tx, debt }, i) => `<div class="dpay" data-i="${i}"><p class="small"><strong>${brl0(Math.abs(tx.amount))}</strong> em ${brD(tx.date)}: ${esc(tx.description)}${tx.note ? `<br><span class="tiny muted">${esc(tx.note)}</span>` : ''}</p>
-      <p class="small">Isso abate o <strong>${esc(debt.name)}</strong>?</p>
+      ${debt ? `<p class="small">Isso abate o <strong>${esc(debt.name)}</strong>?</p>` : `<label class="f small">Isso abate qual financiamento?<select data-pick="${i}">${(settings().debts || []).map(d => `<option value="${esc(d.id)}">${esc(d.name)}</option>`).join('')}</select></label>`}
       <div class="rowbtn"><button class="btn primary" type="button" data-yes="${i}">Sim, abater</button><button class="btn" type="button" data-no="${i}">Não é</button></div></div>`).join('')}`;
   box.querySelectorAll('[data-yes]').forEach(b => b.onclick = async () => {
-    const { tx, debt } = list[+b.dataset.yes], before = debtsNow().find(d => d.id === debt.id)?.now.saldo || 0;
+    const { tx } = list[+b.dataset.yes], pick = box.querySelector(`[data-pick="${b.dataset.yes}"]`)?.value;
+    const debt = list[+b.dataset.yes].debt || (settings().debts || []).find(d => d.id === pick); if (!debt) return;
+    const before = debtsNow().find(d => d.id === debt.id)?.now.saldo || 0;
     if (!await confirmInline(b, { title: 'Abater do financiamento?', text: `${brl0(Math.abs(tx.amount))} saem do saldo do ${esc(debt.name)} (de ${brl0(before)} para ${brl0(Math.max(0, before - Math.abs(tx.amount)))}) e o patrimônio líquido sobe o mesmo valor. O lançamento passa para "${AMORT_CAT}", fora da sobra do mês.`, yes: 'Sim, abater' })) return;
     b.disabled = true;
     try { const s = await applyAmortization(debt.id, { value: tx.amount, date: tx.date, txId: tx.id, note: tx.note || tx.description }); toast(`O saldo do ${debt.name} agora é ${brl0(s)}.`); onDone?.(); }

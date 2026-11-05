@@ -724,7 +724,9 @@ ok('salvar sem mexer no saldo não apaga o histórico do financiamento', await p
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')), await txt('#fcBox'));
-ok('previsão: com a fatura do mês no app, conta a fatura e não pede a aberta', (await txt('#fcBox')).includes('já no app') && !(await page.$('#fcSave')));
+ok('previsão: com a fatura do mês no app, conta a fatura e pede a aberta do mês seguinte', (await txt('#fcBox')).includes('já no app') && /Informar a fatura aberta de (dezembro|janeiro)/.test(await txt('#fcMore summary')), await txt('#fcBox'));
+await page.click('#fcMore summary'); await page.fill('#fcAmount', '5000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+ok('previsão: a fatura aberta do mês seguinte vira a previsão dessa fatura', /Fatura de (dezembro|janeiro): com R\$ 5\.000 até/.test(await txt('#fcBox')), await txt('#fcBox'));
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
 // Gastos do ano: found in the history (the April Detran payment is the IPVA), confirmed, on the calendar.

@@ -146,11 +146,11 @@ export async function runForecastAsk({ supabaseUrl, serviceKey, vapid, fetchImpl
       const categories = await get(`categories?household_id=eq.${hh}&select=name,grp,financing,recurring`);
       let txs = [];
       for (let off = 0; ; off += 1000) {
-        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=source,month,date,day,description,amount,category,installment,manual,pending,splits&order=id&limit=1000&offset=${off}`);
+        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=id,source,month,date,day,description,note,amount,category,installment,manual,pending,splits&order=id&limit=1000&offset=${off}`);
         txs = txs.concat(page.map(t => ({ ...t, amount: +t.amount }))); if (page.length < 1000) break;
       }
       const st = household.settings || {}, f = forecast({ txs, categories, settings: st, today });
-      if (!f || f.basis === 'fatura') { out.skipped += list.length; continue; }
+      if (!f) { out.skipped += list.length; continue; }
       out.families++;
       for (const sub of list) {
         if (!mrows.some(m => m.user_id === sub.user_id)) { out.skipped++; continue; }

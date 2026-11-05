@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('previsao_fatura_seguinte', 'Início', 'v103', 'ambos', 'Previsão com a fatura do mês já no app e amortização',
+    ['Com a fatura do mês já enviada, abra o Início e toque em "Informar a fatura aberta de (mês seguinte)".', 'Digite o valor que aparece no app do banco e confirme.', 'No Início, em "Pagamentos que parecem amortização", confirme o pagamento de R$ 99 mil no financiamento certo.'],
+    'Aparece "Fatura de (mês): com R$ … até …, deve fechar em uns R$ …". Depois de confirmar a amortização, o pagamento sai das contas do mês, o saldo do financiamento cai e o patrimônio sobe.'),
   t('previsao_mes', 'Início', 'v102', 'ambos', 'Previsão do mês e a fatura aberta',
     ['Abra o Início e veja o bloco "Previsão do mês".', 'Toque em "Informar a fatura aberta", digite o valor que aparece no app do banco e toque em Atualizar a previsão; confirme.', 'No domingo, às 19h, toque no aviso "quanto está a fatura aberta?".'],
     'O bloco diz como o mês deve fechar e quanto cabe por dia. Depois de informar, aparece "Pronto!" com o novo valor por dia e o bloco diz "Com a fatura aberta de R$ … informada em …". O aviso de domingo abre o Início já no campo do valor.'),

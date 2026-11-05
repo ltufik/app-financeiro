@@ -381,4 +381,11 @@ export const RELEASES = [
     { id: 'previsao_checkin_domingo', title: 'Pedido de domingo: a fatura aberta em um número', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'A previsão precisa de dados do mês sem pedir PDF parcial toda semana', cost: false, notes: 'Push domingo 19h com a previsão; a cada 2 semanas para quem não responde. Medir a taxa de resposta (meta: 30% ou mais).', from: [], where: 'Início; notificação' },
     { id: 'previsao_nivel_semanas', title: 'Semanas com a fatura aberta em dia contam para o nível do ano', status: 'ideia', origin: 'Luiz', effort: 'P', problem: 'Dar motivo para manter o hábito de domingo', cost: false, notes: 'Combinado em 05/11.', from: [], where: 'Retrospectiva' },
   ] },
+  { id: 'r103', version: 'v103', at: '2026-11-05T19:37:00Z', backlog: [], news: { id: 'n20261105m', title: 'Previsão e amortização acertadas', items: [
+    'Quando a fatura do mês já chegou, a previsão agora pede a fatura aberta do mês seguinte e diz quanto ela deve fechar.',
+    'Pagamento grande de financiamento (amortização) não pesa mais na previsão do mês. O app pergunta se ele abate o financiamento; confirmando, ele sai das contas do mês e só mexe no patrimônio.',
+  ] }, updateDocs: [DOC_PREVISAO], addBacklog: [
+    { id: 'previsao_fatura_seguinte', title: 'Previsão sem campo da fatura quando a fatura do mês já estava no app', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Com a fatura de novembro já importada, o bloco não pedia nada', cost: false, notes: 'Pede a fatura aberta do mês seguinte; o dia de fechamento vem da própria fatura.', from: [], where: 'Início' },
+    { id: 'amortizacao_nao_reconhecida', title: 'Amortização de R$ 99 mil contada como gasto do mês', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Com dois financiamentos e o texto dizendo Bertioga, o app não perguntava se abatia o de Guaratuba', cost: false, notes: 'Reconhece também pela categoria; se não souber qual, pergunta qual financiamento. A previsão ignora o pagamento até a confirmação.', from: [], where: 'Início; Patrimônio' },
+  ] },
 ];
