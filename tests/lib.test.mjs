@@ -237,6 +237,12 @@ test('insights: faltam dados, vermelho, economia, gasto alto, cartão, fixas e p
   const e = insights({ ...base, closeDay: 28, today: '2026-12-02', has: (k, src) => !(src === 'cartao' && k === '2026-11') });
   assert.match(e.find(x => x.id === 'fatura')?.text || '', /Fechou dia 28\/11/);
   assert.ok(!insights({ ...base, closeDay: 24, today: '2026-11-26', has: (k, src) => src !== 'cartao' }).some(x => x.id === 'fatura'), 'only for families that already sent a card bill');
+  // what the bank charged: interest is bad news, fees are information
+  const F = (j, t) => ({ total: j + t, by: { juros: j, iof: 0, anuidade: t, tarifa: 0 } });
+  const j = insights({ ...base, today: '2026-11-15', has: () => true, fees: () => F(45.9, 0), feesYear: () => F(45.9, 0) }).find(x => x.id === 'juros');
+  assert.equal(j.tone, 'bad'); assert.match(j.text, /outubro o banco cobrou R\$\s?45,90 de juros/);
+  const tf = insights({ ...base, today: '2026-11-15', has: () => true, fees: () => F(0, 125), feesYear: () => F(0, 1500) }).find(x => x.id === 'tarifas');
+  assert.match(tf.text, /anuidade; R\$ 1\.500 nos últimos 12 meses/);
 });
 
 test('grupos: receita e despesa, fixa, variável ou extra', async () => {
@@ -858,4 +864,14 @@ test('parcelas já comprometidas: por mês, as que mais pesam e quando acabam', 
   assert.equal(p.months.length, 8); assert.equal(p.items[0].description, 'Geladeira'); assert.equal(p.items[0].ends, '2027-06');
   assert.equal(p.total, 400 * 8 + 300); assert.equal(p.last, '2027-06');
   assert.deepEqual(installmentPlan([], '2026-10').items, []);
+});
+
+test('quanto o banco cobrou: juros, IOF, anuidade e tarifas', async () => {
+  const { feeKind, feesOf } = await import('../public/js/lib/bankfees.js');
+  assert.equal(feeKind('JUROS ROTATIVO'), 'juros'); assert.equal(feeKind('Multa por atraso'), 'juros'); assert.equal(feeKind('ENCARGOS PARCELAMENTO DE FATURA'), 'juros');
+  assert.equal(feeKind('IOF EXTERIOR'), 'iof'); assert.equal(feeKind('Mastercard 1/12 anuidade'), 'anuidade'); assert.equal(feeKind('Tarifa pacote servicos'), 'tarifa');
+  assert.equal(feeKind('Mercado Juros Bairro'), 'juros', 'a word "juros" is enough: the store names do not use it'); assert.equal(feeKind('Padaria'), null);
+  const f = feesOf([{ source: 'conta', amount: -125, description: 'Mastercard anuidade', month: '2026-09' }, { source: 'cartao', amount: 67.72, description: 'IOF EXTERIOR', month: '2026-09' },
+    { source: 'cartao', amount: -10, description: 'ESTORNO ANUIDADE', month: '2026-09' }, { source: 'conta', amount: -37.49, description: 'Tarifa pacote servicos', month: '2026-09' }, { source: 'cartao', amount: 80, description: 'Mercado', month: '2026-09' }]);
+  assert.deepEqual(f.by, { juros: 0, iof: 67.72, anuidade: 115, tarifa: 37.49 }); assert.equal(f.total, 220.21); assert.equal(f.items[0].description, 'Mastercard anuidade'); assert.equal(f.items.length, 3);
 });

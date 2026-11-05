@@ -145,3 +145,9 @@ export const DOC_PATRIMONIO = { id: 'patrimonio_doc', title: 'Patrimônio: finan
 export const DOC_PARCELAS = { id: 'parcelas_doc', title: 'Parcelas já comprometidas', body: `- Início → Próxima fatura: total das parcelas que ainda vão vir (da última fatura) e até quando; barras dos próximos 6 meses; "As que mais pesam" com valor por mês, quantas faltam e o mês da última.
 - Conta como a próxima fatura: compra "03/10" soma nos 7 meses seguintes; a mesma compra repetida na fatura não conta duas vezes.
 - Origem: dor da pesquisa (14% só descobrem o gasto quando a fatura fecha).` };
+
+export const DOC_TARIFAS = { id: 'tarifas_doc', title: 'Quanto o banco cobrou', body: `- Início: juros e multas, IOF, anuidade e tarifas dos últimos 12 meses (fatura e extrato), com o total, por tipo, e "O que foi cobrado". Estorno de tarifa desconta.
+- Reconhece pelo texto do lançamento: juros, encargos, rotativo, mora, multa, parcelamento de fatura; IOF; anuidade; tarifa, pacote ou cesta de serviços, manutenção de conta.
+- Avisos (Início e celular, um de cada vez): juros ou multa no último mês com dados, em vermelho; senão, as tarifas do mês e dos 12 meses (no celular, no máximo a cada 60 dias).
+- Origem: dor da pesquisa (78% não sabem a taxa do rotativo).
+- Parcelas já comprometidas: validadas com os dados reais; o próximo mês bate (fev e mar exatos) e fica um pouco abaixo quando há compras parceladas novas, o que a tela explica.` };

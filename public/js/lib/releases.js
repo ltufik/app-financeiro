@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -311,4 +311,8 @@ export const RELEASES = [
     'No Início, em Próxima fatura, veja quanto dos próximos meses já está comprometido com parcelas e até quando.',
     'Em "As que mais pesam", as compras parceladas com quantas parcelas faltam.',
   ] }, addDocs: [DOC_PARCELAS] },
+  { id: 'r92', version: 'v92', at: '2026-11-05T01:19:00Z', backlog: ['juros_e_tarifas_da_fatura'], news: { id: 'n20261105b', title: 'Quanto o banco cobrou', items: [
+    'No Início, veja quanto foi de juros, IOF, anuidade e tarifas nos últimos 12 meses, e o que foi cobrado.',
+    'Se aparecer juros ou multa na fatura, o app avisa: pagar a fatura inteira, no dia, evita esse custo.',
+  ] }, addDocs: [DOC_TARIFAS] },
 ];

@@ -6,11 +6,12 @@ import { insights } from '../public/js/lib/insights.js';
 import { budgetsOf } from '../public/js/lib/budget.js';
 import { findRecurring } from '../public/js/lib/recurring.js';
 import { addM } from '../public/js/lib/format.js';
+import { feesOf } from '../public/js/lib/bankfees.js';
 import { sendPush } from './_webpush.js';
 
 // Which preference turns each message on, and how many days before the same message can repeat.
-export const TYPES = { fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
-const REPEAT = { fatura: 20, missing: 7, pending: 7, close: 5, budget: 7, semanal: 6 };
+export const TYPES = { juros: 'gastos', tarifas: 'gastos', fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
+const REPEAT = { tarifas: 60, fatura: 20, missing: 7, pending: 7, close: 5, budget: 7, semanal: 6 };
 const days = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
 const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
 
@@ -37,6 +38,7 @@ export function familyInsights({ household, categories, txs }, today) {
     today, months, calc: k => monthCalc(of(k), idx), cats: k => byCategory(of(k), idx),
     fixed: k => expandSplits(of(k)).reduce((a, t) => { const c = idx.get(t.category); return c && c.grp === 'dia' && c.recurring ? a + (t.source === 'conta' ? -t.amount : +t.amount) : a; }, 0),
     has: (k, src) => txs.some(t => t.month === k && t.source === src && !t.manual),
+    fees: k => feesOf(of(k)), feesYear: () => feesOf(txs.filter(t => t.month > addM(today.slice(0, 7), -12))),
     manualCount: k => txs.filter(t => t.month === k && t.manual).length,
     pending: k => txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
     fixedCats: [...idx.values()].filter(c => c.grp === 'dia' && c.recurring).map(c => c.name), closeDay: +st.cardCloseDay || 24,

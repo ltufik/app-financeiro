@@ -7,6 +7,8 @@ import { settle } from '../lib/settle.js';
 import { settings, closeDay } from '../state.js';
 import { renderPendingPayments } from '../debtpay.js';
 import { installmentPlan } from '../lib/parcelas.js';
+import { feesOf, FEE_LABEL } from '../lib/bankfees.js';
+import { addM } from '../lib/format.js';
 import { mergeSuggestions } from '../lib/catmerge.js';
 import { expandSplits } from '../lib/calc.js';
 import { todayISO } from '../lib/format.js';
@@ -90,6 +92,7 @@ export function render(el) {
       <p class="tiny muted" style="margin-top:6px">Parcelas ${brl0(nf.parcelas)} · recorrentes ${brl0(nf.recorrentes)}${nf.manuais ? ' · lançados ' + brl0(nf.manuais) : ''}${G.cardMonthly ? '. Ainda cabe no limite: ' + brl0(G.cardMonthly - nf.total) : ''}.</p>${plansHTML(nf)}` : '<p class="muted small">Aparece quando houver uma fatura importada.</p>'}
     </div>
   </div>
+  ${feesHTML()}
   <details class="more" id="homeMore"${moreOpen() ? ' open' : ''}>
     <summary><span><strong>Mais detalhes</strong><br><span class="tiny muted">Assinaturas, quem paga o quê, quanto guardaram mês a mês, patrimônio e o sonho de vocês</span></span></summary>
     <div class="stack">
@@ -118,6 +121,7 @@ export function render(el) {
   renderGoal(el.querySelector('#goalBox'), G, pr);
   renderPendingPayments(el.querySelector('#debtPayBox'), { onDone: () => S.render() });
   el.querySelector('#plansMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.parcelas'); });
+  el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas'); });
   renderSteps(el.querySelector('#stepsBox'));
   renderInsights(el.querySelector('#insights'));
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);
@@ -132,6 +136,7 @@ function renderInsights(box) {
     cats: k => byCategory(txsOf(k), idx),
     fixed: k => expandSplits(txsOf(k)).reduce((a, t) => { const c = idx.get(t.category); return c && c.grp === 'dia' && c.recurring ? a + (t.source === 'conta' ? -t.amount : +t.amount) : a; }, 0),
     has: (k, src) => S.txs.some(t => t.month === k && t.source === src && !t.manual),
+    fees: k => feesOf(txsOf(k)), feesYear: () => feesOf(S.txs.filter(t => t.month > addM(todayISO().slice(0, 7), -12))),
     manualCount: k => S.txs.filter(t => t.month === k && t.manual).length,
     pending: k => S.txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
     fixedCats: [...idx.values()].filter(c => c.grp === 'dia' && c.recurring).map(c => c.name), closeDay: closeDay(),
@@ -153,6 +158,18 @@ function renderInsights(box) {
   box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const g = JSON.parse(b.dataset.go); if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
 }
 
+// What the bank charged in the last 12 months: interest, IOF, annual fee and account fees, with the biggest ones.
+function feesHTML() {
+  const f = feesOf(S.txs.filter(t => t.month > addM(todayISO().slice(0, 7), -12)));
+  if (f.total < 1) return '';
+  return `<div class="panel" id="feesBox"><h3>Quanto o banco cobrou</h3><p class="muted small">Nos últimos 12 meses, da fatura e do extrato</p>
+    <div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(f.total)}</div>
+    <p class="small">${Object.entries(f.by).filter(e => e[1] > 0).map(e => `${FEE_LABEL[e[0]]} ${brl0(e[1])}`).join(' · ')}</p>
+    ${f.by.juros > 0 ? '<p class="small"><strong>Juros e multa são o custo mais caro:</strong> pagar a fatura inteira, no dia, evita.</p>' : ''}
+    <details class="help" id="feesMore"><summary>O que foi cobrado</summary><ul class="small">${f.items.slice(0, 10).map(x => `<li>${esc(x.description)} (${mShort(x.month)}): ${brl(x.value)}</li>`).join('')}</ul>
+    <p class="tiny muted">Anuidade e tarifas costumam ter isenção: peça ao banco ou troque por um cartão ou pacote sem custo.</p></details></div>`;
+}
+
 // Installments already taken for the next months, from the latest bill: bars per month and what weighs the most.
 const yy = k => mShort(k) + '/' + k.slice(2, 4);
 function plansHTML(nf) {
@@ -160,6 +177,7 @@ function plansHTML(nf) {
   if (!p.items.length) return '';
   const max = Math.max(...p.months.map(x => x.total), 1), first = p.months.slice(0, 6);
   return `<div class="plans" id="plans"><p class="small"><strong>Parcelas já comprometidas</strong>: ${brl0(p.total)} até ${yy(p.last)}</p>
+    <p class="tiny muted">Só as parcelas que já vieram na última fatura; compras parceladas novas entram por cima.</p>
     <ul class="pbars">${first.map(x => `<li><span class="pm">${mShort(x.month)}</span><span class="pb"><i style="width:${Math.round(x.total / max * 100)}%"></i></span><span class="pv num">${brl0(x.total)}</span></li>`).join('')}</ul>
     <details class="help" id="plansMore"><summary>As que mais pesam (${p.items.length})</summary><ul class="small">${p.items.slice(0, 8).map(x => `<li>${esc(x.description)}: ${brl0(x.amount)} por mês, faltam ${x.left} (até ${yy(x.ends)})</li>`).join('')}</ul></details></div>`;
 }

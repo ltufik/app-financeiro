@@ -45,6 +45,12 @@ export function insights(ctx) {
       out.push({ id: 'fatura', tone: 'warn', title: 'A fatura do cartão fechou', text: `Fechou dia ${String(Math.min(cd, closeK === cur ? lastDay : prevLast)).padStart(2, '0')}/${closeK.slice(5)}. Mande o PDF (dá para mandar os de todos os cartões de uma vez) e veja para onde foi o dinheiro de ${mName(closeK)}.`, action: { label: 'Mandar a fatura', go: ['lancar', '#drop'] } });
     }
   }
+  // What the bank charged in the latest month with data: interest first (the costly one), then fees.
+  if (ctx.fees && months.length) {
+    const L = [...months].reverse().find(k => k <= cur), f = L && ctx.fees(L), y = ctx.feesYear ? ctx.feesYear() : null;
+    if (f && f.by.juros > 0) out.push({ id: 'juros', tone: 'bad', title: 'Juros e multa na fatura', text: `Em ${mName(L)} o banco cobrou ${R2(f.by.juros)} de juros, multa ou encargos. Pagar a fatura inteira, no dia, evita esse custo.`, action: { label: 'Ver o que o banco cobrou', go: ['resumo', '#feesBox'] } });
+    else if (f && f.total >= 1 && y && y.total >= 1) out.push({ id: 'tarifas', tone: 'info', title: 'Quanto o banco cobrou', text: `${R2(f.total)} em ${mName(L)} de ${Object.entries(f.by).filter(e => e[1] > 0).map(e => ({ iof: 'IOF', anuidade: 'anuidade', tarifa: 'tarifas', juros: 'juros' })[e[0]]).join(', ')}; ${R(y.total)} nos últimos 12 meses. Dá para pedir isenção ou trocar o pacote.`, action: { label: 'Ver detalhes', go: ['resumo', '#feesBox'] } });
+  }
   // 1. Missing data
   const miss = [];
   if (day >= 5 && !ctx.has(prev, 'conta')) miss.push(`o extrato de ${mName(prev)}`);
