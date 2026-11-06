@@ -2,9 +2,9 @@
 // One idea per screen, big number, its own color; tap right/left (or swipe) to move, progress bars on top.
 // The level (bronze, silver, gold, by percentage) is the high point; the last screen shares without amounts.
 import { S, goals, settings, patrimonio, projectFor, needPmtFor } from './state.js';
-import { yearRetro, yearLevel, yearMilestones, yearOpportunities, yearEvolution } from './lib/closing.js';
+import { yearRetro, yearLevel, yearMilestones, yearOpportunities, yearEvolution, sundayHabit } from './lib/closing.js';
 import { feesOf } from './lib/bankfees.js';
-import { brl0, pct, esc, mLong } from './lib/format.js';
+import { brl0, pct, esc, mLong, todayISO } from './lib/format.js';
 import { toast } from './ui.js';
 import { photo } from './photos.js';
 import { track } from './usage.js';
@@ -33,7 +33,7 @@ export function wrappedSlides(year) {
   const G = goals(), st = settings();
   const r = yearRetro({ year, txs: S.txs, idx: S.catIdx, goals: G, fees: feesOf(S.txs.filter(t => t.month.startsWith(year + '-'))), closed: st.closed || {} });
   if (!r.n) return { r, slides: [] };
-  const lv = yearLevel(r), ms = yearMilestones({ year, per: r.per, txs: S.txs, idx: S.catIdx, debts: st.debts || [] });
+  const lv = yearLevel(r, sundayHabit(st.checkins, todayISO() < `${year}-12-31` ? todayISO() : `${year}-12-31`, year)), ms = yearMilestones({ year, per: r.per, txs: S.txs, idx: S.catIdx, debts: st.debts || [] });
   const fam = /^fam[ií]lia\b/i.test(S.hh.name || '') ? S.hh.name : 'família ' + (S.hh.name || '');
   const slides = [], final = r.n === 12 || (retroUpTo(r) === year + '-12'), upTo = MES(retroUpTo(r)), first = firstTime();
   // First time: what this is and how it works, before any number.

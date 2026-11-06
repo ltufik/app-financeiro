@@ -235,3 +235,16 @@ export const DOC_PREVISAO = { id: 'previsao_doc', title: 'Previsão do mês e o 
 - Com a fatura aberta do dia 20, o resultado (acima da meta, abaixo ou no vermelho) bateu em 5 de 6 meses; o erro típico da sobra ficou entre R$ 0,4 mil e R$ 4 mil (abril, com IPVA e extras, errou mais).
 ## Medir
 - Central: "Informou a fatura aberta" contra "Tocou no aviso de domingo". Abaixo de 30% de resposta, mudar o jeito de pedir.` };
+export const DOC_INICIO = { id: 'inicio_doc', title: 'Início: para fazer agora, previsão e nível do ano', body: `O Início pede ação, não só mostra números. Medimos se as pessoas agem e se voltam.
+## Ordem
+1. Para fazer agora (aberto): fechar o mês, amortização a confirmar, primeiros passos e os avisos que têm uma ação (botão). Vazio, diz "tudo em dia" e o próximo passo (domingo, a fatura aberta).
+2. Previsão do mês (aberto): com a pergunta "Quanto está a fatura aberta hoje?" e o campo à vista.
+3. Seções que abrem, cada uma com uma linha que já diz o principal: Nível do ano, Sobra do mês, Cartão, Quanto o banco cobrou, Outros avisos (os que não pedem ação) e Mais detalhes. O app lembra quais a pessoa deixou abertas.
+## Nível do ano (lib/closing.js, levelProgress)
+- Conta os meses do ano com o extrato da conta.
+- Bronze: sobra no ano. Prata: 10% da renda guardados. Ouro: a meta (Metas), 3 de cada 4 meses no azul e, a partir do 4º domingo da previsão, a fatura aberta em pelo menos metade dos domingos (uma janela por semana, de quinta a quarta).
+- O que falta vem em reais por mês até dezembro, contando a renda de sempre dos meses que faltam (a meta cresce com ela).
+- Validado com os números da família Elias: Prata (12,8%); para o Ouro, uns R$ 19,3 mil por mês até dezembro (R$ 57,8 mil no total).
+## Medir
+- Central → Painel: "Agiram no Início" (quem tocou em Para fazer agora, informou a fatura, confirmou amortização ou fechou o mês, entre quem usou) e quantos dias as pessoas voltam em 30.
+- Eventos: inicio.acao, inicio.abriu_* (cada seção), inicio.previsao_checkin.` };

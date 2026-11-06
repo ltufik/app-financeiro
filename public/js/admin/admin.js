@@ -17,6 +17,7 @@ import { testText } from '../lib/pushinfo.js';
 import { RELEASES } from '../lib/releases.js';
 import { TESTS, AREAS } from '../lib/testbook.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS, screenLabel, screenShot } from './content.js';
+import { homeEngagement } from '../lib/homefeed.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
@@ -200,9 +201,10 @@ async function painel(el) {
     const [fb, us] = await Promise.all([loadFb(), loadUse()]);
     const week = new Date(Date.now() - 7 * 864e5 - 3 * 3600e3).toISOString().slice(0, 10);
     const active = us.people.filter(p => p.last_day >= week).length, fresh = fb.filter(f => f.status === 'novo').length, unans = fb.filter(f => f.kind === 'duvida' && f.helpful === false).length;
+    const eng = homeEngagement(us.people);
     const top = Object.entries(us.features).filter(([k]) => !k.startsWith('aba.') && !k.startsWith('menu.')).sort((a, b) => b[1].users - a[1].users)[0];
     const nav = await loadNav().catch(() => null), err24 = nav ? nav.errors.filter(e => Date.now() - Date.parse(e.at) < 864e5).length : 0;
-    $('#pTop').innerHTML = [['Opiniões novas', fresh, 'abrir', 'opinioes'], ['Erros em 24 horas', err24, err24 ? 'ver onde e com quem' : 'nenhum', 'erros'], ['Dúvidas sem resposta boa', unans, 'abrir', 'duvidas'], ['Usaram nos últimos 7 dias', active, `de ${us.people.length} pessoas`, 'uso'], ['Mais usado', top ? esc(FEATURE_LABELS[top[0]] || top[0]) : '—', top ? `${top[1].users} pessoas` : '', 'uso']]
+    $('#pTop').innerHTML = [['Opiniões novas', fresh, 'abrir', 'opinioes'], ['Erros em 24 horas', err24, err24 ? 'ver onde e com quem' : 'nenhum', 'erros'], ['Dúvidas sem resposta boa', unans, 'abrir', 'duvidas'], ['Usaram nos últimos 7 dias', active, `de ${us.people.length} pessoas`, 'uso'], ['Agiram no Início', `${eng.actedPct}%`, `${eng.acted} de ${eng.active}; voltam ${String(eng.daysMedian).replace('.', ',')} dias em ${us.days || 30}`, 'uso'], ['Mais usado', top ? esc(FEATURE_LABELS[top[0]] || top[0]) : '—', top ? `${top[1].users} pessoas` : '', 'uso']]
       .map(([k, v, s, t]) => `<button type="button" class="mcard mlink" data-go="${t}"><span class="tiny muted">${k}</span><span class="num" style="${typeof v === 'string' ? 'font-size:17px' : ''}">${v}</span><span class="tiny muted">${s}</span></button>`).join('');
     el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   } catch (e) { $('#pTop').innerHTML = '<p class="small muted">Opiniões e uso aparecem depois de rodar o schema.sql novo no Supabase.</p>'; }

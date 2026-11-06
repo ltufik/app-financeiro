@@ -1007,3 +1007,28 @@ test('month-end forecast: history, open bill check-in and the Sunday ask', () =>
   assert.equal(sundayAsk(f, { sent: { previsao: '2026-10-11', previsao_miss: 1 }, checkins: [], today: '2026-10-25' }).miss, 2);
   assert.equal(sundayAsk(f, { sent: { previsao: '2026-10-11', previsao_miss: 1 }, checkins: [{ date: '2026-10-12', value: 1 }], today: '2026-10-18' }).miss, 0, 'answered: back to weekly');
 });
+
+import { levelProgress, sundayHabit, yearLevel } from '../public/js/lib/closing.js';
+import { homeEngagement } from '../public/js/lib/homefeed.js';
+test('level during the year: what is missing, rules, Sunday habit; Início engagement', () => {
+  // 9 months in, R$ 417 mil of income, R$ 53 mil kept (12,8%), 8 of 9 in the blue: Prata; Ouro needs 20% of the
+  // whole year (3 more months of the usual income): about R$ 19 mil per month.
+  const r = { n: 9, months: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'], renda: 417306.31, res: 53494.61, tx: 53494.61 / 417306.31, positive: 8, meta: 0.2 };
+  const p = levelProgress(r, { habit: sundayHabit([], '2026-11-05'), today: '2026-11-05' });
+  assert.equal(p.level, 'prata'); assert.equal(p.next, 'ouro'); assert.equal(p.monthsLeft, 3);
+  assert.equal(p.missing[0].text, 'Guardar uns R$ 19.262 por mês até dezembro (R$ 57.787 no total)');
+  assert.deepEqual(p.rules.map(x => x.ok), [true, true, false]);
+  // Bronze to Prata and the way out of the red
+  assert.match(levelProgress({ ...r, res: 10000, tx: 10000 / 417306.31 }, { today: '2026-11-05' }).missing[0].text, /^Guardar uns R\$ [\d.]+ por mês até dezembro/);
+  assert.match(levelProgress({ ...r, res: -6000, tx: -0.01, positive: 3 }, { today: '2026-11-05' }).missing[0].text, /^Sair do vermelho: R\$ 2\.000 por mês/);
+  // The Sunday habit: one window per week; only weighs on gold from the 4th Sunday on.
+  assert.deepEqual(sundayHabit([], '2026-11-05'), { done: 0, total: 0, need: 0, counts: false, ok: true });
+  const h = sundayHabit([{ date: '2026-11-08' }, { date: '2026-11-20' }], '2026-12-06');
+  assert.deepEqual([h.done, h.total, h.need, h.counts, h.ok], [2, 5, 3, true, false]);
+  const gold = { ...r, res: 90000, tx: 90000 / 417306.31 };
+  assert.equal(yearLevel(gold).level, 'ouro'); assert.equal(yearLevel(gold, h).level, 'prata');
+  assert.match(levelProgress(gold, { habit: h, today: '2026-12-06' }).missing.at(-1).text, /Fatura aberta informada em 2 de 5 domingos; precisa de 3/);
+  assert.equal(sundayHabit([], '2027-01-10', '2027').total, 2, 'first Sundays of 2027: 3 and 10 of January');
+  // Engagement: who acted among who came; median of days back.
+  assert.deepEqual(homeEngagement([{ days: 10, features: { 'inicio.acao': 2 } }, { days: 3, features: { 'aba.resumo': 4 } }, { days: 0, features: {} }]), { active: 2, acted: 1, actedPct: 50, daysMedian: 6.5 });
+});

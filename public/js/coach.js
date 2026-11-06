@@ -4,7 +4,8 @@ import { $ } from './ui.js';
 
 const MAX_TIMES = 3;
 export const COACH_STEPS = [
-  { sel: '.hero', tab: 'resumo', title: 'Quanto sobrou', text: 'Aqui fica a sobra do mês: o que entrou menos o que saiu, sem contar os extras. Embaixo, cartão, categorias e metas.' },
+  { sel: '#sum_sobra, .hero', tab: 'resumo', title: 'Quanto sobrou', text: 'A sobra do mês numa linha: o que entrou menos o que saiu, sem contar os extras. Toque para abrir receitas, despesas e categorias; o mesmo vale para cartão, nível do ano e banco.' },
+  { sel: '#todo', tab: 'resumo', title: 'Para fazer agora', text: 'O que deixa os números de vocês certos hoje, com um botão em cada item. Some quando estiver feito.' },
   { sel: '#monthSel', title: 'Escolha o mês', text: 'Troque o mês aqui. No fim da lista dá para ver o ano inteiro.' },
   { sel: '.tab[data-tab="lancar"]', title: 'Lançar', text: 'Mande a fatura, o extrato ou a foto de uma nota fiscal. Ou fale um gasto no microfone.' },
   { sel: '.tab[data-tab="graficos"]', title: 'Gráficos', text: 'Monte gráficos do seu jeito: pizza, linha ou barra, com o período e as categorias que quiser.' },

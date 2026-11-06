@@ -22,15 +22,14 @@ export function renderForecast(box) {
   const basis = f.basis === 'fatura' ? `Com a fatura de ${mLong(f.month)} já no app.` : f.basis === 'checkin' ? `Com a fatura aberta de ${brl0(f.checkin.value)} informada em ${brD(f.checkin.date)}.` : `Estimada pelo jeito de gastar de vocês nos últimos ${f.hist.length} meses. Fica mais certa com a fatura aberta.`;
   const tone = f.status === 'ok' ? 'good' : f.status === 'risco' ? 'warn' : 'bad';
   box.className = `panel fc fc-${tone}`;
-  box.innerHTML = `<p class="eyebrow">Previsão do mês</p><h3>${esc(t.title)}</h3>
+  box.innerHTML = `<p class="eyebrow">Previsão do mês · atualize com um número</p><h3>${esc(t.title)}</h3>
     <p class="small">${esc(t.head)}</p><p class="small"><strong>${esc(t.day)}</strong></p>
     <p class="tiny muted">${esc(basis)}</p>
     ${t.next ? `<p class="small">${esc(t.next)}</p>` : ''}
-    ${`<details class="help" id="fcMore"${S.openForecast ? ' open' : ''}><summary>${tg.closed ? `Quanto veio a fatura que fechou dia ${brD(tg.closeDate)}?` : tg.month !== today.slice(0, 7) ? `Informar a fatura aberta de ${mLong(tg.month).split(' ')[0]} (10 segundos)` : 'Informar a fatura aberta (10 segundos)'}</summary>
-      <p class="tiny muted">${tg.closed ? 'O valor está no app do banco, na fatura fechada.' : `Abra o app do banco e veja quanto está a fatura que fecha dia ${brD(tg.closeDate)}. Tem mais de um cartão? Some as faturas.`}</p>
-      <div class="rowbtn"><label class="f" style="flex:1">Valor (R$)<input type="number" inputmode="decimal" step="0.01" min="0" id="fcAmount" placeholder="Ex.: 8450"></label><button class="btn primary" type="button" id="fcSave">Atualizar a previsão</button></div></details>`}`;
+    <div class="fc-ask" id="fcMore"><p class="small"><strong>${tg.closed ? `Quanto veio a fatura que fechou dia ${brD(tg.closeDate)}?` : `Quanto está a fatura aberta${tg.month !== today.slice(0, 7) ? ` de ${mLong(tg.month).split(' ')[0]}` : ''} hoje?`}</strong></p>
+      <p class="tiny muted">${tg.closed ? 'O valor está no app do banco, na fatura fechada.' : `Está no app do banco (a fatura que fecha dia ${brD(tg.closeDate)}). Tem mais de um cartão? Some as faturas. Leva 10 segundos e deixa a previsão certa.`}</p>
+      <div class="rowbtn"><label class="f" style="flex:1">Valor (R$)<input type="number" inputmode="decimal" step="0.01" min="0" id="fcAmount" placeholder="Ex.: 8450"></label><button class="btn primary" type="button" id="fcSave">Atualizar a previsão</button></div></div>`;
   if (S.openForecast) { S.openForecast = false; track('inicio.previsao_aviso'); }
-  box.querySelector('#fcMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.previsao_abrir'); });
   const btn = box.querySelector('#fcSave'); if (!btn) return;
   btn.onclick = async () => {
     const inp = box.querySelector('#fcAmount'); clearInvalid(box);

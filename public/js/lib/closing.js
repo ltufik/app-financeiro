@@ -79,9 +79,9 @@ export function yearRetro({ year, txs, idx, goals = {}, fees = null, closed = {}
 // The family's level in the year, by percentage (fair for any income): gold = their own goal and in the blue
 // at least 3 of every 4 months; silver = 10% of income or more; bronze = the year in the blue.
 export const LEVELS = { ouro: 'Ouro', prata: 'Prata', bronze: 'Bronze', inicio: 'Ponto de partida' };
-export function yearLevel(r) {
-  const steady = r.n ? r.positive / r.n >= 0.75 : false, meta = r.meta || 0.2;
-  const level = r.res > 0 && r.tx >= meta && steady ? 'ouro' : r.tx >= 0.10 ? 'prata' : r.res > 0 ? 'bronze' : 'inicio';
+export function yearLevel(r, habit = null) {
+  const steady = r.n ? r.positive / r.n >= 0.75 : false, meta = r.meta || 0.2, kept = !habit || !habit.counts || habit.ok;
+  const level = r.res > 0 && r.tx >= meta && steady && kept ? 'ouro' : r.tx >= 0.10 ? 'prata' : r.res > 0 ? 'bronze' : 'inicio';
   // What is missing for the next level, in percentage points of income (and the steady months for gold).
   const next = level === 'ouro' ? null : level === 'prata' ? { level: 'ouro', points: Math.max(0, meta - r.tx), steady } : level === 'bronze' ? { level: 'prata', points: 0.10 - r.tx } : { level: 'bronze', points: null };
   return { level, label: LEVELS[level], next };
@@ -137,3 +137,46 @@ export function yearEvolution(r) {
   const h = Math.floor(r.per.length / 2), rate = ps => { const res = ps.reduce((a, c) => a + c.res, 0), renda = ps.reduce((a, c) => a + (c.tx ? c.res / c.tx : 0), 0); return renda > 0 ? res / renda : 0; };
   return { first: rate(r.per.slice(0, h)), second: rate(r.per.slice(h)), months: r.per.map(c => ({ month: c.month, tx: c.tx })) };
 }
+
+// Sundays with the open bill informed (the weekly habit). Counts from the first Sunday the forecast existed; it only
+// starts to weigh on gold after 4 Sundays, so nobody loses a level for a habit that did not exist yet.
+export const HABIT_START = '2026-11-08';
+export function sundayHabit(checkins = [], today, year = today.slice(0, 4)) {
+  let start = HABIT_START; if (HABIT_START < `${year}-01-01`) { let t = Date.parse(`${year}-01-01T12:00:00Z`); while (new Date(t).getUTCDay()) t += 864e5; start = new Date(t).toISOString().slice(0, 10); }
+  const sundays = []; for (let t = Date.parse(start + 'T12:00:00Z'); t <= Date.parse(today + 'T12:00:00Z') && new Date(t).toISOString().startsWith(year); t += 7 * 864e5) sundays.push(new Date(t).toISOString().slice(0, 10));
+  // A Sunday counts when the bill was informed from the Thursday before to the Wednesday after (one window per week).
+  const done = sundays.filter(d => (checkins || []).some(c => c && c.date >= addDaysISO(d, -3) && c.date <= addDaysISO(d, 3))).length;
+  const total = sundays.length, need = Math.ceil(total / 2);
+  return { done, total, need, counts: total >= 4, ok: done >= need };
+}
+const addDaysISO = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+
+// The level during the year: where the family is, the rules of every level (met or not) and what is missing for
+// the next one, in money (what to keep more until December, and per month).
+export function levelProgress(r, { habit = null, today } = {}) {
+  // Months still to come in the year (after the last one with the account statement): their income also raises the
+  // goal, so what is missing is "keep about X per month until December", with the usual income of the year.
+  const lv = yearLevel(r, habit), meta = r.meta || 0.2, last = r.months?.length ? +r.months[r.months.length - 1].slice(5, 7) : +today.slice(5, 7) - 1;
+  const monthsLeft = Math.max(0, 12 - last), avg = r.n ? r.renda / r.n : 0;
+  const money = target => Math.max(0, Math.round(target * (r.renda + monthsLeft * avg) - r.res));
+  const perM = v => monthsLeft ? Math.round(v / monthsLeft) : null;
+  const keep = v => monthsLeft ? `Guardar uns ${R0(perM(v))} por mês até dezembro (${R0(v)} no total)` : `Faltaram ${R0(v)} no ano`;
+  const posNeed = Math.ceil(0.75 * Math.max(r.n, 1));
+  const rules = [
+    { level: 'bronze', title: 'Bronze', text: 'Fechar o ano com sobra (ganhar mais do que gastar).', ok: r.res > 0 },
+    { level: 'prata', title: 'Prata', text: 'Guardar pelo menos 10% do que ganharam no ano.', ok: r.tx >= 0.10 },
+    { level: 'ouro', title: 'Ouro', text: `Guardar a meta de vocês (${Math.round(meta * 100)}% do que ganharam), com 3 de cada 4 meses no azul${habit?.counts ? ' e a fatura aberta informada em pelo menos metade dos domingos' : ''}.`, ok: lv.level === 'ouro' },
+  ];
+  const next = lv.next?.level || null, missing = [];
+  if (next === 'bronze') { const v = Math.max(0, Math.round(-r.res)); missing.push({ text: monthsLeft ? `Sair do vermelho: ${R0(perM(v))} por mês de sobra até dezembro (${R0(v)} no total)` : `Faltaram ${R0(v)} de sobra no ano`, per: perM(v), frac: 0 }); }
+  if (next === 'prata') { const v = money(0.10); missing.push({ text: keep(v), per: perM(v), frac: r.renda > 0 ? Math.min(1, Math.max(0, r.res / (0.10 * r.renda))) : 0 }); }
+  if (next === 'ouro') {
+    const v = money(meta);
+    if (v > 0) missing.push({ text: keep(v), per: perM(v), frac: r.renda > 0 ? Math.min(1, Math.max(0, r.res / (meta * r.renda))) : 0 });
+    if (r.positive < posNeed || !(r.n && r.positive / r.n >= 0.75)) missing.push({ text: `Meses no azul: ${r.positive} de ${r.n}; precisa de 3 em cada 4 (fechar os próximos no azul)`, frac: r.n ? r.positive / r.n / 0.75 : 0 });
+    if (habit?.counts && !habit.ok) missing.push({ text: `Fatura aberta informada em ${habit.done} de ${habit.total} domingos; precisa de ${habit.need}`, frac: habit.need ? habit.done / habit.need : 0 });
+  }
+  const frac = missing.length ? Math.min(...missing.map(m => Math.min(1, m.frac || 0))) : 1;
+  return { ...lv, next, nextLabel: next ? LEVELS[next] : null, rules, missing, frac, monthsLeft, habit };
+}
+

@@ -8,3 +8,13 @@ export function rankFeed(list, seen) {
   const f = new Set(fresh), top = list.filter(x => f.has(x.id)).sort((a, b) => RANK[a.tone] - RANK[b.tone]);
   return { list: [...top, ...list.filter(x => !f.has(x.id))], fresh, seen: Object.fromEntries(list.map(x => [x.id, sig(x)])) };
 }
+
+// Engagement of Início (Central): who acts (not only looks) and how often people come back. people = product_usage
+// people ({ days, last_day, features }); acting = touched "Para fazer agora", informed the open bill or confirmed a payoff.
+export const ACT_FEATURES = ['inicio.acao', 'inicio.previsao_checkin', 'patrimonio.amortizou', 'fechar.mes'];
+export function homeEngagement(people = []) {
+  const active = people.filter(p => +p.days > 0), acted = active.filter(p => ACT_FEATURES.some(f => +(p.features || {})[f] > 0));
+  const days = active.map(p => +p.days).sort((a, b) => a - b), mid = days.length ? (days.length % 2 ? days[(days.length - 1) / 2] : (days[days.length / 2 - 1] + days[days.length / 2]) / 2) : 0;
+  return { active: active.length, acted: acted.length, actedPct: active.length ? Math.round(acted.length / active.length * 100) : 0, daysMedian: mid };
+}
+

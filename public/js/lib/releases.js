@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -387,5 +387,13 @@ export const RELEASES = [
   ] }, updateDocs: [DOC_PREVISAO], addBacklog: [
     { id: 'previsao_fatura_seguinte', title: 'Previsão sem campo da fatura quando a fatura do mês já estava no app', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Com a fatura de novembro já importada, o bloco não pedia nada', cost: false, notes: 'Pede a fatura aberta do mês seguinte; o dia de fechamento vem da própria fatura.', from: [], where: 'Início' },
     { id: 'amortizacao_nao_reconhecida', title: 'Amortização de R$ 99 mil contada como gasto do mês', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Com dois financiamentos e o texto dizendo Bertioga, o app não perguntava se abatia o de Guaratuba', cost: false, notes: 'Reconhece também pela categoria; se não souber qual, pergunta qual financiamento. A previsão ignora o pagamento até a confirmação.', from: [], where: 'Início; Patrimônio' },
+  ] },
+  { id: 'r104', version: 'v104', at: '2026-11-06T04:06:00Z', backlog: ['nivel_ao_longo_do_ano', 'previsao_nivel_semanas'], news: { id: 'n20261106a', title: 'Início mais direto e o nível do ano', items: [
+    'O Início começa com "Para fazer agora": o que deixa os números de vocês certos hoje, com um botão em cada item.',
+    'Logo abaixo, a previsão do mês já pergunta quanto está a fatura aberta.',
+    'O resto vem resumido em uma linha (nível do ano, sobra, cartão, banco); toque para abrir.',
+    'Novo: o nível do ano (bronze, prata ou ouro) já durante o ano, com quanto falta para o próximo e as regras de cada um.',
+  ] }, addDocs: [DOC_INICIO], addBacklog: [
+    { id: 'inicio_organizado', title: 'Início organizado: Para fazer agora, previsão e seções que abrem', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Muita informação e muita rolagem; a pessoa via, mas não agia', cost: false, notes: 'Medir: "Agiram no Início" e dias de volta no Painel da Central.', from: [], where: 'Início' },
   ] },
 ];

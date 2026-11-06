@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('inicio_organizado', 'Início', 'v104', 'ambos', 'Início: para fazer agora, seções e nível do ano',
+    ['Abra o Início.', 'Toque no botão de um item de "Para fazer agora".', 'Volte e toque em "Nível do ano", "Sobra", "Cartão" e "Quanto o banco cobrou" para abrir; feche o app e abra de novo.'],
+    'No topo: "Para fazer agora" (ou "Tudo em dia") e a previsão com o campo da fatura aberta. Cada seção mostra numa linha o principal (o nível com a barra e quanto falta por mês; a sobra; a fatura) e abre com o detalhe; o nível lista as regras com ✓ no que já foi alcançado. As seções que ficaram abertas continuam abertas.'),
   t('previsao_fatura_seguinte', 'Início', 'v103', 'ambos', 'Previsão com a fatura do mês já no app e amortização',
     ['Com a fatura do mês já enviada, abra o Início e toque em "Informar a fatura aberta de (mês seguinte)".', 'Digite o valor que aparece no app do banco e confirme.', 'No Início, em "Pagamentos que parecem amortização", confirme o pagamento de R$ 99 mil no financiamento certo.'],
     'Aparece "Fatura de (mês): com R$ … até …, deve fechar em uns R$ …". Depois de confirmar a amortização, o pagamento sai das contas do mês, o saldo do financiamento cai e o patrimônio sobe.'),

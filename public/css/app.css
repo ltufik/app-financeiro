@@ -699,3 +699,27 @@ label.consent[hidden]{display:none}
 .fc .eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
 .fc h3{margin-bottom:6px} .fc p{margin:4px 0}
 .fc .rowbtn{align-items:flex-end;flex-wrap:wrap}
+/* Início: "Para fazer agora" and the sections that open */
+.todo{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.todo-head h2{font-size:20px;margin:0}
+.todo-head p{margin:2px 0 0}
+.todo-done{background:var(--soft,rgba(127,127,127,.08));border-radius:12px;padding:12px 14px;margin:0}
+.insight .act{margin-top:8px}
+.fc-ask{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+details.sum{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:0 0 12px;overflow:hidden}
+details.sum>summary{list-style:none;cursor:pointer;padding:14px 44px 14px 16px;display:flex;flex-direction:column;gap:4px;position:relative}
+details.sum>summary::-webkit-details-marker{display:none}
+details.sum>summary::after{content:'';position:absolute;right:18px;top:20px;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s}
+details.sum[open]>summary::after{transform:rotate(-135deg);top:24px}
+details.sum .sum-t{font-weight:700;font-size:16px}
+details.sum .sum-l{display:flex;flex-direction:column;gap:4px}
+details.sum .big{font-size:30px;line-height:1.1}
+details.sum .sum-b{padding:0 12px 12px}
+details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
+.lvbar{display:block;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.lvbar i{display:block;height:100%;background:var(--accent,var(--good));border-radius:99px}
+.lvrules{list-style:none;padding:0;margin:6px 0}
+.lvrules li{display:flex;gap:8px;padding:4px 0;color:var(--muted)}
+.lvrules li.ok{color:var(--ink)}
+.lvrules li.ok>span:first-child{color:var(--good);font-weight:700}
+.lvmiss{margin:6px 0;padding-left:18px}

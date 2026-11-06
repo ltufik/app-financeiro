@@ -14,7 +14,7 @@ const { newlyDone } = await import('../../public/js/lib/news.js');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public');
 const MOCK = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'mock-supabase.js'), 'utf8');
 const PDFJS = arg('pdfjs'), shots = arg('shots');
-const results = []; const ok = (name, cond, extra = '') => { results.push([cond ? 'ok  ' : 'FAIL', name, extra]); };
+const results = []; const ok = (name, cond, extra = '') => { results.push([cond ? 'ok  ' : 'FAIL', name, extra]); if (process.env.E2E_LIVE) process.stderr.write((cond ? 'ok   ' : 'FAIL ') + name + '\n'); };
 
 const browser = await PW[ENGINE].launch();
 const page = await browser.newPage(ENGINE === 'webkit' ? { ...PW.devices['iPhone 13'] } : { viewport: { width: 400, height: 860 } });
@@ -366,7 +366,7 @@ if (backup) {
   await page.click('.cfm [data-n]');
   await page.click('[data-tab=resumo]');
   ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
-  await page.click('#fcMore summary'); await page.click('#fcSave');
+  await page.click('#fcSave');
   ok('previsão: fatura aberta vazia é recusada com aviso', await page.isVisible('#fcBox .invalid, #fcBox [aria-invalid="true"]'));
   await page.fill('#fcAmount', '30000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]');
   ok('previsão: pede confirmação antes de usar a fatura aberta', (await txt('.cfm')).includes('R$ 30.000'));
@@ -397,9 +397,14 @@ if (backup) {
   await page.selectOption('#monthSel', '2026-09');
   const ins = await txt('#insights');
   ok('início mostra insights do mês', (await page.$$('#insights .insight')).length >= 1, ins.slice(0, 200));
-  ok('início mostra só 2 avisos (3 quando há novidade), com "ver mais"', (await page.$$('#insights .insight')).length <= 3 && (await page.$$('#insights .insight')).length >= 2 && await page.isVisible('#insMore'));
+  ok('início mostra poucos itens (os outros blocos de "Para fazer agora" ocupam lugar), com "ver mais"', (await page.$$('#insights .insight')).length <= 3 && (await page.$$('#insights .insight')).length >= 1 && await page.isVisible('#insMore'));
   ok('régua fica compacta depois de 40%', await page.isVisible('#stepsBox.regua-mini') && (await page.$$('#stepsBox .steps li')).length === 0);
+  ok('Início: "Para fazer agora" no topo, com botão em cada item', await page.isVisible('#todo h2') && (await page.$$('#insights .insight .act')).length === (await page.$$('#insights .insight')).length);
+  ok('Início: seções fechadas com o principal numa linha (sobra, cartão, nível com regras)', !(await page.evaluate(() => document.querySelector('#sum_sobra').open)) && /R\$/.test(await txt('#sum_sobra summary')) && await page.isVisible('#sum_cartao summary') && (await txt('#sum_nivel summary')).includes('Nível de 2026') && (await txt('#sum_nivel')).includes('Regras dos níveis'), await txt('#sum_nivel summary'));
+  await page.click('#sum_sobra > summary'); await page.waitForTimeout(150);
   ok('para onde foi mostra as 5 maiores', (await page.$$eval('#catBars .catbar', b => b.filter(x => !x.hidden).length)) === 5 && await page.isVisible('#catMore'));
+  ok('Início: a seção aberta fica aberta ao voltar', await page.evaluate(() => localStorage.getItem('fin.home.sobra') === '1'));
+  await page.click('#sum_sobra > summary'); await page.waitForTimeout(150);
   ok('detalhes (poupança, patrimônio, meta) ficam recolhidos', await page.evaluate(() => !document.querySelector('#homeMore').open));
   // privacy mode
   await page.click('#privBtn'); await page.waitForTimeout(150);
@@ -724,8 +729,8 @@ ok('salvar sem mexer no saldo não apaga o histórico do financiamento', await p
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')), await txt('#fcBox'));
-ok('previsão: com a fatura do mês no app, conta a fatura e pede a aberta do mês seguinte', (await txt('#fcBox')).includes('já no app') && /Informar a fatura aberta de (dezembro|janeiro)/.test(await txt('#fcMore summary')), await txt('#fcBox'));
-await page.click('#fcMore summary'); await page.fill('#fcAmount', '5000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+ok('previsão: com a fatura do mês no app, conta a fatura e pede a aberta do mês seguinte', (await txt('#fcBox')).includes('já no app') && /Quanto está a fatura aberta de (dezembro|janeiro) hoje\?/.test(await txt('#fcMore')), await txt('#fcBox'));
+await page.fill('#fcAmount', '5000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 ok('previsão: a fatura aberta do mês seguinte vira a previsão dessa fatura', /Fatura de (dezembro|janeiro): com R\$ 5\.000 até/.test(await txt('#fcBox')), await txt('#fcBox'));
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
@@ -1012,9 +1017,11 @@ const used = await page.evaluate(() => window.__db.usage);
   await page.evaluate(() => { const f = window.__db.feedback.find(x => x.kind === 'ideia'); Object.assign(f, { reply: 'Já está no app: em Gráficos, escolha "por semana".', reply_seen: false, status: 'resolvido', replied_at: new Date().toISOString() }); localStorage.setItem('mock.db', JSON.stringify(window.__db)); });
   const mctx = await browser.newContext({ viewport: { width: 400, height: 860 }, storageState: await page.context().storageState() });
   const mp = await mctx.newPage(); await addRoutes(mp); await mp.addInitScript(fakePush);
+  mp.on('pageerror', e => process.stderr.write('MP PAGEERROR ' + e.message + '\n'));
   const seeAnn = async () => { for (let i = 0; i < 40; i++) { if (await mp.$('.ann')) return true; if (await mp.$('.coach')) await mp.click('#coachSkip').catch(() => {}); await mp.waitForTimeout(250); } return false; };
   await mp.goto('https://app.test/');
-  ok('aviso de teste alpha aparece com o nome', await seeAnn() && (await mp.textContent('.ann')).includes('Oi, Luiz! Que bom ter você aqui') && (await mp.textContent('.ann')).includes('família e amigos'));
+  const annSeen = await seeAnn();
+  ok('aviso de teste alpha aparece com o nome', annSeen && (await mp.textContent('.ann')).includes('Oi, Luiz! Que bom ter você aqui') && (await mp.textContent('.ann')).includes('família e amigos'), annSeen ? await mp.textContent('.ann') : 'sem pop-up; coach=' + !!(await mp.$('.coach')) + ' tela=' + (await mp.evaluate(() => document.body.innerText.slice(0, 300))));
   if (shots) await mp.screenshot({ path: path.join(shots, '13-alpha.png') });
   await mp.click('.ann [data-p]'); await mp.waitForTimeout(600);
   ok('só um pop-up por abertura: depois do aviso, nada mais aparece', !(await mp.$('.ann')));
