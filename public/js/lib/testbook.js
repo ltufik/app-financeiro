@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('multa_nao_e_ipva', 'Menu e telas', 'v108', 'ambos', 'Multa não é IPVA',
+    ['No Extrato, num pagamento de multa (ex.: PIX Secretaria da Fazenda), toque em "Anotar" e escreva "multa".', 'Abra Menu ☰ → Gastos do ano.'],
+    'O pagamento não aparece como IPVA nem como "pago" de nenhum veículo.'),
   t('conferir_so_pendentes', 'Início', 'v107', 'ambos', 'Conferir só o que precisa',
     ['No Início, em "N lançamentos para conferir", toque em "Conferir agora".', 'Num lançamento com a categoria certa, toque em "Está certo"; em outro, troque a categoria.'],
     'O Extrato abre só com os lançamentos para conferir, com a frase "Mostrando só os N lançamentos para conferir". Cada confirmação some da lista; no fim aparece "Pronto! Nada para conferir".'),

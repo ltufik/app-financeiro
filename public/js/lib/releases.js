@@ -415,4 +415,9 @@ export const RELEASES = [
     { id: 'conferir_so_pendentes', title: '"Para conferir" abria todos os lançamentos', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O card dizia 2 para conferir, mas o Extrato mostrava todos e não dava para saber quais', cost: false, notes: 'Abre filtrado (mês e lado com pendências), diz quantos são e tem "Está certo" para confirmar a sugestão.', from: [], where: 'Início; Extrato' },
     { id: 'ipva_pago_veiculo_certo', title: 'IPVA do carro aparecia como pago na scooter', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A scooter mostrava "pago R$ 2.755 em 2 parcelas" (Detran do Civic e um pagamento à Secretaria da Fazenda)', cost: false, notes: 'Com mais de um IPVA, só conta como pago o que está ligado ao item; IPVA de moto barato passa a contar.', from: [], where: 'Gastos do ano' },
   ] },
+  { id: 'r108', version: 'v108', at: '2026-11-06T12:11:00Z', backlog: [], news: { id: 'n20261106e', title: 'Multa não é IPVA', items: [
+    'Pagamento de multa (no nome do lançamento ou numa anotação sua) não entra mais como IPVA em Gastos do ano.',
+  ] }, addBacklog: [
+    { id: 'multa_nao_e_ipva', title: 'PIX de multa à Secretaria da Fazenda contado como IPVA', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O PIX de R$ 469,91 de multas (agosto) aparecia como IPVA', cost: false, notes: 'Texto ou anotação com "multa" ou "infração" não é imposto do ano.', from: [], where: 'Gastos do ano' },
+  ] },
 ];

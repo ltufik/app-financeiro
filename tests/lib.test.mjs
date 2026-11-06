@@ -952,6 +952,10 @@ test('gastos do ano: pago no ano', async () => {
   const civic = { kind: 'ipva', from: 'Detran' }, scooter = { kind: 'ipva', assetName: 'Scooter de São Paulo', fromAsset: { atOnce: 330 } };
   const all = [...txs, { source: 'conta', month: '2026-08', amount: -469.91, description: 'PIX Secretaria da Fazenda' }];
   assert.deepEqual(paidThisYear(scooter, all, '2026-11-06', [civic, scooter]), { total: 0, months: [] });
+  // A payment noted as a fine ("multa") is not IPVA, even to the Secretaria da Fazenda.
+  const { kindOfTx } = await import('../public/js/lib/annual.js');
+  assert.equal(kindOfTx({ description: 'PIX Secretaria da Fazenda', note: 'multas' }), null);
+  assert.equal(kindOfTx({ description: 'DETRAN multa de trânsito' }), null);
   // Alone in the list, a cheap motorcycle IPVA (R$ 330) still counts.
   assert.deepEqual(paidThisYear(scooter, [{ source: 'conta', month: '2026-01', amount: -330, description: 'IPVA moto' }], '2026-11-06', [scooter]), { total: 330, months: ['2026-01'] });
 });

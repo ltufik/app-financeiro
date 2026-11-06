@@ -33,7 +33,8 @@ const PAT = {
   iptu: /\biptu\b|prefeitura|tributos? munic|\bpmsp\b/,
   escola: /matricula|material escolar|uniforme escolar/,
 };
-export const kindOfTx = t => { const p = plain(`${t.description} ${t.note || ''}`); if (/ministerio da fazenda|receita federal|\bdas\b|simples nacional/.test(p)) return null; for (const k of ['licenciamento', 'ipva', 'iptu', 'escola']) if (PAT[k].test(p)) return k; return null; };
+// Fines ("multa", in the text or in the person's note) and federal taxes are not the yearly vehicle/property tax.
+export const kindOfTx = t => { const p = plain(`${t.description} ${t.note || ''}`); if (/ministerio da fazenda|receita federal|\bdas\b|simples nacional|\bmultas?\b|infracao|infracoes/.test(p)) return null; for (const k of ['licenciamento', 'ipva', 'iptu', 'escola']) if (PAT[k].test(p)) return k; return null; };
 const payee = t => plain(t.description).replace(/\d+/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
 
 // Payments of the last 12 months that look like the year's taxes and school costs, grouped by who received them.
