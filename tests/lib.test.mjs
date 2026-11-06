@@ -1099,3 +1099,11 @@ test('server health: color by what failed and the history', async () => {
   const r = await runHealth({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'k', anonKey: 'a', env: { VAPID_PUBLIC_KEY: 'p', VAPID_PRIVATE_KEY: 'q' }, fetchImpl: fake });
   assert.equal(r.color, 'vermelho'); assert.equal(r.checks.find(c => c.id === 'assistente').ok, false); assert.match(r.text, /Banco de dados/);
 });
+
+test('health uses the same URL cleanup as the rest of the server (env may end in /rest/v1)', async () => {
+  const { runHealth } = await import('../api/health.js');
+  const seen = [];
+  await runHealth({ supabaseUrl: undefined, serviceKey: 'k', env: {}, fetchImpl: async u => { seen.push(u); return { ok: true }; } }).catch(() => {});
+  const { cleanUrl } = await import('../api/config.js');
+  assert.equal(cleanUrl('https://x.supabase.co/rest/v1/'), 'https://x.supabase.co');
+});

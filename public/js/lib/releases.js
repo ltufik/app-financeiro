@@ -438,4 +438,7 @@ export const RELEASES = [
   ] }, updateBacklog: [{ id: 'saude_do_servidor', set: { tipo: 'backend' } }], addDocs: [DOC_SAUDE], addBacklog: [
     { id: 'tela_entrada_clara', title: 'Tela de entrada com as duas formas de entrar, o selo de segurança e a novidade', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Quem tem digital abria o app e só via o botão de entrar; perdia o recado de segurança e as novidades', cost: false, notes: 'Duas opções claras; selo "sem senha do banco"; novidade mais recente (nada do dinheiro da família aparece antes de entrar).', from: [], where: 'Tela de entrada' },
   ] },
+  { id: 'r111', version: 'v111', at: '2026-11-06T16:58:00Z', backlog: [], semNovidade: 'Só no servidor: a conferência de saúde dava vermelho falso (endereço do banco sem a limpeza que o resto do servidor faz).', semTeste: 'Só no servidor; coberto pelo teste de regra e pela rodada do GitHub logo após publicar.', addBacklog: [
+    { id: 'saude_vermelho_falso', title: 'Saúde do servidor dava vermelho falso no banco e no login', status: 'feito', tipo: 'bug', origin: 'Equipe', effort: 'P', problem: 'A primeira conferência do GitHub deu vermelho com o app funcionando', cost: false, notes: 'O endereço do Supabase vem com /rest/v1 no fim; a saúde agora usa a mesma limpeza do resto do servidor e diz o motivo de cada falha.', from: [], where: 'Servidor' },
+  ] },
 ];
