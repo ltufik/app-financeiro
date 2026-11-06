@@ -23,11 +23,10 @@ import { demoSummary, DEMO_FAMILY, DEMO_MONTH } from '../lib/demo.js';
 import { track } from '../usage.js';
 import { renderForecast } from '../forecast.js';
 
-let goalPreset = 0, showAllInsights = false;
+let goalPreset = 0;
 // Início sections: a clear one-line description; the person opens for the detail (remembered per section).
 const SEC_OPEN = id => { try { return localStorage.getItem('fin.home.' + id) === '1'; } catch (e) { return false; } };
 const sec = (id, title, line, body) => `<details class="sum" id="sum_${id}" data-sec="${id}"${SEC_OPEN(id) ? ' open' : ''}><summary><span class="sum-t">${title}</span><span class="sum-l">${line}</span></summary><div class="sum-b stack">${body}</div></details>`;
-const moreOpen = () => { try { return localStorage.getItem('fin.home.more') === '1'; } catch (e) { return false; } };
 const first = () => (S.user?.user_metadata?.display_name || '').split(' ')[0] || 'você';
 
 // While the family has no data: a fictional month, with the same math as the real summary.
@@ -66,14 +65,16 @@ export function render(el) {
   const P0 = patrimonio(), pr = presets();
   if (goalPreset >= pr.length) goalPreset = 0;
 
-  const fees = feesHTML(), lvl = levelHTML();
+  const fees = feesHTML(), lvl = levelHTML(), subsAll = findRecurring(S.txs, monthKeys(), { idx: S.catIdx });
   el.innerHTML = `<p class="hello">Olá, ${esc(first())}.</p>
   <section class="todo" id="todo">
-    <div class="todo-head"><h2>Para fazer agora</h2><p class="small muted">Cada item leva poucos minutos e deixa os números de vocês certos. Some quando estiver feito.</p></div>
+    <div class="todo-head"><p class="eyebrow" id="todoEyebrow">Seu próximo passo</p></div>
     <div id="closeCard"></div>
     <div class="stack" id="debtPayBox" hidden></div>
     <div class="panel" id="stepsBox" hidden></div>
     <div id="insights" class="insights"></div>
+    <button class="linkbtn small todo-more" type="button" id="todoMore" hidden></button>
+    <div id="todoAttn" hidden></div>
     <p class="small todo-done" id="todoDone" hidden>Tudo em dia por aqui. O próximo passo é no domingo: informar a fatura aberta para a previsão ficar certa.</p>
   </section>
   <div class="panel" id="fcBox" hidden></div>
@@ -111,31 +112,20 @@ export function render(el) {
 `)}
   ${fees ? sec('banco', 'Quanto o banco cobrou', `<span class="small"><strong>${brl0(feesOf(S.txs.filter(t => t.month > addM(todayISO().slice(0, 7), -12))).total)}</strong> nos últimos 12 meses</span><span class="tiny muted">Juros, IOF, anuidade e tarifas. Abra para ver o que foi cobrado.</span>`, fees) : ''}
   <div id="infoBox"></div>
-  <details class="more" id="homeMore"${moreOpen() ? ' open' : ''}>
-    <summary><span><strong>Mais detalhes</strong><br><span class="tiny muted">Assinaturas, quem paga o quê, quanto guardaram mês a mês, patrimônio e o sonho de vocês</span></span></summary>
-    <div class="stack">
-      <div class="panel"><h3>Retrospectiva do ano</h3><p class="small muted">O ano em uma página, com os meses que já têm o extrato da conta.</p><button class="btn" type="button" data-retro="${todayISO().slice(0, 4)}">Ver ${todayISO().slice(0, 4)} até agora</button></div>
-      <div class="panel">
-        <h3>Quanto guardaram, mês a mês</h3>
-        <p class="muted small">Quanto da renda sobrou em cada mês. A linha tracejada é quanto vocês combinaram guardar.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p>
-        <svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg>
-      </div>
-      <div class="grid2">
-        <div class="panel">
-          <h3>Patrimônio</h3>
-          ${P0.rows.length ? `<div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(P0.total)}</div><ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em Patrimônio e dívidas.</p>'}
-        </div>
-        <div class="panel" id="goalBox"></div>
-      </div>
-      <div class="panel" id="subsBox"></div>
-      <div class="panel" id="settleBox" hidden></div>
-    </div>
-  </details>`;
+  <div id="homeMore" class="secs">
+  ${sec('fixos', 'Assinaturas e custos fixos', `<span class="small">${subsAll.length ? `<strong>${subsAll.length}</strong> que voltam todo mês · <strong>${brl0(subsAll.filter(x => x.current).reduce((a, x) => a + x.last, 0))}</strong> no último mês` : 'Aparecem quando a mesma conta vier 3 meses seguidos'}</span><span class="tiny muted">O que sai todo mês sem vocês perceberem. Abra para revisar e cortar o que não usam.</span>`, '<div class="panel" id="subsBox"></div>')}
+  ${sec('patrimonio', 'Patrimônio', `<span class="small">${P0.rows.length ? `<strong>${brl0(P0.total)}</strong> em imóveis, veículos e investimentos, já sem o que falta pagar` : 'Ainda não cadastrado'}</span><span class="tiny muted">Abra para ver cada bem e o que falta de cada financiamento.</span>`,
+    `<div class="panel">${P0.rows.length ? `<ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em Patrimônio e dívidas.</p>'}</div>`)}
+  ${sec('sonho', 'O sonho de vocês', '<span class="tiny muted">Quanto falta e quando chegam lá no ritmo de hoje. Abra para ver e ajustar o plano.</span>', '<div class="panel" id="goalBox"></div>')}
+  ${sec('poupanca', 'Quanto guardaram, mês a mês', `<span class="tiny muted">Quanto da renda sobrou em cada mês, comparado com a meta de ${pct(G.savings || 0.2)}. Abra para ver o gráfico.</span>`,
+    `<div class="panel"><p class="muted small">A linha tracejada é quanto vocês combinaram guardar.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p><svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg></div>`)}
+  ${sec('retro', `Retrospectiva de ${todayISO().slice(0, 4)}`, '<span class="tiny muted">O ano em uma página, com os meses que já têm o extrato da conta.</span>', `<div class="panel"><button class="btn" type="button" data-retro="${todayISO().slice(0, 4)}">Ver ${todayISO().slice(0, 4)} até agora</button></div>`)}
+  ${S.members.length > 1 && !yr ? sec('divisao', 'Quem pagou o quê', '<span class="tiny muted">O acerto do mês entre vocês. Abra para ver quem passa quanto para quem.</span>', '<div class="panel" id="settleBox" hidden></div>') : '<div class="panel" id="settleBox" hidden></div>'}
+  </div>`;
   renderSubs(el.querySelector('#subsBox'));
   if (!yr) renderSettle(el.querySelector('#settleBox'), list[0]);
   const cm = el.querySelector('#catMore');
   if (cm) cm.onclick = () => { const hid = el.querySelectorAll('#catBars [data-more]'); const show = [...hid].some(x => x.hidden); hid.forEach(x => { x.hidden = !show; }); cm.textContent = show ? 'Mostrar só as 5 maiores' : `Ver todas as ${top.length} categorias`; };
-  el.querySelector('#homeMore').ontoggle = e => { try { localStorage.setItem('fin.home.more', e.target.open ? '1' : '0'); } catch (x) { /* storage blocked */ } };
   renderGoal(el.querySelector('#goalBox'), G, pr);
   renderPendingPayments(el.querySelector('#debtPayBox'), { onDone: () => S.render() });
   el.querySelector('#plansMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.parcelas'); });
@@ -146,7 +136,7 @@ export function render(el) {
   // The year retrospective: on top while there is a new edition (retroNotice); always in "Mais detalhes".
   el.querySelectorAll('[data-retro]').forEach(b => b.onclick = () => import('../wrapped.js').then(m => m.openWrapped(b.dataset.retro)));
   if (!yr) renderBudget(el.querySelector('#budgetBox'), cats);
-  bindSecs(el); todoDone();
+  bindSecs(el); arrangeTodo();
 }
 
 // Home insights: what happened this month and what to do about it.
@@ -208,38 +198,55 @@ function renderInsights(box) {
     const g = document.getElementById('goClose'); if (g) g.onclick = () => { S.closeMonth = m2c; S.go('fechar'); };
   }
   const infoBox = document.getElementById('infoBox'), infos = list.filter(x => !x.action);
+  ATTN = infos.find(x => x.tone === 'bad' || x.tone === 'warn') || null;
   if (infoBox) {
     infoBox.innerHTML = infos.length ? sec('avisos', 'Outros avisos', `<span class="small">${infos.length} ${infos.length > 1 ? 'avisos' : 'aviso'}: ${esc(infos[0].title)}${infos.length > 1 ? '…' : ''}</span><span class="tiny muted">Para saber; não pedem nada de vocês.</span>`,
       infos.map(x => `<article class="insight ${x.tone}"><div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p></div></article>`).join('')) : '';
     bindSecs(infoBox);
   }
   list = list.filter(x => x.action);
-  if (!list.length) { box.hidden = true; box.innerHTML = ''; todoDone(); return; }
+  if (!list.length) { box.hidden = true; box.innerHTML = ''; arrangeTodo(); return; }
   box.hidden = false;
-  // Short list: the other "to do" blocks (close the month, payoff, first steps) take their place (at least 1 shows).
-  const busyOthers = ['closeCard', 'debtPayBox', 'stepsBox'].filter(id => { const e = document.getElementById(id); return e && !e.hidden && e.innerHTML.trim(); }).length;
-  const nFresh = list.filter(x => FRESH.has(x.id)).length, base = Math.max(1, Math.max(2, Math.min(3, nFresh)) - busyOthers), shown = showAllInsights ? list : list.slice(0, base);
+  const shown = list;
   const after = S.savedAt && Date.now() - S.savedAt < 30 * 60e3;
   box.innerHTML = shown.map(x => `<article class="insight ${x.tone}${FRESH.has(x.id) ? ' fresh' : ''}">${FRESH.has(x.id) ? `<span class="newtag">${after ? 'Depois do que vocês lançaram' : 'Novo'}</span>` : ''}<span class="ii" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${ICON[x.tone]}</svg></span>
     <div><h3>${esc(x.title)}</h3><p class="small">${esc(x.text)}</p>${x.action ? `<button class="btn small act" type="button" data-go='${esc(JSON.stringify(x.action.go))}'>${esc(x.action.label)}</button>` : ''}</div></article>`).join('');
-  if (list.length > base) { box.insertAdjacentHTML('beforeend', `<button class="linkbtn small" type="button" id="insMore">${showAllInsights ? 'Mostrar menos' : 'Ver mais ' + (list.length - base) + (list.length - base > 1 ? ' itens' : ' item')}</button>`); box.querySelector('#insMore').onclick = () => { showAllInsights = !showAllInsights; renderInsights(box); }; }
   box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { track('inicio.acao'); const g = JSON.parse(b.dataset.go); if (g[0] === 'retro') { import('../wrapped.js').then(m => m.openWrapped(g[1])); return; } if (g[0] === 'fechar') S.closeMonth = null; S.go(g[0], g[1], g[2]); });
-  todoDone();
+  arrangeTodo();
 }
 
 // Opening a section is remembered and counted (engagement: which sections people open).
-const SEC_TRACK = { sobra: 'inicio.abriu_sobra', cartao: 'inicio.abriu_cartao', banco: 'inicio.tarifas', nivel: 'inicio.abriu_nivel', avisos: 'inicio.abriu_avisos' };
+const SEC_TRACK = { fixos: 'inicio.abriu_fixos', patrimonio: 'inicio.abriu_patrimonio', sonho: 'inicio.abriu_sonho', poupanca: 'inicio.abriu_poupanca', retro: 'inicio.abriu_retro', divisao: 'inicio.abriu_divisao', sobra: 'inicio.abriu_sobra', cartao: 'inicio.abriu_cartao', banco: 'inicio.tarifas', nivel: 'inicio.abriu_nivel', avisos: 'inicio.abriu_avisos' };
 function bindSecs(root) {
   root.querySelectorAll('details.sum[data-sec]').forEach(d => d.addEventListener('toggle', () => {
     try { localStorage.setItem('fin.home.' + d.dataset.sec, d.open ? '1' : '0'); } catch (e) { /* storage blocked */ }
     if (d.open && SEC_TRACK[d.dataset.sec]) track(SEC_TRACK[d.dataset.sec]);
   }));
 }
-// "Para fazer agora" with nothing left: says so, and what comes next (so the person knows what is expected).
-function todoDone() {
+// The top of Início guides to ONE thing: what is new since the last visit first; otherwise what needs a decision
+// (payoff to confirm, month to close), then what needs attention (bad before warning), then the first steps.
+// The rest waits behind "Depois disso". Nothing to do: what to keep an eye on; nothing at all: "tudo em dia".
+let ATTN = null, todoOpen = false;
+function arrangeTodo() {
   const t = document.getElementById('todo'); if (!t) return;
-  const busy = ['#closeCard', '#debtPayBox', '#stepsBox', '#insights'].some(q => { const e = t.querySelector(q); return e && !e.hidden && e.innerHTML.trim(); });
-  t.querySelector('#todoDone').hidden = busy;
+  const vis = e => e && !e.hidden && e.innerHTML.trim();
+  const ins = document.getElementById('insights'), arts = ins ? [...ins.querySelectorAll(':scope > .insight')] : [];
+  const rank = a => a.classList.contains('bad') ? 0 : a.classList.contains('warn') ? 1 : 2;
+  const fresh = arts.filter(a => a.classList.contains('fresh')), rest = arts.filter(a => !a.classList.contains('fresh')).sort((a, b) => rank(a) - rank(b));
+  const blocks = ['debtPayBox', 'closeCard'].map(id => document.getElementById(id)).filter(vis), steps = document.getElementById('stepsBox');
+  const units = [...fresh, ...blocks, ...rest, ...(vis(steps) ? [steps] : [])];
+  [...arts, ...blocks, steps].forEach(e => e && e.classList.remove('later'));
+  units.forEach((u, i) => { u.style.order = String(i + 1); if (i && !todoOpen) u.classList.add('later'); });
+  if (ins) ins.style.order = String(arts.length ? Math.min(...arts.map(a => +a.style.order || 99)) : 99);
+  const n = units.length, first = units[0];
+  t.querySelector('#todoEyebrow').textContent = n ? (first.classList.contains('fresh') ? 'Novidade desde a sua última visita' : 'Seu próximo passo') : ATTN ? 'Vale ficar de olho' : 'Tudo em dia';
+  const more = t.querySelector('#todoMore');
+  more.hidden = n < 2; more.textContent = todoOpen ? 'Mostrar só o próximo passo' : `Depois disso: mais ${n - 1} ${n - 1 > 1 ? 'itens' : 'item'}`;
+  more.onclick = () => { todoOpen = !todoOpen; track('inicio.todo_mais'); arrangeTodo(); };
+  const at = t.querySelector('#todoAttn');
+  at.hidden = !!n || !ATTN;
+  at.innerHTML = !n && ATTN ? `<article class="insight ${ATTN.tone}"><div><h3>${esc(ATTN.title)}</h3><p class="small">${esc(ATTN.text)}</p></div></article>` : '';
+  t.querySelector('#todoDone').hidden = !!n || !!ATTN;
 }
 
 // The level of the year, during the year: where the family is, what is missing for the next one, and the rules.
@@ -335,9 +342,9 @@ function renderBudget(box, spent) {
 // Subscriptions and fixed charges found in the statements.
 function renderSubs(box) {
   const subs = findRecurring(S.txs, monthKeys(), { idx: S.catIdx });
-  if (!subs.length) { box.innerHTML = '<h3>Assinaturas e cobranças fixas</h3><p class="small muted">Aparecem aqui quando a mesma cobrança vier em pelo menos 3 dos últimos 4 meses.</p>'; return; }
+  if (!subs.length) { box.innerHTML = '<h3>Assinaturas e custos fixos</h3><p class="small muted">Aparecem aqui quando a mesma cobrança vier em pelo menos 3 dos últimos 4 meses.</p>'; return; }
   const tot = subs.filter(x => x.current).reduce((a, x) => a + x.last, 0);
-  box.innerHTML = `<h3>Assinaturas e cobranças fixas</h3>
+  box.innerHTML = `<h3>Assinaturas e custos fixos</h3>
     <p class="small muted">${subs.length} encontradas · ${brl0(tot)} por mês no último mês. Revise de vez em quando: é dinheiro que sai sem você perceber.</p>
     <ul class="list small">${subs.map(x => `<li><span>${esc(x.name)}<br><span class="tiny muted">${x.months} dos últimos 4 meses${x.current ? '' : ' · não veio no último mês'}</span>${x.rise ? `<br><span class="tiny" style="color:var(--coral)">Subiu ${brl(x.rise)} (era ${brl(x.prev)})</span>` : ''}</span><span class="amt">${brl(x.last)}</span></li>`).join('')}</ul>`;
 }

@@ -237,9 +237,9 @@ export const DOC_PREVISAO = { id: 'previsao_doc', title: 'Previsão do mês e o 
 - Central: "Informou a fatura aberta" contra "Tocou no aviso de domingo". Abaixo de 30% de resposta, mudar o jeito de pedir.` };
 export const DOC_INICIO = { id: 'inicio_doc', title: 'Início: para fazer agora, previsão e nível do ano', body: `O Início pede ação, não só mostra números. Medimos se as pessoas agem e se voltam.
 ## Ordem
-1. Para fazer agora (aberto): fechar o mês, amortização a confirmar, primeiros passos e os avisos que têm uma ação (botão). Vazio, diz "tudo em dia" e o próximo passo (domingo, a fatura aberta).
+1. Seu próximo passo (aberto): UM item por vez. Primeiro o que é novo desde a última visita; senão o que pede decisão (amortização a confirmar, fechar o mês), depois os avisos com ação (ruim antes de alerta) e os primeiros passos. Os outros ficam em "Depois disso". Sem nada para fazer: "Vale ficar de olho" (o aviso ruim ou de alerta mais importante); sem nada: "Tudo em dia" e o próximo passo (domingo, a fatura aberta).
 2. Previsão do mês (aberto): com a pergunta "Quanto está a fatura aberta hoje?" e o campo à vista.
-3. Seções que abrem, cada uma com uma linha que já diz o principal: Nível do ano, Sobra do mês, Cartão, Quanto o banco cobrou, Outros avisos (os que não pedem ação) e Mais detalhes. O app lembra quais a pessoa deixou abertas.
+3. Seções que abrem, cada uma com uma linha que já diz o principal: Nível do ano, Sobra do mês, Cartão, Quanto o banco cobrou, Outros avisos, Assinaturas e custos fixos, Patrimônio, O sonho de vocês, Quanto guardaram mês a mês, Retrospectiva e Quem pagou o quê. O app lembra quais a pessoa deixou abertas.
 ## Nível do ano (lib/closing.js, levelProgress)
 - Conta os meses do ano com o extrato da conta.
 - Bronze: sobra no ano. Prata: 10% da renda guardados. Ouro: a meta (Metas), 3 de cada 4 meses no azul e, a partir do 4º domingo da previsão, a fatura aberta em pelo menos metade dos domingos (uma janela por semana, de quinta a quarta).

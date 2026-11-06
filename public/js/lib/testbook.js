@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('inicio_um_passo', 'Início', 'v106', 'ambos', 'Início: um passo de cada vez',
+    ['Abra o Início.', 'Veja o primeiro cartão ("Seu próximo passo" ou "Novidade desde a sua última visita") e toque em "Depois disso".', 'Abra "Assinaturas e custos fixos" e "Patrimônio".'],
+    'No topo aparece só um item, com um botão claro. "Depois disso" mostra os outros e "Mostrar só o próximo passo" volta. Cada cartão de baixo diz numa linha o que é (ex.: "8 que voltam todo mês · R$ … no último mês") e abre com o detalhe.'),
   t('desfazer_amortizacao', 'Menu e telas', 'v105', 'ambos', 'Desfazer uma amortização',
     ['Menu ☰ → Patrimônio e dívidas → Como está cada financiamento hoje.', 'Numa amortização do histórico que não devia estar lá, toque em "Desfazer" e confirme.'],
     'Aparece "Desfeito" com o novo saldo; a amortização some do histórico, o saldo sobe o mesmo valor e o lançamento volta para a categoria de antes no Extrato.'),

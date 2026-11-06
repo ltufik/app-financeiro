@@ -401,4 +401,11 @@ export const RELEASES = [
   ] }, addBacklog: [
     { id: 'desfazer_amortizacao', title: 'Desfazer amortização confirmada por engano', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Pagamentos confirmados por engano (R$ 99 mil e R$ 15,9 mil) tiraram R$ 115 mil a mais do saldo de Guaratuba, sem jeito de voltar', cost: false, notes: 'Desfazer no histórico; guarda a categoria anterior; o pagamento não é perguntado de novo.', from: [], where: 'Patrimônio e dívidas' },
   ] },
+  { id: 'r106', version: 'v106', at: '2026-11-06T11:12:00Z', backlog: [], news: { id: 'n20261106c', title: 'Um passo de cada vez no Início', items: [
+    'O Início mostra uma coisa por vez: o que é novo desde a sua última visita ou o próximo passo. O resto fica em "Depois disso".',
+    'Sem nada para fazer, ele mostra o que vale ficar de olho.',
+    'Assinaturas e custos fixos, patrimônio, sonho, quanto guardaram e a retrospectiva viraram cartões com o resumo numa linha; toque para abrir.',
+  ] }, updateDocs: [DOC_INICIO], addBacklog: [
+    { id: 'inicio_um_passo', title: 'Início com um passo de cada vez', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Mesmo organizado, o Início ainda tinha muita coisa e a pessoa se perdia', cost: false, notes: 'Ordem: novidade, decisão (amortização, fechar o mês), atenção (ruim antes de alerta), primeiros passos. Sem nada: "vale ficar de olho" ou "tudo em dia".', from: [], where: 'Início' },
+  ] },
 ];

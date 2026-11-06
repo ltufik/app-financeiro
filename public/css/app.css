@@ -723,3 +723,11 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .lvrules li.ok{color:var(--ink)}
 .lvrules li.ok>span:first-child{color:var(--good);font-weight:700}
 .lvmiss{margin:6px 0;padding-left:18px}
+/* Início: one next step at a time */
+.todo .todo-head{order:0}
+.todo .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0}
+.todo #insights{display:flex;flex-direction:column;gap:10px}
+.todo .later{display:none!important}
+.todo .todo-more{order:90;align-self:flex-start}
+.todo #todoAttn,.todo .todo-done{order:95}
+.secs{display:flex;flex-direction:column}
