@@ -566,11 +566,11 @@ async function avisos(el) {
     const pc = v => Math.round(v * 100) + '%', when = j => j.never ? 'sem registro ainda' : `${dday(j.lastAt)}, há ${j.hoursAgo >= 48 ? Math.round(j.hoursAgo / 24) + ' dias' : j.hoursAgo + ' h'}`;
     box.innerHTML = `<h2>Entregas e robôs</h2>
       ${h.alerts.length ? `<div class="status err"><strong>${h.alerts.length > 1 ? h.alerts.length + ' problemas' : '1 problema'}:</strong> ${h.alerts.map(a => esc(a.text)).join(' ')}</div>` : '<p class="status ok">Tudo certo: os robôs rodaram no horário e os avisos estão chegando.</p>'}
-      <p class="small">Últimos 7 dias: <strong>${h.total.sent}</strong> avisos enviados, <strong>${h.total.sent ? pc(h.total.rate) : '—'}</strong> chegaram.</p>
+      <p class="small">Últimos 7 dias: <strong>${h.total.sent}</strong> avisos enviados, <strong>${h.total.sent ? pc(h.total.rate) : '—'}</strong> entregues ao Google ou à Apple (que repassam ao celular).</p>
       <div class="tscroll"><table class="atable small"><thead><tr><th>Robô</th><th>Última rodada</th><th>Rodadas (7 dias)</th></tr></thead><tbody>
         ${h.jobs.map(j => `<tr><td>${esc(j.label)}</td><td>${j.never ? '<span class="muted">sem registro ainda</span>' : `${j.late ? '⚠️ ' : j.lastOk ? '✓ ' : '✗ '}${esc(when(j))}`}</td><td>${j.runs7}${j.fails7 ? ` (${j.fails7} com erro)` : ''}</td></tr>`).join('')}
       </tbody></table></div>
-      ${h.byJob.length ? `<div class="tscroll"><table class="atable small"><thead><tr><th>Tipo</th><th>Enviados</th><th>Chegaram</th><th>Erro</th><th>Aparelho saiu</th></tr></thead><tbody>
+      ${h.byJob.length ? `<div class="tscroll"><table class="atable small"><thead><tr><th>Tipo</th><th>Enviados</th><th>Entregues ao Google/Apple</th><th>Erro</th><th>Aparelho saiu</th></tr></thead><tbody>
         ${h.byJob.map(b => `<tr><td>${esc(b.label)}</td><td>${b.sent}</td><td>${b.ok} (${pc(b.rate)})</td><td>${b.failed}</td><td>${b.gone}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">Nenhum aviso registrado nos últimos 7 dias.</p>'}
       ${h.errors.length ? `<details class="help"><summary>Erros mais comuns</summary><ul class="small">${h.errors.map(e => `<li>${esc(e.text)}: ${e.n}</li>`).join('')}</ul></details>` : ''}
       <p class="tiny muted">"Aparelho saiu" é normal: o celular desinstalou o app ou resetou as notificações, e o aparelho sai da lista sozinho. Se um robô atrasar, der erro ou menos de 80% chegarem, você recebe um push às 9h.</p>`;

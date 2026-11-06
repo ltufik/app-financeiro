@@ -48,8 +48,9 @@ export async function sendPush(sub, data, vapid, fetchImpl = fetch) {
   try {
     const body = encrypt(JSON.stringify(data), sub.keys);
     const r = await fetchImpl(sub.endpoint, {
+      // 'high': delivered right away even with the phone asleep (with 'normal', Android can hold it for a long time).
       method: 'POST',
-      headers: { authorization: vapidAuth(sub.endpoint, vapid), 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: '86400', urgency: 'normal' },
+      headers: { authorization: vapidAuth(sub.endpoint, vapid), 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: '86400', urgency: 'high' },
       body,
     });
     const out = { ok: r.status >= 200 && r.status < 300, status: r.status, gone: r.status === 404 || r.status === 410 };

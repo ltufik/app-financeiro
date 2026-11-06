@@ -892,7 +892,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('avisos'); await ap.waitForSelector('#avMine h2');
   ok('central: avisos mostra seus aparelhos e quem recebe', (await ap.textContent('#avMine')).includes('Android ou Chrome') && (await ap.textContent('#avAll')).includes('2 de 4 pessoas') && (await ap.textContent('#avAll')).includes('Desligadas'));
   await ap.waitForSelector('#avHealth h2');
-  ok('central: entregas e robôs (quanto chegou, robô atrasado em destaque)', /Últimos 7 dias: 10 avisos enviados, 90% chegaram/.test(await ap.textContent('#avHealth')) && (await ap.textContent('#avHealth')).includes('Lembrete da noite (21h) não roda há 3 dias') && (await ap.textContent('#avHealth')).includes('sem registro ainda'), await ap.textContent('#avHealth'));
+  ok('central: entregas e robôs (quanto chegou, robô atrasado em destaque)', /Últimos 7 dias: 10 avisos enviados, 90% entregues ao Google ou à Apple/.test(await ap.textContent('#avHealth')) && (await ap.textContent('#avHealth')).includes('Lembrete da noite (21h) não roda há 3 dias') && (await ap.textContent('#avHealth')).includes('sem registro ainda'), await ap.textContent('#avHealth'));
   await ap.click('#avTest'); await ap.waitForSelector('#avMsg.ok');
   ok('central: push de teste diz para quantos foi e tira aparelho antigo', pushTestSent === 1 && /Enviado para 1 aparelho\..*1 aparelho antigo/.test(await ap.textContent('#avMsg')) && (await ap.textContent('#avMine')).includes('Nenhum aparelho seu') && (await ap.textContent('#toast')).includes('Push de teste enviado'));
   pushTestFail = 401; await ap.click('#avTest'); await ap.waitForSelector('#avMsg.err');

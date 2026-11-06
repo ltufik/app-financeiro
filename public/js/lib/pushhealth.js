@@ -35,7 +35,7 @@ export function pushHealth(logs = [], runs = [], now = new Date().toISOString())
     else if (j.lastOk === false) alerts.push({ job: j.job, text: `${j.label}: a última rodada deu erro.` });
   }
   // Removed devices (gone) are normal housekeeping, not a delivery problem.
-  for (const b of byJob) { const tried = b.sent - b.gone; if (tried >= MIN_FOR_RATE && b.ok / tried < LOW_RATE) alerts.push({ job: b.job, text: `${b.label}: só ${Math.round(b.ok / tried * 100)}% chegaram nos últimos 7 dias.` }); }
+  for (const b of byJob) { const tried = b.sent - b.gone; if (tried >= MIN_FOR_RATE && b.ok / tried < LOW_RATE) alerts.push({ job: b.job, text: `${b.label}: só ${Math.round(b.ok / tried * 100)}% foram entregues nos últimos 7 dias.` }); }
   return { jobs, byJob, total: { sent, ok, rate: sent ? ok / sent : 0 }, errors, alerts };
 }
 

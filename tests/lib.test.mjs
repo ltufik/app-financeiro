@@ -1070,7 +1070,7 @@ test('push health: deliveries by robot, late robots and the alert', () => {
   const d = h.byJob.find(b => b.job === 'diario'); assert.deepEqual([d.sent, d.ok, d.gone, d.failed], [9, 8, 1, 0]);
   assert.deepEqual(h.alerts.map(a => a.job), ['lembrete', 'previsao', 'previsao']);
   assert.match(h.alerts[0].text, /^Lembrete da noite \(21h\) não roda há 4 dias\.$/);
-  assert.match(h.alerts[2].text, /só 50% chegaram/);
+  assert.match(h.alerts[2].text, /só 50% foram entregues/);
   assert.deepEqual(h.errors, [{ text: 'resposta 500', n: 3 }, { text: 'resposta 410', n: 1 }]);
   assert.equal(healthAlertMessage(h.alerts).title, '3 problemas nos avisos do app');
   assert.equal(healthAlertMessage([]), null);
