@@ -948,6 +948,12 @@ test('gastos do ano: pago no ano', async () => {
   const { paidThisYear } = await import('../public/js/lib/annual.js');
   const txs = [{ source: 'conta', month: '2026-04', amount: -2285.34, description: 'Detran' }, { source: 'conta', month: '2026-04', amount: -237.04, description: 'Detran' }, { source: 'conta', month: '2025-04', amount: -2100, description: 'Detran' }];
   assert.deepEqual(paidThisYear({ kind: 'ipva', from: 'Detran' }, txs, '2026-11-05'), { total: 2285.34, months: ['2026-04'] });
+  // Real case: the Civic's IPVA (Detran) and a Secretaria da Fazenda payment were shown as paid for the scooter.
+  const civic = { kind: 'ipva', from: 'Detran' }, scooter = { kind: 'ipva', assetName: 'Scooter de São Paulo', fromAsset: { atOnce: 330 } };
+  const all = [...txs, { source: 'conta', month: '2026-08', amount: -469.91, description: 'PIX Secretaria da Fazenda' }];
+  assert.deepEqual(paidThisYear(scooter, all, '2026-11-06', [civic, scooter]), { total: 0, months: [] });
+  // Alone in the list, a cheap motorcycle IPVA (R$ 330) still counts.
+  assert.deepEqual(paidThisYear(scooter, [{ source: 'conta', month: '2026-01', amount: -330, description: 'IPVA moto' }], '2026-11-06', [scooter]), { total: 330, months: ['2026-01'] });
 });
 
 test('gastos do ano: IPVA pelo veículo do patrimônio e o estado dele', async () => {

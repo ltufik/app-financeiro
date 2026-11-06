@@ -416,6 +416,14 @@ await page.click('#todoMore'); await page.waitForTimeout(100);
   ok('desligar a privacidade mostra os valores de novo', (await txt('#v-resumo .big')).includes('2.658,50'));
   ok('assinaturas e custos fixos: resumo numa linha e a lista ao abrir', /\d+ que voltam todo mês/.test(await txt('#sum_fixos summary')) && (await txt('#subsBox')).includes('Assinaturas e custos fixos') && (await page.$$('#subsBox li')).length >= 1, (await txt('#subsBox')).slice(0, 140));
   await shot('03b-insights');
+  // "N lançamentos para conferir": opens only those, in their month and side.
+  if (await page.$('#insights [data-go*="pend:"]')) {
+    await page.evaluate(() => document.querySelector('#insights [data-go*="pend:"]').click()); await page.waitForTimeout(300);
+    ok('Conferir abre só os lançamentos para conferir, dizendo quantos', await page.isVisible('#lPendInfo') && /Mostrando só (o 1 lançamento|os \d+ lançamentos) para conferir/.test(await txt('#lPendInfo')) && await page.$$eval('#lRows .xrow', r => r.length > 0 && r.every(x => x.classList.contains('pend') || /A classificar/.test(x.textContent))), await txt('#lPendInfo'));
+    await page.click('#lPend'); await page.waitForTimeout(100);
+    ok('Para conferir de novo volta a mostrar todos', !(await page.isVisible('#lPendInfo')));
+    await page.selectOption('#monthSel', '2026-09'); await page.click('[data-tab=resumo]'); await page.waitForTimeout(200);
+  } else ok('Conferir: há lançamentos para conferir no Início', false, 'sem o aviso de lançamentos para conferir');
   // guided month closing
   await page.waitForSelector('#goClose', { state: 'attached' });
   ok('início chama para fechar o mês que terminou', (await txt('#closeCard')).includes('setembro de 2026'), await txt('#closeCard'));

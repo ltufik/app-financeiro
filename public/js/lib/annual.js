@@ -119,9 +119,15 @@ export function payAdvice(item, f) {
 const R = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR'), P = v => Math.round(v * 100) + '%';
 
 // Paid this year: the payments of the same kind and payee in the current calendar year (IPVA: R$ 400 or more).
-export function paidThisYear(item, txs, today) {
+// With more than one IPVA in the list, an item with no payment tied to it (the scooter suggested from Patrimônio)
+// counts nothing: the payments could be of the other vehicle, and saying "paid" without knowing is worse than not
+// saying. The smallest IPVA counted follows the expected value, so a cheap motorcycle IPVA still counts.
+export function paidThisYear(item, txs, today, items = []) {
   const y = today.slice(0, 4), who = item.from ? payee({ description: item.from }) : null;
-  const rows = txs.filter(t => String(t.month || '').startsWith(y + '-') && cost(t) > 0 && kindOfTx(t) === item.kind && (!who || payee(t) === who) && !(item.kind === 'ipva' && cost(t) < 400));
+  if (!who && item.kind === 'ipva' && (items || []).some(o => o !== item && o.kind === 'ipva')) return { total: 0, months: [] };
+  const taken = new Set();
+  const exp = +(item.fromAsset?.atOnce || item.value || 0), min = item.kind === 'ipva' ? Math.min(400, exp > 0 ? exp * 0.5 : 400) : 0;
+  const rows = txs.filter(t => String(t.month || '').startsWith(y + '-') && cost(t) > 0 && kindOfTx(t) === item.kind && (!who || payee(t) === who) && !taken.has(payee(t)) && !(cost(t) < min));
   return { total: r2(rows.reduce((a, t) => a + cost(t), 0)), months: [...new Set(rows.map(t => t.month))].sort() };
 }
 

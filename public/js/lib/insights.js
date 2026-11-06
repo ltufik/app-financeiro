@@ -141,7 +141,7 @@ export function insights(ctx) {
 
   // 6. Things to classify
   const pend = ctx.pending(m);
-  if (pend) out.push({ id: 'pending', tone: 'info', title: `${pend} lançamento${pend > 1 ? 's' : ''} para conferir`, text: 'O app sugeriu a categoria, mas não tem certeza. Confira para a sobra e os gráficos ficarem certos; ele aprende e não pergunta de novo.', action: { label: 'Conferir', go: ['extrato', '#lPend'] } });
+  if (pend) out.push({ id: 'pending', tone: 'info', title: `${pend} lançamento${pend > 1 ? 's' : ''} para conferir`, text: 'O app sugeriu a categoria, mas não tem certeza. Confira para a sobra e os gráficos ficarem certos; ele aprende e não pergunta de novo.', action: { label: 'Conferir agora', go: ['extrato', null, 'pend:' + m] } });
 
   return out.sort((a, b) => RANK[a.tone] - RANK[b.tone]);
 }

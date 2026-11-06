@@ -140,6 +140,12 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('conferir_so_pendentes', 'Início', 'v107', 'ambos', 'Conferir só o que precisa',
+    ['No Início, em "N lançamentos para conferir", toque em "Conferir agora".', 'Num lançamento com a categoria certa, toque em "Está certo"; em outro, troque a categoria.'],
+    'O Extrato abre só com os lançamentos para conferir, com a frase "Mostrando só os N lançamentos para conferir". Cada confirmação some da lista; no fim aparece "Pronto! Nada para conferir".'),
+  t('ipva_pago_veiculo_certo', 'Menu e telas', 'v107', 'ambos', 'IPVA pago no veículo certo',
+    ['Menu ☰ → Gastos do ano, com dois veículos na lista (ex.: carro e scooter).'],
+    'O "✓ pago" aparece só no IPVA do veículo que foi pago (o do Detran ligado a ele); o outro não mostra pagamento de outro veículo.'),
   t('inicio_um_passo', 'Início', 'v106', 'ambos', 'Início: um passo de cada vez',
     ['Abra o Início.', 'Veja o primeiro cartão ("Seu próximo passo" ou "Novidade desde a sua última visita") e toque em "Depois disso".', 'Abra "Assinaturas e custos fixos" e "Patrimônio".'],
     'No topo aparece só um item, com um botão claro. "Depois disso" mostra os outros e "Mostrar só o próximo passo" volta. Cada cartão de baixo diz numa linha o que é (ex.: "8 que voltam todo mês · R$ … no último mês") e abre com o detalhe.'),

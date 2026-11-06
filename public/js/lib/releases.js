@@ -408,4 +408,11 @@ export const RELEASES = [
   ] }, updateDocs: [DOC_INICIO], addBacklog: [
     { id: 'inicio_um_passo', title: 'Início com um passo de cada vez', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Mesmo organizado, o Início ainda tinha muita coisa e a pessoa se perdia', cost: false, notes: 'Ordem: novidade, decisão (amortização, fechar o mês), atenção (ruim antes de alerta), primeiros passos. Sem nada: "vale ficar de olho" ou "tudo em dia".', from: [], where: 'Início' },
   ] },
+  { id: 'r107', version: 'v107', at: '2026-11-06T11:28:00Z', backlog: [], news: { id: 'n20261106d', title: 'IPVA no veículo certo e o que conferir', items: [
+    'Em Gastos do ano, o IPVA de um veículo não aparece mais como pago com o pagamento de outro (o do carro aparecia na scooter).',
+    '"Lançamentos para conferir" agora abre só os que precisam de você, no mês e no lado certo (cartão ou conta). Se a categoria sugerida estiver certa, é só tocar em "Está certo".',
+  ] }, addBacklog: [
+    { id: 'conferir_so_pendentes', title: '"Para conferir" abria todos os lançamentos', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O card dizia 2 para conferir, mas o Extrato mostrava todos e não dava para saber quais', cost: false, notes: 'Abre filtrado (mês e lado com pendências), diz quantos são e tem "Está certo" para confirmar a sugestão.', from: [], where: 'Início; Extrato' },
+    { id: 'ipva_pago_veiculo_certo', title: 'IPVA do carro aparecia como pago na scooter', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A scooter mostrava "pago R$ 2.755 em 2 parcelas" (Detran do Civic e um pagamento à Secretaria da Fazenda)', cost: false, notes: 'Com mais de um IPVA, só conta como pago o que está ligado ao item; IPVA de moto barato passa a contar.', from: [], where: 'Gastos do ano' },
+  ] },
 ];
