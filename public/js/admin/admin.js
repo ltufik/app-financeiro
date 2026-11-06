@@ -18,6 +18,7 @@ import { RELEASES } from '../lib/releases.js';
 import { TESTS, AREAS } from '../lib/testbook.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS, screenLabel, screenShot } from './content.js';
 import { homeEngagement } from '../lib/homefeed.js';
+import { CHECKS } from '../lib/health.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
@@ -190,13 +191,26 @@ function navBadges(fb = []) {
 }
 
 // ---------- Painel ----------
+// Server health on top of the Painel: green, yellow or red now, each check with its time, and the last 7 days.
+const DOT = { verde: '🟢', amarelo: '🟡', vermelho: '🔴' };
+async function renderHealth(box) {
+  let h; try { h = await getView('saude'); } catch (e) { box.innerHTML = `<h2>Saúde do servidor</h2><p class="status err">${esc(errText(e))}</p>`; return; }
+  const now = h.now || { checks: [] }, hist = h.history || { runs: 0, bad: 0, list: [] };
+  box.innerHTML = `<h2>${DOT[now.color] || ''} Saúde do servidor</h2>
+    <p class="small"><strong>${esc(now.text || '')}</strong></p>
+    <ul class="small list">${(now.checks || []).map(c => `<li><span>${c.ok ? '✓' : '✗'} ${esc(CHECKS[c.id]?.label || c.id)}</span><span class="amt">${c.ms ? (c.ms / 1000).toFixed(1).replace('.', ',') + ' s' : ''}</span></li>`).join('')}</ul>
+    <p class="tiny muted">${hist.runs ? `Últimos 7 dias: ${hist.runs} conferências diárias${hist.bad ? `, ${hist.bad} com problema` : ', todas ok'}${hist.list.length ? ' · ' + hist.list.map(r => DOT[r.color] || '').join('') : ''}.` : 'As conferências diárias aparecem aqui a partir de amanhã (9h).'} A cada hora, um robô no GitHub confere o site; se ficar vermelho, o GitHub manda e-mail. Às 9h, se algo estiver vermelho, você recebe um push.</p>`;
+}
+
 async function painel(el) {
   const items = D.backlog.items, count = s => items.filter(i => i.status === s).length;
   el.innerHTML = `<div class="ahead"><h1>Painel</h1><span class="tiny muted">Visão geral do produto</span></div>
+    <div class="panel stack" id="pHealth"><p class="small muted">Conferindo o servidor...</p></div>
     <div class="mgrid" id="pTop"></div>
     <div class="mgrid">${[['No backlog agora', count('agora')], ['Próximos', count('proximo')], ['Ideias', count('ideia')], ['Feitos', count('feito')]].map(([k, v]) => `<div class="mcard"><span class="tiny muted">${k}</span><span class="num">${v}</span></div>`).join('')}</div>
     <div class="panel stack" id="mBox"></div>`;
   renderMetrics(el.querySelector('#mBox'));
+  renderHealth(el.querySelector('#pHealth'));
   try {
     const [fb, us] = await Promise.all([loadFb(), loadUse()]);
     const week = new Date(Date.now() - 7 * 864e5 - 3 * 3600e3).toISOString().slice(0, 10);

@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('tela_entrada_clara', 'Segurança', 'v110', 'ambos', 'Tela de entrada clara',
+    ['Com a digital ligada, deixe o app desconectar (ou feche e abra depois do tempo de Segurança).'],
+    'Nada pede a digital sozinho. Aparecem "Entrar com a digital ou o rosto" e "Entrar com a senha", o selo "Sem senha do banco" e "Novidade no app: …" (toque para ver). A digital só aparece depois de tocar no primeiro botão.'),
   t('multa_nao_e_ipva', 'Menu e telas', 'v108', 'ambos', 'Multa não é IPVA',
     ['No Extrato, num pagamento de multa (ex.: PIX Secretaria da Fazenda), toque em "Anotar" e escreva "multa".', 'Abra Menu ☰ → Gastos do ano.'],
     'O pagamento não aparece como IPVA nem como "pago" de nenhum veículo.'),

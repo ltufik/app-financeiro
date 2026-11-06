@@ -7,15 +7,16 @@ import { withRecorder } from './_pushlog.js';
 import { sendPush } from './_webpush.js';
 import { pushHealth, healthAlertMessage } from '../public/js/lib/pushhealth.js';
 import { linkFor } from '../public/js/lib/links.js';
+import { runHealth } from './health.js';
 
 // After the 9h robots: if a robot is late, failed or delivers badly, one push to the owner's devices (ADMIN_EMAILS),
 // opening the Central on "Avisos no celular". Best effort.
-export async function healthCheck({ supabaseUrl, serviceKey, vapid, admins = [], fetchImpl = fetch, now = new Date().toISOString() }) {
+export async function healthCheck({ supabaseUrl, serviceKey, vapid, admins = [], extra = [], fetchImpl = fetch, now = new Date().toISOString() }) {
   const H = { apikey: serviceKey, ...(serviceKey.startsWith('sb_') ? {} : { authorization: `Bearer ${serviceKey}` }) };
   const get = async p => { const r = await fetchImpl(`${supabaseUrl}/rest/v1/${p}`, { headers: H }); if (!r.ok) throw new Error(`supabase ${r.status} ${p.split('?')[0]}`); return r.json(); };
   const since7 = new Date(Date.parse(now) - 7 * 864e5).toISOString(), since30 = new Date(Date.parse(now) - 30 * 864e5).toISOString();
   const [logs, runs] = await Promise.all([get(`push_log?at=gte.${since7}&select=at,job,ok,status,error&limit=5000`), get(`job_runs?at=gte.${since30}&select=at,job,ok&limit=500`)]);
-  const msg = healthAlertMessage(pushHealth(logs, runs, now).alerts);
+  const msg = healthAlertMessage([...extra, ...pushHealth(logs, runs, now).alerts]);
   if (!msg || !admins.length) return { alerts: msg ? 1 : 0, sent: 0 };
   const r = await fetchImpl(`${supabaseUrl}/auth/v1/admin/users?per_page=1000`, { headers: H }); if (!r.ok) return { alerts: 1, sent: 0, error: 'users' };
   const ids = ((await r.json()).users || []).filter(u => admins.includes(String(u.email || '').toLowerCase())).map(u => u.id);
@@ -44,8 +45,11 @@ export default async function handler(req, res) {
     const releases = await withRecorder({ supabaseUrl, serviceKey, job: 'versao' }, () => applyReleases(rest(supabaseUrl, serviceKey), vapid)).catch(e => ({ error: String(e.message || e) }));
     const daily = await withRecorder({ supabaseUrl, serviceKey, job: 'diario' }, () => runDaily({ supabaseUrl, serviceKey, vapid }));
     const admins = String(process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    const health = await withRecorder({ supabaseUrl, serviceKey, job: 'saude', run: false }, () => healthCheck({ supabaseUrl, serviceKey, vapid, admins })).catch(e => ({ error: String(e.message || e) }));
-    res.status(200).json({ ...daily, releases, health });
+    // The daily check of the server (job_runs "servidor"; the hourly one is the GitHub Action on /api/health).
+    const server = await withRecorder({ supabaseUrl, serviceKey, job: 'servidor' }, async () => { const h = await runHealth({ supabaseUrl, serviceKey }); return { color: h.color, text: h.text, ...(h.color === 'vermelho' ? { error: h.text } : {}) }; }).catch(e => ({ color: 'vermelho', text: String(e.message || e) }));
+    const extra = server.color === 'vermelho' ? [{ job: 'servidor', text: `Servidor: ${server.text}` }] : [];
+    const health = await withRecorder({ supabaseUrl, serviceKey, job: 'saude', run: false }, () => healthCheck({ supabaseUrl, serviceKey, vapid, admins, extra })).catch(e => ({ error: String(e.message || e) }));
+    res.status(200).json({ ...daily, releases, server, health });
   }
   catch (e) { res.status(500).json({ error: String(e.message || e) }); }
 }

@@ -8,6 +8,7 @@ import { LOCK_OPTIONS, CENTRAL_OPTIONS, lockMinutes, isExpired, idleState, lockT
 import { esc } from './lib/format.js';
 import { $, toast, announce, confirmInline } from './ui.js';
 import { track } from './usage.js';
+import { RELEASES } from './lib/releases.js';
 
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
@@ -67,6 +68,20 @@ const hideWarn = () => $('#lkWarn')?.remove();
 // Called right after an explicit sign-in: the clock starts now.
 export function freshSignIn(user, scope = 'app') { lsSet((scope === 'central' ? 'fin.central.' : 'fin.') + 'lock.last.' + user, String(Date.now())); }
 
+// What the person sees before entering (app only): the security seal and the latest news of the app, so the
+// lock screen is not a blank wall. Nothing about the family's money shows here.
+function frontDoor(scope) {
+  if (scope === 'central') return '';
+  const news = [...RELEASES].reverse().find(r => r.news)?.news;
+  return `<div class="trust lk-trust"><div><strong>Sem senha do banco.</strong> O app não se conecta à sua conta: você mesmo baixa o PDF da fatura ou do extrato, e ele é lido no seu celular e descartado.
+      <details><summary>Como cuidamos dos seus dados</summary><ul class="small">
+        <li>Nunca pedimos a senha do banco nem acesso à conta (não usamos Open Finance).</li>
+        <li>O arquivo da fatura, a senha do PDF e as fotos não são guardados.</li>
+        <li>Os lançamentos ficam só com a sua família, e dá para apagar tudo quando quiser.</li>
+        <li>Se alguém pedir a senha do seu banco em nome do Pra Onde Foi, não é o app.</li></ul></details></div></div>
+    ${news ? `<details class="lk-news" id="lkNews"><summary>Novidade no app: ${esc(news.title)}</summary><ul class="small">${news.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></details>` : ''}`;
+}
+
 export async function lock(reason = 'parado') {
   if (!L || isLocked()) return;
   hideWarn(); document.querySelectorAll('.cfm-wrap').forEach(x => x.remove()); document.body.classList.remove('cfm-open');
@@ -79,14 +94,16 @@ export async function lock(reason = 'parado') {
     <div class="lk-brand"><img src="/icons/icon.svg" alt="" width="44" height="44">Pra Onde Foi</div>
     <p class="lk-hello">${esc(hello)}</p>
     <h2 id="lkT">${esc(title)}</h2><p class="small muted">${esc(text)}</p>
-    ${bio ? `<button class="btn primary lk-big" type="button" id="lkBio">${finger} Entrar</button>` : ''}
+    ${bio ? `<button class="btn primary lk-big" type="button" id="lkBio">${finger} Entrar com a digital ou o rosto</button>
+    <button class="btn lk-big" type="button" id="lkUsePass">Entrar com a senha</button>` : ''}
     <form id="lkForm" class="stack"${bio ? ' hidden' : ''}>
       <label class="f">Senha de ${esc(L.email || 'sua conta')}<input type="password" id="lkPass" autocomplete="current-password" required></label>
       <button class="btn primary lk-big" type="submit" id="lkGo">Entrar</button>
     </form>
     <p class="small lk-upd" id="lkUpd" hidden></p>
-    <p class="small" id="lkMsg" role="status">${bio ? 'Ao tocar em Entrar, o celular pede a digital ou o rosto.' : ''}</p>
-    <div class="lk-links">${bio ? '<button class="linkbtn" type="button" id="lkUsePass">Entrar com a senha</button>' : ''}<span class="small muted">Não é você? <button class="linkbtn" type="button" id="lkOut">Sair da conta</button></span></div>
+    <p class="small" id="lkMsg" role="status">${bio ? 'Nada abre sozinho: o celular só pede a digital ou o rosto quando você tocar.' : ''}</p>
+    ${frontDoor(L.scope)}
+    <div class="lk-links"><span class="small muted">Não é você? <button class="linkbtn" type="button" id="lkOut">Sair da conta</button></span></div>
   </div>`;
   document.body.append(el);
   const msg = (t, bad) => { $('#lkMsg').textContent = t; $('#lkMsg').className = 'small' + (bad ? ' err' : ''); };

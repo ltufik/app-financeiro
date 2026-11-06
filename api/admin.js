@@ -13,6 +13,8 @@ import { pushPeople, deviceKind } from '../public/js/lib/pushinfo.js';
 import { linkFor } from '../public/js/lib/links.js';
 import { withRecorder } from './_pushlog.js';
 import { pushHealth } from '../public/js/lib/pushhealth.js';
+import { runHealth } from './health.js';
+import { healthHistory } from '../public/js/lib/health.js';
 
 const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases', 'tests'];
 const READ_ONLY = ['releases'];
@@ -37,6 +39,12 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && req.query?.view === 'nav') return res.status(200).json(await rpc('product_nav', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
     // A failed read says which table and why (shown to the owner in the console), never just "db".
     const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); if (!x.ok) { let m = ''; try { m = (await x.json()).message || ''; } catch (e) { /* no body */ } throw new Error(`banco ${x.status} em ${path.split('?')[0]}${m ? ' (' + m + ')' : ''}`); } return x.json(); };
+    // Server health now (with times) and the daily checks of the last 7 days.
+    if (req.method === 'GET' && req.query?.view === 'saude') {
+      const since = new Date(Date.now() - 8 * 864e5).toISOString();
+      const [now, runs] = await Promise.all([runHealth({ supabaseUrl: URL_, serviceKey: SERVICE }), q(`job_runs?job=eq.servidor&at=gte.${since}&select=at,job,ok,summary&order=at.desc&limit=50`).catch(() => [])]);
+      return res.status(200).json({ now, history: healthHistory(runs, 7) });
+    }
     // Deliveries: every push of the last 7 days and the robots' runs of the last 30, summarized (lib/pushhealth.js).
     if (req.method === 'GET' && req.query?.view === 'entregas') {
       const since7 = new Date(Date.now() - 7 * 864e5).toISOString(), since30 = new Date(Date.now() - 30 * 864e5).toISOString();

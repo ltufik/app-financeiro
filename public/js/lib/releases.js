@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -431,5 +431,11 @@ export const RELEASES = [
     { id: 'backup_semanal', title: 'Cópia semanal do banco fora do Supabase, com teste de restauração', status: 'proximo', tipo: 'seguranca', origin: 'Luiz', effort: 'M', problem: 'Se o Supabase perder os dados, não há cópia nossa', cost: false, notes: 'Exportar toda semana para um lugar privado; restaurar num banco de teste para conferir.', from: [], where: 'Banco' },
     { id: 'apagar_conta_revisao', title: 'Apagar a conta apaga tudo (LGPD)', status: 'proximo', tipo: 'seguranca', origin: 'Luiz', effort: 'P', problem: 'O "apagar minha conta" existe; falta garantir que leva todos os dados da pessoa', cost: false, notes: 'Conferir cada tabela (avisos, opiniões, uso, erros, atalhos) e testar.', from: [], where: 'Menu → Sobre o app' },
     { id: 'email_proprio', title: 'E-mail próprio do app para login e avisos', status: 'depois', tipo: 'backend', origin: 'Luiz', effort: 'M', problem: 'O e-mail de login sai do remetente padrão do Supabase', cost: false, notes: 'Domínio praondefoi.app.br; antes de abrir ao público.', from: [], where: 'Login' },
+  ] },
+  { id: 'r110', version: 'v110', at: '2026-11-06T16:43:00Z', backlog: ['saude_do_servidor'], news: { id: 'n20261106f', title: 'Tela de entrada mais clara', items: [
+    'Ao abrir o app, nada pede a digital sozinho: você escolhe "Entrar com a digital ou o rosto" ou "Entrar com a senha".',
+    'A tela de entrada mostra como cuidamos dos seus dados (sem senha do banco) e a novidade mais recente do app.',
+  ] }, updateBacklog: [{ id: 'saude_do_servidor', set: { tipo: 'backend' } }], addDocs: [DOC_SAUDE], addBacklog: [
+    { id: 'tela_entrada_clara', title: 'Tela de entrada com as duas formas de entrar, o selo de segurança e a novidade', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Quem tem digital abria o app e só via o botão de entrar; perdia o recado de segurança e as novidades', cost: false, notes: 'Duas opções claras; selo "sem senha do banco"; novidade mais recente (nada do dinheiro da família aparece antes de entrar).', from: [], where: 'Tela de entrada' },
   ] },
 ];

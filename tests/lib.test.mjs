@@ -1083,3 +1083,19 @@ test('link to a Central page (alerts to the owner only)', async () => {
   assert.equal(linkFor('central', { sec: 'avisos' }), '/admin.html#avisos');
   assert.equal(linkFor('central', { sec: 'x"><script' }), '/');
 });
+
+import { healthColor, healthHistory } from '../public/js/lib/health.js';
+test('server health: color by what failed and the history', async () => {
+  const ok = id => ({ id, ok: true, ms: 300 });
+  assert.equal(healthColor(['banco', 'login', 'bibliotecas', 'avisos', 'assistente'].map(ok)).color, 'verde');
+  assert.deepEqual(healthColor([ok('banco'), { id: 'login', ok: false }, ok('bibliotecas')]), { color: 'vermelho', ok: false, text: 'Fora do ar: Login.' });
+  assert.equal(healthColor([ok('banco'), { id: 'assistente', ok: false }]).color, 'amarelo');
+  assert.equal(healthColor([{ id: 'banco', ok: true, ms: 4000 }]).text, 'Lento: Banco de dados.');
+  const h = healthHistory([{ job: 'servidor', at: '2026-11-08T12:00:00Z', ok: true, summary: { color: 'verde' } }, { job: 'servidor', at: '2026-11-07T12:00:00Z', ok: false, summary: { color: 'vermelho', text: 'Fora do ar: Login.' } }, { job: 'servidor', at: '2026-10-01T12:00:00Z', ok: true }], 7, '2026-11-09T13:00:00Z');
+  assert.deepEqual([h.runs, h.bad, h.list[1].text], [2, 1, 'Fora do ar: Login.']);
+  // The endpoint: database down -> red; public answer has no details.
+  const { runHealth } = await import('../api/health.js');
+  const fake = async (u, o) => ({ ok: !/rest\/v1/.test(u) });
+  const r = await runHealth({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'k', anonKey: 'a', env: { VAPID_PUBLIC_KEY: 'p', VAPID_PRIVATE_KEY: 'q' }, fetchImpl: fake });
+  assert.equal(r.color, 'vermelho'); assert.equal(r.checks.find(c => c.id === 'assistente').ok, false); assert.match(r.text, /Banco de dados/);
+});

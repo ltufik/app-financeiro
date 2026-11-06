@@ -260,3 +260,12 @@ export const DOC_ENTREGAS = { id: 'entregas_doc', title: 'Avisos: registro das e
 - Às 9h, depois dos robôs, se houver alerta: push para os aparelhos de quem está em ADMIN_EMAILS, abrindo essa página.
 ## Banco
 - Rodar o schema.sql novo no Supabase (cria push_log e job_runs, com grant para o service_role).` };
+export const DOC_SAUDE = { id: 'saude_doc', title: 'Saúde do servidor', body: `O app está no ar? api/health.js confere e lib/health.js decide a cor.
+## O que é conferido
+- Banco de dados (uma leitura simples), Login (saúde do Supabase Auth), Bibliotecas que o celular baixa (pdf.js e supabase-js nas CDNs, versões fixas): se falham, vermelho.
+- Chaves dos avisos (VAPID) e do assistente: se faltam, amarelo. Mais de 2,5 s também é amarelo.
+## Quando
+- A cada hora: GitHub Actions (saude.yml) chama /api/health (resposta pública só com ok por item, sem detalhes). Três tentativas; se ficar vermelho, a rodada falha e o GitHub manda e-mail.
+- Todo dia às 9h: o robô registra a conferência (job_runs "servidor"); se vermelho, entra no push de alerta ao dono.
+## Onde ver
+- Central → Painel, no topo: cor, cada conferência com o tempo e os últimos 7 dias.` };

@@ -731,3 +731,8 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .todo .todo-more{order:90;align-self:flex-start}
 .todo #todoAttn,.todo .todo-done{order:95}
 .secs{display:flex;flex-direction:column}
+/* Lock screen: seal and news before entering */
+#lockScreen .lk-trust{margin-top:4px;text-align:left}
+#lockScreen .lk-news{text-align:left;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+#lockScreen .lk-news summary{cursor:pointer;font-weight:600}
+#lockScreen .lk-card{overflow-y:auto;max-height:100%}

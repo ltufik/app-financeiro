@@ -1,6 +1,6 @@
 // Starting content for the console's service matrix, documentation and usage labels.
 import { BUG_STUDY } from '../lib/bugstudy.js';
-import { NEW_DOCS, DOC_SONHO, DOC_SEGURANCA, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS } from '../lib/docsections.js';
+import { NEW_DOCS, DOC_SONHO, DOC_SEGURANCA, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE } from '../lib/docsections.js';
 // Once saved in the console, the database copy is the one that counts.
 
 // Friendly names for the usage keys recorded by the app (public/js/usage.js).
@@ -54,6 +54,7 @@ export const SERVICES = [
   sv('anotacao', 'Anotação pessoal no lançamento', 'O que o lançamento realmente foi (ex.: cabeleireiro Lily), lembrado para o mesmo nome nas próximas faturas', 'Extrato → Anotar', 'no_ar', 'gratis', 'nao', 'Coluna note em transactions; lembranças em households.settings.memos', ['extrato.anotacao']),
   sv('push_novidade', 'Push de novidade', 'A cada versão com novidade, um push para todos, com o nome; quem pediu recebe só o personalizado. Também pela Central: Novidades → publicar com "Mandar também no celular" (uma vez por novidade)', 'Notificações no celular', 'no_ar', 'gratis', 'nao', 'Web Push (VAPID), na primeira abertura depois da publicação', []),
   sv('icone', 'Atalhos no ícone', 'Segurar o ícone abre direto falar, nota ou PDF', 'Ícone do app (Android)', 'no_ar', 'gratis', 'nao', '—', ['atalho.voz', 'atalho.nota', 'atalho.pdf']),
+  sv('saude_servidor', 'Saúde do servidor', 'Confere banco, login, as bibliotecas que o celular baixa (leitura de PDF e conexão) e as chaves dos avisos e do assistente: verde, amarelo ou vermelho. A cada hora pelo GitHub (e-mail se ficar vermelho) e todo dia às 9h com detalhes (push ao dono se vermelho)', 'Central → Painel', 'no_ar', 'gratis', 'nao', 'Vercel (api/health); GitHub Actions (saude.yml); Supabase (job_runs)', []),
   sv('entregas', 'Registro dos avisos e dos robôs', 'Cada push enviado (de qual robô, tipo, família, se chegou) e cada rodada dos robôs ficam registrados por 90 dias; a Central mostra as entregas e o horário de cada robô; se um robô atrasar, der erro ou menos de 80% chegarem, push para o dono às 9h', 'Central → Avisos no celular', 'no_ar', 'gratis', 'nao', 'Supabase (push_log, job_runs); Vercel Cron', []),
   sv('previsao', 'Previsão do mês', 'Como o mês deve fechar e quanto cabe por dia para bater a meta; fica mais certa com a fatura aberta (um número do app do banco). Domingo às 19h, push pedindo esse número (a cada 2 semanas para quem não responde)', 'Início; notificação de domingo', 'teste', 'gratis', 'nao', 'Web Push; Vercel Cron (domingo 22h UTC)', ['inicio.previsao_abrir', 'inicio.previsao_checkin', 'inicio.previsao_aviso']),
   sv('lembrete', 'Lembrete do fim do dia', 'Às 21h, só para quem não lançou nada no dia', 'Notificação', 'no_ar', 'gratis', 'nao', 'Web Push; Vercel Cron', ['atalho.voz']),
@@ -81,6 +82,7 @@ export const DOCS = [
   DOC_PREVISAO,
   DOC_INICIO,
   DOC_ENTREGAS,
+  DOC_SAUDE,
   { id: 'visao', title: 'Visão geral', body: `**Pra Onde Foi** mostra para a família para onde vai o dinheiro, sem conectar no banco.
 A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e dinheiro falando, e o app mostra quanto sobrou, onde dá para economizar e se estão no caminho do sonho.
 ## Fase atual

@@ -57,6 +57,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && JSON.parse(r.request().postData()).action === 'news_push') { newsPushes.push(JSON.parse(r.request().postData()).id); return r.fulfill({ json: { pushed: 3 } }); }
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && pushTestFail) return r.fulfill({ status: pushTestFail, json: pushTestFail === 500 ? { error: 'failed', detail: 'db' } : { error: 'not_signed_in' } });
     if (u.pathname === '/api/admin' && r.request().method() === 'POST') { pushTestSent++; return r.fulfill({ json: { results: [{ kind: 'Android ou Chrome', ok: true, gone: false }, { kind: 'iPhone ou iPad', ok: false, gone: true }] } }); }
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'saude') return r.fulfill({ json: { now: { color: 'amarelo', text: 'Com problema: Assistente (chave configurada).', checks: [{ id: 'banco', ok: true, ms: 420 }, { id: 'assistente', ok: false, ms: 0 }] }, history: { runs: 2, bad: 0, list: [{ color: 'verde' }, { color: 'verde' }] } } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'entregas') return r.fulfill({ json: pushHealth([...Array(9).fill({ job: 'diario', ok: true, status: 201 }), { job: 'diario', ok: false, status: 410 }].map(l => ({ ...l, at: new Date(Date.now() - 3 * 36e5).toISOString() })), [{ job: 'diario', ok: true, at: new Date(Date.now() - 3 * 36e5).toISOString() }, { job: 'lembrete', ok: true, at: new Date(Date.now() - 80 * 36e5).toISOString() }]) });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
@@ -859,6 +860,8 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   const resumo = await ap.evaluate(() => document.querySelector('dialog[open] textarea')?.value || navigator.clipboard.readText().catch(() => ''));
   ok('central: resumo para o Claude com uso, opiniões e backlog, sem e-mail', /Pessoas: 12/.test(resumo) && resumo.includes('Testador (família Família Teste)') && resumo.includes('## Backlog') && !resumo.includes('@test.com'), resumo.slice(0, 120));
   await ap.evaluate(() => document.querySelectorAll('dialog[open]').forEach(d => { d.close(); d.remove(); }));
+  await ap.waitForSelector('#pHealth h2');
+  ok('central: saúde do servidor no topo do painel (cor, cada conferência e a semana)', (await ap.textContent('#pHealth')).includes('Saúde do servidor') && (await ap.textContent('#pHealth')).includes('Com problema: Assistente') && (await ap.textContent('#pHealth')).includes('✗ Assistente') && (await ap.textContent('#pHealth')).includes('2 conferências diárias, todas ok'), await ap.textContent('#pHealth'));
   ok('central: painel mostra opiniões novas e quem usou', (await ap.textContent('#pTop')).includes('Opiniões novas') && (await ap.textContent('#pTop')).includes('de 2 pessoas'));
   await atab('opinioes'); await ap.waitForSelector('.fbcard');
   ok('central: opiniões em aberto com quem mandou e a tela', (await ap.$$('.fbcard')).length === 3 && (await ap.textContent('#aMain')).includes('tela lancar'));
@@ -1142,6 +1145,7 @@ const used = await page.evaluate(() => window.__db.usage);
   ok('tela de entrada avisa a versão nova: ao entrar, ela já abre atualizada', await page.isVisible('#lkUpd') && (await txt('#lkUpd')).includes('v999') && (await txt('#lkUpd')).includes('ao entrar, ela já abre atualizada'));
   await page.evaluate(() => { window.__updateReady = false; });
   ok('desconectado: tela de entrada com "Olá" e Entrar, sem pedir a digital sozinha', await page.isVisible('#lockScreen') && (await txt('#lockScreen')).includes('Olá, Luiz') && await page.isVisible('#lkBio') && (await txt('#lkBio')).includes('Entrar') && await page.isVisible('#lkUsePass') && (await txt('#lockScreen')).includes('Não é você?'));
+  ok('tela de entrada mostra o selo (sem senha do banco) e a novidade do app, com as duas formas de entrar', (await txt('#lockScreen')).includes('Sem senha do banco') && /Novidade no app: /.test(await txt('#lkNews summary')) && (await txt('#lkBio')).includes('digital ou o rosto') && (await txt('#lkUsePass')).includes('Entrar com a senha'));
   if (shots) await page.screenshot({ path: path.join(shots, '19a-entrar-digital.png') });
   await page.click('#lkBio');
   await page.waitForSelector('#lockScreen', { state: 'detached', timeout: 8000 }).catch(() => {});
