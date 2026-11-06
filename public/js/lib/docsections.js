@@ -248,3 +248,15 @@ export const DOC_INICIO = { id: 'inicio_doc', title: 'Início: para fazer agora,
 ## Medir
 - Central → Painel: "Agiram no Início" (quem tocou em Para fazer agora, informou a fatura, confirmou amortização ou fechou o mês, entre quem usou) e quantos dias as pessoas voltam em 30.
 - Eventos: inicio.acao, inicio.abriu_* (cada seção), inicio.previsao_checkin.` };
+export const DOC_ENTREGAS = { id: 'entregas_doc', title: 'Avisos: registro das entregas e dos robôs', body: `Todo push passa por sendPush (api/_webpush.js), que avisa o registro da rodada em andamento (api/_pushlog.js, AsyncLocalStorage). Nada muda em quem chama.
+## O que fica guardado (90 dias, só o servidor lê)
+- push_log: quando, robô (diario, versao, lembrete, previsao, familia, teste, recado, novidade, saude), tipo (a tag do aviso), família, pessoa, se chegou, código da resposta e o erro. Nunca o texto nem as chaves do aparelho.
+- job_runs: cada rodada dos robôs (quando, se deu certo, quanto tempo, o resumo).
+## Robôs e janelas (lib/pushhealth.js)
+- Avisos do dia e Novidades: 9h, todo dia (janela de 26 h). Lembrete: 21h (26 h). Previsão: domingo 19h (8 dias).
+- Atrasado, última rodada com erro ou menos de 80% entregues (sem contar "aparelho saiu"): alerta.
+## Onde ver e o alerta
+- Central → Avisos no celular → "Entregas e robôs".
+- Às 9h, depois dos robôs, se houver alerta: push para os aparelhos de quem está em ADMIN_EMAILS, abrindo essa página.
+## Banco
+- Rodar o schema.sql novo no Supabase (cria push_log e job_runs, com grant para o service_role).` };

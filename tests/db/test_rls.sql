@@ -281,3 +281,18 @@ select 'servidor lê aparelhos, membros, famílias, categorias, regras e lançam
   (select count(*) from public.push_subscriptions) + (select count(*) from public.members) + (select count(*) from public.households)
   + (select count(*) from public.categories) + (select count(*) from public.rules) + (select count(*) from public.transactions) >= 0)::text;
 reset role;
+
+-- Registro dos avisos e dos robôs: só o servidor grava e lê; ninguém logado vê.
+set role service_role;
+insert into push_log(job, kind, ok, status) values ('diario', 'dados', true, 201), ('diario', 'dados', false, 410);
+insert into job_runs(job, ok, ms, summary) values ('diario', true, 1200, '{"sent":1}');
+select 'servidor registra envios e rodadas: ' || ((select count(*) from push_log) = 2 and (select count(*) from job_runs) = 1)::text;
+delete from push_log where at < now() - interval '90 days';
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: pessoa logada não lê o registro dos avisos)
+select count(*) from push_log;
+\set ON_ERROR_STOP on
+reset role;

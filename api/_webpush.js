@@ -1,5 +1,6 @@
 // Web Push without dependencies: VAPID (RFC 8292) signature and aes128gcm payload encryption (RFC 8291).
 // Files starting with "_" are not exposed as Vercel routes.
+import { currentRecorder } from './_pushlog.js';
 import crypto from 'node:crypto';
 
 export const b64u = buf => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -43,11 +44,16 @@ export function encrypt(payload, { p256dh, auth }) {
 
 // Sends one notification. Returns {ok, status, gone} (gone = subscription expired, delete it).
 export async function sendPush(sub, data, vapid, fetchImpl = fetch) {
-  const body = encrypt(JSON.stringify(data), sub.keys);
-  const r = await fetchImpl(sub.endpoint, {
-    method: 'POST',
-    headers: { authorization: vapidAuth(sub.endpoint, vapid), 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: '86400', urgency: 'normal' },
-    body,
-  });
-  return { ok: r.status >= 200 && r.status < 300, status: r.status, gone: r.status === 404 || r.status === 410 };
+  const rec = currentRecorder(); // the run in progress logs every send (push_log), delivered or not
+  try {
+    const body = encrypt(JSON.stringify(data), sub.keys);
+    const r = await fetchImpl(sub.endpoint, {
+      method: 'POST',
+      headers: { authorization: vapidAuth(sub.endpoint, vapid), 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: '86400', urgency: 'normal' },
+      body,
+    });
+    const out = { ok: r.status >= 200 && r.status < 300, status: r.status, gone: r.status === 404 || r.status === 410 };
+    rec?.push(sub, data, out);
+    return out;
+  } catch (e) { rec?.push(sub, data, { ok: false }, e); throw e; }
 }

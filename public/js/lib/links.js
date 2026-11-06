@@ -6,8 +6,10 @@ const TABS = ['resumo', 'lancar', 'graficos', 'perguntar', 'extrato', 'fechar', 
 const SECS = /^[a-z]{2,20}$/;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-// kind: 'novidade' (id of the note), 'recado' (id of the reply), 'avisos', or 'tela' ({tab, sec}).
+// kind: 'novidade' (id of the note), 'recado' (id of the reply), 'avisos', 'tela' ({tab, sec}) or 'central' ({sec}:
+// a page of the product Central, only in alerts to the owner).
 export function linkFor(kind, { id, tab, sec } = {}) {
+  if (kind === 'central' && SECS.test(sec || '')) return `/admin.html#${sec}`;
   if ((kind === 'novidade' || kind === 'recado') && ID.test(String(id ?? ''))) return `/?abrir=${kind}&id=${encodeURIComponent(id)}`;
   if (kind === 'avisos') return '/?abrir=avisos';
   if (kind === 'tela' && TABS.includes(tab)) return `/?tab=${tab}${(tab === 'ajustes' && SECS.test(sec || '')) || (tab === 'lancar' && sec === 'pdf') || (tab === 'resumo' && sec === 'previsao') ? '&sec=' + sec : ''}`;

@@ -1051,3 +1051,35 @@ test('financing history keeps what identifies each payoff (for undo)', async () 
   assert.equal(Math.round(n.saldo), 330650); assert.equal(n.months, 5);
   assert.deepEqual(n.history.filter(h => h.kind === 'amortizacao').map(h => [h.at, h.txId]), [['a1', 't1']]);
 });
+
+import { pushHealth, healthAlertMessage } from '../public/js/lib/pushhealth.js';
+test('push health: deliveries by robot, late robots and the alert', () => {
+  const now = '2026-11-09T13:00:00Z';
+  const runs = [
+    { at: '2026-11-09T12:00:00Z', job: 'diario', ok: true }, { at: '2026-11-09T12:00:05Z', job: 'versao', ok: true },
+    { at: '2026-11-06T00:00:00Z', job: 'lembrete', ok: true }, // 3 days ago: late
+    { at: '2026-11-08T22:00:00Z', job: 'previsao', ok: false },
+  ];
+  const logs = [
+    ...Array(8).fill({ job: 'diario', ok: true, status: 201 }), { job: 'diario', ok: false, status: 410 },
+    ...Array(3).fill({ job: 'previsao', ok: true, status: 201 }), ...Array(3).fill({ job: 'previsao', ok: false, status: 500 }),
+  ].map(l => ({ ...l, at: '2026-11-08T22:00:00Z' }));
+  const h = pushHealth(logs, runs, now);
+  const j = Object.fromEntries(h.jobs.map(x => [x.job, x]));
+  assert.equal(j.diario.late, false); assert.equal(j.lembrete.late, true); assert.equal(j.lembrete.hoursAgo, 85); assert.equal(j.previsao.lastOk, false);
+  const d = h.byJob.find(b => b.job === 'diario'); assert.deepEqual([d.sent, d.ok, d.gone, d.failed], [9, 8, 1, 0]);
+  assert.deepEqual(h.alerts.map(a => a.job), ['lembrete', 'previsao', 'previsao']);
+  assert.match(h.alerts[0].text, /^Lembrete da noite \(21h\) não roda há 4 dias\.$/);
+  assert.match(h.alerts[2].text, /só 50% chegaram/);
+  assert.deepEqual(h.errors, [{ text: 'resposta 500', n: 3 }, { text: 'resposta 410', n: 1 }]);
+  assert.equal(healthAlertMessage(h.alerts).title, '3 problemas nos avisos do app');
+  assert.equal(healthAlertMessage([]), null);
+  // No record yet: not an alert.
+  assert.deepEqual(pushHealth([], [], now).alerts, []); assert.equal(pushHealth([], [], now).jobs[0].never, true);
+});
+
+test('link to a Central page (alerts to the owner only)', async () => {
+  const { linkFor } = await import('../public/js/lib/links.js');
+  assert.equal(linkFor('central', { sec: 'avisos' }), '/admin.html#avisos');
+  assert.equal(linkFor('central', { sec: 'x"><script' }), '/');
+});

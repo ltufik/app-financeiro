@@ -212,7 +212,7 @@ async function painel(el) {
 
 // ---------- Backlog ----------
 function backlog(el) {
-  const items = D.backlog.items, shown = items.filter(i => !filter || (filter === 'bug' ? i.tipo === 'bug' : i.status === filter));
+  const items = D.backlog.items, shown = items.filter(i => !filter || (TIPOS[filter] ? i.tipo === filter : i.status === filter));
   el.innerHTML = `<div class="ahead"><h1>Backlog</h1><div class="rowbtn"><button class="chip" type="button" data-v="quadro" aria-pressed="${view === 'quadro'}">Quadro</button><button class="chip" type="button" data-v="lista" aria-pressed="${view === 'lista'}">Lista</button></div></div>
     <details class="panel" id="bNew"><summary><strong>Nova ideia</strong></summary>
       <div class="stack" style="margin-top:10px"><label class="f">Ideia<input type="text" id="nTitle" maxlength="120" placeholder="Ex.: Revisão de domingo"></label>
@@ -220,10 +220,10 @@ function backlog(el) {
       <div class="grid2"><label class="f">De onde veio<input type="text" id="nOrig" maxlength="60" placeholder="Ex.: Testador, Equipe, Benchmarking"></label>
       <label class="f">Esforço<select id="nEff">${Object.entries(EFFORT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
       <label class="f">Status<select id="nStat">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === 'ideia' ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
-      <label class="f">Tipo<select id="nTipo"><option value="">Melhoria ou ideia</option><option value="bug">Bug (algo que não funciona como deveria)</option></select></label>
+      <label class="f">Tipo<select id="nTipo"><option value="">Melhoria ou ideia</option><option value="bug">Bug (algo que não funciona como deveria)</option><option value="seguranca">Segurança</option><option value="backend">Backend (servidor, banco, robôs)</option></select></label>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="nCost" style="width:auto"> Tem custo de infraestrutura</label></div>
       <div><button class="btn primary" type="button" id="nAdd">Adicionar</button></div></div></details>
-    ${view === 'lista' ? `<div class="chips">${[['', 'Todos'], ...Object.entries(STATUS), ['bug', 'Bugs']].map(([k, v]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${v} <span class="tiny muted">${k === 'bug' ? items.filter(i => i.tipo === 'bug').length : k ? items.filter(i => i.status === k).length : items.length}</span></button>`).join('')}</div>
+    ${view === 'lista' ? `<div class="chips">${[['', 'Todos'], ...Object.entries(STATUS), ...Object.entries(TIPOS)].map(([k, v]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${v} <span class="tiny muted">${TIPOS[k] ? items.filter(i => i.tipo === k).length : k ? items.filter(i => i.status === k).length : items.length}</span></button>`).join('')}</div>
       <div class="blist">${shown.map(rowHTML).join('') || '<p class="small muted">Nada aqui.</p>'}</div>`
     : `<div class="kanban">${['agora', 'proximo', 'ideia', 'depois', 'feito'].map(s => `<section class="kcol"><h3>${STATUS[s]} <span class="tiny muted">${items.filter(i => i.status === s).length}</span></h3>${items.filter(i => i.status === s).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99)).map(cardHTML).join('')}</section>`).join('')}</div>`}`;
   el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; backlog(el); });
@@ -257,7 +257,9 @@ function backlog(el) {
 const statusSel = i => `<select data-st="${i.id}" aria-label="Status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === i.status ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
 const askers = i => [...new Set([...(i.from || []), ...[...String(i.notes || '').matchAll(/Opinião #(\d+)/g)].map(m => +m[1])])].length;
 const askTag = i => askers(i) ? `<span class="tag ask" title="Recebem um recado automático quando ficar pronto">pedido por ${askers(i)}</span>` : '';
-const bugTag = i => i.tipo === 'bug' ? '<span class="tag bug">bug</span> ' : '';
+// Kinds of item: bug, segurança and backend (filters and tags in the backlog).
+const TIPOS = { bug: 'Bugs', seguranca: 'Segurança', backend: 'Backend' };
+const bugTag = i => TIPOS[i.tipo] ? `<span class="tag ${i.tipo}">${i.tipo === 'seguranca' ? 'segurança' : i.tipo}</span> ` : '';
 const cardHTML = i => `<article class="kcard"><strong>${bugTag(i)}${esc(i.title)}</strong>${i.problem ? `<span class="tiny">${esc(i.problem)}</span>` : ''}${askTag(i) ? `<span>${askTag(i)}</span>` : ''}
   <span><span class="tag">${EFFORT[i.effort] || ''}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''} <span class="tiny">${esc(i.origin || '')}</span></span>${statusSel(i)}${i.status !== 'feito' ? `<button class="chip kclaude" type="button" data-claude="${esc(i.id)}">Pedir ao Claude</button>` : ''}</article>`;
 const rowHTML = i => `<div class="brow3"><span><strong>${bugTag(i)}${esc(i.title)}</strong>${i.problem ? `<br><span class="tiny muted">${esc(i.problem)}</span>` : ''}<br><span class="tiny muted">${esc(i.origin || '')}</span> ${i.cost ? '<span class="tag cost">custo</span>' : ''} ${askTag(i)}
@@ -539,9 +541,26 @@ const dday = d => d ? new Date(d).toLocaleDateString('pt-BR') : '';
 async function avisos(el) {
   el.innerHTML = `<div class="ahead"><h1>Avisos no celular</h1><button class="btn primary" type="button" id="avTest">Enviar push de teste para mim</button></div>
     <p class="status" id="avMsg" role="status" hidden></p>
+    <div class="panel stack" id="avHealth"><p class="small muted">Carregando as entregas...</p></div>
     <div class="panel stack" id="avMine"><p class="small muted">Carregando...</p></div>
     <div class="panel stack" id="avAll"></div>`;
   const say = (k, t) => { const m = $('#avMsg'); m.hidden = false; m.className = 'status ' + k; m.textContent = t; };
+  // Deliveries of the last 7 days and the robots: did each run on time, how many pushes arrived.
+  (async () => {
+    const box = $('#avHealth'); let h;
+    try { const r = await getView('entregas'); h = { alerts: [], jobs: [], byJob: [], errors: [], total: { sent: 0, ok: 0, rate: 0 }, ...(r || {}) }; } catch (e) { box.innerHTML = `<h2>Entregas</h2><p class="status err">${esc(errText(e))}</p><p class="tiny muted">Se o erro fala em push_log ou job_runs, rode o schema.sql novo no Supabase.</p>`; return; }
+    const pc = v => Math.round(v * 100) + '%', when = j => j.never ? 'sem registro ainda' : `${dday(j.lastAt)}, há ${j.hoursAgo >= 48 ? Math.round(j.hoursAgo / 24) + ' dias' : j.hoursAgo + ' h'}`;
+    box.innerHTML = `<h2>Entregas e robôs</h2>
+      ${h.alerts.length ? `<div class="status err"><strong>${h.alerts.length > 1 ? h.alerts.length + ' problemas' : '1 problema'}:</strong> ${h.alerts.map(a => esc(a.text)).join(' ')}</div>` : '<p class="status ok">Tudo certo: os robôs rodaram no horário e os avisos estão chegando.</p>'}
+      <p class="small">Últimos 7 dias: <strong>${h.total.sent}</strong> avisos enviados, <strong>${h.total.sent ? pc(h.total.rate) : '—'}</strong> chegaram.</p>
+      <div class="tscroll"><table class="atable small"><thead><tr><th>Robô</th><th>Última rodada</th><th>Rodadas (7 dias)</th></tr></thead><tbody>
+        ${h.jobs.map(j => `<tr><td>${esc(j.label)}</td><td>${j.never ? '<span class="muted">sem registro ainda</span>' : `${j.late ? '⚠️ ' : j.lastOk ? '✓ ' : '✗ '}${esc(when(j))}`}</td><td>${j.runs7}${j.fails7 ? ` (${j.fails7} com erro)` : ''}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${h.byJob.length ? `<div class="tscroll"><table class="atable small"><thead><tr><th>Tipo</th><th>Enviados</th><th>Chegaram</th><th>Erro</th><th>Aparelho saiu</th></tr></thead><tbody>
+        ${h.byJob.map(b => `<tr><td>${esc(b.label)}</td><td>${b.sent}</td><td>${b.ok} (${pc(b.rate)})</td><td>${b.failed}</td><td>${b.gone}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">Nenhum aviso registrado nos últimos 7 dias.</p>'}
+      ${h.errors.length ? `<details class="help"><summary>Erros mais comuns</summary><ul class="small">${h.errors.map(e => `<li>${esc(e.text)}: ${e.n}</li>`).join('')}</ul></details>` : ''}
+      <p class="tiny muted">"Aparelho saiu" é normal: o celular desinstalou o app ou resetou as notificações, e o aparelho sai da lista sozinho. Se um robô atrasar, der erro ou menos de 80% chegarem, você recebe um push às 9h.</p>`;
+  })();
   const draw = async () => {
     let d; try { d = await getView('push'); } catch (e) { $('#avMine').innerHTML = `<p class="status err">${esc(errText(e))}</p>`; $('#avAll').hidden = true; return; }
     const on = k => k !== false;

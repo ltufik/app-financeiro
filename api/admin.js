@@ -11,6 +11,8 @@ import { replyTitle } from '../public/js/lib/news.js';
 import { rest, closeLoop, pushNews } from './_loop.js';
 import { pushPeople, deviceKind } from '../public/js/lib/pushinfo.js';
 import { linkFor } from '../public/js/lib/links.js';
+import { withRecorder } from './_pushlog.js';
+import { pushHealth } from '../public/js/lib/pushhealth.js';
 
 const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases', 'tests'];
 const READ_ONLY = ['releases'];
@@ -35,6 +37,12 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && req.query?.view === 'nav') return res.status(200).json(await rpc('product_nav', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
     // A failed read says which table and why (shown to the owner in the console), never just "db".
     const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); if (!x.ok) { let m = ''; try { m = (await x.json()).message || ''; } catch (e) { /* no body */ } throw new Error(`banco ${x.status} em ${path.split('?')[0]}${m ? ' (' + m + ')' : ''}`); } return x.json(); };
+    // Deliveries: every push of the last 7 days and the robots' runs of the last 30, summarized (lib/pushhealth.js).
+    if (req.method === 'GET' && req.query?.view === 'entregas') {
+      const since7 = new Date(Date.now() - 7 * 864e5).toISOString(), since30 = new Date(Date.now() - 30 * 864e5).toISOString();
+      const [logs, runs] = await Promise.all([q(`push_log?at=gte.${since7}&select=at,job,kind,ok,status,error&order=at.desc&limit=5000`), q(`job_runs?at=gte.${since30}&select=at,job,ok,ms,summary&order=at.desc&limit=500`)]);
+      return res.status(200).json(pushHealth(logs, runs, new Date().toISOString()));
+    }
     // Notifications: devices and people, never the push keys.
     if (req.method === 'GET' && req.query?.view === 'push') {
       const [subs, members, fams] = await Promise.all([q('push_subscriptions?select=user_id,endpoint,prefs,created_at'), q('members?select=user_id,display_name,household_id'), q('households?select=id,name')]);
@@ -58,7 +66,7 @@ export default async function handler(req, res) {
         if (item.pushed_at) return res.status(409).json({ error: 'already_sent', pushed_at: item.pushed_at });
         // Marked first (two taps do not send twice); if it reached no device, unmarked so it can go again.
         item.pushed_at = new Date().toISOString(); await db.setBoard('news', news, user.email);
-        const pushed = await pushNews(db, [item], new Set(), vapid, fetch).catch(() => 0);
+        const pushed = await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'novidade', run: false }, () => pushNews(db, [item], new Set(), vapid, fetch)).catch(() => 0);
         const now = (await db.board('news')) || news, it = (now.items || []).find(n => n.id === item.id);
         if (it) { if (pushed) it.pushed_count = pushed; else { delete it.pushed_at; delete it.pushed_count; } await db.setBoard('news', now, user.email); }
         return res.status(200).json({ pushed, pushed_at: pushed ? item.pushed_at : null });
@@ -67,12 +75,12 @@ export default async function handler(req, res) {
       const subs = await q(`push_subscriptions?user_id=eq.${user.id}&select=id,endpoint,p256dh,auth`);
       const name = String(user.user_metadata?.display_name || '').trim().split(/\s+/)[0];
       const results = [];
-      for (const s of subs) {
+      await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'teste', run: false }, async () => { for (const s of subs) {
         const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title: name ? `${name}, o teste chegou` : 'O teste chegou', body: 'As notificações do Pra Onde Foi estão funcionando neste aparelho.', url: linkFor('avisos'), tag: 'teste-central' }, vapid).catch(() => ({ ok: false }));
         // A device that no longer exists (app removed, notifications reset) leaves the list.
         if (r.gone) await fetch(`${URL_}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H }).catch(() => {});
         results.push({ kind: deviceKind(s.endpoint), ok: !!r.ok, gone: !!r.gone });
-      }
+      } });
       return res.status(200).json({ results });
     }
     if (req.method === 'PATCH') {
@@ -98,10 +106,10 @@ export default async function handler(req, res) {
           const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); return x.ok ? x.json() : []; };
           const [m] = await q(`members?user_id=eq.${row.user_id}&select=display_name&limit=1`);
           const subs = await q(`push_subscriptions?user_id=eq.${row.user_id}&select=endpoint,p256dh,auth`);
-          for (const sub of subs) {
+          await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'recado', run: false }, async () => { for (const sub of subs) {
             const out = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title: replyTitle(row.kind, m?.display_name), body: patch.reply.slice(0, 200), url: linkFor('recado', { id }), tag: 'reply-' + id }, vapid).catch(() => ({ ok: false }));
             if (out.ok) pushed++;
-          }
+          } });
         } catch (e) { /* the in-app message still shows */ }
       }
       return res.status(200).json({ ok: true, pushed });

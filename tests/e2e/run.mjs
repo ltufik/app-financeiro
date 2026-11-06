@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { APP_VERSION } from '../helpers/app-version.mjs';
+import { pushHealth } from '../../public/js/lib/pushhealth.js';
 
 const arg = k => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : null; };
 const PW = await import(arg('playwright'));
@@ -56,6 +57,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && JSON.parse(r.request().postData()).action === 'news_push') { newsPushes.push(JSON.parse(r.request().postData()).id); return r.fulfill({ json: { pushed: 3 } }); }
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && pushTestFail) return r.fulfill({ status: pushTestFail, json: pushTestFail === 500 ? { error: 'failed', detail: 'db' } : { error: 'not_signed_in' } });
     if (u.pathname === '/api/admin' && r.request().method() === 'POST') { pushTestSent++; return r.fulfill({ json: { results: [{ kind: 'Android ou Chrome', ok: true, gone: false }, { kind: 'iPhone ou iPad', ok: false, gone: true }] } }); }
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'entregas') return r.fulfill({ json: pushHealth([...Array(9).fill({ job: 'diario', ok: true, status: 201 }), { job: 'diario', ok: false, status: 410 }].map(l => ({ ...l, at: new Date(Date.now() - 3 * 36e5).toISOString() })), [{ job: 'diario', ok: true, at: new Date(Date.now() - 3 * 36e5).toISOString() }, { job: 'lembrete', ok: true, at: new Date(Date.now() - 80 * 36e5).toISOString() }]) });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'nav') return r.fulfill({ json: NAV_FIXTURE });
@@ -886,6 +888,8 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: concluir item vindo de opinião manda o recado sozinho', !(await ap.$('.cfm')) && (await ap.textContent('#toast')).includes('Recado automático enviado para 1 pessoa'), (await ap.textContent('#toast')) + ' | ' + JSON.stringify(adminStore.backlog.items.find(i => i.id === fromOp)) + ' | ' + adminPuts.slice(-3).join(','));
   await atab('avisos'); await ap.waitForSelector('#avMine h2');
   ok('central: avisos mostra seus aparelhos e quem recebe', (await ap.textContent('#avMine')).includes('Android ou Chrome') && (await ap.textContent('#avAll')).includes('2 de 4 pessoas') && (await ap.textContent('#avAll')).includes('Desligadas'));
+  await ap.waitForSelector('#avHealth h2');
+  ok('central: entregas e robôs (quanto chegou, robô atrasado em destaque)', /Últimos 7 dias: 10 avisos enviados, 90% chegaram/.test(await ap.textContent('#avHealth')) && (await ap.textContent('#avHealth')).includes('Lembrete da noite (21h) não roda há 3 dias') && (await ap.textContent('#avHealth')).includes('sem registro ainda'), await ap.textContent('#avHealth'));
   await ap.click('#avTest'); await ap.waitForSelector('#avMsg.ok');
   ok('central: push de teste diz para quantos foi e tira aparelho antigo', pushTestSent === 1 && /Enviado para 1 aparelho\..*1 aparelho antigo/.test(await ap.textContent('#avMsg')) && (await ap.textContent('#avMine')).includes('Nenhum aparelho seu') && (await ap.textContent('#toast')).includes('Push de teste enviado'));
   pushTestFail = 401; await ap.click('#avTest'); await ap.waitForSelector('#avMsg.err');

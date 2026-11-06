@@ -3,6 +3,7 @@
 import { cleanUrl } from './config.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
+import { withRecorder } from './_pushlog.js';
 
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const mName = k => /^\d{4}-\d{2}$/.test(k || '') ? MES[+k.slice(5) - 1] : 'mês';
@@ -33,11 +34,13 @@ export default async function handler(req, res) {
     const msg = message({ type: b.type, name: (self.display_name || 'Alguém').split(' ')[0], family: hh?.name || 'família', source: b.source, month: b.month });
     const subs = (await get(`push_subscriptions?household_id=eq.${b.household}&user_id=neq.${me.id}&select=id,endpoint,p256dh,auth,prefs`)).filter(s => s.prefs?.familia !== false);
     let sent = 0;
-    for (const s of subs) {
-      const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, msg, vapid).catch(() => ({ ok: false }));
-      if (r.gone) await fetch(`${URL_}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H });
-      if (r.ok) sent++;
-    }
+    await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'familia', run: false }, async () => {
+      for (const s of subs) {
+        const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { ...msg, tag: msg.tag || b.type }, vapid).catch(() => ({ ok: false }));
+        if (r.gone) await fetch(`${URL_}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H });
+        if (r.ok) sent++;
+      }
+    });
     res.status(200).json({ sent });
   } catch (e) { res.status(500).json({ error: 'failed' }); }
 }
