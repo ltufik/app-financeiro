@@ -726,6 +726,11 @@ const dRow = await page.evaluate(() => [...document.querySelectorAll('[data-list
 ok('patrimônio: "Quanto falta hoje" já vem com a amortização descontada', await page.$eval(`[data-list="debts"] tr:nth-child(${dRow}) input[data-k="saldo"]`, i => +i.value) === 350000);
 await page.click('#pSave'); await page.waitForTimeout(300);
 ok('salvar sem mexer no saldo não apaga o histórico do financiamento', await page.evaluate(() => { const d = window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba'); return d.saldo === 480000 && d.log.some(e => e.value === 130000); }));
+await page.click('#pDebtNow .dnow:has-text("Guaratuba") [data-undo]'); await page.waitForSelector('.cfm [data-y]');
+ok('desfazer amortização pede confirmação e diz que volta para o saldo', (await txt('.cfm')).includes('voltam para o saldo'));
+await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+ok('desfazer amortização: sai do histórico e o saldo volta', await page.evaluate(() => !window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').log.some(e => e.value === 130000)) && (await txt('#pDebtNow .dnow:has-text("Guaratuba")')).includes('480.000'), await txt('#pDebtNow .dnow:has-text("Guaratuba")'));
+await page.click('#pDebtNow .dnow:has-text("Guaratuba") summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')), await txt('#fcBox'));

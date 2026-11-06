@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('desfazer_amortizacao', 'Menu e telas', 'v105', 'ambos', 'Desfazer uma amortização',
+    ['Menu ☰ → Patrimônio e dívidas → Como está cada financiamento hoje.', 'Numa amortização do histórico que não devia estar lá, toque em "Desfazer" e confirme.'],
+    'Aparece "Desfeito" com o novo saldo; a amortização some do histórico, o saldo sobe o mesmo valor e o lançamento volta para a categoria de antes no Extrato.'),
   t('inicio_organizado', 'Início', 'v104', 'ambos', 'Início: para fazer agora, seções e nível do ano',
     ['Abra o Início.', 'Toque no botão de um item de "Para fazer agora".', 'Volte e toque em "Nível do ano", "Sobra", "Cartão" e "Quanto o banco cobrou" para abrir; feche o app e abra de novo.'],
     'No topo: "Para fazer agora" (ou "Tudo em dia") e a previsão com o campo da fatura aberta. Cada seção mostra numa linha o principal (o nível com a barra e quanto falta por mês; a sobra; a fatura) e abre com o detalhe; o nível lista as regras com ✓ no que já foi alcançado. As seções que ficaram abertas continuam abertas.'),

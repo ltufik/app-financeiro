@@ -21,7 +21,8 @@ async function amortCategory() {
 
 // The financing's log gets the payment; the transaction (when saved) moves to the amortization category.
 export async function applyAmortization(debtId, { value, date, txId = null, note = '' }) {
-  const st = settings(), debts = (st.debts || []).map(d => d.id !== debtId ? d : { ...d, log: [...(d.log || []), { date, at: new Date().toISOString(), kind: 'amortizacao', value: Math.abs(+value), txId, note: String(note || '').slice(0, 140) }] });
+  const prevCategory = txId ? S.txs.find(x => x.id === txId)?.category || null : null;
+  const st = settings(), debts = (st.debts || []).map(d => d.id !== debtId ? d : { ...d, log: [...(d.log || []), { date, at: new Date().toISOString(), kind: 'amortizacao', value: Math.abs(+value), txId, prevCategory, note: String(note || '').slice(0, 140) }] });
   const d = debts.find(x => x.id === debtId); if (!d) throw new Error('financiamento não encontrado');
   const next = { ...st, debts };
   await db.saveSettings(S.hh.id, next); S.hh.settings = next;
@@ -31,6 +32,24 @@ export async function applyAmortization(debtId, { value, date, txId = null, note
   }
   track('patrimonio.amortizou');
   return debtNow(d, todayISO()).saldo;
+}
+
+// Undo a payoff confirmed by mistake: the value goes back to the balance, the payment goes back to its category
+// (the one it had; for payoffs from before this was kept, the category of the same payment in other months) and
+// the app does not ask about it again.
+export async function undoAmortization(debtId, at) {
+  const st = settings(), d = (st.debts || []).find(x => x.id === debtId); if (!d) throw new Error('financiamento não encontrado');
+  const e = (d.log || []).find(x => x && x.kind === 'amortizacao' && x.at === at); if (!e) throw new Error('amortização não encontrada');
+  const next = { ...st, debts: st.debts.map(x => x.id !== debtId ? x : { ...x, log: (x.log || []).filter(y => y !== e) }), debtSkip: e.txId ? [...new Set([...(st.debtSkip || []), e.txId])].slice(-200) : st.debtSkip };
+  await db.saveSettings(S.hh.id, next); S.hh.settings = next;
+  let back = null;
+  if (e.txId) {
+    const t = S.txs.find(x => x.id === e.txId);
+    back = e.prevCategory || (t && S.txs.find(x => x.id !== t.id && x.description === t.description && x.category && x.category !== AMORT_CAT)?.category) || null;
+    if (back && t && t.category === AMORT_CAT) { await db.updateTransaction(t.id, { category: back }); t.category = back; }
+  }
+  track('patrimonio.desfez_amortizacao');
+  return { saldo: debtNow(next.debts.find(x => x.id === debtId), todayISO()).saldo, back, hadTx: !!e.txId };
 }
 
 export async function dismissPayment(txId) {

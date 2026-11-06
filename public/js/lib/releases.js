@@ -396,4 +396,9 @@ export const RELEASES = [
   ] }, addDocs: [DOC_INICIO], addBacklog: [
     { id: 'inicio_organizado', title: 'Início organizado: Para fazer agora, previsão e seções que abrem', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Muita informação e muita rolagem; a pessoa via, mas não agia', cost: false, notes: 'Medir: "Agiram no Início" e dias de volta no Painel da Central.', from: [], where: 'Início' },
   ] },
+  { id: 'r105', version: 'v105', at: '2026-11-06T10:49:00Z', backlog: [], news: { id: 'n20261106b', title: 'Desfazer uma amortização', items: [
+    'Em Patrimônio e dívidas, cada amortização do histórico do financiamento tem "Desfazer": o valor volta para o saldo e o pagamento volta para a categoria de antes.',
+  ] }, addBacklog: [
+    { id: 'desfazer_amortizacao', title: 'Desfazer amortização confirmada por engano', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Pagamentos confirmados por engano (R$ 99 mil e R$ 15,9 mil) tiraram R$ 115 mil a mais do saldo de Guaratuba, sem jeito de voltar', cost: false, notes: 'Desfazer no histórico; guarda a categoria anterior; o pagamento não é perguntado de novo.', from: [], where: 'Patrimônio e dívidas' },
+  ] },
 ];

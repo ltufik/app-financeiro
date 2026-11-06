@@ -35,7 +35,7 @@ export function debtNow(d, today) {
   // Installments due since the balance date: whole months only (30/09 to 04/11 is one).
   const n = !d?.saldoEm ? 0 : Math.max(0, monthsBetween(ym(from), cur) - (+today.slice(8, 10) < +from.slice(8, 10) ? 1 : 0));
   let k = ym(from), byMonth = 0;
-  const applyEvents = upTo => { while (events.length && ym(events[0].date) <= upTo) { const e = events.shift(), v = Math.min(s, +e.value); s = r2(s - v); amortized += v; history.push({ date: e.date, kind: 'amortizacao', value: v, saldo: s, note: e.note || '' }); } };
+  const applyEvents = upTo => { while (events.length && ym(events[0].date) <= upTo) { const e = events.shift(), v = Math.min(s, +e.value); s = r2(s - v); amortized += v; history.push({ date: e.date, kind: 'amortizacao', value: v, saldo: s, note: e.note || '', at: e.at || '', txId: e.txId || null }); } };
   applyEvents(k);
   for (let i = 0; i < n && s > 0; i++) {
     k = addMonth(k, 1);

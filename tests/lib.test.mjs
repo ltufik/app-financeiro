@@ -1032,3 +1032,12 @@ test('level during the year: what is missing, rules, Sunday habit; Início engag
   // Engagement: who acted among who came; median of days back.
   assert.deepEqual(homeEngagement([{ days: 10, features: { 'inicio.acao': 2 } }, { days: 3, features: { 'aba.resumo': 4 } }, { days: 0, features: {} }]), { active: 2, acted: 1, actedPct: 50, daysMedian: 6.5 });
 });
+
+test('financing history keeps what identifies each payoff (for undo)', async () => {
+  const { debtNow } = await import('../public/js/lib/debt.js');
+  // Luiz: R$ 480 mil from June at 12% a.a., R$ 5.600 a month, R$ 140 mil paid off: about R$ 330 mil today.
+  const d = { saldo: 480000, saldoEm: '2026-06-01', taxa: 0.12, parcela: 5600, sistema: 'price', log: [{ kind: 'amortizacao', value: 140000, date: '2026-08-15', at: 'a1', txId: 't1' }] };
+  const n = debtNow(d, '2026-11-06');
+  assert.equal(Math.round(n.saldo), 330650); assert.equal(n.months, 5);
+  assert.deepEqual(n.history.filter(h => h.kind === 'amortizacao').map(h => [h.at, h.txId]), [['a1', 't1']]);
+});
