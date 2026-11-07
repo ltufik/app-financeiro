@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('cartao_valor_informado', 'Início', 'v113', 'ambos', 'Cartão com o valor informado',
+    ['No Início, na previsão do mês, informe a fatura aberta (o valor do app do banco).', 'Veja o aviso do cartão ("Dá para gastar cerca de … por dia") no Início ou no push das 9h.'],
+    'O aviso diz "A fatura de … está em R$ … (o valor que vocês informaram em dd/mm)" e o valor por dia é calculado com ele.'),
   t('push_na_hora', 'Notificações', 'v112', 'ambos', 'Avisos chegam na hora',
     ['Deixe o celular parado, com a tela apagada, por uns 10 minutos.', 'Na Central → Avisos no celular, toque em "Enviar push de teste".'],
     'O aviso "o teste chegou" aparece no celular em poucos segundos, com som ou vibração, mesmo que já houvesse outro teste na barra.'),

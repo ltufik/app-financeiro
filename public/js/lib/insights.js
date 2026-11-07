@@ -107,15 +107,19 @@ export function insights(ctx) {
     }
   }
 
-  // 4. Next card bill already above the goal
-  const nf = ctx.nextFatura, cap = ctx.goals.cardMonthly;
-  if (nf && cap && nf.total > cap) out.push({ id: 'card', tone: 'warn', title: 'Cartão acima do limite', text: `A fatura de ${mName(nf.month)} já soma ${R(nf.total)} entre parcelas e contas fixas, ${R(nf.total - cap)} acima do limite de ${R(cap)}. Segure as compras no cartão até o fechamento.` });
+  // 4. Next card bill already above the goal. The open bill the person typed (Previsão do mês) is the real number:
+  // it wins over the estimate (installments + fixed bills) when it is newer and higher.
+  let nf = ctx.nextFatura; const cap = ctx.goals.cardMonthly;
+  const ck = nf && (ctx.checkins || []).filter(c => c && c.month === nf.month && +c.value >= 0).sort((a, b) => (a.date < b.date ? -1 : 1)).pop();
+  if (ck && +ck.value > nf.total) nf = { ...nf, total: +ck.value, informed: ck.date };
+  const soma = nf && (nf.informed ? `está em ${R(nf.total)} (o valor que vocês informaram em ${nf.informed.slice(8, 10)}/${nf.informed.slice(5, 7)})` : `já soma ${R(nf.total)}`);
+  if (nf && cap && nf.total > cap) out.push({ id: 'card', tone: 'warn', title: 'Cartão acima do limite', text: `A fatura de ${mName(nf.month)} ${nf.informed ? soma : `já soma ${R(nf.total)} entre parcelas e contas fixas`}, ${R(nf.total - cap)} acima do limite de ${R(cap)}. Segure as compras no cartão até o fechamento.` });
 
   // 4b. How much is left per day on the card until the bill closes (only while under the limit).
   if (nf && cap && nf.total < cap && ctx.closeDay) {
     const cd = Math.min(+ctx.closeDay, lastDay), left = cap - nf.total;
     const days = day < cd ? cd - day : (new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate() - day) + Math.min(+ctx.closeDay, new Date(+addM(cur, 1).slice(0, 4), +addM(cur, 1).slice(5, 7), 0).getDate());
-    if (days > 0 && left >= 50) out.push({ id: 'perday', tone: 'info', title: `Dá para gastar cerca de ${R(left / days)} por dia no cartão`, text: `A fatura de ${mName(nf.month)} já soma ${R(nf.total)} e o limite combinado é ${R(cap)}. Sobram ${R(left)} para os ${days} dias até o cartão fechar.`, action: { label: 'Ver metas', go: ['ajustes', null, 'metas'] } });
+    if (days > 0 && left >= 50) out.push({ id: 'perday', tone: 'info', title: `Dá para gastar cerca de ${R(left / days)} por dia no cartão`, text: `A fatura de ${mName(nf.month)} ${soma} e o limite combinado é ${R(cap)}. Sobram ${R(left)} para os ${days} dias até o cartão fechar.`, action: { label: 'Ver metas', go: ['ajustes', null, 'metas'] } });
   }
 
   // 4c. A fixed bill (electricity, condo fee, school...) well above its own average.

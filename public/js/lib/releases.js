@@ -448,4 +448,9 @@ export const RELEASES = [
     { id: 'aparelhos_com_tipo', title: 'Lista de aparelhos com o tipo certo, a data e teste por aparelho', status: 'proximo', tipo: 'backend', origin: 'Luiz', effort: 'P', problem: 'Android e Chrome de computador aparecem iguais; não dá para saber qual aparelho é qual', cost: false, notes: 'Guardar o tipo do aparelho na inscrição (Android, Windows, iPhone, Mac) e testar um por um.', from: [], where: 'Central; Notificações' },
     { id: 'familia_sem_avisos', title: 'Mostrar quem da família não recebe avisos e convidar a ligar', status: 'ideia', tipo: 'backend', origin: 'Equipe', effort: 'P', problem: 'Só um aparelho da família Elias está inscrito para receber avisos', cost: false, notes: 'No Início de quem não ligou, um convite curto; na Central, quem está sem.', from: [], where: 'Início; Central' },
   ] },
+  { id: 'r113', version: 'v113', at: '2026-11-07T13:07:00Z', backlog: [], news: { id: 'n20261107a', title: 'Cartão com o valor que você informou', items: [
+    'Os avisos do cartão ("dá para gastar por dia", "acima do limite") agora usam a fatura aberta que você informou na previsão do mês, quando ela é mais recente. Antes usavam só a estimativa de parcelas e contas fixas.',
+  ] }, addBacklog: [
+    { id: 'cartao_valor_informado', title: 'Aviso do cartão ignorava a fatura aberta informada', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Luiz informou R$ 13 mil de fatura aberta, mas o aviso das 9h dizia R$ 8,8 mil (só parcelas e contas fixas)', cost: false, notes: 'O valor informado vale quando é maior que a estimativa; o texto diz que é o valor informado e a data.', from: [], where: 'Início; avisos' },
+  ] },
 ];

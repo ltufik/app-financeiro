@@ -681,6 +681,11 @@ test('insights: quanto dá para gastar por dia no cartão e conta fixa acima do 
   // After the closing day, the days run to next month's closing; above the limit, no per-day message.
   assert.match(insights({ ...base, today: '2026-11-26' }).find(x => x.id === 'perday').text, /28 dias/);
   assert.ok(!insights({ ...base, today: '2026-11-14', nextFatura: { month: '2026-11', total: 5200 } }).some(x => x.id === 'perday'));
+  // Real case: Luiz typed R$ 13 mil as the open bill; the estimate said R$ 8,8 mil. The typed value wins.
+  const typed = insights({ ...base, today: '2026-11-14', goals: { savings: 0.2, cardMonthly: 17000 }, nextFatura: { month: '2026-11', total: 8819 }, checkins: [{ date: '2026-11-06', month: '2026-11', value: 13150 }] });
+  assert.match(typed.find(x => x.id === 'perday').text, /^A fatura de novembro está em R\$ 13\.150 \(o valor que vocês informaram em 06\/11\) e o limite combinado é R\$ 17\.000\. Sobram R\$ 3\.850/);
+  // An older, lower typed value does not hide installments already above it.
+  assert.match(insights({ ...base, today: '2026-11-14', goals: { savings: 0.2, cardMonthly: 17000 }, nextFatura: { month: '2026-11', total: 8819 }, checkins: [{ date: '2026-11-02', month: '2026-11', value: 4000 }] }).find(x => x.id === 'perday').text, /já soma R\$ 8\.819/);
 });
 
 import { progressOf } from '../public/js/lib/queue.js';
