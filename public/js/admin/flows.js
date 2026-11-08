@@ -29,6 +29,8 @@ export const SCREENS = {
   lancar_revisao: { title: 'Revisão da fatura', where: 'Depois de enviar o PDF', key: 'lancar.pdf_ok' },
   extrato_categoria: { title: 'Extrato por categoria', where: 'Extrato → Categoria', key: 'extrato.categoria' },
   juntar_categorias: { title: 'Categorias parecidas', where: 'Menu ☰ → Configurações → Categorias (e aviso no Início)', key: 'categorias.juntar' },
+  saque: { title: 'No que foi o saque', where: 'Lançar (quando há saque sem detalhe) e aviso no Início', key: 'lancar.saque_detalhado' },
+  regra_aprender: { title: 'Ensinar o app (regra pelo nome)', where: 'Depois de mudar a categoria no Extrato ou no Fechar o mês', key: 'regras.aplicou' },
   anotacao: { title: 'Anotar um lançamento', where: 'Extrato → Anotar', key: 'extrato.anotacao' },
   categoria: { title: 'Escolher a categoria', where: 'Toque na categoria de um lançamento (revisão, Extrato, Fechar o mês)', key: null },
   graficos: { title: 'Gráficos', where: 'Aba Gráficos', key: 'aba.graficos' },
@@ -96,6 +98,11 @@ export const FLOWS = [
   { id: 'categorias', title: 'Organizar as categorias', desc: 'Categorias repetidas deixam gráficos e orçamento confusos; o app sugere juntar.', steps: [
     st('inicio', 'Aviso no Início: "Duas categorias parecem a mesma"', null), st('juntar_categorias', 'Em Categorias, toca em "Juntar em…" e confirma', 'categorias.juntar'),
     st('extrato_categoria', 'No Extrato, filtra pela categoria e vê o total só dela', 'extrato.categoria')] },
+  { id: 'regras', title: 'Ensinar o app pelo nome', desc: 'Mudar um lançamento e todos os parecidos irem junto: menos trabalho a cada fatura.', steps: [
+    st('extrato', 'No Extrato, muda a categoria de um lançamento'), st('regra_aprender', 'O app pergunta se tudo com o mesmo nome vai junto e mostra quantos mudam', 'regras.aplicou'),
+    st('juntar_categorias', 'Em Categorias, vê as regras ensinadas (e desfaz, se quiser)', 'regras.desfez')] },
+  { id: 'saques', title: 'Contar no que foi o saque', desc: 'Dinheiro vivo some do controle; uma frase curta devolve a sobra certa.', steps: [
+    st('inicio', 'Aviso no Início: "R$ … em saques sem detalhe"', null), st('saque', 'Em Lançar, escreve ou fala "200 feira, 100 uber" e salva', 'lancar.saque_detalhado')] },
   { id: 'falar', title: 'Lançar falando', desc: 'Pix e dinheiro antes do extrato chegar.', steps: [
     st('lancar', 'Abre Lançar'), st('lancar_falar', 'Fala "gastei 45 na padaria no pix" e toca em Interpretar'), st('lancar_salvo', 'Confere e salva')] },
   { id: 'nota', title: 'Nota fiscal', desc: 'Uma compra com itens de categorias diferentes.', steps: [

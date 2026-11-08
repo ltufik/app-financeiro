@@ -82,6 +82,10 @@ export async function replaceStatement(hh, source, month, rows, { cards = [], un
   }
   return must(r);
 }
+// Learned rules by name ("Regras que aprendem"): one regex rule, the entries moved in one go, and undo.
+export const addRule = async (hh, r) => must(await sb.from('rules').upsert({ household_id: hh, min_abs: null, max_abs: null, ...r }, { onConflict: 'household_id,source,kind,pattern' }));
+export const deleteRule = async (hh, source, pattern) => must(await sb.from('rules').delete().eq('household_id', hh).eq('source', source).eq('kind', 'regex').eq('pattern', pattern));
+export async function setCategoryMany(ids, category) { for (let i = 0; i < ids.length; i += 200) must(await sb.from('transactions').update({ category, pending: false }).in('id', ids.slice(i, i + 200))); }
 export const learnRule = async (hh, source, pattern, category) => must(await sb.rpc('learn_rule', { p_household: hh, p_source: source, p_pattern: pattern, p_category: category }));
 
 export const addCategory = async (hh, c) => must(await sb.from('categories').insert({ household_id: hh, ...c }).select().single());

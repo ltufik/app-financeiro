@@ -140,6 +140,12 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('regras_que_aprendem', 'Extrato', 'v117', 'ambos', 'Regras que aprendem',
+    ['No Extrato, ache um lançamento de um lugar que aparece várias vezes (iFood, Uber, um posto) e mude a categoria.', 'Leia a pergunta, abra "Ajustar o nome" e teste um nome que não está no lançamento; depois volte.', 'Toque em "Sim, todos". Depois, em Menu → Categorias, toque em Desfazer na regra.'],
+    'Aparece "Quer que tudo com "…" vá para …?" com quantos lançamentos mudam e exemplos; um nome que não está no lançamento é recusado. Ao aplicar, os outros mudam juntos e o próximo que chegar já vem na categoria. Em Categorias a regra aparece e o Desfazer devolve as categorias de antes. "Só este" muda só aquele lançamento.'),
+  t('saques_dinheiro_vivo', 'Lançar', 'v117', 'ambos', 'Saques: contar no que foi o dinheiro',
+    ['Com um extrato que tenha um saque (dos últimos 2 meses), abra Lançar.', 'Em "No que foi o dinheiro do saque?", escreva ou fale "200 feira, 100 uber" e confira as categorias.', 'Salve. Se houver outro saque, toque em "Não lembro" nele.'],
+    'Aparecem as partes com a categoria de cada uma e o resto que continua como saque; ao salvar, o saque passa a contar nessas categorias (no Extrato e na sobra do mês). "Não lembro" faz a pergunta sumir para aquele saque. O Início mostra o aviso "R$ … em saques sem detalhe" enquanto houver algum.'),
   t('historico_outros_apps', 'Lançar', 'v116', 'ambos', 'Histórico de outro app',
     ['No app antigo (Mobills, Organizze...), exporte os lançamentos em Excel ou CSV.', 'Em Lançar → Enviar faturas, extratos ou planilha, abra "Usava outro app?" e depois escolha o arquivo.', 'Revise e salve.'],
     'As colunas são achadas sozinhas; despesas saem como gasto e receitas como entrada, com as categorias de vocês; o que não foi pago e as transferências ficam de fora; o que já estava no app não duplica.'),

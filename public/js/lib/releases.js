@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -469,5 +469,9 @@ export const RELEASES = [
   { id: 'r116', version: 'v116', at: '2026-11-08T22:47:00Z', backlog: ['historico_de_outros_apps'], news: { id: 'n20261108a', title: 'Traga o histórico de outro app', items: [
     'Usava Mobills, Organizze ou outro app? Exporte em Excel ou CSV e mande em Lançar: o app traz despesas e receitas com as suas categorias.',
     'Ficam de fora o que ainda não foi pago, as transferências entre suas contas e o que já está no app.',
+  ] } },
+  { id: 'r117', version: 'v117', at: '2026-11-08T23:03:00Z', backlog: ['saques_e_dinheiro_vivo', 'regras_que_aprendem_confirmar_antes_de_a'], addDocs: [DOC_SAQUES, DOC_REGRAS], news: { id: 'n20261108b', title: 'Saques e categorias que aprendem', items: [
+    'Sacou dinheiro? Em Lançar aparece "No que foi o dinheiro do saque?". Escreva ou fale em poucas palavras, como "200 feira, 100 uber", e o saque passa a contar em cada categoria. Não lembra? Toque em "Não lembro".',
+    'Mudou a categoria de um lançamento? O app pergunta se tudo com o mesmo nome vai junto (por exemplo, tudo com IFOOD para Delivery) e mostra antes quantos lançamentos mudam. Dá para desfazer em Categorias.',
   ] } },
 ];

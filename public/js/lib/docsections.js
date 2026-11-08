@@ -303,3 +303,22 @@ export const DOC_ROBO_BACKLOG = { id: 'robo_backlog_doc', title: 'Claude no back
 - Depois de aplicado, o arquivo vai para backlog/ops/aplicados/ (fica o histórico).
 ## Cópia para o Claude ler
 - backlog/backlog.json e backlog/BACKLOG.md: o backlog como está na Central (inclusive o que o Luiz mudou lá). Não editar à mão.` };
+
+export const DOC_SAQUES = { id: 'saques_doc', title: 'Saques e dinheiro vivo', body: `Dinheiro sacado some do controle: o extrato só mostra "SAQUE". O app pergunta no que foi e divide o saque por categoria.
+## Como funciona
+- Lançar mostra "No que foi o dinheiro do saque?" para cada saque da conta dos últimos 70 dias (R$ 20 ou mais) que ainda não foi detalhado. Um por vez, do mais recente.
+- A pessoa escreve ou fala em poucas palavras ("200 feira, 100 uber"). O app acha a categoria de cada parte pelas palavras do dia a dia (feira → Mercado, uber → Transporte...) e dá para trocar antes de salvar.
+- O que não foi dito continua na categoria do saque. Se as partes passam do valor sacado, o app avisa e não salva.
+- Salvo, o saque vira um lançamento dividido (como a nota fiscal): conta uma linha por parte na sobra do mês e nos gráficos.
+- "Não lembro" deixa o saque como está e o app não pergunta mais sobre ele (fica em households.settings.cashSkip).
+- No Início e no aviso das 9h aparece "R$ … em saques sem detalhe" enquanto houver algum.
+- Regras em lib/cash.js (testadas); tela em cash.js.` };
+
+export const DOC_REGRAS = { id: 'regras_aprendem_doc', title: 'Regras que aprendem', body: `Quando a pessoa muda a categoria de um lançamento, o app procura o nome por trás da descrição (IFOOD, UBER, DROGASIL...) e pergunta se tudo com esse nome vai para a mesma categoria.
+## Como funciona
+- Só pergunta quando outros lançamentos mudariam. Mostra quantos, de quais categorias e até 4 exemplos antes de aplicar.
+- O nome é a primeira palavra útil da descrição (sem PIX, PAG, COMPRA, LTDA...). Se essa palavra aparece em 3 ou mais categorias (geral demais, como POSTO), usa as duas primeiras palavras (POSTO SHELL). A pessoa pode ajustar o nome; ele precisa aparecer no lançamento.
+- Opções: "Sim, todos" (muda os lançamentos e cria a regra), "Só este" (só o lançamento, como antes).
+- A regra vale para os próximos lançamentos, antes das regras do próprio app (prioridade 20); o que foi ensinado lançamento por lançamento continua valendo primeiro.
+- Em Categorias, "Regras que vocês ensinaram" lista cada regra com quantos lançamentos ela cobre e "Desfazer": apaga a regra e devolve os lançamentos para a categoria que tinham antes (o app guarda o que mudou em households.settings.ruleLog).
+- Regras em lib/learn.js (testadas); tela em learnask.js. Aparece no Extrato e no Fechar o mês.` };

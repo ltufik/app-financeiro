@@ -21,6 +21,7 @@ import { classifyText, aiKind, KIND_LABEL, KIND_RULES } from '../lib/classify.js
 import { docKeys, compareStatement, docsText } from '../lib/statements.js';
 import { applyMemos } from '../lib/memo.js';
 import { parseCSV, detectColumns, buildEntries, markDuplicates, matchCategory } from '../lib/sheet.js';
+import { renderCash } from '../cash.js';
 import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX, progressOf, nowHint, failedIndexes } from '../lib/queue.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
@@ -30,7 +31,7 @@ const PDF = { bytes: null, name: '' };
 
 export function render(el) {
   if (!el.dataset.built) build(el);
-  renderManual(); renderImports();
+  renderManual(); renderImports(); renderCash($('#cashBox'));
   const nm = pendingManual().length, ni = S.imports.length;
   $('#lHistSum').textContent = `${nm} em aberto · ${ni} ${ni === 1 ? 'importação' : 'importações'}`;
 }
@@ -55,6 +56,7 @@ export function reveal(sel) {
 function build(el) {
   el.dataset.built = '1';
   el.innerHTML = `
+  <div class="panel stack cash" id="cashBox" hidden></div>
   <div class="panel stack">
     <h2>O que você quer lançar?</h2>
     <div class="ltiles" role="group" aria-label="Como lançar"><button type="button" class="ltile" data-mode="falar" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><strong>Falar ou escrever</strong><span class="tiny muted">"Gastei 45 na padaria no pix"</span></span></button><button type="button" class="ltile" data-mode="nota" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><strong>Foto da nota</strong><span class="tiny muted">Separa cada item por categoria</span></span></button><button type="button" class="ltile" data-mode="pdf" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></span><span><strong>Fatura ou extrato</strong><span class="tiny muted">PDF, foto ou planilha</span><span class="lmany">Vários de uma vez</span></span></button><button type="button" class="ltile" data-mode="mao" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span><strong>Preencher à mão</strong><span class="tiny muted">Data, valor e categoria</span></span></button></div>

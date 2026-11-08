@@ -1201,3 +1201,47 @@ test('a card sheet with a refund keeps purchases as purchases', async () => {
   const d = detectColumns(rows), r = buildEntries(rows, { map: d.map, header: d.header, categories: [] });
   assert.deepEqual(r.entries.map(e => [e.source, e.amount]), [['cartao', 150], ['cartao', -50]]);
 });
+
+test('cash: withdrawals found, "200 feira, 100 uber" read, split with the rest kept', async () => {
+  const { isCashWithdrawal, pendingCash, parseCashText, cashSplits } = await import('../public/js/lib/cash.js');
+  const cats = [{ name: 'Mercado' }, { name: 'Transporte' }, { name: 'Presentes' }, { name: 'Restaurantes e delivery' }, { name: 'A classificar' }, { name: 'Saque' }];
+  assert.equal(isCashWithdrawal({ source: 'conta', amount: -400, description: 'SAQUE BANCO24HORAS' }), true);
+  assert.equal(isCashWithdrawal({ source: 'conta', amount: -300, description: 'PIX SAQUE' }), true);
+  assert.equal(isCashWithdrawal({ source: 'conta', amount: -6.5, description: 'TARIFA SAQUE' }), false);
+  assert.equal(isCashWithdrawal({ source: 'cartao', amount: 50, description: 'SAQUE' }), false);
+  assert.equal(isCashWithdrawal({ source: 'conta', amount: -50, description: 'Mercado Saquarema' }), false);
+  const txs = [{ id: 1, source: 'conta', amount: -400, description: 'SAQUE 24H', date: '2026-11-02', month: '2026-11' }, { id: 2, source: 'conta', amount: -200, description: 'SAQUE', date: '2026-08-01', month: '2026-08' },
+    { id: 3, source: 'conta', amount: -300, description: 'SAQUE', date: '2026-10-20', month: '2026-10', splits: [{ category: 'Mercado', amount: 300 }] }, { id: 4, source: 'conta', amount: -100, description: 'SAQUE', date: '2026-10-25', month: '2026-10' }];
+  assert.deepEqual(pendingCash(txs, { today: '2026-11-08', skip: [4] }).map(t => t.id), [1], 'old, split and "não lembro" stay out');
+  const p = parseCashText('200 feira, 100 uber e R$ 50,50 no presente da Bia', cats);
+  assert.deepEqual(p.map(x => [x.amount, x.category]), [[200, 'Mercado'], [100, 'Transporte'], [50.5, 'Presentes']]);
+  assert.deepEqual(parseCashText('almoço 45', cats).map(x => x.category), ['Restaurantes e delivery']);
+  assert.deepEqual(cashSplits(-400, p, 'Saque'), [{ category: 'Mercado', amount: 200 }, { category: 'Transporte', amount: 100 }, { category: 'Presentes', amount: 50.5 }, { category: 'Saque', amount: 49.5 }]);
+  assert.equal(cashSplits(-100, p), null, 'more than the withdrawal');
+});
+
+import { suggestRule, rulePattern, ruleCandidates, ruleMatches, undoMoves } from '../public/js/lib/learn.js';
+test('regras que aprendem: acha o nome, conta o que muda e não repete', () => {
+  assert.deepEqual(ruleCandidates('IFD*BURGER KING 123'), ['IFD', 'IFD BURGER']);
+  assert.deepEqual(ruleCandidates('PIX ENVIADO Joao da Silva'), ['JOAO', 'JOAO DA']);
+  assert.deepEqual(ruleCandidates('PAG*'), []);
+  const p = rulePattern('ifood');
+  assert.ok(new RegExp(p).test('IFOOD *RESTAURANTE') && new RegExp(p).test('PAG*IFOOD') && !new RegExp(p).test('IFOODX'));
+  const txs = [
+    { id: 1, source: 'cartao', description: 'IFOOD *PIZZARIA', category: 'Restaurante' },
+    { id: 2, source: 'cartao', description: 'IFOOD*BURGER', category: 'A classificar' },
+    { id: 3, source: 'cartao', description: 'IFOOD MERCADO', category: 'Delivery' },
+    { id: 4, source: 'conta', description: 'IFOOD', category: 'Restaurante' },
+    { id: 5, source: 'cartao', description: 'IFOOD X', category: 'Mercado', splits: [{ category: 'Mercado', amount: 10 }] },
+  ];
+  const s = suggestRule({ id: 9, source: 'cartao', description: 'IFOOD *SUSHI' }, 'Delivery', txs, []);
+  assert.equal(s.label, 'IFOOD'); assert.deepEqual(s.change.map(t => t.id), [1, 2]); assert.equal(s.same, 1); assert.equal(s.total, 3);
+  assert.equal(suggestRule({ id: 9, source: 'cartao', description: 'IFOOD *SUSHI' }, 'Delivery', txs, [{ kind: 'regex', source: 'cartao', pattern: s.pattern, category: 'Delivery' }]), null);
+  assert.equal(suggestRule({ id: 9, source: 'cartao', description: 'NETFLIX' }, 'Assinaturas', txs, []), null);
+  assert.equal(suggestRule({ id: 9, source: 'cartao', description: 'IFOOD', manual: true }, 'Delivery', txs, []), null);
+  // Too general: three categories under "POSTO" -> "POSTO SHELL".
+  const posto = ['Combustível', 'Carro', 'Mercado'].map((c, i) => ({ id: 20 + i, source: 'conta', description: 'POSTO ' + ['IPIRANGA', 'BR', 'ALE'][i], category: c })).concat([{ id: 30, source: 'conta', description: 'POSTO SHELL 22', category: 'Carro' }]);
+  assert.equal(suggestRule({ id: 31, source: 'conta', description: 'POSTO SHELL 10' }, 'Combustível', posto, []).label, 'POSTO SHELL');
+  assert.equal(ruleMatches(rulePattern('posto shell'), posto).length, 1);
+  assert.deepEqual(undoMoves({ category: 'Delivery', moved: [[1, 'Restaurante'], [2, 'A classificar']] }, [{ id: 1, category: 'Delivery' }, { id: 2, category: 'Mercado' }]), [[1, 'Restaurante']]);
+});

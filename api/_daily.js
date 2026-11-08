@@ -9,9 +9,10 @@ import { addM } from '../public/js/lib/format.js';
 import { feesOf } from '../public/js/lib/bankfees.js';
 import { sendPush } from './_webpush.js';
 import { forecast, sundayAsk } from '../public/js/lib/monthend.js';
+import { pendingCash } from '../public/js/lib/cash.js';
 
 // Which preference turns each message on, and how many days before the same message can repeat.
-export const TYPES = { juros: 'gastos', tarifas: 'gastos', fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
+export const TYPES = { saques: 'dados', juros: 'gastos', tarifas: 'gastos', fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
 const REPEAT = { tarifas: 60, fatura: 20, missing: 7, pending: 7, close: 5, budget: 7, semanal: 6 };
 const days = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
 const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
@@ -43,7 +44,7 @@ export function familyInsights({ household, categories, txs }, today) {
     manualCount: k => txs.filter(t => t.month === k && t.manual).length,
     pending: k => txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
     fixedCats: [...idx.values()].filter(c => c.grp === 'dia' && c.recurring).map(c => c.name), closeDay: +st.cardCloseDay || 24,
-    goals: g, nextFatura: nf, checkins: st.checkins || [], budgets: budgetsOf(st), recurring: findRecurring(txs, months, { idx }), toClose: (() => { const cur = today.slice(0, 7), cl = st.closed || {}; return months.filter(k => k < cur && !cl[k]).pop() || null; })(),
+    goals: g, nextFatura: nf, checkins: st.checkins || [], cashPending: pendingCash(txs, { today, skip: st.cashSkip || [] }), budgets: budgetsOf(st), recurring: findRecurring(txs, months, { idx }), toClose: (() => { const cur = today.slice(0, 7), cl = st.closed || {}; return months.filter(k => k < cur && !cl[k]).pop() || null; })(),
     etaYears: pmt => { if (!(pmt > 0) || !g.patrimonio) return null; const pts = project({ start: +st.invest?.total || 0, pmt, ret: g.ret ?? 0.05, years: 40 }); const i = pts.findIndex(v => v >= g.patrimonio); return i < 0 ? null : i; },
   }).map(x => ({ ...x, url: x.action ? linkFor('tela', { tab: x.action.go[0], sec: x.action.go[0] === 'lancar' && x.action.go[1] === '#drop' ? 'pdf' : x.action.go[2] }) : linkFor('tela', { tab: 'resumo' }) }));
 }
@@ -79,7 +80,7 @@ export async function runDaily({ supabaseUrl, serviceKey, vapid, fetchImpl = fet
       const categories = await get(`categories?household_id=eq.${hh}&select=name,grp,financing,recurring`);
       let txs = [];
       for (let off = 0; ; off += 1000) {
-        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=source,month,date,day,description,amount,category,installment,manual,pending,splits&order=id&limit=1000&offset=${off}`);
+        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=id,source,month,date,day,description,note,amount,category,installment,manual,pending,splits&order=id&limit=1000&offset=${off}`);
         txs = txs.concat(page.map(t => ({ ...t, amount: +t.amount }))); if (page.length < 1000) break;
       }
       out.families++;

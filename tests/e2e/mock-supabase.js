@@ -16,6 +16,7 @@ class Q {
   constructor(t) { this.t = t; this.f = []; this.op = 'select'; this.ret = false; this.one = false; this.rng = null; this.cols = '*'; }
   select(c) { if (this.op === 'select') this.cols = c || '*'; else this.ret = true; return this; }
   eq(k, v) { this.f.push(r => r[k] === v); return this; }
+  in(k, vs) { const set = new Set(vs); this.f.push(r => set.has(r[k])); return this; }
   order() { return this; }
   limit() { return this; }
   range(a, b) { this.rng = [a, b]; return this; }

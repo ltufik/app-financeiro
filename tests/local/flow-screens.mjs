@@ -106,6 +106,12 @@ await step('lancar', async () => { await page.click('[data-tab=lancar]'); await 
 await step('lancar_falar', async () => { await page.click('.ltile[data-mode="falar"]'); await page.fill('#qText', 'gastei 45 na padaria no pix'); await page.click('#qGo'); await page.waitForSelector('#qSave'); }, { scrollTo: '.ltiles' });
 await step('lancar_salvo', async () => { await page.click('#qSave'); await page.click('.cfm [data-y]'); await page.waitForSelector('#toast:not([hidden])'); }, { keepToast: true });
 await step('lancar_nota', async () => { await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="nota"]'); await page.setInputFiles('#rcFile', path.join(ROOT, 'icons/icon-512.png')); await page.waitForSelector('#rcReview:not([hidden])', { timeout: 15000 }); }, { scrollTo: '#rcReview' });
+// A withdrawal with no detail: "No que foi o dinheiro do saque?" with the parts already typed.
+await step('saque', async () => {
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); const d = new Date().toISOString().slice(0, 10); S.txs.push({ id: 'fsaque', household_id: S.hh.id, source: 'conta', month: d.slice(0, 7), date: d, description: 'SAQUE BANCO24HORAS', amount: -300, category: 'A classificar', manual: false }); S.render(); });
+  await page.waitForSelector('#cashBox:not([hidden])', { timeout: 8000 }); await page.fill('#cashTxt', '150 feira, 80 uber, 40 presente');
+}, { scrollTo: '#cashBox' });
+await page.evaluate(async () => { const { S } = await import('/js/state.js'); S.txs = S.txs.filter(t => t.id !== 'fsaque'); S.render(); }).catch(() => {});
 await step('lancar_pdf', async () => { await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="pdf"]'); await page.waitForSelector('#drop'); }, { scrollTo: '.ltiles' });
 if (arg('pdf')) await step('lancar_revisao', async () => {
   await page.evaluate(() => new Promise(r => { const t = setInterval(() => { if (window.pdfjsLib) { clearInterval(t); r(); } }, 50); }));
@@ -132,6 +138,13 @@ await step('perguntar_resposta', async () => { await page.fill('#askText', 'quan
 await step('extrato', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(400); });
 await step('anotacao', async () => { await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in'); await page.fill('.nt-in', 'cabeleireiro Lily'); });
 await page.click('.cps .tx').catch(() => {});
+// Learned rule: change one entry and the app asks about everything with the same name.
+await step('regra_aprender', async () => {
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); const m = '2026-09'; [['fr1', 'IFOOD *PIZZARIA BELLA', 'Restaurante'], ['fr2', 'IFOOD*HAMBURGUERIA', 'A classificar'], ['fr3', 'IFOOD *SUSHI DO BAIRRO', 'A classificar']].forEach(([id, d, c]) => S.txs.push({ id, household_id: S.hh.id, source: 'cartao', month: m, day: '12/09', description: d, amount: 68.9, category: c, manual: false })); S.render(); });
+  await page.fill('#lSearch', 'sushi do bairro'); await page.waitForTimeout(300); await page.click('#lRows li:not([data-split]) .chip'); await page.waitForSelector('.cps');
+  await page.fill('.cps-q', 'Restaurante'); await page.waitForTimeout(150); await page.click('.cps-it'); await page.waitForSelector('.lrn', { timeout: 8000 });
+});
+await page.click('.lrn [data-n]').catch(() => {}); await page.fill('#lSearch', '').catch(() => {});
 await step('extrato_categoria', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(300); const v = await page.$$eval('#lCat option', o => o.map(x => x.value).filter(Boolean)); if (v.length) await page.selectOption('#lCat', v[0]); await page.waitForTimeout(300); });
 await page.selectOption('#lCat', '').catch(() => {});
 await step('juntar_categorias', async () => { await sec('categorias'); await page.fill('#cNew', 'Mercados'); await page.click('#cAdd'); await page.click('.cfm [data-y]'); await page.waitForSelector('#catMerge .mergecard', { timeout: 8000 }); }, { scrollTo: '#catMerge' });

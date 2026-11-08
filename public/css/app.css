@@ -736,3 +736,16 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 #lockScreen .lk-news{text-align:left;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 #lockScreen .lk-news summary{cursor:pointer;font-weight:600}
 #lockScreen .lk-card{overflow-y:auto;max-height:100%}
+/* Saques e dinheiro vivo */
+.cash .eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0}
+.cash .cash-in{align-items:flex-end}
+.cash-list{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:6px}
+.cash-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cash-list select{max-width:60%}
+/* Regras que aprendem */
+.lrn .eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 4px}
+.lrn-list{list-style:none;padding:0;margin:8px 0;display:flex;flex-direction:column;gap:6px}
+.lrn-list li{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.lrn-adj{margin:6px 0 10px}.lrn-adj summary{cursor:pointer}
+.lrn-rules{list-style:none;padding:0;margin:4px 0;display:flex;flex-direction:column;gap:8px}
+.lrn-rules li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}

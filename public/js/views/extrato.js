@@ -1,3 +1,4 @@
+import { askRule } from '../learnask.js';
 import { S, txsOf, latestClosed, monthKeys, settings } from '../state.js';
 import * as db from '../db.js';
 import { brl, esc, mLong, norm } from '../lib/format.js';
@@ -85,7 +86,7 @@ function draw() {
       try {
         await db.updateTransaction(t.id, { category: c, pending: false }); t.category = c; t.pending = false;
         if (!t.manual) { await db.learnRule(S.hh.id, t.source, norm(t.description), c).catch(() => {}); S.rules.push({ source: t.source, kind: 'exact', pattern: norm(t.description), category: c }); }
-        toast('Categoria salva'); S.render();
+        toast('Categoria salva'); S.render(); askRule(t, c, { onChange: () => S.render() });
       } catch (e) { toast('Não foi possível salvar.'); draw(); }
     }, { description: t.description, amount: t.amount }));
     if (isPend(t) && t.category && t.category !== 'A classificar') {

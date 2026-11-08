@@ -122,6 +122,13 @@ export function insights(ctx) {
     if (days > 0 && left >= 50) out.push({ id: 'perday', tone: 'info', title: `Dá para gastar cerca de ${R(left / days)} por dia no cartão`, text: `A fatura de ${mName(nf.month)} ${soma} e o limite combinado é ${R(cap)}. Sobram ${R(left)} para os ${days} dias até o cartão fechar.`, action: { label: 'Ver metas', go: ['ajustes', null, 'metas'] } });
   }
 
+  // 4d. Withdrawals not explained yet: cash disappears from the control unless the person says what it paid for.
+  const cash = ctx.cashPending || [];
+  if (cash.length) {
+    const tot = cash.reduce((a, t) => a + Math.abs(+t.amount), 0);
+    out.push({ id: 'saques', tone: 'warn', title: `${R(tot)} em ${cash.length > 1 ? 'saques' : 'saque'} sem detalhe`, text: 'Dinheiro vivo some do controle. Conte em poucas palavras no que foi (ex.: 200 feira, 100 uber) e a sobra do mês fica certa.', action: { label: 'Contar no que foi', go: ['lancar', '#cashBox'] } });
+  }
+
   // 4c. A fixed bill (electricity, condo fee, school...) well above its own average.
   if (before.length >= 2 && (ctx.fixedCats || []).length) {
     const cm = ctx.cats(m), bills = [];

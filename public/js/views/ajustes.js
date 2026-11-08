@@ -16,6 +16,7 @@ import { renderFeedback, renderDuvidas } from '../feedback.js';
 import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
 import { renderAnnual } from '../annual.js';
+import { renderTaught } from '../learnask.js';
 import { ASSET_TYPES, UFS, guessAssetType, isVehicle, ipvaOf } from '../lib/annual.js';
 import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
@@ -95,6 +96,7 @@ export function render(el) {
     <label class="f">Nome<input type="text" id="cNew" maxlength="60" placeholder="Ex.: Academia"></label>
     <div class="kinds" role="radiogroup" aria-label="Tipo da categoria" id="cKinds">${KINDS.map(k => `<button type="button" class="kind" role="radio" aria-checked="${k.key === 'dvar'}" data-kind="${k.key}"><strong>${k.label}</strong><span>${k.hint}</span></button>`).join('')}</div>
     <div><button class="btn primary" id="cAdd" type="button">Criar categoria</button></div>
+    <div id="taught" class="stack" hidden></div>
     <h3 style="margin-top:10px">Suas categorias</h3>
     <div id="catList" class="stack"></div>
   </div>
@@ -188,6 +190,7 @@ export function render(el) {
   if (sec.key === 'duvidas') renderDuvidas($('#faqBox'));
   if (sec.key === 'applepay') renderApplePay($('#apBox'));
   if (sec.key === 'gastos_ano') renderAnnual($('#anBox'));
+  if (sec.key === 'categorias') renderTaught($('#taught'));
   if (sec.key === 'conta') renderSecurity($('#secBox'));
   if (sec.key === 'opiniao') renderFeedback($('#fbBox'));
   // help

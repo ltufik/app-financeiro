@@ -298,6 +298,18 @@ async function sheetTests(tag) {
   const oa = await txt('#shReview');
   ok(tag + 'outro app: despesas, receita e cartão certos; não pago e transferência de fora', oa.includes('Planilha: 3 lançamentos') && oa.includes('1 ainda não pago ficou de fora') && oa.includes('1 transferência entre contas ficou de fora'), oa.slice(0, 400));
   await page.click('#shCancel'); await page.click('.cfm [data-y]').catch(() => {});
+  // Saques e dinheiro vivo: a recent withdrawal asks what the money paid for and splits it by category.
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); const d = new Date().toISOString().slice(0, 10), t = { id: 'saque-e2e', household_id: S.hh.id, source: 'conta', month: d.slice(0, 7), date: d, day: d.slice(8, 10) + '/' + d.slice(5, 7), description: 'SAQUE BANCO24HORAS', amount: -400, category: 'A classificar', manual: false, splits: null }; window.__db.transactions.push({ ...t }); S.txs.push(t); S.render(); });
+  await page.waitForSelector('#cashBox:not([hidden])', { timeout: 8000 }).catch(() => {});
+  ok(tag + 'saque: Lançar pergunta no que foi o dinheiro', (await txt('#cashBox')).includes('No que foi o dinheiro do saque') && (await txt('#cashBox')).includes('R$ 400'), await txt('#cashBox'));
+  await page.fill('#cashTxt', '500 feira'); 
+  ok(tag + 'saque: mais que o saque mostra erro e não salva', (await txt('#cashPrev')).includes('mais que o saque') && await page.isDisabled('#cashSave'));
+  await page.fill('#cashTxt', '200 feira, 100 uber');
+  ok(tag + 'saque: mostra as partes e o resto', (await txt('#cashPrev')).includes('R$ 200') && (await txt('#cashPrev')).includes('R$ 100') && (await txt('#cashPrev')).includes('O resto, R$ 100'), await txt('#cashPrev'));
+  await page.click('#cashSave'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]');
+  await page.waitForFunction(() => (window.__db.transactions.find(t => t.id === 'saque-e2e')?.splits || []).length === 3, null, { timeout: 8000 }).catch(() => {});
+  const sq = await page.evaluate(() => window.__db.transactions.find(t => t.id === 'saque-e2e')?.splits);
+  ok(tag + 'saque: salva dividido por categoria e a pergunta some', (sq || []).length === 3 && sq.reduce((a, s) => a + s.amount, 0) === 400 && await page.isHidden('#cashBox'), JSON.stringify(sq));
   if (arg('xlsx')) {
     await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/planilha-ficticia.xlsx'));
     await page.waitForSelector('#shReview:not([hidden])', { timeout: 20000 }).catch(() => {});
@@ -658,10 +670,10 @@ if (nrows) {
   if (shots) await page.screenshot({ path: path.join(shots, '07b-categoria.png') });
   await page.fill('.cps-q', ''); await page.waitForTimeout(100);
   await page.click('.cps-it:not(.on)');
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300); if (await page.$('.lrn')) await page.click('.lrn [data-n]');
   ok('troca de categoria ensina regra', await page.evaluate(() => window.__learned > 0));
   await page.click('#lRows li:not([data-split]) .chip'); await page.waitForSelector('.cps');
-  await page.fill('.cps-q', 'Estacionamento'); await page.click('.cps-new'); await page.waitForTimeout(400);
+  await page.fill('.cps-q', 'Estacionamento'); await page.click('.cps-new'); await page.waitForTimeout(400); if (await page.$('.lrn')) await page.click('.lrn [data-n]');
   ok('dá para criar a categoria na hora e ela já fica escolhida', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Estacionamento' && c.grp === 'dia')) && !(await page.$('.cps')));
   // Personal note (Paty's idea): what the entry really was, remembered for the same name.
   await page.waitForTimeout(300); await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in');
@@ -675,6 +687,28 @@ if (nrows) {
   await page.fill('#lSearch', ''); await page.waitForTimeout(200);
 }
 await shot('07-extrato');
+if (nrows) { // Regras que aprendem: changing one entry offers to move everything with the same name, with the preview; undo in Categorias.
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); const m = new Date().toISOString().slice(0, 7);
+    [['rg1', 'ZEBRAFOOD *PIZZA', 'Restaurante'], ['rg2', 'ZEBRAFOOD*BURGER', 'A classificar'], ['rg3', 'ZEBRAFOOD *SUSHI', 'A classificar']].forEach(([id, d, c]) => { const t = { id, household_id: S.hh.id, source: 'cartao', month: m, day: '05/' + m.slice(5), description: d, amount: 50, category: c, manual: false, splits: null }; window.__db.transactions.push({ ...t }); S.txs.push(t); });
+    S.render(); });
+  await page.fill('#lSearch', 'zebrafood'); await page.waitForTimeout(300);
+  await page.locator('#lRows li', { hasText: 'SUSHI' }).locator('.chip').first().click(); await page.waitForSelector('.cps');
+  await page.fill('.cps-q', 'Transporte'); await page.waitForTimeout(100); await page.click('.cps-it'); await page.waitForSelector('.lrn', { timeout: 5000 }).catch(() => {});
+  const lr = await txt('.lrn'), dest = (/vá para (.+?)\?/.exec(lr) || [])[1];
+  ok('regras: pergunta se tudo com o mesmo nome vai junto e mostra o que muda', lr.includes('Quer que tudo com "ZEBRAFOOD" vá para') && !!dest && lr.includes('Isso muda 2 lançamentos') && lr.includes('ZEBRAFOOD *PIZZA') && lr.includes('Sim, todos (2)'), lr.slice(0, 300));
+  await page.click('.lrn-adj summary'); await page.fill('#lrnIn', 'pizza hut');
+  ok('regras: ajustar o nome recusa o que não aparece no lançamento', (await txt('.lrn')).includes('não aparece em') && await page.isDisabled('.lrn [data-y]'));
+  await page.fill('#lrnIn', 'zebrafood');
+  await page.click('.lrn [data-y]'); await page.waitForFunction(() => !document.querySelector('.lrn'), null, { timeout: 8000 }).catch(() => {});
+  const ap = await page.evaluate(() => ({ r: window.__db.rules.find(r => r.kind === 'regex' && r.priority === 20 && /ZEBRAFOOD/.test(r.pattern)), c: ['rg1', 'rg2', 'rg3'].map(id => window.__db.transactions.find(t => t.id === id)?.category), log: (window.__db.households[0].settings.ruleLog || []).length }));
+  ok('regras: aplica a regra e muda os lançamentos com o mesmo nome', ap.r?.category === dest && ap.c.every(c => c === dest) && ap.log === 1, JSON.stringify(ap));
+  await page.fill('#lSearch', ''); await page.waitForTimeout(200);
+  await sec('categorias'); await page.waitForSelector('#taught:not([hidden])', { timeout: 5000 }).catch(() => {});
+  ok('regras: Categorias mostra a regra ensinada', (await txt('#taught')).includes('ZEBRAFOOD') && (await txt('#taught')).includes(dest), await txt('#taught'));
+  await page.locator('#taught li', { hasText: 'ZEBRAFOOD' }).locator('[data-undo]').click(); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(500);
+  const un = await page.evaluate(() => ({ r: window.__db.rules.some(r => r.kind === 'regex' && /ZEBRAFOOD/.test(r.pattern)), c: ['rg1', 'rg2'].map(id => window.__db.transactions.find(t => t.id === id)?.category) }));
+  ok('regras: desfazer apaga a regra e devolve as categorias de antes', !un.r && un.c[0] === 'Restaurante' && un.c[1] === 'A classificar', JSON.stringify(un));
+}
 await sec('metas');
 await page.fill('#gSav', '150'); await page.click('#gSave');
 ok('meta de poupança acima de 100% é recusada', (await txt('#v-ajustes')).includes('Guardar da renda (%): o máximo é 100'));
