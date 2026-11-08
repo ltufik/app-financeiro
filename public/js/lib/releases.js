@@ -466,4 +466,8 @@ export const RELEASES = [
   { id: 'r115', version: 'v115', at: '2026-11-08T22:35:00Z', backlog: [], semNovidade: 'Só na Central e no GitHub: o Claude passa a ler e mudar o backlog pelo robô do GitHub (sem senha).', semTeste: 'Coberto pelos testes de regra (token do GitHub e mudanças) e pela primeira rodada do robô.', addDocs: [DOC_ROBO_BACKLOG], addBacklog: [
     { id: 'claude_no_backlog', title: 'Claude lê e muda o backlog da Central (robô do GitHub)', status: 'feito', tipo: 'backend', origin: 'Luiz', effort: 'P', problem: 'O Claude não via as mudanças feitas na Central nem conseguia criar ou mudar itens', cost: false, notes: 'Robô do GitHub com token assinado (sem senha); cópia em backlog/BACKLOG.md; mudanças em backlog/ops/.', from: [], where: 'Central; GitHub' },
   ] },
+  { id: 'r116', version: 'v116', at: '2026-11-08T22:47:00Z', backlog: ['historico_de_outros_apps'], news: { id: 'n20261108a', title: 'Traga o histórico de outro app', items: [
+    'Usava Mobills, Organizze ou outro app? Exporte em Excel ou CSV e mande em Lançar: o app traz despesas e receitas com as suas categorias.',
+    'Ficam de fora o que ainda não foi pago, as transferências entre suas contas e o que já está no app.',
+  ] } },
 ];

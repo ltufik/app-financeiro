@@ -52,9 +52,14 @@ const HEAD = {
   amount: /^(valor|quantia|total|preco|r\$|montante|amount|vlr)/,
   category: /(categoria|classifica|grupo|tipo de gasto|^tipo$|rubrica)/,
   source: /(forma|meio|pagamento|conta ou cartao|cartao ou conta|^onde|origem|cartao$|conta$)/,
-  kind: /(entrada.*saida|receita.*despesa|^natureza|^sentido|^e\/s)/,
+  kind: /(entrada.*saida|receita.*despesa|^natureza|^sentido|^e\/s|^tipo de lancamento|^tipo de transacao)/,
+  status: /^(situacao|status|pago\??|efetivad|confirmad)/,
 };
-export const COLS = ['date', 'description', 'amount', 'category', 'source', 'kind'];
+export const COLS = ['date', 'description', 'amount', 'category', 'source', 'kind', 'status'];
+// Values that say money in/out or moved between own accounts (other apps' "Tipo" column: Despesa, Receita, Transferência).
+const KIND_VAL = /^(despesa|receita|entrada|saida|transferencia|credito|debito|gasto|ganho)s?$/;
+// Rows the other app marks as not paid yet (future bills): they did not happen, so they stay out.
+const notPaid = v => /^(nao pag|nao efetiv|pendente|agendad|a pagar|a receber|previst|em aberto|nao)/.test(plain(v));
 export function detectColumns(rows) {
   const scan = rows.slice(0, 15);
   let best = { row: -1, map: {}, score: 0 };
@@ -63,6 +68,17 @@ export function detectColumns(rows) {
     const score = Object.keys(map).length + (map.amount != null ? 1 : 0);
     if (score > best.score && map.amount != null) best = { row: i, map, score };
   });
+  // A "Tipo" column holding Despesa/Receita/Transferência is the money in/out, not the category (Mobills, Organizze...):
+  // then the category is the next column that says so ("Categoria"), if any.
+  if (best.row >= 0 && best.map.category != null) {
+    const vals = rows.slice(best.row + 1, best.row + 41).map(r => plain(r[best.map.category])).filter(Boolean);
+    if (vals.length && vals.filter(v => KIND_VAL.test(v)).length / vals.length >= 0.8) {
+      if (best.map.kind == null) best.map.kind = best.map.category;
+      delete best.map.category;
+      const j = rows[best.row].findIndex((c, k) => k !== best.map.kind && /(categoria|classifica)/.test(plain(c)) && !/sub/.test(plain(c)));
+      if (j >= 0) best.map.category = j;
+    }
+  }
   if (best.row >= 0 && best.map.description != null) return { header: best.row, map: best.map };
   // No (complete) header: look at the cells of the first rows with data.
   const body = rows.slice(best.row + 1, best.row + 31), n = Math.max(0, ...body.map(r => r.length)), map = { ...best.map }, taken = new Set(Object.values(map));
@@ -76,7 +92,8 @@ export function detectColumns(rows) {
 }
 
 const isCard = v => /cart|credit|credito|visa|master|elo|amex|nubank/.test(plain(v));
-const isIncome = v => /^(entrada|receita|credito|recebid|e$)/.test(plain(v));
+const isIncome = v => /^(entrada|receita|credito|recebid|ganho|e$)/.test(plain(v));
+const isTransfer = v => /^transfer/.test(plain(v));
 const isExpense = v => /^(saida|despesa|debito|gasto|pago|s$)/.test(plain(v));
 
 // A sheet category -> the family's category: same name, a similar one, or null (new).
@@ -91,21 +108,31 @@ export function matchCategory(name, categories) {
 // Returns { entries: [{date, month, day, source, description, amount, category, sheetCategory}], skipped, sheetCats }.
 export function buildEntries(rows, { map, header = -1, defaultSource = 'conta', positives = 'saida', closeDay = 24, categories = [], catMap = {} }) {
   const idx = new Map(categories.map(c => [c.name, c])), entries = [], sheetCats = {};
-  let skipped = 0;
+  // A sheet with negative values marks expenses with the sign (Mobills and most apps): then a positive value in an
+  // account is money in. On a card, a positive value stays a purchase (negatives there are refunds).
+  const body = rows.slice(header + 1), srcOf = r => map.source != null && String(r[map.source] ?? '').trim() ? (isCard(r[map.source]) ? 'cartao' : 'conta') : defaultSource;
+  const mixed = body.some(r => (parseAmount(r[map.amount]) ?? 0) < 0);
+  // Card rows: whichever sign most of them have is a purchase (card statements: positive; Mobills: negative).
+  const card = body.filter(r => srcOf(r) === 'cartao').map(r => parseAmount(r[map.amount]) ?? 0), cardNeg = card.filter(v => v < 0).length > card.filter(v => v > 0).length;
+  let skipped = 0, notPaidN = 0, transfersN = 0;
   for (const r of rows.slice(header + 1)) {
     const date = parseDate(r[map.date]), raw = parseAmount(r[map.amount]), desc = String(r[map.description] ?? '').replace(/\s+/g, ' ').trim();
     if (!date || raw == null || raw === 0 || !desc || /^(total|saldo|subtotal)\b/i.test(desc)) { if (r.some(c => String(c ?? '').trim())) skipped++; continue; }
+    // Not paid yet, or a transfer between own accounts in the other app: left out (counted as skipped).
+    if (map.status != null && notPaid(r[map.status])) { notPaidN++; continue; }
+    if (map.kind != null && isTransfer(r[map.kind])) { transfersN++; continue; }
     const sc = map.category != null ? String(r[map.category] ?? '').trim() : '';
     if (sc) sheetCats[sc] = (sheetCats[sc] || 0) + 1;
     const cat = sc ? (sc in catMap ? catMap[sc] : matchCategory(sc, categories) || '') : '';
     const source = map.source != null && String(r[map.source] ?? '').trim() ? (isCard(r[map.source]) ? 'cartao' : 'conta') : defaultSource;
-    // Money in or out: the "entrada/saída" column, else the category's side, else the sign, else the choice for positives.
+    // Money in or out: the "entrada/saída" column, else the category's side, else the sign (positive is money in when the
+    // sheet also has negatives), else the choice for positives.
     const kv = map.kind != null ? r[map.kind] : '', c = idx.get(cat);
-    const income = isIncome(kv) ? true : isExpense(kv) ? false : c ? kindOf(c).side === 'Receitas' : raw < 0 ? false : positives === 'entrada';
+    const income = isIncome(kv) ? true : isExpense(kv) ? false : c ? kindOf(c).side === 'Receitas' : source === 'cartao' && raw < 0 ? !cardNeg : source === 'cartao' && cardNeg ? true : raw < 0 ? false : mixed && source === 'conta' ? true : positives === 'entrada';
     const v = Math.abs(raw), amount = round2(source === 'conta' ? (income ? v : -v) : (income ? -v : v));
     entries.push({ date, month: source === 'cartao' ? cycleMonth(date, closeDay) : date.slice(0, 7), day: `${date.slice(8, 10)}/${date.slice(5, 7)}`, source, description: desc.slice(0, 200), amount, category: cat || 'A classificar', sheetCategory: sc });
   }
-  return { entries, skipped, sheetCats };
+  return { entries, skipped, sheetCats, notPaid: notPaidN, transfers: transfersN };
 }
 
 // Rows already in the app (same source, same value, date within 3 days): left out so nothing doubles.

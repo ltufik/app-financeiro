@@ -87,7 +87,7 @@ function build(el) {
       <ul>
         <li><b>Faturas de todos os cartões</b><span>do mesmo mês, juntas</span></li>
         <li><b>Extrato da conta</b><span>mesmo se o banco dividiu em vários arquivos</span></li>
-        <li><b>Planilha Excel ou CSV</b><span>a que vocês já usavam para controlar</span></li>
+        <li><b>Planilha Excel ou CSV</b><span>a que vocês já usavam, ou o histórico de outro app (Mobills, Organizze...)</span></li>
         <li><b>Foto ou print</b><span>de fatura, extrato ou comprovante</span></li>
       </ul>
       <p class="tiny muted">Mandou vários? O app lê um por vez, numa fila, e você revisa cada um. PDF com senha também funciona: o app pede a senha e não a guarda.</p>
@@ -103,6 +103,10 @@ function build(el) {
       <li><strong>iPhone:</strong> toque em Escolher arquivos → <em>Escolher Arquivo</em> (ou <em>Procurar</em>), depois em <em>Selecionar</em>, no canto de cima, marque todos e toque em <em>Abrir</em>.</li>
       <li><strong>Android:</strong> toque em Escolher arquivos, segure o dedo no primeiro arquivo até ele ficar marcado, toque nos outros e depois em <em>Selecionar</em> (ou <em>Abrir</em>).</li>
       <li>Também dá para compartilhar vários PDFs de uma vez a partir do app do banco ou de Arquivos: toque em Compartilhar → Pra Onde Foi (no Android, com o app instalado).</li></ol></details>
+    <details class="help" style="margin-top:10px" id="otherApps"><summary>Usava outro app? Traga o histórico</summary><ol>
+      <li>No app antigo, procure <em>Exportar</em> ou <em>Relatório</em> e escolha <em>Excel</em> (XLS) ou <em>CSV</em>, com o período que quiser trazer. No Mobills: menu <em>⋯</em> → <em>Gerenciar</em> → <em>Exportar relatório</em>.</li>
+      <li>Salve o arquivo no celular (ou mande para você mesmo por e-mail e abra o anexo) e toque em Escolher arquivos aqui.</li>
+      <li>O app acha as colunas sozinho, traz despesas e receitas com as categorias de vocês e deixa de fora o que ainda não foi pago, as transferências entre contas e o que já está no app.</li></ol></details>
     <details class="help" style="margin-top:10px"><summary>Onde encontro o PDF no app do banco?</summary><ol>
       <li><strong>Fatura do cartão:</strong> no app do banco, abra Cartões → Fatura e procure <em>Baixar PDF</em>, <em>Compartilhar</em> ou <em>Enviar por e-mail</em>.</li>
       <li><strong>Extrato da conta:</strong> abra Conta → Extrato, escolha o mês inteiro (do dia 1 ao último dia) e procure <em>Exportar PDF</em> ou <em>Compartilhar</em>.</li>
@@ -133,6 +137,7 @@ function build(el) {
   $('#qGo').onclick = interpret;
   $('#qManual').onclick = () => { Q = [{ source: 'conta', date: todayISO(), description: '', amount: 0, category: 'A classificar' }]; renderQ(); $('#qStatus').textContent = 'Preencha e salve.'; };
   $('#pdfIn').onchange = e => { const fs = [...(e.target.files || [])]; e.target.value = ''; startFiles(fs, 'pdf'); };
+  $('#otherApps')?.addEventListener('toggle', e => { if (e.target.open) track('lancar.outros_apps'); });
   const drop = $('#drop');
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
   drop.ondragleave = () => drop.classList.remove('over');
@@ -730,20 +735,20 @@ function sheetEntries() {
   // New categories are not passed as categories: their rows keep the sign of the sheet (in or out).
   const cats = S.categories;
   const catMap = Object.fromEntries(Object.entries(SH.catMap).map(([k, v]) => [k, v.startsWith('+') ? v.slice(1) : v]));
-  let entries = [], skipped = 0;
-  for (const s of SH.sheets) { const map = s === SH.sheets[0] ? SH.map : { ...s.det.map, ...SH.mapEdits }; const r = buildEntries(s.rows, { map, header: s.det.header, defaultSource: SH.defaultSource, positives: SH.positives, closeDay: closeDay(), categories: cats, catMap }); entries = entries.concat(r.entries); skipped += r.skipped; }
-  return { entries: markDuplicates(entries, S.txs), skipped };
+  let entries = [], skipped = 0, notPaid = 0, transfers = 0;
+  for (const s of SH.sheets) { const map = s === SH.sheets[0] ? SH.map : { ...s.det.map, ...SH.mapEdits }; const r = buildEntries(s.rows, { map, header: s.det.header, defaultSource: SH.defaultSource, positives: SH.positives, closeDay: closeDay(), categories: cats, catMap }); entries = entries.concat(r.entries); skipped += r.skipped; notPaid += r.notPaid || 0; transfers += r.transfers || 0; }
+  return { entries: markDuplicates(entries, S.txs), skipped, notPaid, transfers };
 }
 function renderSheet() {
   const box = $('#shReview'); box.hidden = false;
-  const { entries, skipped } = sheetEntries(), keep = entries.filter(e => SH.includeDup || !e.dup), dups = entries.filter(e => e.dup).length;
+  const { entries, skipped, notPaid, transfers } = sheetEntries(), keep = entries.filter(e => SH.includeDup || !e.dup), dups = entries.filter(e => e.dup).length;
   const months = [...new Set(keep.map(e => e.month))].sort(), out = keep.filter(e => e.source === 'conta' ? e.amount < 0 : e.amount > 0).reduce((a, e) => a + Math.abs(e.amount), 0), inn = keep.reduce((a, e) => a + Math.abs(e.amount), 0) - out;
   const s0 = SH.sheets[0], ncol = Math.max(...s0.rows.slice(0, 20).map(r => r.length));
   const allPositive = SH.map.kind == null && !s0.rows.slice(s0.det.header + 1).some(r => { const v = r[SH.map.amount]; return typeof v === 'number' ? v < 0 : /^\s*-|\(/.test(String(v)); });
   const sheetCats = Object.keys(SH.catMap).sort((a, b) => a.localeCompare(b, 'pt'));
   const catOpts = cur => `<option value="">A classificar</option>` + S.categories.filter(c => c.name !== 'A classificar').sort((a, b) => a.name.localeCompare(b.name, 'pt')).map(c => `<option value="${esc(c.name)}"${c.name === cur ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
   box.innerHTML = `<h3>Planilha: ${keep.length} lançamentos${months.length ? ` de ${mLong(months[0])}${months.length > 1 ? ` a ${mLong(months[months.length - 1])}` : ''}` : ''}</h3>
-    <p class="small muted">${esc(SH.file)}${SH.sheets.length > 1 ? ` · ${SH.sheets.length} abas` : ''} · saídas ${brl(out)} · entradas ${brl(inn)}${skipped ? ` · ${skipped} ${skipped === 1 ? 'linha sem data ou valor ficou' : 'linhas sem data ou valor ficaram'} de fora` : ''}</p>
+    <p class="small muted">${esc(SH.file)}${SH.sheets.length > 1 ? ` · ${SH.sheets.length} abas` : ''} · saídas ${brl(out)} · entradas ${brl(inn)}${skipped ? ` · ${skipped} ${skipped === 1 ? 'linha sem data ou valor ficou' : 'linhas sem data ou valor ficaram'} de fora` : ''}${notPaid ? ` · ${notPaid} ainda não ${notPaid === 1 ? 'pago ficou' : 'pagos ficaram'} de fora` : ''}${transfers ? ` · ${transfers} ${transfers === 1 ? 'transferência entre contas ficou' : 'transferências entre contas ficaram'} de fora` : ''}</p>
     <div class="rvguide"><strong>${QU && !isDone(QU) ? `Arquivo ${position(QU)}: o que fazer` : 'O que fazer'}</strong><ol class="small">
       <li>Confira se as colunas abaixo estão certas.</li>
       <li>${sheetCats.length ? 'Diga para qual categoria do app vai cada categoria da planilha.' : 'A planilha não tem categorias: os lançamentos entram "a classificar" e o app sugere depois.'}</li>

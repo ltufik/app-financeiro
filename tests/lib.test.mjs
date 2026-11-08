@@ -1177,3 +1177,27 @@ test('backlog robot: only GitHub tokens of this repository, branch and workflow;
   assert.equal(r.items.find(i => i.id === 'novo_item').hack, undefined); assert.deepEqual(r.items.find(i => i.id === 'a').from, undefined);
   assert.deepEqual(r.done, ['add novo_item', 'update a', 'status b feito', 'move a']);
 });
+
+test('history from other apps: "Tipo" column with Despesa/Receita, not paid and transfers left out', async () => {
+  const { parseCSV, detectColumns, buildEntries } = await import('../public/js/lib/sheet.js');
+  const cats = [{ name: 'Mercado', grp: 'dia' }, { name: 'Salário', grp: 'renda' }, { name: 'A classificar', grp: 'dia' }];
+  // Organizze-like export (fictitious): positive values, a "Tipo" column and "Situação".
+  const org = parseCSV('Data;Descrição;Tipo;Categoria;Valor;Situação;Conta\n05/09/2026;Supermercado Dia;Despesa;Mercado;R$ 230,50;Pago;Conta corrente\n05/09/2026;Salário;Receita;Salário;R$ 8.000,00;Pago;Conta corrente\n10/09/2026;Aluguel;Despesa;Moradia;R$ 2.000,00;Não pago;Conta corrente\n12/09/2026;Para a poupança;Transferência;;R$ 500,00;Pago;Conta corrente\n');
+  const d = detectColumns(org);
+  assert.equal(d.map.kind, 2); assert.equal(d.map.category, 3); assert.equal(d.map.status, 5);
+  const r = buildEntries(org, { map: d.map, header: d.header, categories: cats });
+  assert.deepEqual(r.entries.map(e => [e.description, e.amount, e.category]), [['Supermercado Dia', -230.5, 'Mercado'], ['Salário', 8000, 'Salário']]);
+  assert.deepEqual([r.skipped, r.notPaid, r.transfers], [0, 1, 1], 'not paid and transfer, counted apart');
+  // Mobills-like export (fictitious): negative values for expenses, credit card account.
+  const mob = parseCSV('Data,Descrição,Valor,Conta,Categoria\n2026-09-03,Padaria,-18.90,Cartão Nubank,Alimentação\n2026-09-04,Freela,1200.00,Itaú,Renda extra\n');
+  const m = detectColumns(mob), rm = buildEntries(mob, { map: m.map, header: m.header, categories: cats });
+  assert.deepEqual(rm.entries.map(e => [e.source, e.amount, e.category]), [['cartao', 18.9, 'A classificar'], ['conta', 1200, 'A classificar']]);
+  assert.deepEqual(Object.keys(rm.sheetCats), ['Alimentação', 'Renda extra']);
+});
+
+test('a card sheet with a refund keeps purchases as purchases', async () => {
+  const { parseCSV, detectColumns, buildEntries } = await import('../public/js/lib/sheet.js');
+  const rows = parseCSV('Data;Descrição;Valor;Cartão ou conta\n03/09/2026;Loja;150,00;Cartão\n05/09/2026;Estorno loja;-50,00;Cartão\n');
+  const d = detectColumns(rows), r = buildEntries(rows, { map: d.map, header: d.header, categories: [] });
+  assert.deepEqual(r.entries.map(e => [e.source, e.amount]), [['cartao', 150], ['cartao', -50]]);
+});

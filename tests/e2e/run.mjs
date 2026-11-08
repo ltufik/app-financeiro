@@ -290,6 +290,14 @@ async function sheetTests(tag) {
   await page.waitForSelector('#shReview:not([hidden])', { timeout: 15000 }).catch(() => {});
   ok(tag + 'planilha de novo: o que já está no app fica de fora', (await txt('#shReview')).includes('6 linhas já estão no app') && await page.isDisabled('#shSave'), await txt('#shReview'));
   await page.click('#shCancel'); await page.click('.cfm [data-y]').catch(() => {});
+  // Exported from another app (fictitious, like Organizze): "Tipo" Despesa/Receita, "Situação" and a transfer.
+  await page.click('.ltile[data-mode="pdf"]');
+  ok(tag + 'Lançar: ajuda para trazer o histórico de outro app', (await txt('#otherApps')).includes('Usava outro app') && (await txt('#otherApps')).includes('Mobills'));
+  await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/outro-app-ficticio.csv'));
+  await page.waitForSelector('#shReview:not([hidden])', { timeout: 15000 }).catch(() => {});
+  const oa = await txt('#shReview');
+  ok(tag + 'outro app: despesas, receita e cartão certos; não pago e transferência de fora', oa.includes('Planilha: 3 lançamentos') && oa.includes('1 ainda não pago ficou de fora') && oa.includes('1 transferência entre contas ficou de fora'), oa.slice(0, 400));
+  await page.click('#shCancel'); await page.click('.cfm [data-y]').catch(() => {});
   if (arg('xlsx')) {
     await page.click('.ltile[data-mode="pdf"]'); await page.setInputFiles('#pdfIn', path.join(ROOT, '../tests/fixtures/planilha-ficticia.xlsx'));
     await page.waitForSelector('#shReview:not([hidden])', { timeout: 20000 }).catch(() => {});
