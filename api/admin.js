@@ -15,6 +15,7 @@ import { withRecorder } from './_pushlog.js';
 import { pushHealth } from '../public/js/lib/pushhealth.js';
 import { runHealth } from './health.js';
 import { healthHistory } from '../public/js/lib/health.js';
+import { looksLikeGithubToken, verifyGithubOidc, applyOps } from './_ghoidc.js';
 
 const KEYS = ['backlog', 'pricing', 'canvas', 'notes', 'faq', 'services', 'docs', 'news', 'releases', 'tests'];
 const READ_ONLY = ['releases'];
@@ -27,6 +28,24 @@ export default async function handler(req, res) {
   const admins = String(process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   if (!URL_ || !ANON || !SERVICE) return res.status(503).json({ error: 'not_configured' });
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  // The repository's backlog robot (GitHub, signed token, no secret): reads the backlog and applies changes, nothing else.
+  if (token && looksLikeGithubToken(token)) {
+    try { await verifyGithubOidc(token); } catch (e) { return res.status(401).json({ error: 'not_allowed', detail: String(e.message || e) }); }
+    try {
+      const db = rest(URL_, SERVICE), cur = (await db.board('backlog')) || { items: [] };
+      if (req.method === 'GET' && req.query?.view === 'agent_backlog') return res.status(200).json({ items: cur.items || [] });
+      const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+      if (req.method === 'POST' && b.action === 'agent_backlog' && Array.isArray(b.ops) && b.ops.length <= 200) {
+        const { items, done } = applyOps(cur.items || [], b.ops);
+        if (done.length) {
+          await db.setBoard('backlog', { ...cur, items }, 'Claude (robô do GitHub)');
+          await closeLoop(db, cur.items || [], items, vapidFromEnv()).catch(() => null); // done items: whoever asked gets the message
+        }
+        return res.status(200).json({ done, items });
+      }
+      return res.status(400).json({ error: 'bad_request' });
+    } catch (e) { return res.status(500).json({ error: 'failed', detail: String(e?.message || e).slice(0, 160) }); }
+  }
   const u = token && await fetch(`${URL_}/auth/v1/user`, { headers: { apikey: ANON, authorization: `Bearer ${token}` } });
   if (!u || !u.ok) return res.status(401).json({ error: 'not_signed_in' });
   const user = await u.json();

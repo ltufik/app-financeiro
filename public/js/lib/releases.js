@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -462,5 +462,8 @@ export const RELEASES = [
     { id: 'push_limpeza_aparelhos', set: { status: 'feito', notes: 'Cada rodada marca entregues (zera as falhas) e com erro (soma); com 5 falhas seguidas o aparelho sai da lista. Se o celular ainda tiver a permissão, o app inscreve de novo ao abrir.' } },
     { id: 'apagar_conta_revisao', set: { status: 'feito', notes: 'Apagar a conta agora também apaga as opiniões, os erros registrados, os avisos enviados, os limites de uso e os convites da pessoa, e tira o id dela dos lançamentos e importações da família que continua (a família passa para outro membro). Corrigido: quem criou a família não conseguia apagar a conta se outra pessoa continuasse. Testado no banco.' } },
     { id: 'csp_navegador', set: { status: 'agora', notes: 'Fase 1 no ar (v114): só observa e registra em Erros. Fase 2: bloquear, depois de alguns dias sem registros dos celulares.' } },
+  ] },
+  { id: 'r115', version: 'v115', at: '2026-11-08T22:35:00Z', backlog: [], semNovidade: 'Só na Central e no GitHub: o Claude passa a ler e mudar o backlog pelo robô do GitHub (sem senha).', semTeste: 'Coberto pelos testes de regra (token do GitHub e mudanças) e pela primeira rodada do robô.', addDocs: [DOC_ROBO_BACKLOG], addBacklog: [
+    { id: 'claude_no_backlog', title: 'Claude lê e muda o backlog da Central (robô do GitHub)', status: 'feito', tipo: 'backend', origin: 'Luiz', effort: 'P', problem: 'O Claude não via as mudanças feitas na Central nem conseguia criar ou mudar itens', cost: false, notes: 'Robô do GitHub com token assinado (sem senha); cópia em backlog/BACKLOG.md; mudanças em backlog/ops/.', from: [], where: 'Central; GitHub' },
   ] },
 ];

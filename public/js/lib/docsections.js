@@ -292,3 +292,14 @@ export const DOC_LIMITES = { id: 'limites_doc', title: 'Limite de uso das funç�
 - As chaves são o id da pessoa ou o hash do código, nunca e-mail ou token. Linhas com mais de 2 dias são apagadas aos poucos.
 ## Push só para serviços conhecidos
 - O servidor só envia push para Google (FCM), Apple, Mozilla e Microsoft. Inscrição com outro endereço é recusada (ninguém usa o servidor para postar em endereço inventado).` };
+export const DOC_ROBO_BACKLOG = { id: 'robo_backlog_doc', title: 'Claude no backlog (robô do GitHub)', body: `O Claude lê e muda o backlog da Central sem senha nem chave copiada: pelo robô do GitHub.
+## Como funciona
+- O robô (.github/workflows/backlog.yml) roda a cada 3 horas, quando o Claude manda um arquivo de mudanças e quando é acionado.
+- Ele pede ao GitHub um token assinado (OIDC). O servidor (api/admin.js, api/_ghoidc.js) confere a assinatura do GitHub, o repositório (ltufik/app-financeiro), o ramo main e o arquivo do robô. Qualquer outra coisa é recusada.
+- Com esse token, só duas coisas: ler o backlog e aplicar mudanças nele.
+## Mudanças que o Claude pode fazer
+- backlog/ops/AAAA-MM-DD-nome.json: lista de mudanças: incluir item, mudar campos (título, status, tipo, esforço, problema, notas, onde, origem, ordem), mudar status, mudar de posição. Campos desconhecidos são ignorados. Itens não são apagados (usa descartado).
+- Item marcado como feito avisa quem pediu, como na Central.
+- Depois de aplicado, o arquivo vai para backlog/ops/aplicados/ (fica o histórico).
+## Cópia para o Claude ler
+- backlog/backlog.json e backlog/BACKLOG.md: o backlog como está na Central (inclusive o que o Luiz mudou lá). Não editar à mão.` };

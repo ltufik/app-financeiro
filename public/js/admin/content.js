@@ -1,6 +1,6 @@
 // Starting content for the console's service matrix, documentation and usage labels.
 import { BUG_STUDY } from '../lib/bugstudy.js';
-import { NEW_DOCS, DOC_SONHO, DOC_SEGURANCA, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES } from '../lib/docsections.js';
+import { NEW_DOCS, DOC_SONHO, DOC_SEGURANCA, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG } from '../lib/docsections.js';
 // Once saved in the console, the database copy is the one that counts.
 
 // Friendly names for the usage keys recorded by the app (public/js/usage.js).
@@ -85,6 +85,7 @@ export const DOCS = [
   DOC_SAUDE,
   DOC_CSP,
   DOC_LIMITES,
+  DOC_ROBO_BACKLOG,
   { id: 'visao', title: 'Visão geral', body: `**Pra Onde Foi** mostra para a família para onde vai o dinheiro, sem conectar no banco.
 A família manda o PDF da fatura e do extrato (de qualquer banco), lança pix e dinheiro falando, e o app mostra quanto sobrou, onde dá para economizar e se estão no caminho do sonho.
 ## Fase atual

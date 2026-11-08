@@ -1,0 +1,37 @@
+# Backlog robot: applies Claude's change files (backlog/ops/*.json) to the Central and copies the current backlog to
+# backlog/backlog.json and backlog/BACKLOG.md. Runs when a change file is pushed, every 3 hours (to catch what was
+# changed in the Central) and on demand. GitHub signs the call (OIDC); no secret is needed.
+name: Backlog (robô)
+on:
+  push:
+    branches: [main]
+    paths: ['backlog/ops/*.json']
+  schedule:
+    - cron: '23 */3 * * *'
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  id-token: write
+concurrency:
+  group: backlog
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Aplicar mudanças e copiar o backlog
+        run: node scripts/backlog-sync.mjs
+      - name: Guardar no repositório
+        run: |
+          git config user.name "Robô do backlog"
+          git config user.email "actions@github.com"
+          git add backlog
+          if git diff --cached --quiet; then echo "nada mudou"; exit 0; fi
+          git commit -m "Backlog atualizado (robô)"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1

@@ -1147,3 +1147,33 @@ test('device kind from the browser (saved with the subscription)', async () => {
   assert.equal(deviceFromUA('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'), 'Mac (Safari)');
   assert.equal(deviceFromUA(''), '');
 });
+
+test('backlog robot: only GitHub tokens of this repository, branch and workflow; only known changes', async () => {
+  const crypto = await import('crypto');
+  const { verifyGithubOidc, applyOps, OIDC, _resetJwks, looksLikeGithubToken } = await import('../api/_ghoidc.js');
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'k1' };
+  const enc = o => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const sign = claims => { const h = enc({ alg: 'RS256', kid: 'k1' }), p = enc(claims); return `${h}.${p}.${crypto.sign('RSA-SHA256', Buffer.from(`${h}.${p}`), privateKey).toString('base64url')}`; };
+  const now = Date.parse('2026-11-08T22:00:00Z'), t = now / 1000;
+  const good = { iss: OIDC.iss, aud: OIDC.aud, repository: OIDC.repo, job_workflow_ref: OIDC.workflow, ref: 'refs/heads/main', exp: t + 300 };
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ keys: [jwk] }) });
+  _resetJwks();
+  assert.equal((await verifyGithubOidc(sign(good), { fetchImpl, now })).repository, 'ltufik/app-financeiro');
+  assert.equal(looksLikeGithubToken(sign(good)), true); assert.equal(looksLikeGithubToken('abc'), false);
+  for (const bad of [{ repository: 'outro/repo' }, { aud: 'x' }, { job_workflow_ref: 'ltufik/app-financeiro/.github/workflows/telas.yml@refs/heads/main' }, { ref: 'refs/heads/teste' }, { exp: t - 10 }])
+    await assert.rejects(verifyGithubOidc(sign({ ...good, ...bad }), { fetchImpl, now }));
+  const other = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey;
+  const h = enc({ alg: 'RS256', kid: 'k1' }), p = enc(good);
+  await assert.rejects(verifyGithubOidc(`${h}.${p}.${crypto.sign('RSA-SHA256', Buffer.from(`${h}.${p}`), other).toString('base64url')}`, { fetchImpl, now }), /signature/);
+  // Changes: add, update known fields only, status, move; unknown fields and statuses are ignored.
+  const r = applyOps([{ id: 'a', title: 'A', status: 'ideia' }, { id: 'b', title: 'B', status: 'agora' }], [
+    { op: 'add', item: { id: 'novo_item', title: 'Novo', status: 'proximo', hack: 1 } },
+    { op: 'update', id: 'a', set: { notes: 'ok', status: 'agora', from: ['x'] } },
+    { op: 'status', id: 'b', status: 'feito' }, { op: 'status', id: 'b', status: 'zzz' },
+    { op: 'move', id: 'a', to: 0 },
+  ]);
+  assert.deepEqual(r.items.map(i => [i.id, i.status]), [['a', 'agora'], ['novo_item', 'proximo'], ['b', 'feito']]);
+  assert.equal(r.items.find(i => i.id === 'novo_item').hack, undefined); assert.deepEqual(r.items.find(i => i.id === 'a').from, undefined);
+  assert.deepEqual(r.done, ['add novo_item', 'update a', 'status b feito', 'move a']);
+});
