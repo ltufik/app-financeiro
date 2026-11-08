@@ -4,6 +4,7 @@ import { cleanUrl } from './config.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
 import { withRecorder } from './_pushlog.js';
+import { allowed } from './_ratelimit.js';
 
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const mName = k => /^\d{4}-\d{2}$/.test(k || '') ? MES[+k.slice(5) - 1] : 'mês';
@@ -23,6 +24,7 @@ export default async function handler(req, res) {
   const u = token && await fetch(`${URL_}/auth/v1/user`, { headers: { apikey: ANON, authorization: `Bearer ${token}` } });
   if (!u || !u.ok) return res.status(401).json({ error: 'not_signed_in' });
   const me = await u.json();
+  if (!await allowed(`notify:${me.id}`, [{ limit: 10, window: 60 }, { limit: 100, window: 86400 }], { supabaseUrl: URL_, serviceKey: SERVICE })) return res.status(429).json({ error: 'rate_limited' });
   const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   if (!/^[0-9a-f-]{36}$/i.test(b.household || '') || !['joined', 'imported', 'closed'].includes(b.type)) return res.status(400).json({ error: 'bad_request' });
   const H = { apikey: SERVICE, ...(SERVICE.startsWith('sb_') ? {} : { authorization: `Bearer ${SERVICE}` }) };

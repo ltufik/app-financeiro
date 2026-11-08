@@ -296,3 +296,97 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select count(*) from push_log;
 \set ON_ERROR_STOP on
 reset role;
+
+-- Limite de uso: o servidor conta; passou do limite, recusa; ninguém logado chama.
+set role service_role;
+select 'limite de uso: 2 de 2 passam, o 3º não: ' || (public.rate_hit('ai:u1', 2, 60) and public.rate_hit('ai:u1', 2, 60) and not public.rate_hit('ai:u1', 2, 60))::text;
+reset role;
+set role authenticated;
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: pessoa logada não chama o limite de uso)
+select public.rate_hit('x', 1, 60);
+\set ON_ERROR_STOP on
+reset role;
+
+-- LGPD: quem apaga a conta não deixa nada; a família que continua fica com os números, sem o id da pessoa.
+reset role;
+insert into auth.users values ('00000000-0000-0000-0000-00000000000d', 'd@x'), ('00000000-0000-0000-0000-00000000000e', 'e@x');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
+select public.create_household('Família D', 'Duda') as hd \gset
+insert into transactions(household_id, source, month, description, amount, category, manual) values (:'hd', 'conta', '2026-11', 'feira', -50, 'Mercado', true);
+select public.create_invite(:'hd', 'Edu', 'Cônjuge') as dcode \gset
+select public.send_feedback(:'hd', 'ideia', 'Queria um gráfico por pessoa');
+select public.log_error(:'hd', 'tela', 'Não foi possível salvar.', 'lancar', null, 'Android', 'v114');
+reset role;
+insert into public.members(household_id, user_id, role, display_name) values (:'hd', '00000000-0000-0000-0000-00000000000e', 'member', 'Edu');
+insert into public.push_log(job, ok, household_id, user_id) values ('teste', true, :'hd', '00000000-0000-0000-0000-00000000000d');
+insert into public.rate_limits(key, window_start, n) values ('ai:00000000-0000-0000-0000-00000000000d', now(), 1);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
+select public.delete_my_account();
+reset role;
+select 'apagar conta não deixa nada da pessoa: ' || (
+  (select created_by from households where id = :'hd') = '00000000-0000-0000-0000-00000000000e'
+  and (select count(*) from transactions where household_id = :'hd') = 1
+  and not exists (select 1 from transactions where created_by = '00000000-0000-0000-0000-00000000000d')
+  and not exists (select 1 from invites where created_by = '00000000-0000-0000-0000-00000000000d')
+  and not exists (select 1 from feedback where user_id = '00000000-0000-0000-0000-00000000000d' or text = 'Queria um gráfico por pessoa')
+  and not exists (select 1 from app_errors where user_id = '00000000-0000-0000-0000-00000000000d')
+  and not exists (select 1 from push_log where user_id = '00000000-0000-0000-0000-00000000000d')
+  and not exists (select 1 from rate_limits where key like '%00000000000d')
+  and not exists (select 1 from members where user_id = '00000000-0000-0000-0000-00000000000d')
+  and not exists (select 1 from auth.users where id = '00000000-0000-0000-0000-00000000000d'))::text;
+
+-- Aparelhos: o tipo fica guardado; 5 falhas seguidas tiram o aparelho; uma entrega zera as falhas.
+reset role;
+insert into auth.users values ('00000000-0000-0000-0000-00000000000f', 'f@x');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000f';
+select public.create_household('Família F', 'Fê') as hf \gset
+select public.save_push(:'hf', 'https://fcm.googleapis.com/fcm/send/f1', 'k', 'a', '{}', 'Android (Chrome)');
+select public.save_push(:'hf', 'https://fcm.googleapis.com/fcm/send/f2', 'k', 'a', '{}');
+reset role;
+set role service_role;
+select public.push_result(array['https://fcm.googleapis.com/fcm/send/f1'], array['https://fcm.googleapis.com/fcm/send/f2']);
+select public.push_result('{}', array['https://fcm.googleapis.com/fcm/send/f2']);
+select public.push_result('{}', array['https://fcm.googleapis.com/fcm/send/f2']);
+select public.push_result('{}', array['https://fcm.googleapis.com/fcm/send/f2']);
+select public.push_result('{}', array['https://fcm.googleapis.com/fcm/send/f2']) as removed \gset
+reset role;
+select 'aparelhos: tipo guardado, entrega registrada, 5 falhas tiram: ' || (
+  (select device from push_subscriptions where endpoint like '%/f1') = 'Android (Chrome)'
+  and (select last_ok_at is not null and fails = 0 from push_subscriptions where endpoint like '%/f1')
+  and not exists (select 1 from push_subscriptions where endpoint like '%/f2') and :removed = 1)::text;
+set role authenticated;
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: pessoa logada não marca entregas)
+select public.push_result('{}', '{}');
+\set ON_ERROR_STOP on
+reset role;
+
+-- Revisão de acesso: toda tabela com RLS; tabela que a pessoa logada acessa tem regra; visitante não chama
+-- funções do app (só ver convite); membro não vira dono.
+reset role;
+select 'toda tabela com RLS: ' || (not exists (select 1 from pg_tables where schemaname = 'public' and not rowsecurity))::text;
+select 'toda tabela acessível tem regra: ' || (not exists (
+  select 1 from information_schema.role_table_grants g where g.table_schema = 'public' and g.grantee = 'authenticated'
+     and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = g.table_name)))::text;
+select 'visitante só vê convite: ' || (coalesce(string_agg(p.proname, ',' order by p.proname), '') = 'invite_info')::text
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute');
+insert into auth.users values ('00000000-0000-0000-0000-000000000010', 'g@x'), ('00000000-0000-0000-0000-000000000011', 'h@x');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000010';
+select public.create_household('Família G', 'Gui') as hg \gset
+reset role;
+insert into public.members(household_id, user_id, role, display_name) values (:'hg', '00000000-0000-0000-0000-000000000011', 'member', 'Hel');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000011';
+update public.members set display_name = 'Helena' where user_id = '00000000-0000-0000-0000-000000000011';
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: membro não se promove a dono)
+update public.members set role = 'owner' where user_id = '00000000-0000-0000-0000-000000000011';
+\set ON_ERROR_STOP on
+reset role;
+select 'membro muda o nome, não o papel: ' || ((select display_name = 'Helena' and role = 'member' from members where user_id = '00000000-0000-0000-0000-000000000011'))::text;

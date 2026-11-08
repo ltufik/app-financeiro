@@ -19,10 +19,11 @@ export function tapLabel(target) {
   return String(raw).replace(/\s+/g, ' ').trim().replace(/R\$\s*/g, '').replace(/\d[\d.,]*/g, '#').slice(0, 60);
 }
 
-// Error text without e-mails or long numbers (account, card, phone), at most 400 characters.
+// Error text without e-mails, money values, address queries or long numbers (account, card, phone), at most 400 characters.
 const NOISE = /^(Script error\.?|ResizeObserver loop|Load failed|cancel)/i;
 export function cleanError(m) {
   const s = String(m || '').replace(/\s+/g, ' ').trim();
   if (!s || NOISE.test(s)) return '';
-  return s.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '<e-mail>').replace(/\d[\d.\-/ ]{5,}\d/g, '#').slice(0, 400);
+  // Also money values (R$ 13.150,00) and web addresses' queries (tokens), which say nothing about the bug.
+  return s.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '<e-mail>').replace(/(https?:\/\/[^\s?#]+)[?#]\S*/g, '$1').replace(/R\$\s*-?[\d.,]+/g, 'R$ #').replace(/\d[\d.\-/ ]{5,}\d/g, '#').slice(0, 400);
 }

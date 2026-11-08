@@ -12,6 +12,16 @@ export function deviceKind(endpoint = '') {
   return 'Aparelho';
 }
 
+// The device as the phone itself says (user agent), saved with the subscription: "Android (Chrome)", "iPhone",
+// "Windows (Edge)"... Only the kind of device and browser, nothing that identifies the person.
+export function deviceFromUA(ua = '') {
+  const u = String(ua);
+  const os = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) || (/Macintosh/.test(u) && /Mobile/.test(u)) ? 'iPad' : /Android/.test(u) ? 'Android' : /Windows/.test(u) ? 'Windows' : /Macintosh|Mac OS X/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : '';
+  const br = /SamsungBrowser/.test(u) ? 'Samsung Internet' : /Edg\//.test(u) ? 'Edge' : /Firefox\//.test(u) ? 'Firefox' : /Chrome\//.test(u) ? 'Chrome' : /Safari\//.test(u) ? 'Safari' : '';
+  if (!os) return br || '';
+  return (os === 'iPhone' || os === 'iPad') ? os : br ? `${os} (${br})` : os;
+}
+
 // subs: [{user_id, endpoint, prefs, created_at}], members: [{user_id, display_name, household_id}],
 // families: {household_id: name}. One line per person, the ones with more devices first.
 export function pushPeople(subs = [], members = [], families = {}) {

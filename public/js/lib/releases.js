@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -452,5 +452,15 @@ export const RELEASES = [
     'Os avisos do cartão ("dá para gastar por dia", "acima do limite") agora usam a fatura aberta que você informou na previsão do mês, quando ela é mais recente. Antes usavam só a estimativa de parcelas e contas fixas.',
   ] }, addBacklog: [
     { id: 'cartao_valor_informado', title: 'Aviso do cartão ignorava a fatura aberta informada', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Luiz informou R$ 13 mil de fatura aberta, mas o aviso das 9h dizia R$ 8,8 mil (só parcelas e contas fixas)', cost: false, notes: 'O valor informado vale quando é maior que a estimativa; o texto diz que é o valor informado e a data.', from: [], where: 'Início; avisos' },
+  ] },
+  { id: 'r114', version: 'v114', at: '2026-11-08T21:52:00Z', backlog: [], semNovidade: 'Proteções invisíveis: o navegador observa de onde o app carrega código (fase 1), as funções do servidor ganham limite de uso, os erros registrados ficam sem valores, apagar a conta apaga tudo da pessoa e cada aparelho guarda o tipo e sai da lista depois de 5 falhas.', semTeste: 'Nada muda na tela; coberto pelo e2e (com a política bloqueando) e pelos testes de regra e do banco.', addDocs: [DOC_CSP, DOC_LIMITES], updateBacklog: [
+    { id: 'pesquisa_no_app', set: { title: 'Pesquisa de satisfação dentro do app' } },
+    { id: 'limite_uso_funcoes', set: { status: 'feito', notes: 'Contagem no banco (rate_hit), comum a todas as instâncias; sem o SQL, conta por instância. Assistente 30/min e 300/dia por pessoa; atalho 20/min e 200/dia por código; avisos da família 10/min; push de teste 5/min. O servidor só envia push para Google, Apple, Mozilla e Microsoft.' } },
+    { id: 'logs_sem_dados_sensiveis', set: { status: 'feito', notes: 'Revisados: erros (agora sem valores em reais, sem a parte do endereço depois do "?", sem e-mails nem números longos), cliques (só o nome do botão, números viram #), uso (só o nome da ação), avisos (sem o texto) e os logs do servidor (só código e tipo do erro do assistente).' } },
+    { id: 'revisao_rls_tabelas', set: { status: 'feito', notes: 'Testes automáticos para todas as tabelas: toda tabela com RLS; toda tabela acessível tem regra; visitante só consegue ver um convite. Corrigido: um membro conseguia se promover a dono atualizando a própria linha (agora só muda nome e relação). Funções do app fechadas para visitantes.' } },
+    { id: 'aparelhos_com_tipo', set: { status: 'feito', notes: 'Cada aparelho guarda o tipo que o próprio celular informa (Android (Chrome), iPhone, Windows (Edge)…) e a data do último aviso entregue; na Central, "Testar só este". O app grava de novo uma vez por versão, então o tipo aparece na próxima abertura.' } },
+    { id: 'push_limpeza_aparelhos', set: { status: 'feito', notes: 'Cada rodada marca entregues (zera as falhas) e com erro (soma); com 5 falhas seguidas o aparelho sai da lista. Se o celular ainda tiver a permissão, o app inscreve de novo ao abrir.' } },
+    { id: 'apagar_conta_revisao', set: { status: 'feito', notes: 'Apagar a conta agora também apaga as opiniões, os erros registrados, os avisos enviados, os limites de uso e os convites da pessoa, e tira o id dela dos lançamentos e importações da família que continua (a família passa para outro membro). Corrigido: quem criou a família não conseguia apagar a conta se outra pessoa continuasse. Testado no banco.' } },
+    { id: 'csp_navegador', set: { status: 'agora', notes: 'Fase 1 no ar (v114): só observa e registra em Erros. Fase 2: bloquear, depois de alguns dias sem registros dos celulares.' } },
   ] },
 ];

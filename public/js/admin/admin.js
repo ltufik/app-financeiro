@@ -580,7 +580,8 @@ async function avisos(el) {
     const on = k => k !== false;
     $('#avMine').innerHTML = `<h2>Seus aparelhos</h2>
       ${!d.configured ? '<p class="status err">As notificações não estão configuradas no servidor (faltam as chaves VAPID na Vercel).</p>' : ''}
-      ${d.mine.length ? `<ul class="avlist">${d.mine.map(m => `<li><strong>${esc(m.kind)}</strong> <span class="tiny muted">ligado em ${dday(m.since)}${on(m.prefs.novidades) ? '' : ' · novidades desligadas'}</span></li>`).join('')}</ul>`
+      ${d.mine.length ? `<ul class="avlist">${d.mine.map(m => `<li><strong>${esc(m.kind)}</strong> <span class="tiny muted">ligado em ${dday(m.since)}${m.lastOk ? ` · último aviso entregue ${dday(m.lastOk)}` : ''}${m.fails ? ` · ${m.fails} ${m.fails > 1 ? 'falhas seguidas' : 'falha'} (com 5 sai da lista)` : ''}${on(m.prefs.novidades) ? '' : ' · novidades desligadas'}</span>${m.id && d.mine.length > 1 ? ` <button class="linkbtn small" type="button" data-avone="${esc(m.id)}">Testar só este</button>` : ''}</li>`).join('')}</ul>
+        <p class="tiny muted">O tipo aparece certinho (Android, iPhone, Windows…) a partir da próxima vez que o app abrir em cada aparelho.</p>`
         : '<p class="small">Nenhum aparelho seu está com as notificações ligadas. Por isso nenhum push chegou até agora.</p>'}
       <details class="help"${d.mine.length ? '' : ' open'}><summary>Como ligar no seu celular</summary><ol class="small">
         <li>Abra o Pra Onde Foi pelo ícone na tela do celular (no iPhone, ele precisa estar instalado na tela de início).</li>
@@ -592,16 +593,19 @@ async function avisos(el) {
       ${d.people.length ? `<div class="tw"><table class="atable"><thead><tr><th>Pessoa</th><th>Família</th><th>Aparelhos</th><th>Novidades</th><th>Desde</th></tr></thead><tbody>
       ${d.people.map(p => `<tr><td>${esc(p.name)}${p.me ? ' <span class="tiny muted">(você)</span>' : ''}</td><td>${esc(p.family)}</td><td>${p.devices} <span class="tiny muted">${esc(p.kinds.join(', '))}</span></td><td>${p.novidades ? 'Ligadas' : 'Desligadas'}</td><td>${dday(p.since)}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
   };
-  $('#avTest').onclick = async () => {
-    const b = $('#avTest'); b.disabled = true; say('busy', 'Enviando...');
+  // One test for all your devices, or for one ("Testar só este").
+  const sendTest = async (b, device) => {
+    b.disabled = true; say('busy', 'Enviando...');
     try {
-      const r = await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'test_push' }) });
+      const r = await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'test_push', ...(device ? { device } : {}) }) });
       if (!r.ok) await failWith(r);
       const t = testText((await r.json()).results); say(t.kind, t.text); toast(t.kind === 'ok' ? 'Push de teste enviado' : 'O push de teste não foi enviado');
       await draw();
     } catch (e) { say('err', errText(e)); toast('O push de teste não saiu'); }
     finally { b.disabled = false; }
   };
+  $('#avTest').onclick = () => sendTest($('#avTest'));
+  $('#avMine').addEventListener('click', e => { const b = e.target.closest('[data-avone]'); if (b) sendTest(b, b.dataset.avone); });
   await draw();
 }
 

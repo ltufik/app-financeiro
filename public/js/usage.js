@@ -5,7 +5,7 @@ import * as db from './db.js';
 import { S } from './state.js';
 import { tapCell, tapLabel, cleanError } from './lib/navlog.js';
 
-export const APP_VERSION = 'v113';
+export const APP_VERSION = 'v114';
 const OK = /^[a-z_]{2,20}(\.[a-z_]{2,20})?$/;
 export const device = () => { const u = navigator.userAgent; return (/iphone|ipad/i.test(u) ? 'iPhone' : /android/i.test(u) ? 'Android' : /mac/i.test(u) ? 'Mac' : /windows/i.test(u) ? 'Windows' : 'Outro') + (window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone ? ' · app instalado' : ' · navegador'); };
 export const screenOf = () => S.tab === 'ajustes' ? 'menu.' + (S.sec || 'familia') : S.tab === 'resumo' ? 'inicio' : (S.tab || '');
@@ -66,5 +66,7 @@ export function reportError(kind, message, source = '') {
   db.sb.rpc('log_error', { p_household: S.hh?.id || null, p_kind: kind, p_message: msg, p_screen: cur || screenOf() || null, p_source: String(source).slice(0, 200) || null, p_device: device(), p_version: APP_VERSION }).then(() => {}, () => {});
 }
 window.addEventListener('error', e => { if (e.message) reportError('js', e.message, `${String(e.filename || '').split('/').pop()}:${e.lineno || ''}`); });
+// The browser's security policy (CSP) blocked or would block something: logged so it shows in the Central (Erros).
+document.addEventListener('securitypolicyviolation', e => reportError('js', `Segurança (CSP) bloquearia ${e.effectiveDirective || e.violatedDirective}: ${String(e.blockedURI || 'inline').slice(0, 120)}`, `${String(e.sourceFile || '').split('/').pop()}:${e.lineNumber || ''}`));
 window.addEventListener('unhandledrejection', e => reportError('promessa', e.reason?.message || String(e.reason || '')));
 window.__onToastErr = t => reportError('tela', t);

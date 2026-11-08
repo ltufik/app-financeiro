@@ -53,11 +53,11 @@ export default async function handler(req, res) {
     }
     // Notifications: devices and people, never the push keys.
     if (req.method === 'GET' && req.query?.view === 'push') {
-      const [subs, members, fams] = await Promise.all([q('push_subscriptions?select=user_id,endpoint,prefs,created_at'), q('members?select=user_id,display_name,household_id'), q('households?select=id,name')]);
+      const [subs, members, fams] = await Promise.all([q('push_subscriptions?select=*').then(r => r.map(({ p256dh, auth, ...s }) => s)), q('members?select=user_id,display_name,household_id'), q('households?select=id,name')]);
       const vapid = vapidFromEnv();
       return res.status(200).json({
         configured: !!(vapid.publicKey && vapid.privateKey),
-        mine: subs.filter(s => s.user_id === user.id).map(s => ({ kind: deviceKind(s.endpoint), since: s.created_at, prefs: s.prefs || {} })),
+        mine: subs.filter(s => s.user_id === user.id).map(s => ({ id: s.id, kind: s.device || deviceKind(s.endpoint), since: s.created_at, lastOk: s.last_ok_at || null, fails: +s.fails || 0, prefs: s.prefs || {} })),
         people: pushPeople(subs, members, Object.fromEntries(fams.map(f => [f.id, f.name]))).map(({ user_id, ...p }) => ({ ...p, me: user_id === user.id })),
         users: new Set(members.map(m => m.user_id)).size,
       });
@@ -80,14 +80,15 @@ export default async function handler(req, res) {
         return res.status(200).json({ pushed, pushed_at: pushed ? item.pushed_at : null });
       }
       if (b.action !== 'test_push') return res.status(400).json({ error: 'bad_request' });
-      const subs = await q(`push_subscriptions?user_id=eq.${user.id}&select=id,endpoint,p256dh,auth`);
+      const only = /^[0-9a-f-]{36}$/i.test(String(b.device || '')) ? `&id=eq.${b.device}` : '';
+      const subs = await q(`push_subscriptions?user_id=eq.${user.id}${only}&select=*`);
       const name = String(user.user_metadata?.display_name || '').trim().split(/\s+/)[0];
       const results = [];
       await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'teste', run: false }, async () => { for (const s of subs) {
         const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title: name ? `${name}, o teste chegou` : 'O teste chegou', body: 'As notificações do Pra Onde Foi estão funcionando neste aparelho.', url: linkFor('avisos'), tag: 'teste-central' }, vapid).catch(() => ({ ok: false }));
         // A device that no longer exists (app removed, notifications reset) leaves the list.
         if (r.gone) await fetch(`${URL_}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H }).catch(() => {});
-        results.push({ kind: deviceKind(s.endpoint), ok: !!r.ok, gone: !!r.gone });
+        results.push({ kind: s.device || deviceKind(s.endpoint), ok: !!r.ok, gone: !!r.gone });
       } });
       return res.status(200).json({ results });
     }

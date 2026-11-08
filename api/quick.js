@@ -6,13 +6,13 @@
 //   The file is read and dropped: never stored.
 // ?formato=texto answers with plain text, for Siri to read out loud.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY; ANTHROPIC_API_KEY (and CLAUDE_MODEL_QUICK) for phrases.
+import { allowed } from './_ratelimit.js';
 import crypto from 'crypto';
 import { cleanUrl } from './config.js';
 import { quickRow, phrasePrompt, phraseRows, sniffBase64, docPrompt, docMessage } from '../public/js/lib/quick.js';
 import { aiKind } from '../public/js/lib/classify.js';
 import { prepareRules, classify } from '../public/js/lib/categorize.js';
 
-const hits = new Map();
 // Asks the assistant; content is a prompt or a list of blocks (a file and the prompt). Returns the JSON answer or null.
 async function ask(content, fetchImpl = fetch) {
   const key = String(process.env.ANTHROPIC_API_KEY || '').trim(); if (!key) return null;
@@ -41,9 +41,8 @@ export default async function handler(req, res) {
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim() || String(b.codigo || '').trim();
   if (!/^[A-Za-z0-9_-]{20,80}$/.test(token)) return res.status(401).json({ ok: false, mensagem: 'Código do atalho ausente ou errado. Gere um novo no app.' });
   const hash = crypto.createHash('sha256').update(token).digest('hex');
-  const now = Date.now(), list = (hits.get(hash) || []).filter(t => now - t < 60_000);
-  if (list.length >= 20) return res.status(429).json({ ok: false, mensagem: 'Muitas compras seguidas. Tente de novo em um minuto.' });
-  list.push(now); hits.set(hash, list);
+  // Limit per shortcut code (its hash): 20 a minute and 200 a day.
+  if (!await allowed(`quick:${hash.slice(0, 32)}`, [{ limit: 20, window: 60 }, { limit: 200, window: 86400 }], { supabaseUrl: URL_, serviceKey: SERVICE })) return res.status(429).json({ ok: false, mensagem: 'Muitas compras seguidas. Tente de novo em um minuto.' });
   const H = { apikey: SERVICE, 'content-type': 'application/json', ...(SERVICE.startsWith('sb_') ? {} : { authorization: `Bearer ${SERVICE}` }) };
   const get = async p => { const r = await fetch(`${URL_}/rest/v1/${p}`, { headers: H }); if (!r.ok) throw new Error('db'); return r.json(); };
   try {
@@ -51,7 +50,7 @@ export default async function handler(req, res) {
     if (!tok) return res.status(401).json({ ok: false, mensagem: 'Código do atalho não reconhecido. Gere um novo no app (menu ☰ → Atalhos do iPhone).' });
     const [hh] = await get(`households?id=eq.${tok.household_id}&select=settings`);
     const rules = await get(`rules?household_id=eq.${tok.household_id}&source=eq.cartao&select=source,kind,pattern,category,min_abs,max_abs,priority`);
-    const today = new Date(now - 3 * 3600e3).toISOString().slice(0, 10);
+    const today = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
     const brl = v => Math.abs(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     if (b.arquivo != null) {
       const f = sniffBase64(b.arquivo);

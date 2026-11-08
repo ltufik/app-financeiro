@@ -258,6 +258,9 @@ export const DOC_ENTREGAS = { id: 'entregas_doc', title: 'Avisos: registro das e
 ## Onde ver e o alerta
 - Central → Avisos no celular → "Entregas e robôs".
 - Às 9h, depois dos robôs, se houver alerta: push para os aparelhos de quem está em ADMIN_EMAILS, abrindo essa página.
+## Aparelhos
+- Cada inscrição guarda o tipo (o que o celular informa), o último aviso entregue e as falhas seguidas (push_result, só o servidor). 5 falhas seguidas: sai da lista; o app inscreve de novo ao abrir, se tiver permissão (uma vez por versão).
+- Central → Avisos no celular → Seus aparelhos: tipo, desde quando, último entregue, falhas e "Testar só este".
 ## Banco
 - Rodar o schema.sql novo no Supabase (cria push_log e job_runs, com grant para o service_role).` };
 export const DOC_SAUDE = { id: 'saude_doc', title: 'Saúde do servidor', body: `O app está no ar? api/health.js confere e lib/health.js decide a cor.
@@ -269,3 +272,23 @@ export const DOC_SAUDE = { id: 'saude_doc', title: 'Saúde do servidor', body: `
 - Todo dia às 9h: o robô registra a conferência (job_runs "servidor"); se vermelho, entra no push de alerta ao dono.
 ## Onde ver
 - Central → Painel, no topo: cor, cada conferência com o tempo e os últimos 7 dias.` };
+export const DOC_CSP = { id: 'csp_doc', title: 'Proteção do navegador (CSP)', body: `A política de segurança diz ao navegador de onde o app pode carregar código, estilo, fotos e conexões. Se alguém conseguir injetar um script, o navegador recusa.
+## O que é permitido (vercel.json)
+- Código: o próprio site, cdnjs (pdf.js 3.11.174) e jsDelivr (supabase-js 2.45.4). Nenhum script dentro do HTML (boot.js no lugar) e nenhum onerror/onclick escrito no HTML.
+- Estilos: o próprio site e o Google Fonts (estilos dentro das telas continuam permitidos). Fontes: Google Fonts. Fotos: o site, data:/blob: e Pexels.
+- Conexões: o site, o Supabase (https e wss) e as CDNs acima. Nada de iframe nem formulário para fora; o app não pode ser aberto dentro de outro site.
+## Em duas fases
+1. Só observa (Content-Security-Policy-Report-Only): nada é bloqueado; o que seria bloqueado vira erro "Segurança (CSP) bloquearia …" na Central → Erros.
+2. Bloqueia (Content-Security-Policy): depois de alguns dias sem nenhum desses erros nos celulares de verdade.
+## Testes
+- O e2e serve as páginas com a política valendo (bloqueando), mais o endereço do leitor de PDF de teste; qualquer recusa quebra "sem erros no console".` };
+export const DOC_LIMITES = { id: 'limites_doc', title: 'Limite de uso das funções do servidor', body: `Para ninguém chamar as funções sem parar (abuso ou conta alta), cada uma tem limite por pessoa (api/_ratelimit.js).
+## Limites
+- Assistente (api/ai): 30 por minuto e 300 por dia, por pessoa.
+- Atalho de compras (api/quick): 20 por minuto e 200 por dia, por código do atalho.
+- Avisos da família (api/notify): 10 por minuto e 100 por dia. Push de teste (api/push-test): 5 por minuto e 30 por dia.
+## Como conta
+- No banco (rate_hit e rate_limits), comum a todas as instâncias do servidor; só o servidor chama. Sem o SQL rodado, conta por instância (menos preciso, mas limita).
+- As chaves são o id da pessoa ou o hash do código, nunca e-mail ou token. Linhas com mais de 2 dias são apagadas aos poucos.
+## Push só para serviços conhecidos
+- O servidor só envia push para Google (FCM), Apple, Mozilla e Microsoft. Inscrição com outro endereço é recusada (ninguém usa o servidor para postar em endereço inventado).` };

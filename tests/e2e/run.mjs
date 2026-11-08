@@ -13,6 +13,10 @@ const PW = await import(arg('playwright'));
 const ENGINE = arg('browser') || 'chromium', SMOKE = process.argv.includes('--smoke'), SMOKE_DONE = new Error('smoke done');
 const { newlyDone } = await import('../../public/js/lib/news.js');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public');
+// The same security policy as production (vercel.json), ENFORCED here so any violation fails the run ("sem erros no
+// console"); the test-only PDF reader host is added.
+const CSP_TEST = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../vercel.json'), 'utf8')).headers[0].headers.find(h => /^Content-Security-Policy/.test(h.key)).value
+  .replace("script-src 'self'", "script-src 'self' https://pdfjs.test").replace("connect-src 'self'", "connect-src 'self' https://pdfjs.test");
 const MOCK = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'mock-supabase.js'), 'utf8');
 const PDFJS = arg('pdfjs'), shots = arg('shots');
 const results = []; const ok = (name, cond, extra = '') => { results.push([cond ? 'ok  ' : 'FAIL', name, extra]); if (process.env.E2E_LIVE) process.stderr.write((cond ? 'ok   ' : 'FAIL ') + name + '\n'); };
@@ -69,7 +73,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/ai') { const out = aiMock(JSON.parse(r.request().postData())); return out?.__status ? r.fulfill({ status: out.__status, json: { error: 'timeout' } }) : r.fulfill({ json: out }); }
     const p = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
     if (!fs.existsSync(p)) return r.fulfill({ status: 404, body: 'nf' });
-    r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream' });
+    r.fulfill({ body: fs.readFileSync(p), contentType: types[path.extname(p)] || 'application/octet-stream', ...(path.extname(p) === '.html' ? { headers: { 'content-security-policy': CSP_TEST } } : {}) });
   });
   await t.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ body: MOCK, contentType: 'text/javascript' }));
   // --xlsx <xlsx.full.min.js>: the Excel reader the app loads from the CDN (installed on GitHub; not available offline).

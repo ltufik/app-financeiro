@@ -88,7 +88,13 @@ export const addCategory = async (hh, c) => must(await sb.from('categories').ins
 export const renameCategory = async (id, name) => must(await sb.rpc('rename_category', { p_id: id, p_name: name }));
 // Joins category `from` into `into` (entries, rules and receipt parts move; `from` is removed). Needs the v78 SQL.
 export const mergeCategory = async (from, into) => { const r = await sb.rpc('merge_category', { p_from: from, p_into: into }); if (r.error && /merge_category|function .* does not exist|PGRST202/i.test(r.error.message || r.error.code || '')) { const e = new Error('needs_schema'); e.code = 'needs_schema'; throw e; } return must(r); };
-export const savePush = async (hh, sub, prefs) => must(await sb.rpc('save_push', { p_household: hh, p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_prefs: prefs || {} }));
+// The kind of device goes along (Central: "Seus aparelhos"); before the v114 SQL the database does not know it: retry without.
+export const savePush = async (hh, sub, prefs, device = '') => {
+  const args = { p_household: hh, p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_prefs: prefs || {} };
+  const r = await sb.rpc('save_push', device ? { ...args, p_device: String(device).slice(0, 40) } : args);
+  if (r.error && device && /save_push|function .* does not exist|PGRST202/i.test(r.error.message || r.error.code || '')) return must(await sb.rpc('save_push', args));
+  return must(r);
+};
 export const deletePush = async endpoint => must(await sb.rpc('delete_push', { p_endpoint: endpoint }));
 export const myPush = async endpoint => (must(await sb.from('push_subscriptions').select('endpoint, prefs, household_id').eq('endpoint', endpoint)) || [])[0] || null;
 export const updateCategory = async (id, patch) => must(await sb.from('categories').update(patch).eq('id', id));

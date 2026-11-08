@@ -36,7 +36,11 @@ export function photo(key, { w = 900, ratio = '4 / 3', fallback = '', cls = '' }
   const fb = fallback === 'hero' ? HERO : (SCENES[fallback] || '');
   return `<figure class="photo ${cls}" style="aspect-ratio:${ratio}">
     <img src="${U(p.id)}&w=${w}" srcset="${U(p.id)}&w=${Math.round(w / 2)} ${Math.round(w / 2)}w, ${U(p.id)}&w=${w} ${w}w" sizes="(max-width:560px) 100vw, 520px"
-      alt="${p.alt}" decoding="async" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('off')">
+      alt="${p.alt}" decoding="async" referrerpolicy="no-referrer">
     <div class="photo-fb">${fb}</div>
   </figure>`;
 }
+
+// A photo that does not load shows its drawing instead (one listener for all, no inline handler: CSP).
+document.addEventListener('error', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.closest) t.closest('figure.photo')?.classList.add('off'); }, true);
+

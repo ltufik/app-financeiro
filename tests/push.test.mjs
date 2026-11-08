@@ -113,13 +113,13 @@ test('avisos da família: textos de entrou, importou e fechou', async () => {
 import { runReminder, reminderMessage } from '../api/_daily.js';
 test('lembrete das 21h: só para quem não lançou nada hoje, uma vez por dia', async () => {
   const sent = [], patched = [], k = browser().sub.keys;
-  const subs = [{ id: 1, user_id: 'a', household_id: 'h', endpoint: 'https://push.example/a', p256dh: k.p256dh, auth: k.auth, prefs: {}, last_sent: {} },
-    { id: 2, user_id: 'b', household_id: 'h', endpoint: 'https://push.example/b', p256dh: 'x', auth: 'y', prefs: {}, last_sent: {} },
-    { id: 3, user_id: 'c', household_id: 'h', endpoint: 'https://push.example/c', p256dh: 'x', auth: 'y', prefs: { lembrete: false }, last_sent: {} },
-    { id: 4, user_id: 'd', household_id: 'h', endpoint: 'https://push.example/d', p256dh: 'x', auth: 'y', prefs: {}, last_sent: { lembrete: '2026-10-30' } }];
+  const subs = [{ id: 1, user_id: 'a', household_id: 'h', endpoint: 'https://fcm.googleapis.com/a', p256dh: k.p256dh, auth: k.auth, prefs: {}, last_sent: {} },
+    { id: 2, user_id: 'b', household_id: 'h', endpoint: 'https://fcm.googleapis.com/b', p256dh: 'x', auth: 'y', prefs: {}, last_sent: {} },
+    { id: 3, user_id: 'c', household_id: 'h', endpoint: 'https://fcm.googleapis.com/c', p256dh: 'x', auth: 'y', prefs: { lembrete: false }, last_sent: {} },
+    { id: 4, user_id: 'd', household_id: 'h', endpoint: 'https://fcm.googleapis.com/d', p256dh: 'x', auth: 'y', prefs: {}, last_sent: { lembrete: '2026-10-30' } }];
   const fetchImpl = async (url, o = {}) => {
     const u = new URL(url), t = u.pathname.split('/').pop(), json = d => ({ ok: true, status: 201, json: async () => d });
-    if (u.hostname === 'push.example') { sent.push(u.pathname); return { ok: true, status: 201 }; }
+    if (u.hostname === 'fcm.googleapis.com') { sent.push(u.pathname); return { ok: true, status: 201 }; }
     if (t === 'push_subscriptions' && (o.method || 'GET') === 'GET') return json(subs);
     if (t === 'push_subscriptions') { patched.push(JSON.parse(o.body)); return json([]); }
     if (t === 'transactions') return json(u.searchParams.get('created_by') === 'eq.b' ? [{ id: 9 }] : []);
@@ -140,12 +140,12 @@ import { applyReleases, rest as rest2, newsPush } from '../api/_loop.js';
 test('novidade publicada vira push para todos; quem pediu recebe só o personalizado', async () => {
   const k = browser().sub.keys, sent = [];
   const T = { feedback: [{ id: 1, user_id: 'u1', kind: 'ideia', text: 'ver por semana', reply: null }], members: [{ user_id: 'u1', display_name: 'Luana Souza' }],
-    push_subscriptions: [{ id: 1, user_id: 'u1', endpoint: 'https://push.example/u1', p256dh: k.p256dh, auth: k.auth, prefs: {} }, { id: 2, user_id: 'u2', endpoint: 'https://push.example/u2', p256dh: k.p256dh, auth: k.auth, prefs: {} },
-      { id: 3, user_id: 'u3', endpoint: 'https://push.example/u3', p256dh: k.p256dh, auth: k.auth, prefs: { novidades: false } }],
+    push_subscriptions: [{ id: 1, user_id: 'u1', endpoint: 'https://fcm.googleapis.com/u1', p256dh: k.p256dh, auth: k.auth, prefs: {} }, { id: 2, user_id: 'u2', endpoint: 'https://fcm.googleapis.com/u2', p256dh: k.p256dh, auth: k.auth, prefs: {} },
+      { id: 3, user_id: 'u3', endpoint: 'https://fcm.googleapis.com/u3', p256dh: k.p256dh, auth: k.auth, prefs: { novidades: false } }],
     product_board: [{ key: 'backlog', data: { items: [{ id: 'semana', title: 'Gráfico por semana', status: 'agora', from: [1] }] } }] };
   const fetchImpl = async (url, o = {}) => {
     const u = new URL(url), method = o.method || 'GET', json = d => ({ ok: true, status: 200, json: async () => d });
-    if (u.hostname === 'push.example') { sent.push(u.pathname.slice(1)); return { ok: true, status: 201 }; }
+    if (u.hostname === 'fcm.googleapis.com') { sent.push(u.pathname.slice(1)); return { ok: true, status: 201 }; }
     const table = u.pathname.split('/').pop(), q = Object.fromEntries(u.searchParams);
     const match = r => Object.entries(q).every(([kk, v]) => ['select', 'limit', 'on_conflict'].includes(kk) || (v.startsWith('eq.') ? String(r[kk]) === v.slice(3) : v.startsWith('in.(') ? v.slice(4, -1).split(',').includes(String(r[kk])) : v === 'is.null' ? r[kk] == null : true));
     if (method === 'GET') return json((T[table] || []).filter(match));

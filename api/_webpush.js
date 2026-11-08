@@ -1,6 +1,7 @@
 // Web Push without dependencies: VAPID (RFC 8292) signature and aes128gcm payload encryption (RFC 8291).
 // Files starting with "_" are not exposed as Vercel routes.
 import { currentRecorder } from './_pushlog.js';
+import { pushEndpointOk } from './_ratelimit.js';
 import crypto from 'node:crypto';
 
 export const b64u = buf => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -45,6 +46,7 @@ export function encrypt(payload, { p256dh, auth }) {
 // Sends one notification. Returns {ok, status, gone} (gone = subscription expired, delete it).
 export async function sendPush(sub, data, vapid, fetchImpl = fetch) {
   const rec = currentRecorder(); // the run in progress logs every send (push_log), delivered or not
+  if (!pushEndpointOk(sub?.endpoint)) { const out = { ok: false, status: 0, gone: false }; rec?.push(sub, data, out, new Error('endereço de push não reconhecido')); return out; }
   try {
     const body = encrypt(JSON.stringify(data), sub.keys);
     const r = await fetchImpl(sub.endpoint, {

@@ -1,5 +1,6 @@
 // Sends a test notification to the device that asked for it (signed-in users only).
 // Body: { subscription: PushSubscription JSON }. Env: SUPABASE_URL, SUPABASE_ANON_KEY, VAPID_*.
+import { allowed, pushEndpointOk } from './_ratelimit.js';
 import { cleanUrl } from './config.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
@@ -14,7 +15,9 @@ export default async function handler(req, res) {
   if (!u || !u.ok) return res.status(401).json({ error: 'not_signed_in' });
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const s = body.subscription;
-  if (!s || !/^https:\/\//.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth) return res.status(400).json({ error: 'bad_request' });
+  if (!s || !pushEndpointOk(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return res.status(400).json({ error: 'bad_request' });
+  const me = await u.json().catch(() => ({}));
+  if (!await allowed(`pushtest:${me.id || 'x'}`, [{ limit: 5, window: 60 }, { limit: 30, window: 86400 }], { supabaseUrl: SUPABASE_URL, serviceKey: String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim() })) return res.status(429).json({ error: 'rate_limited' });
   try {
     const r = await sendPush(s, { title: 'Avisos ligados', body: 'Pronto! É assim que o Pra Onde Foi vai te avisar quando algo importante acontecer com o dinheiro da família.', url: linkFor('avisos'), tag: 'teste' }, vapid);
     res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status });

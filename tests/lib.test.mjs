@@ -1112,3 +1112,38 @@ test('health uses the same URL cleanup as the rest of the server (env may end in
   const { cleanUrl } = await import('../api/config.js');
   assert.equal(cleanUrl('https://x.supabase.co/rest/v1/'), 'https://x.supabase.co');
 });
+
+test('limit of use: database count, fallback per instance, and only real push services', async () => {
+  const { allowed, pushEndpointOk } = await import('../api/_ratelimit.js');
+  let n = 0; const db = async () => ({ ok: true, json: async () => (++n <= 2) });
+  const opt = { supabaseUrl: 'https://x.supabase.co', serviceKey: 'k', fetchImpl: db };
+  assert.equal(await allowed('ai:u1', [{ limit: 2, window: 60 }], opt), true);
+  assert.equal(await allowed('ai:u1', [{ limit: 2, window: 60 }], opt), true);
+  assert.equal(await allowed('ai:u1', [{ limit: 2, window: 60 }], opt), false);
+  // Database down (or SQL not run yet): the per-instance count still limits.
+  const down = { supabaseUrl: 'https://x.supabase.co', serviceKey: 'k', fetchImpl: async () => { throw new Error('rede'); } };
+  const r = []; for (let i = 0; i < 4; i++) r.push(await allowed('quick:abc', [{ limit: 3, window: 60 }], down));
+  assert.deepEqual(r, [true, true, true, false]);
+  assert.equal(pushEndpointOk('https://fcm.googleapis.com/fcm/send/abc'), true);
+  assert.equal(pushEndpointOk('https://web.push.apple.com/QW'), true);
+  assert.equal(pushEndpointOk('https://wns2-par02p.notify.windows.com/w/?token=1'), true);
+  assert.equal(pushEndpointOk('https://evil.example/fcm.googleapis.com'), false);
+  assert.equal(pushEndpointOk('http://fcm.googleapis.com/x'), false);
+});
+
+test('error text carries no money values, tokens in addresses, e-mails or long numbers', async () => {
+  const { cleanError } = await import('../public/js/lib/navlog.js');
+  assert.equal(cleanError('Não foi possível abater R$ 99.000,00 de tufik.luiz@gmail.com'), 'Não foi possível abater R$ # de <e-mail>');
+  assert.equal(cleanError('Segurança (CSP) bloquearia img-src: https://x.supabase.co/storage/v1/object?token=abc123&t=9'), 'Segurança (CSP) bloquearia img-src: https://x.supabase.co/storage/v1/object');
+  assert.equal(cleanError('cartão 4111 1111 1111 1111'), 'cartão #');
+});
+
+test('device kind from the browser (saved with the subscription)', async () => {
+  const { deviceFromUA } = await import('../public/js/lib/pushinfo.js');
+  assert.equal(deviceFromUA('Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36'), 'Android (Chrome)');
+  assert.equal(deviceFromUA('Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0 Mobile Safari/537.36'), 'Android (Samsung Internet)');
+  assert.equal(deviceFromUA('Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1'), 'iPhone');
+  assert.equal(deviceFromUA('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36 Edg/130.0'), 'Windows (Edge)');
+  assert.equal(deviceFromUA('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'), 'Mac (Safari)');
+  assert.equal(deviceFromUA(''), '');
+});

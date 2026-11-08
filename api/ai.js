@@ -1,8 +1,8 @@
+import { allowed } from './_ratelimit.js';
 import { cleanUrl } from './config.js';
 // Calls Claude for signed-in users. The Anthropic API key stays on the server.
 // Env: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY; optional CLAUDE_MODEL, CLAUDE_MODEL_QUICK, ALLOWED_EMAILS (comma-separated).
 const MAX_BODY = 4_000_000;
-const hits = new Map(); // best-effort per-instance rate limit: user -> [timestamps]
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
@@ -18,9 +18,9 @@ export default async function handler(req, res) {
   const allow = (process.env.ALLOWED_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   if (allow.length && !allow.includes(String(user.email || '').toLowerCase())) return res.status(403).json({ error: 'not_allowed' });
 
-  const now = Date.now(), list = (hits.get(user.id) || []).filter(t => now - t < 60_000);
-  if (list.length >= 30) return res.status(429).json({ error: 'rate_limited' });
-  list.push(now); hits.set(user.id, list);
+  // Limit per person: 30 a minute and 300 a day (the day cap also keeps the assistant's bill under control).
+  const SERVICE = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!await allowed(`ai:${user.id}`, [{ limit: 30, window: 60 }, { limit: 300, window: 86400 }], { supabaseUrl: SUPABASE_URL, serviceKey: SERVICE })) return res.status(429).json({ error: 'rate_limited' });
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   if (JSON.stringify(body).length > MAX_BODY) return res.status(413).json({ error: 'too_large' });

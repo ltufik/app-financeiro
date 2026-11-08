@@ -407,16 +407,36 @@ grant select on public.push_subscriptions to authenticated;
 revoke all on public.push_subscriptions from anon;
 
 -- Liga os avisos neste aparelho (o mesmo aparelho pode ter sido de outra conta: troca o dono).
-create or replace function public.save_push(p_household uuid, p_endpoint text, p_p256dh text, p_auth text, p_prefs jsonb default '{}'::jsonb)
+-- Tipo do aparelho (o que o celular diz: "Android (Chrome)", "iPhone"...), último aviso entregue e falhas seguidas
+-- (depois de 5 falhas seguidas o aparelho sai da lista; o app inscreve de novo ao abrir, se ainda tiver permissão).
+alter table public.push_subscriptions add column if not exists device text check (device is null or length(device) <= 40);
+alter table public.push_subscriptions add column if not exists last_ok_at timestamptz;
+alter table public.push_subscriptions add column if not exists fails int not null default 0;
+drop function if exists public.save_push(uuid, text, text, text, jsonb);
+create or replace function public.save_push(p_household uuid, p_endpoint text, p_p256dh text, p_auth text, p_prefs jsonb default '{}'::jsonb, p_device text default null)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_member(p_household) then raise exception 'not_member'; end if;
   if p_endpoint !~ '^https://' or length(p_endpoint) > 1000 then raise exception 'bad_endpoint'; end if;
-  insert into push_subscriptions(household_id, user_id, endpoint, p256dh, auth, prefs)
-    values (p_household, auth.uid(), p_endpoint, p_p256dh, p_auth, coalesce(p_prefs, '{}'::jsonb))
+  insert into push_subscriptions(household_id, user_id, endpoint, p256dh, auth, prefs, device)
+    values (p_household, auth.uid(), p_endpoint, p_p256dh, p_auth, coalesce(p_prefs, '{}'::jsonb), nullif(left(trim(coalesce(p_device, '')), 40), ''))
   on conflict (endpoint) do update set household_id = excluded.household_id, user_id = excluded.user_id,
-    p256dh = excluded.p256dh, auth = excluded.auth, prefs = excluded.prefs;
+    p256dh = excluded.p256dh, auth = excluded.auth, prefs = excluded.prefs, device = coalesce(excluded.device, push_subscriptions.device), fails = 0;
 end $$;
+
+-- Resultado de uma rodada de avisos (só o servidor): entregues zeram as falhas; com erro somam; 5 seguidas, sai.
+create or replace function public.push_result(p_ok text[], p_fail text[]) returns int
+language plpgsql security definer set search_path = public as $$
+declare removed int;
+begin
+  update push_subscriptions set fails = 0, last_ok_at = now() where endpoint = any(coalesce(p_ok, '{}'));
+  update push_subscriptions set fails = fails + 1 where endpoint = any(coalesce(p_fail, '{}'));
+  delete from push_subscriptions where fails >= 5;
+  get diagnostics removed = row_count;
+  return removed;
+end $$;
+revoke all on function public.push_result(text[], text[]) from public, anon, authenticated;
+grant execute on function public.push_result(text[], text[]) to service_role;
 
 -- Desliga os avisos deste aparelho.
 create or replace function public.delete_push(p_endpoint text)
@@ -550,6 +570,16 @@ begin
   update public.members m set role = 'owner'
    where m.household_id in (select household_id from public.members where user_id = me and role = 'owner')
      and m.user_id = (select x.user_id from public.members x where x.household_id = m.household_id and x.user_id <> me order by x.created_at limit 1);
+  -- LGPD: nothing of the person stays. Families that continue keep their shared numbers, without the person's id.
+  update public.households h set created_by = (select x.user_id from public.members x where x.household_id = h.id and x.user_id <> me order by x.created_at limit 1)
+   where h.created_by = me;
+  update public.transactions set created_by = null where created_by = me;
+  update public.imports set created_by = null where created_by = me;
+  delete from public.invites where created_by = me;
+  delete from public.feedback where user_id = me;
+  delete from public.app_errors where user_id = me;
+  delete from public.push_log where user_id = me;
+  delete from public.rate_limits where key like '%:' || me::text;
   delete from public.members where user_id = me;
   delete from auth.users where id = me;
 end $$;
@@ -564,7 +594,7 @@ grant execute on function public.replace_month(uuid, text, text, jsonb, uuid[], 
 grant execute on function public.replace_statement(uuid, text, text, jsonb, text[], boolean, uuid[], text, text, jsonb) to authenticated;
 grant execute on function public.learn_rule(uuid, text, text, text) to authenticated;
 grant execute on function public.rename_category(uuid, text) to authenticated;
-grant execute on function public.save_push(uuid, text, text, text, jsonb) to authenticated;
+grant execute on function public.save_push(uuid, text, text, text, jsonb, text) to authenticated;
 grant execute on function public.delete_push(text) to authenticated;
 grant execute on function public.touch_activity(uuid) to authenticated;
 
@@ -914,3 +944,39 @@ alter table public.push_log enable row level security;
 alter table public.job_runs enable row level security;
 revoke all on public.push_log, public.job_runs from anon, authenticated;
 grant select, insert, delete on public.push_log, public.job_runs to service_role;
+
+-- Limite de uso das funções do servidor (assistente, atalho de compras, avisos): contagem por janela de tempo,
+-- comum a todas as instâncias. Só o servidor usa. Linhas com mais de 2 dias são apagadas aos poucos.
+create table if not exists public.rate_limits (
+  key          text not null check (length(key) <= 120),
+  window_start timestamptz not null,
+  n            int not null default 0,
+  primary key (key, window_start)
+);
+alter table public.rate_limits enable row level security;
+revoke all on public.rate_limits from anon, authenticated;
+grant select, insert, update, delete on public.rate_limits to service_role;
+create or replace function public.rate_hit(p_key text, p_limit int, p_window int) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare w timestamptz := to_timestamp(floor(extract(epoch from now()) / greatest(p_window, 1)) * greatest(p_window, 1)); c int;
+begin
+  insert into public.rate_limits(key, window_start, n) values (left(p_key, 120), w, 1)
+  on conflict (key, window_start) do update set n = public.rate_limits.n + 1 returning n into c;
+  if random() < 0.02 then delete from public.rate_limits where window_start < now() - interval '2 days'; end if;
+  return c <= p_limit;
+end $$;
+revoke all on function public.rate_hit(text, int, int) from public, anon, authenticated;
+grant execute on function public.rate_hit(text, int, int) to service_role;
+
+-- Revisão de acesso (v114).
+-- 1) Membro só muda o próprio nome e a relação; o papel (dona/membro) só muda pelas funções do app.
+--    Antes, um membro conseguia se promover a dono atualizando a própria linha.
+revoke update on public.members from authenticated;
+grant update (display_name, relation) on public.members to authenticated;
+-- 2) Funções do app só para quem está logado (nunca para visitante), exceto ver um convite.
+do $$ declare f record; begin
+  for f in select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.prosecdef and p.proname in ('accept_invite', 'create_household', 'create_invite', 'delete_push',
+              'learn_rule', 'rename_category', 'replace_month', 'replace_statement', 'save_push', 'touch_activity', 'is_member', 'is_owner')
+  loop execute format('revoke execute on function %s from public, anon', f.sig); execute format('grant execute on function %s to authenticated', f.sig); end loop;
+end $$;

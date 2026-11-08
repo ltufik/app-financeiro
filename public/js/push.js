@@ -2,8 +2,9 @@
 import * as db from './db.js';
 import { S } from './state.js';
 import { announce } from './ui.js';
-import { track } from './usage.js';
+import { track, APP_VERSION } from './usage.js';
 import { shouldAskPush, pushAskText } from './lib/pushask.js';
+import { deviceFromUA } from './lib/pushinfo.js';
 
 export const PUSH_TYPES = [
   { key: 'dados', label: 'Falta de dados', hint: 'Quando faltar o extrato ou a fatura, ou o mês estiver acabando sem lançamentos.' },
@@ -49,12 +50,12 @@ export async function enablePush(prefs) {
   const r = await reg();
   let sub = await r.pushManager.getSubscription();
   if (!sub) sub = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(db.config.vapidPublicKey) });
-  await db.savePush(S.hh.id, sub.toJSON(), prefs);
+  await db.savePush(S.hh.id, sub.toJSON(), prefs, deviceFromUA(navigator.userAgent));
   return 'on';
 }
 export async function savePrefs(prefs) {
   const sub = await (await reg()).pushManager.getSubscription(); if (!sub) return;
-  await db.savePush(S.hh.id, sub.toJSON(), prefs);
+  await db.savePush(S.hh.id, sub.toJSON(), prefs, deviceFromUA(navigator.userAgent));
 }
 export async function disablePush() {
   const sub = await (await reg()).pushManager.getSubscription(); if (!sub) return;
@@ -81,6 +82,11 @@ const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k)
 export async function refreshPushState() {
   S.pushStatus = await pushStatus().catch(() => 'unsupported');
   if (S.pushStatus === 'on') ls('fin.push.on', '1'); else if (S.pushStatus === 'off' || S.pushStatus === 'denied') ls('fin.push.on', '0');
+  // Once per version, quietly saves this device again: records the kind of device and brings it back if the server
+  // removed it after failures (the phone still has the permission). Keeps the person's choices.
+  if (S.pushStatus === 'on' && S.hh?.id && ls('fin.push.saved.' + S.hh.id) !== APP_VERSION) {
+    try { await savePrefs(await currentPrefs()); ls('fin.push.saved.' + S.hh.id, APP_VERSION); } catch (e) { /* next time */ }
+  }
   return S.pushStatus;
 }
 
