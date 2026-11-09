@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('previsao_o_que_falta', 'Início', 'v124', 'ambos', 'Previsão conta o que ainda vai entrar e sair',
+    ['No começo do mês, com o extrato parcial (antes do salário e das contas fixas) no app, abra a Previsão do mês no Início.'],
+    'A previsão não fica no vermelho só porque o salário ainda não entrou. Embaixo aparece "Já conta com R$ … que ainda devem entrar (Salário) e R$ … de contas fixas e financiamentos que ainda vão sair, pelo extrato até dd/mm". O valor por dia considera esse resto do mês.'),
   t('mes_em_andamento', 'Início', 'v122', 'ambos', 'Mês em andamento não "fechou"',
     ['No meio do mês, com o extrato parcial do mês já no app, abra o Início.'],
     'Nenhum aviso diz que o mês atual "fechou" (no vermelho ou guardando). Os avisos de resultado falam do último mês que já terminou; o mês atual aparece na Previsão do mês.'),

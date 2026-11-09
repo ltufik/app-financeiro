@@ -34,7 +34,8 @@ export const SCENARIOS = [
     ctx: base({ months: ['2026-10'], has: (k, s) => s === 'cartao' && k === '2026-10', M: { '2026-10': calcOf(0, 0, 5200) }, cashPending: [], dups: 0, catMerge: 0, recurring: [], fees: null, budgets: {}, nextFatura: null }) },
 ];
 
-const FC = { month: '2026-11', status: 'risco', res: 1800, meta: 2800, perDay: 120, perDayZero: 260, usual: 180, basis: 'checkin', nextBill: null };
+const FC = { month: '2026-11', status: 'risco', res: 1800, meta: 2800, perDay: 120, perDayZero: 260, usual: 180, basis: 'checkin', nextBill: null,
+  coming: { income: [{ name: 'Salário', value: 14000 }], fixed: [{ name: 'Escola', value: 2400 }, { name: 'Moradia e contas', value: 2600 }], variable: 1500, through: '2026-11-08' } };
 // The same link the 9h robot builds from the notice's button (api/_daily.js).
 const pushUrl = x => x.action ? linkFor('tela', { tab: x.action.go[0], sec: x.action.go[0] === 'lancar' && x.action.go[1] === '#drop' ? 'pdf' : x.action.go[2] }) : linkFor('tela', { tab: 'resumo' });
 
@@ -55,7 +56,7 @@ export function otherPushes() {
   return [
     { channel: 'push', where: 'Domingo, resumo da semana', id: 'semanal', title: w.title, text: w.text, url: w.url },
     { channel: 'push', where: 'Domingo 19h, previsão do mês', id: 'previsao', title: sa?.msg.title, text: sa?.msg.body, url: linkFor('tela', { tab: 'resumo', sec: 'previsao' }) },
-    { channel: 'inicio', where: 'Início, Previsão do mês', id: 'previsao', title: ft.title, text: `${ft.head} ${ft.day}`, action: { label: 'Atualizar a previsão' } },
+    { channel: 'inicio', where: 'Início, Previsão do mês', id: 'previsao', title: ft.title, text: `${ft.head} ${ft.day} ${ft.counted}`, action: { label: 'Atualizar a previsão' } },
     { channel: 'push', where: '21h, quem não lançou nada hoje', id: 'lembrete', title: r1.title, text: r1.body, url: r1.url },
     { channel: 'push', where: '21h, família ainda sem dados', id: 'lembrete_vazio', title: r2.title, text: r2.body, url: r2.url },
     ...fam.map(({ type, m }) => ({ channel: 'push', where: `Para o resto da família quando ${PARTNER.split(' ')[0]} ${type === 'joined' ? 'entra' : type === 'imported' ? 'manda a fatura' : 'fecha o mês'}`, id: 'familia_' + type, title: m.title, text: m.body, url: m.url })),

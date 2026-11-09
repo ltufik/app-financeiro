@@ -980,7 +980,7 @@ test('gastos do ano: IPVA pelo veículo do patrimônio e o estado dele', async (
 
 import { forecast, forecastText, checkinTarget, sundayAsk, closeDateOf } from '../public/js/lib/monthend.js';
 test('month-end forecast: history, open bill check-in and the Sunday ask', () => {
-  const categories = [{ name: 'Salário', grp: 'renda' }, { name: 'Aluguel', grp: 'dia' }, { name: 'Mercado', grp: 'dia' }, { name: 'Obra', grp: 'fora' }];
+  const categories = [{ name: 'Salário', grp: 'renda' }, { name: 'Aluguel', grp: 'dia', recurring: true }, { name: 'Mercado', grp: 'dia' }, { name: 'Obra', grp: 'fora' }];
   const txs = [];
   for (const k of ['2026-07', '2026-08', '2026-09']) txs.push(
     { month: k, source: 'conta', amount: 10000, category: 'Salário' }, { month: k, source: 'conta', amount: -3000, category: 'Aluguel' },
@@ -1360,4 +1360,26 @@ test('central → mensagens: todos os cenários geram mensagens com título e te
   const m = await import('../public/js/admin/msgscenarios.js');
   for (const sc of m.SCENARIOS) { const l = m.scenarioMessages(sc); assert.ok(l.length >= 2, sc.id); assert.ok(l.every(x => x.title && x.text), sc.id); }
   assert.ok(m.otherPushes().every(x => x.title && x.text && (x.url || x.action)));
+});
+test('previsão: extrato parcial conta o salário que ainda vai entrar e as fixas e financiamentos que ainda vão sair', () => {
+  const categories = [{ name: 'Salário', grp: 'renda' }, { name: 'Escola', grp: 'dia', recurring: true }, { name: 'Financiamento', grp: 'dia', financing: true },
+    { name: 'Pix e pagamentos', grp: 'dia' }, { name: 'Mercado', grp: 'dia' }];
+  const txs = [];
+  for (const k of ['2026-08', '2026-09', '2026-10']) txs.push(
+    { month: k, source: 'conta', date: k + '-05', amount: 16000, category: 'Salário' }, { month: k, source: 'conta', date: k + '-20', amount: 16000, category: 'Salário' },
+    { month: k, source: 'conta', date: k + '-10', amount: -3000, category: 'Escola' }, { month: k, source: 'conta', date: k + '-15', amount: -5600, category: 'Financiamento' },
+    { month: k, source: 'conta', date: k + '-12', amount: -3000, category: 'Pix e pagamentos' }, { month: k, source: 'cartao', amount: 9000, category: 'Mercado' });
+  // November: the statement so far goes until the 8th; only a few pix, no salary yet, no fixed bill yet.
+  txs.push({ month: '2026-11', source: 'conta', date: '2026-11-03', amount: -354, category: 'Pix e pagamentos' }, { month: '2026-11', source: 'conta', date: '2026-11-08', amount: -100, category: 'Pix e pagamentos' });
+  const f = forecast({ txs, categories, settings: { goals: { savings: 0.2 }, cardCloseDay: 28 }, today: '2026-11-09' });
+  assert.deepEqual(f.coming.income, [{ name: 'Salário', value: 32000 }]);
+  assert.deepEqual(f.coming.fixed.map(x => [x.name, x.value]), [['Financiamento', 5600], ['Escola', 3000]]);
+  // Income 32.000; account: 454 so far + 8.600 fixed + 22 days of the usual 3.000/30 pix; card 9.000.
+  assert.equal(f.entradas, 32000); assert.equal(f.conta, Math.round(454 + 8600 + 100 * 22)); assert.equal(f.card, 9000);
+  assert.equal(f.res, Math.round(32000 - (454 + 8600 + 2200) - 9000));
+  const t = forecastText(f);
+  assert.match(t.counted, /^Já conta com R\$ 32\.000 que ainda devem entrar \(Salário\) e R\$ 8\.600 de contas fixas e financiamentos que ainda vão sair \(Financiamento e Escola\), pelo extrato até 08\/11\.$/);
+  // The whole month in: nothing on top.
+  const full = forecast({ txs: [...txs, { month: '2026-11', source: 'conta', date: '2026-11-30', amount: 16000, category: 'Salário' }], categories, settings: { goals: { savings: 0.2 }, cardCloseDay: 28 }, today: '2026-11-30' });
+  assert.equal(full.coming.income.length + full.coming.fixed.length + full.coming.variable, 0);
 });

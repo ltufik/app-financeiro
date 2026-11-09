@@ -33,7 +33,7 @@ export function forecast({ txs: all, categories, settings = {}, today }) {
   // A big payment that looks like paying off a financing and is not confirmed yet does not count: once confirmed it
   // goes to "Amortização de financiamento" (only the equity changes), so it never is the month's spending.
   const pend = new Set(pendingAmortizations(all, settings.debts || [], settings.debtSkip).map(x => x.tx.id));
-  const txs = pend.size ? all.filter(t => !pend.has(t.id)) : all;
+  const txs = pend.size ? all.filter(t => t.id == null || !pend.has(t.id)) : all;
   const idx = catIndex(categories), cur = today.slice(0, 7), day = +today.slice(8, 10), cd = +settings.cardCloseDay || 24;
   const of = k => txs.filter(t => t.month === k), has = (k, src) => txs.some(t => t.month === k && t.source === src && !t.manual);
   const hist = [...new Set(txs.map(t => t.month))].filter(k => k < cur && has(k, 'conta') && has(k, 'cartao')).sort().slice(-3);
@@ -42,10 +42,27 @@ export function forecast({ txs: all, categories, settings = {}, today }) {
   const renda = median(hist.map(k => C[k].renda)) || median(hist.map(k => C[k].E));
   const goal = +(settings.goals?.savings ?? 0.2) || 0, meta = Math.max(0, renda * goal);
 
-  // Account side: the statement when it is in; otherwise the usual month (or what was already launched, if more).
-  const contaIn = has(cur, 'conta');
-  const E = contaIn ? now.E : Math.max(median(hist.map(k => C[k].E)), now.E);
-  const D = contaIn ? now.D : Math.max(median(hist.map(k => C[k].D)), now.D);
+  // Account side: what already happened this month (the statement so far, or what was typed) plus what still is
+  // expected until the end of the month, from the family's own last months: the income that usually comes (salary,
+  // by category), the fixed bills and financing payments that usually leave (by category) and the day-to-day pace
+  // for the days the statement does not cover yet. A statement of the whole month needs nothing on top.
+  const contaRows = k => expandSplits(of(k).filter(t => t.source === 'conta'));
+  const byCat = k => { const m = {}; for (const t of contaRows(k)) { const n = t.category || 'A classificar'; m[n] = (m[n] || 0) + (+t.amount || 0); } return m; };
+  const H = hist.map(byCat), N = byCat(cur), names = [...new Set([...H.flatMap(o => Object.keys(o)), ...Object.keys(N)])];
+  const grpOf = n => idx.get(n) || { grp: 'dia' }, isFixed = c => c.grp === 'dia' && (c.recurring || c.financing);
+  const lastSeen = has(cur, 'conta') ? of(cur).filter(t => t.source === 'conta' && !t.manual && t.date).map(t => t.date).sort().pop() || null : null;
+  const seenDay = lastSeen ? +lastSeen.slice(8, 10) : 0, full = !!lastSeen && seenDay >= lastDayOf(cur) - 1;
+  const comingIn = [], comingOut = []; let varHist = 0, varNow = 0;
+  for (const n of names) {
+    const c = grpOf(n), med = median(H.map(o => o[n] || 0)), got = N[n] || 0;
+    if (c.grp === 'renda' && med > 0 && !full) { const v = Math.max(0, med - Math.max(0, got)); if (v >= 1) comingIn.push({ name: n, value: r0(v) }); }
+    else if (isFixed(c) && med < 0 && !full) { const v = Math.max(0, -med - Math.max(0, -got)); if (v >= 1) comingOut.push({ name: n, value: r0(v), financing: !!c.financing }); }
+    else if (c.grp === 'dia' && !isFixed(c)) { varHist += -med; varNow += -got; }
+  }
+  const contaPace = Math.max(0, varHist) / 30;
+  const varLeft = full ? 0 : lastSeen ? contaPace * Math.max(0, lastDayOf(cur) - seenDay) : Math.max(0, varHist - Math.max(0, varNow));
+  const sum = a => a.reduce((x, y) => x + y.value, 0);
+  const E = now.E + sum(comingIn), D = now.D + sum(comingOut) + varLeft;
 
   // Card side (the bill of this month counts this month). Share of the bill that counts in the leftover.
   const tot = hist.reduce((a, k) => a + C[k].cardTotal, 0), share = tot > 0 ? Math.min(1, Math.max(0, hist.reduce((a, k) => a + C[k].card, 0) / tot)) : 1;
@@ -63,7 +80,7 @@ export function forecast({ txs: all, categories, settings = {}, today }) {
 
   // Per day: the family's usual pace of new purchases, plus (or minus) the room left above the goal, spread over
   // the days left. Fixed bills are already in the forecast, so this is what fits for the day-to-day.
-  const res = E - D - card, daysLeft = lastDayOf(cur) - day + 1, usual = pace * share;
+  const res = E - D - card, daysLeft = lastDayOf(cur) - day + 1, usual = pace * share + contaPace;
   const perDay = Math.max(0, usual + (daysLeft > 0 ? (res - meta) / daysLeft : 0)), perDayZero = Math.max(0, usual + (daysLeft > 0 ? res / daysLeft : 0));
   // This month's bill is already in (it closed): the open one is next month's. The check-in then forecasts that bill.
   let nextBill = null;
@@ -76,7 +93,8 @@ export function forecast({ txs: all, categories, settings = {}, today }) {
   }
   const status = res >= meta ? 'ok' : res >= 0 ? 'risco' : 'vermelho';
   return { month: cur, res: r0(res), meta: r0(meta), renda: r0(renda), goal, status, perDay: r0(perDay), perDayZero: r0(perDayZero), usual: r0(usual), daysLeft, basis, checkin: ck, closeDate,
-    card: r0(card), conta: r0(D), entradas: r0(E), hist, nextBill, ignored: pend.size };
+    card: r0(card), conta: r0(D), entradas: r0(E), hist, nextBill, ignored: pend.size,
+    coming: { income: comingIn.sort((a, b) => b.value - a.value), fixed: comingOut.sort((a, b) => b.value - a.value), variable: r0(varLeft), through: lastSeen } };
 }
 
 // The text of the forecast, the same on Início, in the toast after a check-in and in the Sunday push.
@@ -94,7 +112,13 @@ export function forecastText(f) {
   const short = f.status === 'ok' ? head : f.status === 'risco' ? `A previsão é sobrar ${R(f.res)}, e a meta é ${R(f.meta)}.` : `A previsão é faltar ${R(-f.res)}.`;
   const nb = f.nextBill, nm = nb && MES[+nb.month.slice(5) - 1];
   const next = nb?.value != null ? `Fatura de ${nm}: com ${R(nb.checkin.value)} até ${nb.checkin.date.slice(8, 10)}/${nb.checkin.date.slice(5, 7)}, deve fechar em uns ${R(nb.value)} (o normal de vocês é ${R(nb.usual)}).` : '';
-  return { next, line: head, head: short, title: f.status === 'ok' ? `${M} no caminho da meta` : f.status === 'risco' ? `${M} pode fechar abaixo da meta` : `${M} pode fechar no vermelho`, day };
+  // What the forecast already counts that did not happen yet (so the person trusts the number).
+  const cm = f.coming || {}, inc = (cm.income || []).reduce((a, x) => a + x.value, 0), fix = (cm.fixed || []).reduce((a, x) => a + x.value, 0);
+  const names = l => l.slice(0, 2).map(x => x.name).join(' e ') + (l.length > 2 ? ' e outras' : '');
+  const plan = [inc ? `${R(inc)} que ainda devem entrar (${names(cm.income)})` : '', fix ? `${R(fix)} de contas fixas e financiamentos que ainda vão sair (${names(cm.fixed)})` : '']
+    .filter(Boolean).join(' e ');
+  const counted = plan ? `Já conta com ${plan}${cm.through ? `, pelo extrato até ${cm.through.slice(8, 10)}/${cm.through.slice(5, 7)}` : ''}.` : '';
+  return { next, counted, line: head, head: short, title: f.status === 'ok' ? `${M} no caminho da meta` : f.status === 'risco' ? `${M} pode fechar abaixo da meta` : `${M} pode fechar no vermelho`, day };
 }
 
 // Sunday 19h push: whether to ask this device, and the message. Asks at most once a week; after two asks in a row

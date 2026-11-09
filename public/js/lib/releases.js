@@ -492,4 +492,8 @@ export const RELEASES = [
     'O Início não diz mais que o mês "fechou" antes de ele acabar. Os avisos de resultado falam do último mês que terminou; o mês atual fica na Previsão do mês.',
   ] } },
   { id: 'r123', version: 'v123', at: '2026-11-09T22:35:00Z', addDocs: [DOC_MENSAGENS], semNovidade: 'Só na Central: a página Mensagens, para revisar todos os avisos e pushes antes da reescrita.', semTeste: 'Só a Central muda (coberta pelo teste automático da Central).' },
+  { id: 'r124', version: 'v124', at: '2026-11-09T22:56:00Z', updateDocs: [DOC_PREVISAO], addBacklog: [{ id: 'previsao_com_o_que_falta', title: 'Previsão do mês com o que ainda vai entrar e sair', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'M', problem: 'Com o extrato parcial, a previsão e o "quanto dá por dia" ignoravam o salário que ainda vai entrar e as contas fixas e financiamentos que ainda vão sair', from: [] }], backlog: ['previsao_com_o_que_falta'], news: { id: 'n20261109e', title: 'Previsão do mês mais certa', items: [
+    'A previsão agora conta o que ainda vai acontecer no mês: o salário que ainda vai entrar e as contas fixas e financiamentos que ainda vão sair, pelo jeito dos seus últimos meses.',
+    'Embaixo da previsão aparece o que ela já está contando, e o valor por dia para bater a meta considera esse resto do mês.',
+  ] } },
 ];

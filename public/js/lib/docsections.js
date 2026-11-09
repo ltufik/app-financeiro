@@ -217,10 +217,11 @@ SP jan, 5x, 3% (carro 4%, moto 2%) · RJ jan, 3x, 3% · MG fev, 3x, 3% · PR jan
 export const DOC_PREVISAO = { id: 'previsao_doc', title: 'Previsão do mês e o pedido de domingo', body: `Início → "Previsão do mês": como o mês deve fechar e quanto cabe por dia para bater a meta.
 ## Como calcula (lib/monthend.js)
 - Base: os últimos 3 meses completos (com extrato e fatura); precisa de pelo menos 2.
-- Conta: o extrato do mês, se já veio; senão, a mediana dos meses anteriores (ou o já lançado, se for maior).
+- Conta: o que já aconteceu no mês (o extrato até o último dia que ele cobre, ou o que foi lançado) mais o que ainda deve acontecer, pelos últimos meses da própria família: a renda que costuma entrar (por categoria, ex.: as duas partes do salário), as contas fixas e os financiamentos que costumam sair (categorias fixas ou de financiamento) e o ritmo normal do dia a dia da conta (pix, débito) nos dias que o extrato ainda não cobre. Extrato do mês inteiro: nada a mais.
+- A tela diz o que já está contado: "Já conta com R$ 32.000 que ainda devem entrar (Salário) e R$ 8.600 de contas fixas e financiamentos que ainda vão sair, pelo extrato até 08/11".
 - Cartão (conta pelo mês da fatura): a fatura do mês, se já veio; senão, a fatura aberta informada + o ritmo normal de compras novas até o fechamento; sem nada, a mediana das faturas. Só a parte que entra na sobra (o resto é extra ou não conta).
 - Meta: o percentual combinado em Metas sobre a renda fixa de sempre.
-- Por dia: o ritmo normal de compras novas (cartão, sem parcelas e assinaturas) mais a folga acima da meta dividida pelos dias que faltam. Se não dá para bater a meta, mostra quanto cabe para não fechar no vermelho.
+- Por dia: o ritmo normal de compras novas (cartão, sem parcelas e assinaturas, e pix e débito da conta fora das contas fixas) mais a folga acima da meta dividida pelos dias que faltam. Se não dá para bater a meta, mostra quanto cabe para não fechar no vermelho.
 ## A fatura aberta
 - Se a fatura do mês já está no app, o pedido é da fatura aberta do mês seguinte (dia de fechamento tirado da última compra da fatura) e a previsão mostra quanto ela deve fechar.
 - Pagamento que parece amortização e ainda não foi confirmado não entra na previsão.

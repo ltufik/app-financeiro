@@ -24,7 +24,7 @@ export function renderForecast(box) {
   box.className = `panel fc fc-${tone}`;
   box.innerHTML = `<p class="eyebrow">Previsão do mês · atualize com um número</p><h3>${esc(t.title)}</h3>
     <p class="small">${esc(t.head)}</p><p class="small"><strong>${esc(t.day)}</strong></p>
-    <p class="tiny muted">${esc(basis)}</p>
+    <p class="tiny muted">${esc(basis)}${t.counted ? ' ' + esc(t.counted) : ''}</p>
     ${t.next ? `<p class="small">${esc(t.next)}</p>` : ''}
     <div class="fc-ask" id="fcMore"><p class="small"><strong>${tg.closed ? `Quanto veio a fatura que fechou dia ${brD(tg.closeDate)}?` : `Quanto está a fatura aberta${tg.month !== today.slice(0, 7) ? ` de ${mLong(tg.month).split(' ')[0]}` : ''} hoje?`}</strong></p>
       <p class="tiny muted">${tg.closed ? 'O valor está no app do banco, na fatura fechada.' : `Está no app do banco (a fatura que fecha dia ${brD(tg.closeDate)}). Tem mais de um cartão? Some as faturas. Leva 10 segundos e deixa a previsão certa.`}</p>
