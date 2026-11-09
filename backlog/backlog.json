@@ -1,5 +1,15 @@
 [
  {
+  "id": "repetidos_lancado_a_mao",
+  "from": [],
+  "tipo": "bug",
+  "title": "Lançado à mão + extrato: nunca em dobro, sem perder o que a pessoa escreveu",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "O pix e a amortização lançados antes do extrato perderam a categoria e a descrição ao juntar, a amortização perguntou de novo e não dava para apagar um lançamento à mão depois do extrato"
+ },
+ {
   "id": "missoes_e_desafios",
   "cost": false,
   "from": [],
