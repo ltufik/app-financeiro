@@ -86,6 +86,9 @@ export async function replaceStatement(hh, source, month, rows, { cards = [], un
 export const addRule = async (hh, r) => must(await sb.from('rules').upsert({ household_id: hh, min_abs: null, max_abs: null, ...r }, { onConflict: 'household_id,source,kind,pattern' }));
 export const deleteRule = async (hh, source, pattern) => must(await sb.from('rules').delete().eq('household_id', hh).eq('source', source).eq('kind', 'regex').eq('pattern', pattern));
 export async function setCategoryMany(ids, category) { for (let i = 0; i < ids.length; i += 200) must(await sb.from('transactions').update({ category, pending: false }).in('id', ids.slice(i, i + 200))); }
+// Pesquisa de satisfação: what the app needs to pick it, and each event (shown, later, answered).
+export const surveyContext = async () => must(await sb.rpc('survey_context'));
+export const surveyEvent = async (hh, survey, kind, score, answers, version) => must(await sb.rpc('survey_event', { p_household: hh, p_survey: survey, p_kind: kind, p_score: score, p_answers: answers, p_version: version }));
 export const learnRule = async (hh, source, pattern, category) => must(await sb.rpc('learn_rule', { p_household: hh, p_source: source, p_pattern: pattern, p_category: category }));
 
 export const addCategory = async (hh, c) => must(await sb.from('categories').insert({ household_id: hh, ...c }).select().single());

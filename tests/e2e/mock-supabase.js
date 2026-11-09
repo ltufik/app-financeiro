@@ -55,6 +55,8 @@ class Q {
 
 const DEFAULT_CATS = [['Salário', 'renda'], ['Reembolsos', 'entrada'], ['Outras entradas', 'entrada'], ['Mercado', 'dia'], ['Restaurantes e delivery', 'dia'], ['Saúde', 'dia'], ['A classificar', 'dia'], ['Financiamento imobiliário', 'dia', true, true], ['Assinaturas', 'dia', false, true], ['Pagamento da fatura do cartão', 'neutro']];
 const rpcs = {
+  survey_context() { return window.__surveyCtx || { joined: new Date().toISOString(), active_days: 1, history: [] }; },
+  survey_event({ p_survey, p_kind, p_score, p_answers, p_version }) { (T.surveys ||= []).push({ survey: p_survey, kind: p_kind, score: p_score, answers: p_answers, version: p_version, created_at: new Date().toISOString() }); return null; },
   send_feedback({ p_household, p_kind, p_text, p_answer, p_screen, p_device, p_version }) {
     if (!['erro', 'ideia', 'critica', 'duvida'].includes(p_kind)) throw new Error('bad_kind'); if (String(p_text || '').trim().length < 3) throw new Error('too_short');
     const id = T.feedback.length + 1; T.feedback.push({ id, user_id: session.user.id, household_id: p_household, kind: p_kind, text: p_text, answer: p_answer, screen: p_screen, device: p_device, version: p_version, status: 'novo', helpful: null, created_at: now() }); return id;

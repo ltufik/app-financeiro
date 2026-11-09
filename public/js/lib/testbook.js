@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('pesquisa_satisfacao', 'Início', 'v119', 'ambos', 'Pesquisa de satisfação no momento certo',
+    ['Com uma conta que usa o app há mais de 2 semanas e tem 2 meses de fatura, abra o Início.', 'No cartão "Sua opinião · 1 minuto", toque em Responder e responda as 3 perguntas.', 'Em outra conta, nova (menos de 3 dias), abra o Início.'],
+    'O cartão traz o seu nome e a pesquisa do seu momento (quem usa há tempo vê a nota de 0 a 10). Sem responder, o botão não avança. Ao enviar, aparece o agradecimento e o cartão some. A conta nova não vê pesquisa. "Agora não" some o cartão por 7 dias. Na Central → Pesquisas aparece a resposta.'),
   t('repetidos_conciliacao', 'Lançar', 'v118', 'ambos', 'Lançado à mão + extrato: um só',
     ['Lance à mão um pix ou compra de hoje, com uma categoria e uma descrição sua (ex.: "bolo do aniversário").', 'Quando o extrato ou a fatura com esse lançamento chegar, mande em Lançar e confira "Já lançados por você".', 'Salve e procure o lançamento no Extrato. Em outro lançamento feito à mão, toque em Apagar.'],
     'Na revisão, o lançamento à mão aparece marcado em "Já lançados por você". Depois de salvar fica um só (o do banco), com a sua categoria e a sua descrição como anotação. Uma amortização já informada não pergunta de novo. Se algum repetido sobrar, o Extrato mostra "apareceu duas vezes" com Juntar. Apagar remove o lançamento feito à mão, com confirmação.'),

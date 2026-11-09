@@ -390,3 +390,29 @@ update public.members set role = 'owner' where user_id = '00000000-0000-0000-000
 \set ON_ERROR_STOP on
 reset role;
 select 'membro muda o nome, não o papel: ' || ((select display_name = 'Helena' and role = 'member' from members where user_id = '00000000-0000-0000-0000-000000000011'))::text;
+
+-- Pesquisa de satisfação: cada um vê só as suas; o contexto conta dias de uso; só o servidor lê todas.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000010';
+select public.survey_event(:'hg', 'nps', 'mostrou');
+select public.survey_event(:'hg', 'nps', 'respondeu', 9, '{"ajudou":["previsao"],"falta":"importar mais bancos"}'::jsonb, 'v119');
+select 'pesquisa: contexto traz o histórico: ' || ((select jsonb_array_length(public.survey_context()->'history') = 2))::text;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000011';
+select 'pesquisa: outra pessoa não vê as respostas: ' || ((select count(*) = 0 from surveys))::text;
+\set ON_ERROR_STOP off
+\echo (os erros a seguir são esperados: tipo inválido, nota fora da escala vira nula, sem acesso direto e ao relatório)
+select public.survey_event(:'hg', 'nps', 'apagou');
+insert into surveys(user_id, survey, kind) values ('00000000-0000-0000-0000-000000000010', 'nps', 'respondeu');
+select public.product_surveys();
+\set ON_ERROR_STOP on
+reset role;
+select 'pesquisa: escrever direto não passa: ' || ((select count(*) = 2 from surveys))::text;
+set role service_role;
+select 'pesquisa: o servidor lê o relatório: ' || ((select jsonb_array_length(public.product_surveys()) = 2))::text;
+select 'pesquisa: o servidor lê a tabela: ' || ((select count(*) = 2 from surveys))::text;
+reset role;
+set role anon;
+\set ON_ERROR_STOP off
+select public.survey_context();
+\set ON_ERROR_STOP on
+reset role;

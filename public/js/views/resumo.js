@@ -24,6 +24,7 @@ import { track } from '../usage.js';
 import { renderForecast } from '../forecast.js';
 import { cashPending } from '../cash.js';
 import { familyDups } from '../dupfix.js';
+import { renderSurvey } from '../survey.js';
 
 let goalPreset = 0;
 // Início sections: a clear one-line description; the person opens for the detail (remembered per section).
@@ -51,11 +52,12 @@ function demoCard() {
 export function render(el) {
   const ks = monthKeys(), G = goals();
   if (!ks.length) {
-    el.innerHTML = `<div class="panel hero"><h2>Boas-vindas, ${esc(first())}!</h2><p class="muted" style="margin-top:6px">O resumo do mês aparece aqui assim que vocês mandarem o primeiro PDF ou lançarem o primeiro gasto. Veja abaixo como fica, com uma família de exemplo.</p></div>${demoCard()}<div class="panel" id="stepsBox"></div><div id="insights"></div>`;
+    el.innerHTML = `<div class="panel stack surv-card" id="survBox" hidden></div><div class="panel hero"><h2>Boas-vindas, ${esc(first())}!</h2><p class="muted" style="margin-top:6px">O resumo do mês aparece aqui assim que vocês mandarem o primeiro PDF ou lançarem o primeiro gasto. Veja abaixo como fica, com uma família de exemplo.</p></div>${demoCard()}<div class="panel" id="stepsBox"></div><div id="insights"></div>`;
     el.querySelector('#demoPdf').onclick = () => { track('exemplo.fatura'); S.go('lancar'); import('./lancar.js').then(m => m.openMode('pdf', true)); };
     el.querySelector('#demoFalar').onclick = () => { track('exemplo.falar'); S.go('lancar'); import('./lancar.js').then(m => m.openMode('falar', true)); };
     renderInsights(el.querySelector('#insights'));
     renderSteps(el.querySelector('#stepsBox'));
+    renderSurvey(el.querySelector('#survBox'));
     return;
   }
   const yr = S.m.startsWith('ano:'), list = yr ? ks.filter(k => k.startsWith(S.m.slice(4))) : [S.m];
@@ -69,6 +71,7 @@ export function render(el) {
 
   const fees = feesHTML(), lvl = levelHTML(), subsAll = findRecurring(S.txs, monthKeys(), { idx: S.catIdx });
   el.innerHTML = `<p class="hello">Olá, ${esc(first())}.</p>
+  <div class="panel stack surv-card" id="survBox" hidden></div>
   <section class="todo" id="todo">
     <div class="todo-head"><p class="eyebrow" id="todoEyebrow">Seu próximo passo</p></div>
     <div id="closeCard"></div>
@@ -133,6 +136,7 @@ export function render(el) {
   el.querySelector('#plansMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.parcelas'); });
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas_lista'); });
   renderSteps(el.querySelector('#stepsBox'));
+  if (!yr) renderSurvey(el.querySelector('#survBox'));
   renderInsights(el.querySelector('#insights'));
   if (!yr) renderForecast(el.querySelector('#fcBox'));
   // The year retrospective: on top while there is a new edition (retroNotice); always in "Mais detalhes".

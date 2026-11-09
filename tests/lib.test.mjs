@@ -1267,3 +1267,29 @@ test('repetidos: o que foi lançado à mão e veio no extrato vira um só', () =
   assert.deepEqual(mergeInto(txs[0], txs[1]), { category: 'Festas', pending: false, note: 'Bolo e doces Amanda' });
   assert.deepEqual(mergeInto({ description: 'PIX ENVIADO AMANDA', category: 'A classificar' }, { description: 'PIX ENVIADO AMANDA' }), {});
 });
+
+import { pickSurvey, surveyDone, surveyResults, SURVEYS } from '../public/js/lib/survey.js';
+test('pesquisa: cada um vê a pesquisa do seu momento, nunca logo ao entrar e sem insistir', () => {
+  const now = '2026-11-30T12:00:00Z', base = { now, joined: '2026-11-01T12:00:00Z', activeDays: 4 };
+  assert.equal(pickSurvey({ ...base, joined: '2026-11-28T12:00:00Z' }), null); // just arrived
+  assert.equal(pickSurvey({ ...base, activeDays: 1 }), null);
+  assert.equal(pickSurvey({ ...base, months: 0 }), 'sem_fatura');
+  assert.equal(pickSurvey({ ...base, months: 1 }), 'um_mes');
+  assert.equal(pickSurvey({ ...base, months: 1, joined: '2026-11-25T12:00:00Z' }), null); // one month, too early to ask why it stopped
+  assert.equal(pickSurvey({ ...base, months: 3 }), 'nps');
+  assert.equal(pickSurvey({ ...base, months: 1, owner: false }), 'um_mes');
+  assert.equal(pickSurvey({ ...base, months: 2, owner: false, history: [] }), 'familia');
+  // "Agora não": waits 7 days; twice: never again. Answered one: 30 days of nothing; nps again after 90 days.
+  assert.equal(pickSurvey({ ...base, months: 0, history: [{ survey: 'sem_fatura', kind: 'adiou', at: '2026-11-27T12:00:00Z' }] }), null);
+  assert.equal(pickSurvey({ ...base, months: 0, history: [{ survey: 'sem_fatura', kind: 'adiou', at: '2026-11-20T12:00:00Z' }] }), 'sem_fatura');
+  assert.equal(pickSurvey({ ...base, months: 0, history: [1, 2].map(i => ({ survey: 'sem_fatura', kind: 'adiou', at: `2026-11-0${i}T12:00:00Z` })) }), null);
+  assert.equal(pickSurvey({ ...base, months: 3, history: [{ survey: 'um_mes', kind: 'respondeu', at: '2026-11-15T12:00:00Z' }] }), null);
+  assert.equal(pickSurvey({ ...base, months: 3, history: [{ survey: 'nps', kind: 'respondeu', at: '2026-08-15T12:00:00Z' }] }), 'nps');
+  assert.equal(pickSurvey({ ...base, months: 3, history: [{ survey: 'nps', kind: 'respondeu', at: '2026-10-15T12:00:00Z' }] }), null);
+  assert.equal(surveyDone('nps', { nota: 8 }), false); assert.equal(surveyDone('nps', { nota: 8, ajudou: ['previsao'] }), true);
+  const rows = [{ survey: 'nps', kind: 'mostrou', name: 'A' }, { survey: 'nps', kind: 'respondeu', score: 10, answers: { ajudou: ['previsao', 'avisos'], falta: 'mais bancos' }, name: 'A' }, { survey: 'nps', kind: 'respondeu', score: 6, answers: { ajudou: ['previsao'] }, name: 'B' }];
+  const r = surveyResults('nps', rows);
+  assert.equal(r.answered, 2); assert.equal(r.questions[0].nps, 0); assert.equal(r.questions[0].avg, 8);
+  assert.equal(r.questions[1].counts.previsao, 2); assert.deepEqual(r.questions[2].texts.map(t => t.text), ['mais bancos']);
+  assert.ok(Object.values(SURVEYS).every(s => s.questions.length >= 2));
+});

@@ -29,6 +29,7 @@ export const SCREENS = {
   lancar_revisao: { title: 'Revisão da fatura', where: 'Depois de enviar o PDF', key: 'lancar.pdf_ok' },
   extrato_categoria: { title: 'Extrato por categoria', where: 'Extrato → Categoria', key: 'extrato.categoria' },
   juntar_categorias: { title: 'Categorias parecidas', where: 'Menu ☰ → Configurações → Categorias (e aviso no Início)', key: 'categorias.juntar' },
+  pesquisa: { title: 'Pesquisa de satisfação', where: 'Cartão no Início, só no momento certo de cada pessoa', key: 'inicio.pesquisa_respondeu' },
   saque: { title: 'No que foi o saque', where: 'Lançar (quando há saque sem detalhe) e aviso no Início', key: 'lancar.saque_detalhado' },
   regra_aprender: { title: 'Ensinar o app (regra pelo nome)', where: 'Depois de mudar a categoria no Extrato ou no Fechar o mês', key: 'regras.aplicou' },
   anotacao: { title: 'Anotar um lançamento', where: 'Extrato → Anotar', key: 'extrato.anotacao' },
@@ -101,6 +102,8 @@ export const FLOWS = [
   { id: 'regras', title: 'Ensinar o app pelo nome', desc: 'Mudar um lançamento e todos os parecidos irem junto: menos trabalho a cada fatura.', steps: [
     st('extrato', 'No Extrato, muda a categoria de um lançamento'), st('regra_aprender', 'O app pergunta se tudo com o mesmo nome vai junto e mostra quantos mudam', 'regras.aplicou'),
     st('juntar_categorias', 'Em Categorias, vê as regras ensinadas (e desfaz, se quiser)', 'regras.desfez')] },
+  { id: 'pesquisa', title: 'Responder a pesquisa', desc: 'Cada pessoa vê a pesquisa do seu momento (sem fatura, um mês, família ou geral), nunca logo ao entrar.', steps: [
+    st('inicio', 'Vê o cartão "Sua opinião · 1 minuto" no Início', 'inicio.pesquisa_viu'), st('pesquisa', 'Toca em Responder e responde uma pergunta por vez', 'inicio.pesquisa_abriu'), st('pesquisa', 'Envia e recebe o agradecimento com o nome', 'inicio.pesquisa_respondeu')] },
   { id: 'saques', title: 'Contar no que foi o saque', desc: 'Dinheiro vivo some do controle; uma frase curta devolve a sobra certa.', steps: [
     st('inicio', 'Aviso no Início: "R$ … em saques sem detalhe"', null), st('saque', 'Em Lançar, escreve ou fala "200 feira, 100 uber" e salva', 'lancar.saque_detalhado')] },
   { id: 'falar', title: 'Lançar falando', desc: 'Pix e dinheiro antes do extrato chegar.', steps: [

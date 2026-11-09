@@ -709,6 +709,23 @@ if (nrows) { // Regras que aprendem: changing one entry offers to move everythin
   const un = await page.evaluate(() => ({ r: window.__db.rules.some(r => r.kind === 'regex' && /ZEBRAFOOD/.test(r.pattern)), c: ['rg1', 'rg2'].map(id => window.__db.transactions.find(t => t.id === id)?.category) }));
   ok('regras: desfazer apaga a regra e devolve as categorias de antes', !un.r && un.c[0] === 'Restaurante' && un.c[1] === 'A classificar', JSON.stringify(un));
 }
+{ // Pesquisa de satisfação: the survey of the person's moment as a card on Início (never right after joining); one question at a time.
+  await page.click('[data-tab=resumo]'); await page.waitForTimeout(600);
+  ok('pesquisa: não aparece para quem acabou de entrar', await page.evaluate(() => document.querySelector('#survBox')?.hidden === true));
+  await page.evaluate(async () => { window.__surveyCtx = { joined: new Date(Date.now() - 40 * 864e5).toISOString(), active_days: 6, history: [] }; (await import('/js/survey.js')).resetSurvey(); });
+  await page.click('[data-tab=resumo]'); await page.waitForSelector('#survBox:not([hidden])', { timeout: 8000 }).catch(() => {});
+  const sv = await txt('#survBox');
+  ok('pesquisa: quem usa há tempo vê a pesquisa geral, com o nome', sv.includes('Sua opinião') && /como está sendo usar/i.test(sv), sv.slice(0, 200));
+  await page.click('#svGo'); await page.waitForSelector('.surv');
+  ok('pesquisa: sem nota não avança', await page.isDisabled('#svNext'));
+  await page.click('.sv-scale [data-v="9"]'); await page.click('#svNext');
+  await page.click('.sv-opt[data-v="previsao"]'); await page.click('#svNext');
+  await page.fill('#svT', 'Ler mais bancos'); await page.click('#svNext');
+  await page.waitForFunction(() => (window.__db.surveys || []).some(s => s.kind === 'respondeu'), null, { timeout: 8000 }).catch(() => {});
+  const sr = await page.evaluate(() => (window.__db.surveys || []).find(s => s.kind === 'respondeu'));
+  ok('pesquisa: resposta salva com a nota, as opções e o texto', sr?.survey === 'nps' && sr.score === 9 && sr.answers.ajudou.includes('previsao') && sr.answers.falta === 'Ler mais bancos' && await page.isHidden('#survBox'), JSON.stringify(sr));
+  await page.evaluate(() => { window.__surveyCtx = null; });
+}
 if (nrows) { // Repetidos: typed by hand and brought again by the bill -> one tap keeps one, with the category and the words; a typed entry can be deleted.
   const cat0 = await page.evaluate(async () => { const { S } = await import('/js/state.js'); const m = new Date().toISOString().slice(0, 7), c = S.categories.find(x => x.name !== 'A classificar').name;
     const add = t => { t = { household_id: S.hh.id, source: 'cartao', month: m, amount: 77.7, splits: null, pending: false, ...t }; window.__db.transactions.push({ ...t }); S.txs.push(t); };

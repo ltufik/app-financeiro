@@ -332,3 +332,14 @@ export const DOC_REPETIDOS = { id: 'repetidos_doc', title: 'Lançado à mão + e
 ## Depois
 - findDups (lib/dups.js) acha pares que sobraram (à mão + banco, mesmo valor, até 5 dias) e amortizações cujo lançamento à mão sumiu e cuja linha do extrato não está ligada. O Extrato mostra "apareceu duas vezes" com Juntar, Juntar todos e "Não é repetido" (households.settings.dupSkip). O Início e o aviso das 9h avisam ("repetidos").
 - No Extrato, lançamento feito à mão tem o botão Apagar (com confirmação), a qualquer momento.` };
+
+export const DOC_PESQUISA = { id: 'pesquisa_doc', title: 'Pesquisa de satisfação', body: `Cada pessoa vê no máximo uma pesquisa, escolhida pelo momento dela no app. Aparece como cartão no Início (nunca pop-up), com o nome, e responde uma pergunta por vez.
+## Quem vê qual
+- **Sem fatura** (sem_fatura): ainda não mandou fatura nem extrato. Pergunta o que impediu (PDF, receio com os dados, trabalho, tempo, senha...).
+- **Um mês** (um_mes): mandou um mês, não fechou e entrou há 10 dias ou mais. Pergunta o que faltou para o próximo e se um aviso ajudaria.
+- **Família** (familia): entrou por convite, a família já tem fatura e a pessoa usou 3 dias. Pergunta se ajuda a conversar e se quer gastos só seus.
+- **Geral** (nps): 2 meses ou um mês fechado e 14 dias de app. Nota de 0 a 10, o que mais ajuda e o que falta.
+## Regras
+- Nunca para quem acabou de entrar: 3 dias desde a entrada e 2 dias de uso.
+- No máximo uma a cada 30 dias. "Agora não" espera 7 dias; depois de 2, aquela pesquisa não aparece mais. Respondida não volta (a geral volta depois de 90 dias).
+- Regras em lib/survey.js (testadas); tela em survey.js. Guarda em surveys (mostrou, adiou, respondeu; opções e textos curtos, nunca valores). Resultados em Central → Pesquisas (NPS, contagem por opção, textos).` };

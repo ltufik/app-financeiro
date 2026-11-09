@@ -138,6 +138,12 @@ await step('perguntar_resposta', async () => { await page.fill('#askText', 'quan
 await step('extrato', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(400); });
 await step('anotacao', async () => { await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in'); await page.fill('.nt-in', 'cabeleireiro Lily'); });
 await page.click('.cps .tx').catch(() => {});
+// Survey: the general one, for a family that has used the app for a while; the first question open.
+await step('pesquisa', async () => {
+  await page.evaluate(async () => { window.__surveyCtx = { joined: new Date(Date.now() - 40 * 864e5).toISOString(), active_days: 6, history: [] }; (await import('/js/survey.js')).resetSurvey(); });
+  await page.click('[data-tab=resumo]'); await page.waitForSelector('#survBox:not([hidden])', { timeout: 8000 }); await page.click('#svGo'); await page.waitForSelector('.surv'); await page.click('.sv-scale [data-v="9"]');
+});
+await page.click('#svBack').catch(() => {}); await page.evaluate(() => { window.__surveyCtx = null; document.querySelectorAll('.cfm-wrap').forEach(x => x.remove()); document.body.classList.remove('cfm-open'); }).catch(() => {});
 // Learned rule: change one entry and the app asks about everything with the same name.
 await step('regra_aprender', async () => {
   await page.evaluate(async () => { const { S } = await import('/js/state.js'); const m = '2026-09'; [['fr1', 'IFOOD *PIZZARIA BELLA', 'Restaurante'], ['fr2', 'IFOOD*HAMBURGUERIA', 'A classificar'], ['fr3', 'IFOOD *SUSHI DO BAIRRO', 'A classificar']].forEach(([id, d, c]) => S.txs.push({ id, household_id: S.hh.id, source: 'cartao', month: m, day: '12/09', description: d, amount: 68.9, category: c, manual: false })); S.render(); });

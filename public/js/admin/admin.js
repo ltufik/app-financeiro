@@ -19,11 +19,12 @@ import { TESTS, AREAS } from '../lib/testbook.js';
 import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS, screenLabel, screenShot } from './content.js';
 import { homeEngagement } from '../lib/homefeed.js';
 import { CHECKS } from '../lib/health.js';
+import { SURVEYS, surveyResults } from '../lib/survey.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
-const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
+const TABS = ['painel', 'opinioes', 'pesquisas', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -146,7 +147,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
+  ({ painel, opinioes, pesquisas, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -168,7 +169,7 @@ function labelTables(root) {
 // ---------- Side menu: three groups that open on click ----------
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
-  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
+  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
   { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
   { id: 'conta', title: 'Sua conta', icon: IC('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), items: [['acesso', 'Acesso e segurança']] },
@@ -375,6 +376,25 @@ const fail = (el, title, e) => { el.innerHTML = `<div class="ahead"><h1>${title}
 const FB_KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
 const FB_STATUS = { novo: 'Nova', visto: 'Lida', backlog: 'No backlog', resolvido: 'Resolvida' };
 let fbKind = '', fbStatus = 'aberto', replyOpen = null;
+// Pesquisas de satisfação: each survey with who saw it, answered or said "Agora não", the counts per option and the texts.
+async function pesquisas(el) {
+  el.innerHTML = '<div class="ahead"><h1>Pesquisas</h1></div><p class="small muted">Carregando...</p>';
+  let rows; try { rows = await getView('pesquisas'); } catch (e) { return fail(el, 'Pesquisas', e); }
+  const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+  const card = id => { const r = surveyResults(id, rows), max = q => Math.max(1, ...Object.values(q.counts || {}));
+    return `<article class="panel stack"><h2>${esc(r.title)}</h2><p class="tiny muted">Viram ${r.shown} · responderam ${r.answered} (${pct(r.answered, r.shown)}) · "Agora não" ${r.later} · <code>${id}</code></p>
+      ${r.questions.map(q => `<div class="stack"><p class="small"><strong>${esc(q.q)}</strong></p>${q.type === 'scale' ? `<p class="small">${q.n ? `Média <strong>${String(q.avg).replace('.', ',')}</strong> · NPS <strong>${q.nps}</strong> (${q.n} notas)` : 'Sem notas ainda.'}</p>`
+        : q.type === 'text' ? (q.texts.length ? `<ul class="small">${q.texts.map(t => `<li>${esc(t.text)} <span class="tiny muted">— ${esc(t.name || 'Alguém')}, ${dt(t.at)}</span></li>`).join('')}</ul>` : '<p class="tiny muted">Nenhum texto ainda.</p>')
+        : `<div class="stack">${q.options.map(([k, l]) => `<div class="tiny"><div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(l)}</span><strong>${q.counts[k]}</strong></div><div style="height:6px;border-radius:3px;background:var(--line)"><div style="height:6px;border-radius:3px;background:var(--accent);width:${q.counts[k] / max(q) * 100}%"></div></div></div>`).join('')}</div>`}</div>`).join('')}</article>`; };
+  el.innerHTML = `<div class="ahead"><h1>Pesquisas</h1><span class="tiny muted">${rows.filter(r => r.kind === 'respondeu').length} respostas</span></div>
+    <details class="panel"><summary class="small"><strong>Quem vê qual pesquisa (regras)</strong></summary><ul class="small">
+      <li>Nunca para quem acabou de entrar: pelo menos 3 dias desde a entrada e 2 dias de uso.</li>
+      <li>No máximo uma a cada 30 dias por pessoa. "Agora não" espera 7 dias; depois de 2 "Agora não", aquela pesquisa não aparece mais. Respondida não volta (a geral volta depois de 90 dias).</li>
+      <li><strong>Sem fatura</strong>: ainda não mandou fatura ou extrato. <strong>Um mês</strong>: mandou um mês, não fechou e entrou há 10 dias ou mais. <strong>Família</strong>: entrou por convite, já tem fatura e usou 3 dias. <strong>Geral (NPS)</strong>: 2 meses ou um mês fechado e 14 dias de app.</li>
+      <li>Aparece como cartão no Início (nunca pop-up), com o nome da pessoa; uma pergunta por vez.</li></ul></details>
+    <div class="stack">${Object.keys(SURVEYS).map(card).join('')}</div>`;
+}
+
 async function opinioes(el) {
   el.innerHTML = '<div class="ahead"><h1>Opiniões</h1></div><p class="small muted">Carregando...</p>';
   let list; try { list = await loadFb(true); } catch (e) { return fail(el, 'Opiniões', e); }
