@@ -1,0 +1,4 @@
+[
+  { "op": "add", "item": { "id": "missoes_e_desafios", "title": "Missões e desafios para chegar nas metas (gamificação)", "status": "proximo", "origin": "Luiz", "effort": "G", "problem": "Informar não basta: o app precisa desafiar a família a agir para chegar nas metas, e hoje quase todos param antes da primeira fatura", "notes": "Missões de começo (mandar a 1ª fatura e o extrato, ligar avisos, convidar a família, fechar o 1º mês) e desafios pelo fluxo financeiro, metas e dados do app (ex.: semana sem delivery, gastar até R$ X por dia até o fim do mês, guardar a meta do mês, rever uma assinatura, detalhar os saques). Progresso visível, ligado aos níveis do ano. Desafio aceito pela pessoa, com prazo; push de lembrete e de resultado. Junta com desafio_de_meta_52_semanas_mes_sem_deliv.", "from": [], "where": "Início; Notificações" } },
+  { "op": "update", "id": "desafio_de_meta_52_semanas_mes_sem_deliv", "set": { "notes": "Entra em missoes_e_desafios." } }
+]
