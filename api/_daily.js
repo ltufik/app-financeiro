@@ -27,14 +27,14 @@ export function brToday(now = Date.now()) { const d = new Date(now - 3 * 3600e3)
 
 
 // Family's insights, built the same way as the home screen.
-export function familyInsights({ household, categories, txs }, today) {
+export function familyInsights({ household, categories, txs }, today, name = '') {
   const idx = catIndex(categories), st = household.settings || {}, g = { cardMonthly: 0, savings: 0.2, patrimonio: 0, ret: 0.05, ...(st.goals || {}) };
   const of = k => txs.filter(t => t.month === k), months = [...new Set(txs.map(t => t.month))].sort();
   const cards = [...new Set(txs.filter(t => t.source === 'cartao' && !t.manual).map(t => t.month))].sort(), L = cards[cards.length - 1];
   const rec = (st.recurring || []).reduce((a, r) => a + (+r[1] || 0), 0);
   const nf = L ? (() => { const open = addM(L, 1); const man = txs.filter(t => t.manual && t.month === open && t.source === 'cartao').reduce((a, t) => a + +t.amount, 0); return { month: open, total: schedule(of(L).filter(t => t.source === 'cartao'), 12)[0] + rec + man }; })() : null;
   return insights({
-    today, months, calc: k => monthCalc(of(k), idx), cats: k => byCategory(of(k), idx),
+    today, months, name, calc: k => monthCalc(of(k), idx), cats: k => byCategory(of(k), idx),
     fixed: k => expandSplits(of(k)).reduce((a, t) => { const c = idx.get(t.category); return c && c.grp === 'dia' && c.recurring ? a + (t.source === 'conta' ? -t.amount : +t.amount) : a; }, 0),
     has: (k, src) => txs.some(t => t.month === k && t.source === src && !t.manual),
     fees: k => feesOf(of(k)), feesYear: () => feesOf(txs.filter(t => t.month > addM(today.slice(0, 7), -12))),
@@ -82,11 +82,13 @@ export async function runDaily({ supabaseUrl, serviceKey, vapid, fetchImpl = fet
       }
       txs = privatize(txs, catIndex(categories), []); // "só meu" entries count as totals; their details never go into a push
       out.families++;
-      const ins = familyInsights({ household, categories, txs }, today), week = weekly(txs, catIndex(categories), today);
+      // Each person gets the notices with their own name (computed once per name).
+      const per = new Map(), forName = nm => { if (!per.has(nm)) per.set(nm, { ins: familyInsights({ household, categories, txs }, today, nm), week: weekly(txs, catIndex(categories), today, nm) }); return per.get(nm); };
       for (const sub of list) {
+        const nm = firstOf(sub.user_id), { ins, week } = forName(nm);
         const msg = pick(ins, week, sub, today, dow);
         if (!msg) { out.skipped++; continue; }
-        const nm = firstOf(sub.user_id), title = msg.id === 'fatura' && nm ? `${nm}, a fatura do cartão fechou` : msg.title;
+        const title = msg.title;
         const r = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: msg.text.slice(0, 220), url: msg.url, tag: msg.id }, vapid, fetchImpl).catch(() => ({ ok: false }));
         if (r.gone) { await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${sub.id}`, { method: 'DELETE', headers: H }); out.removed++; continue; }
         if (!r.ok) { out.errors++; continue; }

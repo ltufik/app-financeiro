@@ -26,12 +26,13 @@ export default async function handler(req, res) {
     const members = await get(`members?household_id=eq.${b.household}&select=user_id,display_name`);
     const self = members.find(m => m.user_id === me.id); if (!self) return res.status(403).json({ error: 'not_member' });
     const [hh] = await get(`households?id=eq.${b.household}&select=name`);
-    const msg = message({ type: b.type, name: (self.display_name || 'Alguém').split(' ')[0], family: hh?.name || 'família', source: b.source, month: b.month });
-    const subs = (await get(`push_subscriptions?household_id=eq.${b.household}&user_id=neq.${me.id}&select=id,endpoint,p256dh,auth,prefs`)).filter(s => s.prefs?.familia !== false);
+    const first = m => String(m?.display_name || '').trim().split(/\s+/)[0];
+    const msgFor = uid => message({ type: b.type, name: first(self) || 'Alguém', to: first(members.find(m => m.user_id === uid)), family: hh?.name || 'família', source: b.source, month: b.month });
+    const subs = (await get(`push_subscriptions?household_id=eq.${b.household}&user_id=neq.${me.id}&select=id,user_id,endpoint,p256dh,auth,prefs`)).filter(s => s.prefs?.familia !== false);
     let sent = 0;
     await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'familia', run: false }, async () => {
       for (const s of subs) {
-        const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { ...msg, tag: msg.tag || b.type }, vapid).catch(() => ({ ok: false }));
+        const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { ...msgFor(s.user_id), tag: msgFor(s.user_id).tag || b.type }, vapid).catch(() => ({ ok: false }));
         if (r.gone) await fetch(`${URL_}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'DELETE', headers: H });
         if (r.ok) sent++;
       }

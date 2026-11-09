@@ -221,14 +221,14 @@ test('insights: faltam dados, vermelho, economia, gasto alto, cartão, fixas e p
   // a good month: congratulations with the time to reach the goal; month ending without entries
   const b = insights({ ...base, months: ['2026-07', '2026-08', '2026-09'], today: '2026-10-28', has: (k, src) => k <= '2026-09' || (src === 'cartao' && k === '2026-10'), nextFatura: null, fixed: () => 0, pending: () => 0 });
   const bi = b.map(x => x.id);
-  assert.ok(bi.includes('saved')); assert.match(b.find(x => x.id === 'saved').text, /30% da renda.*cerca de 12 anos/);
+  assert.ok(bi.includes('saved')); assert.match(b.find(x => x.id === 'saved').title, /guardaram 30% em setembro/); assert.match(b.find(x => x.id === 'saved').text, /cerca de 12 anos/);
   assert.ok(bi.includes('low')); assert.ok(bi.includes('ending')); assert.match(b.find(x => x.id === 'ending').text, /Faltam 4 dias/);
   assert.ok(!bi.includes('missing'));
   // no data at all: nothing to say
   assert.deepEqual(insights({ ...base, months: [], today: '2026-10-10', has: () => false }), []);
   // the card bill closed (day 24) and is not in the app yet: first, with a link to send it; once sent, gone
   const c = insights({ ...base, closeDay: 24, today: '2026-11-26', has: (k, src) => !(src === 'cartao' && k === '2026-11') });
-  const cf = c.find(x => x.id === 'fatura'); assert.ok(cf); assert.match(cf.text, /Fechou dia 24\/11.*dinheiro de novembro/); assert.deepEqual(cf.action.go, ['lancar', '#drop']);
+  const cf = c.find(x => x.id === 'fatura'); assert.ok(cf); assert.match(cf.text, /Fechou dia 24\/11.*dinheiro de vocês em novembro/); assert.deepEqual(cf.action.go, ['lancar', '#drop']);
   assert.ok(!c.find(x => x.id === 'missing')?.text.includes('fatura de novembro'));
   assert.ok(!insights({ ...base, closeDay: 24, today: '2026-11-26', has: () => true }).some(x => x.id === 'fatura'));
   assert.ok(!insights({ ...base, closeDay: 24, today: '2026-11-24', has: (k, src) => !(src === 'cartao' && k === '2026-11') }).some(x => x.id === 'fatura'), 'not on the closing day itself');
@@ -240,9 +240,9 @@ test('insights: faltam dados, vermelho, economia, gasto alto, cartão, fixas e p
   // what the bank charged: interest is bad news, fees are information
   const F = (j, t) => ({ total: j + t, by: { juros: j, iof: 0, anuidade: t, tarifa: 0 } });
   const j = insights({ ...base, today: '2026-11-15', has: () => true, fees: () => F(45.9, 0), feesYear: () => F(45.9, 0) }).find(x => x.id === 'juros');
-  assert.equal(j.tone, 'bad'); assert.match(j.text, /outubro o banco cobrou R\$\s?45,90 de juros/);
+  assert.equal(j.tone, 'bad'); assert.match(j.text, /outubro vocês pagaram R\$\s?45,90 de juros/);
   const tf = insights({ ...base, today: '2026-11-15', has: () => true, fees: () => F(0, 125), feesYear: () => F(0, 1500) }).find(x => x.id === 'tarifas');
-  assert.match(tf.text, /anuidade; R\$ 1\.500 nos últimos 12 meses/);
+  assert.match(tf.text, /anuidade, e R\$ 1\.500 nos últimos 12 meses/);
 });
 
 test('grupos: receita e despesa, fixa, variável ou extra', async () => {
@@ -291,7 +291,7 @@ test('orçamento por categoria: uso, ritmo, sugestão e aviso', async () => {
   assert.deepEqual(suggestBudgets([{ Mercado: 2010, Lazer: 400, 'A classificar': 900 }, { Mercado: 1890, Lazer: 520 }]), { Mercado: 1950, Lazer: 450 });
   const ins = insights({ today: '2026-10-10', months: ['2026-10'], calc: () => ({ res: 0, renda: 0, E: 0, out: 0, tx: 0 }), cats: () => ({ Mercado: 1700, Lazer: 600 }), has: () => true, manualCount: () => 1, pending: () => 0, goals: {}, nextFatura: null, budgets: { Mercado: 2000, Lazer: 500 } });
   const b = ins.find(x => x.id === 'budget');
-  assert.equal(b.title, 'Orçamento estourado: Lazer'); assert.match(b.text, /Lazer já passou R\$ 100 do limite de R\$ 500\. Mercado já usou 85% de R\$ 2\.000 e faltam 21 dias\./);
+  assert.equal(b.title, 'Lazer passou do orçamento'); assert.match(b.text, /Lazer já passou R\$ 100 do limite de R\$ 500\. Mercado já usou 85% de R\$ 2\.000 e faltam 21 dias\./);
 });
 
 test('assinaturas: acha cobranças que se repetem e o aumento de preço', async () => {
@@ -675,15 +675,15 @@ test('insights: quanto dá para gastar por dia no cartão e conta fixa acima do 
     goals: { savings: 0.2, cardMonthly: 5000 }, nextFatura: { month: '2026-11', total: 3000 }, fixedCats: ['Moradia', 'Escola'], closeDay: 24 };
   const a = insights({ ...base, today: '2026-11-14' });
   const pd = a.find(x => x.id === 'perday');
-  assert.ok(pd); assert.equal(pd.title, 'Dá para gastar cerca de R$ 200 por dia no cartão'); assert.match(pd.text, /Sobram R\$ 2\.000 para os 10 dias/);
+  assert.ok(pd); assert.equal(pd.title, 'Dá para gastar R$ 200 por dia no cartão'); assert.match(pd.text, /Sobram R\$ 2\.000 para os 10 dias/);
   const bu = a.find(x => x.id === 'bill_up');
-  assert.ok(bu); assert.equal(bu.title, 'Moradia veio acima do normal'); assert.match(bu.text, /Moradia: R\$ 1\.050 em outubro, R\$ 350 \(50%\) acima da média/);
+  assert.ok(bu); assert.equal(bu.title, 'Moradia veio acima da média'); assert.match(bu.text, /Moradia: R\$ 1\.050 em outubro, R\$ 350 \(50%\) acima da média/);
   // After the closing day, the days run to next month's closing; above the limit, no per-day message.
   assert.match(insights({ ...base, today: '2026-11-26' }).find(x => x.id === 'perday').text, /28 dias/);
   assert.ok(!insights({ ...base, today: '2026-11-14', nextFatura: { month: '2026-11', total: 5200 } }).some(x => x.id === 'perday'));
   // Real case: Luiz typed R$ 13 mil as the open bill; the estimate said R$ 8,8 mil. The typed value wins.
   const typed = insights({ ...base, today: '2026-11-14', goals: { savings: 0.2, cardMonthly: 17000 }, nextFatura: { month: '2026-11', total: 8819 }, checkins: [{ date: '2026-11-06', month: '2026-11', value: 13150 }] });
-  assert.match(typed.find(x => x.id === 'perday').text, /^A fatura de novembro está em R\$ 13\.150 \(o valor que vocês informaram em 06\/11\) e o limite combinado é R\$ 17\.000\. Sobram R\$ 3\.850/);
+  assert.match(typed.find(x => x.id === 'perday').text, /^A fatura de vocês de novembro está em R\$ 13\.150 \(o valor que vocês informaram em 06\/11\), e o limite combinado é R\$ 17\.000\. Sobram R\$ 3\.850/);
   // An older, lower typed value does not hide installments already above it.
   assert.match(insights({ ...base, today: '2026-11-14', goals: { savings: 0.2, cardMonthly: 17000 }, nextFatura: { month: '2026-11', total: 8819 }, checkins: [{ date: '2026-11-02', month: '2026-11', value: 4000 }] }).find(x => x.id === 'perday').text, /já soma R\$ 8\.819/);
 });
@@ -1342,7 +1342,7 @@ test('insights: o mês que está acontecendo nunca "fechou" (no vermelho ou não
   const base = { months: Object.keys(M), calc: k => M[k], cats: () => ({ Escola: 3000 }), fixed: () => 0, manualCount: () => 0, pending: () => 0, goals: { savings: 0.2 }, has: () => true };
   const a = insights({ ...base, today: '2026-11-09' });
   assert.ok(!a.some(x => /novembro fechou/i.test(x.title))); assert.ok(!a.some(x => x.id === 'red'));
-  assert.ok(a.some(x => x.id === 'saved' && /outubro/.test(x.text)));
+  assert.ok(a.some(x => x.id === 'saved' && /outubro/.test(x.title)));
   const b = insights({ ...base, today: '2026-12-02' });
   assert.ok(b.some(x => x.id === 'red' && /Novembro fechou no vermelho/.test(x.title)));
 });
@@ -1382,4 +1382,19 @@ test('previsão: extrato parcial conta o salário que ainda vai entrar e as fixa
   // The whole month in: nothing on top.
   const full = forecast({ txs: [...txs, { month: '2026-11', source: 'conta', date: '2026-11-30', amount: 16000, category: 'Salário' }], categories, settings: { goals: { savings: 0.2 }, cardCloseDay: 28 }, today: '2026-11-30' });
   assert.equal(full.coming.income.length + full.coming.fixed.length + full.coming.variable, 0);
+});
+
+test('manual de mensagens: todas as mensagens do app (Central → Mensagens) estão dentro do manual', async () => {
+  const m = await import('../public/js/admin/msgscenarios.js'), { checkMessage } = await import('../public/js/lib/msgcheck.js');
+  const groups = [...m.SCENARIOS.map(s => ({ today: s.today, list: m.scenarioMessages(s) })), { today: '2026-11-15', list: m.otherPushes() }];
+  const bad = groups.flatMap(g => g.list.map(x => [x.id, checkMessage(x, { today: g.today, name: m.PERSON }).map(p => p.text)])).filter(([, p]) => p.length);
+  assert.deepEqual(bad, []);
+});
+test('o financiamento aparece no aviso do mês abaixo da meta, com o número', async () => {
+  const { insights } = await import('../public/js/lib/insights.js');
+  const M = { '2026-09': { res: 3000, renda: 10000, out: 7000, tx: 0.3 }, '2026-10': { res: 1200, renda: 10000, out: 8800, tx: 0.12, fin: 2200, tx2: 0.34 } };
+  const a = insights({ months: Object.keys(M), today: '2026-11-09', name: 'Luiz Elias', calc: k => M[k], cats: () => ({}), fixed: () => 0, has: () => true, manualCount: () => 0, pending: () => 0, goals: { savings: 0.2 } });
+  const b = a.find(x => x.id === 'below');
+  assert.equal(b.title, 'Luiz, vocês guardaram 12% em outubro');
+  assert.match(b.text, /faltaram R\$ 800\. Sem contar o financiamento \(R\$ 2\.200\), seriam 34%: ele também é patrimônio/);
 });

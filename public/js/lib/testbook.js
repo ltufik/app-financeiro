@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('mensagens_personalizadas', 'Início', 'v125', 'ambos', 'Avisos com o nome e os números de vocês',
+    ['Abra o Início e leia os avisos de cima.', 'Se receber um push (9h, domingo ou 21h), leia o título.', 'Num mês que fechou abaixo da meta por causa do financiamento, leia o aviso do mês.'],
+    'Todo aviso começa com o seu nome ("Luiz, …"), fala de vocês com "vocês", traz o valor da família comparado com a média de vocês e tem um botão que leva direto ao lugar. Nada de "vale olhar" ou "faltam dados". A etiqueta "Sem contar o financiamento" saiu do Início; quando o financiamento é o motivo de ficar abaixo da meta, o aviso do mês diz quanto seria sem ele.'),
   t('previsao_o_que_falta', 'Início', 'v124', 'ambos', 'Previsão conta o que ainda vai entrar e sair',
     ['No começo do mês, com o extrato parcial (antes do salário e das contas fixas) no app, abra a Previsão do mês no Início.'],
     'A previsão não fica no vermelho só porque o salário ainda não entrou. Embaixo aparece "Já conta com R$ … que ainda devem entrar (Salário) e R$ … de contas fixas e financiamentos que ainda vão sair, pelo extrato até dd/mm". O valor por dia considera esse resto do mês.'),

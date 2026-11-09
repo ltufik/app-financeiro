@@ -64,7 +64,8 @@ test('avisos do dia: escolhe um por aparelho, respeita preferências e não repe
   assert.equal(pick(withBill, week, { prefs: { dados: false } }, today, 3).id, 'red');
   assert.deepEqual(brToday(Date.parse('2026-11-16T02:00:00Z')), { iso: '2026-11-15', dow: 0 });
   const w = weekly([{ source: 'cartao', date: '2026-11-14', amount: 120, category: 'Mercado' }, { source: 'conta', date: '2026-11-13', amount: -80, category: 'Lazer' }, { source: 'conta', date: '2026-11-01', amount: -999, category: 'Lazer' }], catIndex([{ name: 'Mercado', grp: 'dia' }, { name: 'Lazer', grp: 'dia' }]), today);
-  assert.match(w.text, /R\$ 200 em despesas\. Maiores: Mercado R\$ 120, Lazer R\$ 80/);
+  assert.match(w.text, /R\$ 200 em despesas nos últimos 7 dias, R\$ 50 a menos que uma semana normal de vocês\. Mais pesaram: Mercado R\$ 120, Lazer R\$ 80/);
+  assert.equal(weekly([], new Map(), '2026-11-15', 'Mari Souza').title, 'Mari, nenhum gasto de vocês lançado na semana');
 });
 
 test('rotina diária: lê o banco, manda o aviso certo, marca o envio e remove aparelho que saiu', async () => {
@@ -96,7 +97,7 @@ test('rotina diária: lê o banco, manda o aviso certo, marca o envio e remove a
   };
   const out = await runDaily({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'sb_secret_x', vapid, fetchImpl: fake, now: Date.parse('2026-11-15T15:00:00Z') });
   assert.deepEqual(out, { families: 1, sent: 1, skipped: 0, removed: 2, errors: 0 });
-  assert.equal(pushes.length, 1); assert.match(pushes[0].title, /vermelho/); assert.equal(pushes[0].url, '/?tab=perguntar');
+  assert.equal(pushes.length, 1); assert.match(pushes[0].title, /vermelho/); assert.equal(pushes[0].url, '/?tab=graficos');
   assert.deepEqual(patches, [['?id=eq.s1', { last_sent: { red: '2026-11-15' } }]]);
   assert.deepEqual(deletes.sort(), ['?id=eq.s2', '?id=eq.s3']);
 });
@@ -104,9 +105,10 @@ test('rotina diária: lê o banco, manda o aviso certo, marca o envio e remove a
 test('avisos da família: textos de entrou, importou e fechou', async () => {
   const { message } = await import('../api/notify.js');
   assert.equal(message({ type: 'joined', name: 'Luana', family: 'Família Elias' }).title, 'Luana entrou na família');
-  assert.equal(message({ type: 'imported', name: 'Luana', source: 'cartao', month: '2026-10' }).title, 'Luana importou a fatura de outubro');
-  assert.equal(message({ type: 'imported', name: 'Luiz', source: 'conta', month: '2026-09' }).title, 'Luiz importou o extrato de setembro');
+  assert.equal(message({ type: 'imported', name: 'Luana', source: 'cartao', month: '2026-10' }).title, 'Luana mandou a fatura de outubro');
+  assert.equal(message({ type: 'imported', name: 'Luiz', source: 'conta', month: '2026-09' }).title, 'Luiz mandou o extrato de setembro');
   assert.equal(message({ type: 'closed', name: 'Luiz', month: '2026-09' }).url, '/?tab=fechar');
+  assert.equal(message({ type: 'imported', name: 'Luana', to: 'Luiz', source: 'cartao', month: '2026-10' }).title, 'Luiz, Luana mandou a fatura de outubro');
   assert.equal(message({ type: 'x' }), null);
 });
 

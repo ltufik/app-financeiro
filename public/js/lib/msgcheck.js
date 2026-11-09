@@ -3,7 +3,7 @@
 // Returns the problems found, in plain words. Pure, tested in tests/lib.test.mjs.
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 // Personal messages talk to "você"; everything about the family's money talks about "vocês".
-export const PERSONAL = new Set(['lembrete', 'lembrete_vazio', 'recado', 'teste', 'familia_joined', 'familia_imported', 'familia_closed']);
+export const PERSONAL = new Set(['lembrete', 'lembrete_vazio', 'recado', 'teste']);
 // Messages about money that must carry the family's own numbers, and the ones that must compare with the family's normal.
 const NEEDS_NUMBER = new Set(['red', 'saved', 'below', 'high', 'low', 'card', 'perday', 'fixed', 'bill_up', 'subs_up', 'budget', 'juros', 'tarifas', 'semanal', 'previsao', 'saques', 'entrada_amortizacao']);
 const NEEDS_COMPARE = new Set(['red', 'high', 'low', 'bill_up', 'semanal']);

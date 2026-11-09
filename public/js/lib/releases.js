@@ -496,4 +496,8 @@ export const RELEASES = [
     'A previsão agora conta o que ainda vai acontecer no mês: o salário que ainda vai entrar e as contas fixas e financiamentos que ainda vão sair, pelo jeito dos seus últimos meses.',
     'Embaixo da previsão aparece o que ela já está contando, e o valor por dia para bater a meta considera esse resto do mês.',
   ] } },
+  { id: 'r125', version: 'v125', at: '2026-11-09T23:20:00Z', updateDocs: [DOC_MENSAGENS], backlog: ['comunicacoes_personalizadas'], news: { id: 'n20261109f', title: 'Avisos com a cara de vocês', items: [
+    'Os avisos do Início e do celular agora falam com você pelo nome e trazem os números de vocês, comparados com a média de vocês, com um botão que leva direto ao que fazer.',
+    'A etiqueta "Sem contar o financiamento" saiu do Início: quando o financiamento é o motivo de ficar abaixo da meta, o aviso do mês mostra quanto vocês guardariam sem ele.',
+  ] } },
 ];

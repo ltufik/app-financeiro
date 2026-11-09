@@ -403,7 +403,7 @@ if (backup) {
   const hero = await txt('#v-resumo .big');
   ok('setembro: sobra R$ 2.658,50', hero.includes('2.658,50'), hero);
   const pills = await txt('#v-resumo .hero .chips');
-  ok('setembro: 6% e 18%', pills.includes('Guardaram 6% · queriam 20%') && pills.includes('Sem contar o financiamento 18%'), pills);
+  ok('setembro: guardaram 6% (o "sem o financiamento" saiu do Início e virou aviso)', pills.includes('Guardaram 6% · queriam 20%') && !pills.includes('financiamento'), pills);
   ok('próxima fatura com parcelas', (await txt('#v-resumo')).includes('Parcelas R$ 8.401'));
   ok('meta e patrimônio aparecem', (await txt('#v-resumo')).includes('Sonho: R$ 3.000.000 investidos aos 55 anos'));
   { // The pace is the real average of the last complete months, never the old fixed "Ritmo atual".
@@ -1056,8 +1056,8 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-7-servicos.png'), fullPage: true });
   await atab('mensagens'); await ap.waitForSelector('.msgcard');
   const mx = await ap.textContent('#aMain');
-  ok('central: mensagens mostra os avisos e pushes da família fictícia, com o que está fora do manual', (await ap.$$('.msgcard')).length >= 20 && mx.includes('fora do manual') && mx.includes('Outubro fechou no vermelho') && mx.includes('Não traz o nome'), mx.slice(0, 200));
-  await ap.click('[data-r="nome"]'); ok('central: mensagens filtra por regra', (await ap.$$('.msgcard')).length >= 10);
+  ok('central: mensagens mostra os avisos e pushes da família fictícia, todos dentro do manual', (await ap.$$('.msgcard')).length >= 20 && mx.includes('0 fora do manual') && mx.includes('Ana, outubro fechou no vermelho') && (await ap.$$('.msg-bad')).length === 0, mx.slice(0, 200));
+  await ap.click('[data-r="nome"]'); ok('central: mensagens filtra por regra (nenhuma sem nome)', (await ap.$$('.msgcard')).length === 0);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-8-mensagens.png'), fullPage: true });
   await atab('docs'); await ap.waitForSelector('.docsec');
   ok('central: documentação com glossário', (await ap.textContent('#aMain')).includes('Glossário da interface'));

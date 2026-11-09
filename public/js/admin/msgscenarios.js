@@ -21,7 +21,7 @@ const base = (over = {}) => {
     goals: { savings: 0.2, cardMonthly: 6000, patrimonio: 800000 }, nextFatura: { month: '2026-11', total: 4300 }, etaYears: () => 14, closeDay: 28,
     fixedCats: ['Escola', 'Moradia e contas'], budgets: { Delivery: 500 }, recurring: [{ name: 'Netflix', rise: 6, current: true, prev: 39.9, last: 45.9 }],
     fees: k => (k === '2026-10' ? { total: 92.4, by: { juros: 0, tarifa: 92.4 } } : null), feesYear: () => ({ total: 640 }), cashPending: [{ amount: -400 }, { amount: -600 }],
-    dups: 1, funding: [], catMerge: 1, catMergeText: 'Mercado e Supermercado', toClose: null, checkins: [], ...over };
+    dups: 1, funding: [], catMerge: 1, catMergeText: 'Mercado e Supermercado parecem a mesma coisa.', toClose: null, checkins: [], ...over };
 };
 
 export const SCENARIOS = [
@@ -41,22 +41,22 @@ const pushUrl = x => x.action ? linkFor('tela', { tab: x.action.go[0], sec: x.ac
 
 // Every message of a scenario: the notices on Início (also the 9h push, the most urgent one) and the other pushes.
 export function scenarioMessages(sc) {
-  const ins = insights({ ...sc.ctx, today: sc.today });
+  const ins = insights({ ...sc.ctx, today: sc.today, name: PERSON });
   const out = ins.map(x => ({ channel: 'inicio', id: x.id, tone: x.tone, title: x.title, text: x.text, action: x.action || null }));
   const top = ins.find(x => x.id === 'fatura') || ins.find(x => x.tone === 'bad' || x.tone === 'warn') || ins[0];
-  if (top) out.push({ channel: 'push', where: 'Push das 9h (o aviso mais urgente)', id: top.id, title: top.id === 'fatura' ? `${PERSON.split(' ')[0]}, a fatura do cartão fechou` : top.title, text: top.text, url: pushUrl(top) });
+  if (top) out.push({ channel: 'push', where: 'Push das 9h (o aviso mais urgente)', id: top.id, title: top.title, text: top.text, url: pushUrl(top) });
   return out;
 }
 export function otherPushes() {
   const idx = catIndex([{ name: 'Mercado', grp: 'dia' }, { name: 'Delivery', grp: 'dia' }]);
-  const w = weekly([{ source: 'cartao', date: '2026-11-14', amount: 420, category: 'Mercado' }, { source: 'cartao', date: '2026-11-13', amount: 160, category: 'Delivery' }], idx, '2026-11-15');
-  const ft = forecastText(FC), sa = sundayAsk(FC, { name: PERSON, sent: {}, checkins: [], today: '2026-11-15' });
+  const w = weekly([{ source: 'cartao', date: '2026-11-14', amount: 420, category: 'Mercado' }, { source: 'cartao', date: '2026-11-13', amount: 160, category: 'Delivery' }, { source: 'cartao', date: '2026-11-01', amount: 1200, category: 'Mercado' }], idx, '2026-11-15', PERSON);
+  const ft = forecastText(FC, PERSON), sa = sundayAsk(FC, { name: PERSON, sent: {}, checkins: [], today: '2026-11-15' });
   const r1 = reminderMessage(PERSON), r2 = reminderMessage(PERSON, { empty: true });
-  const fam = ['joined', 'imported', 'closed'].map(type => ({ type, m: familyNotice({ type, name: PARTNER.split(' ')[0], family: 'Família Souza', source: 'cartao', month: '2026-10' }) }));
+  const fam = ['joined', 'imported', 'closed'].map(type => ({ type, m: familyNotice({ type, name: PARTNER.split(' ')[0], to: PERSON.split(' ')[0], family: 'Família Souza', source: 'cartao', month: '2026-10' }) }));
   return [
     { channel: 'push', where: 'Domingo, resumo da semana', id: 'semanal', title: w.title, text: w.text, url: w.url },
     { channel: 'push', where: 'Domingo 19h, previsão do mês', id: 'previsao', title: sa?.msg.title, text: sa?.msg.body, url: linkFor('tela', { tab: 'resumo', sec: 'previsao' }) },
-    { channel: 'inicio', where: 'Início, Previsão do mês', id: 'previsao', title: ft.title, text: `${ft.head} ${ft.day} ${ft.counted}`, action: { label: 'Atualizar a previsão' } },
+    { channel: 'inicio', where: 'Início, Previsão do mês', id: 'previsao', title: ft.title, text: `${ft.head} ${ft.day}`, detail: ft.counted, action: { label: 'Atualizar a previsão' } },
     { channel: 'push', where: '21h, quem não lançou nada hoje', id: 'lembrete', title: r1.title, text: r1.body, url: r1.url },
     { channel: 'push', where: '21h, família ainda sem dados', id: 'lembrete_vazio', title: r2.title, text: r2.body, url: r2.url },
     ...fam.map(({ type, m }) => ({ channel: 'push', where: `Para o resto da família quando ${PARTNER.split(' ')[0]} ${type === 'joined' ? 'entra' : type === 'imported' ? 'manda a fatura' : 'fecha o mês'}`, id: 'familia_' + type, title: m.title, text: m.body, url: m.url })),

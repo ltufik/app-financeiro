@@ -371,4 +371,6 @@ export const DOC_MENSAGENS = { id: 'mensagens_doc', title: 'Mensagens: o manual 
 ## Como funciona
 - As regras estão em lib/msgcheck.js (testadas). Os cenários em admin/msgscenarios.js usam as mesmas funções do app e dos robôs (insights, previsão, pushtexts), então o que aparece na Central é o que as pessoas recebem.
 - Os textos dos pushes que não vêm do Início (resumo da semana, lembrete das 21h, avisos da família) ficam em lib/pushtexts.js.
-- Próximo passo: reescrever as mensagens até todas ficarem dentro do manual, e então o teste passa a exigir isso.` };
+- Desde a v125 todas estão dentro do manual, e o teste (tests/lib.test.mjs) não deixa publicar mensagem fora dele.
+- O nome vem de quem está vendo (Início) ou de quem recebe (push: o robô monta os avisos uma vez por nome).
+- "Sem contar o financiamento": saiu do Início (etiqueta fixa). Aparece no aviso do mês que ficou abaixo da meta quando havia financiamento: "Sem contar o financiamento (R$ X), seriam Y%". O gráfico de quanto guardaram mantém as barras vazadas.` };

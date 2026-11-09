@@ -100,7 +100,8 @@ export function forecast({ txs: all, categories, settings = {}, today }) {
 // The text of the forecast, the same on Início, in the toast after a check-in and in the Sunday push.
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const R = v => (v < 0 ? '−' : '') + 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
-export function forecastText(f) {
+export function forecastText(f, name = '') {
+  const N = String(name || '').trim().split(/\s+/)[0];
   const m = MES[+f.month.slice(5) - 1], M = m[0].toUpperCase() + m.slice(1);
   const head = f.status === 'ok' ? `No ritmo de agora, ${m} fecha com sobra de ${R(f.res)}${f.meta ? `, acima da meta de ${R(f.meta)}` : ''}.`
     : f.status === 'risco' ? `${M} pode fechar abaixo da meta: a previsão é sobrar ${R(f.res)}, e a meta é ${R(f.meta)}.`
@@ -118,7 +119,7 @@ export function forecastText(f) {
   const plan = [inc ? `${R(inc)} que ainda devem entrar (${names(cm.income)})` : '', fix ? `${R(fix)} de contas fixas e financiamentos que ainda vão sair (${names(cm.fixed)})` : '']
     .filter(Boolean).join(' e ');
   const counted = plan ? `Já conta com ${plan}${cm.through ? `, pelo extrato até ${cm.through.slice(8, 10)}/${cm.through.slice(5, 7)}` : ''}.` : '';
-  return { next, counted, line: head, head: short, title: f.status === 'ok' ? `${M} no caminho da meta` : f.status === 'risco' ? `${M} pode fechar abaixo da meta` : `${M} pode fechar no vermelho`, day };
+  return { next, counted, line: head, head: short, title: (N ? `${N}, ${m}` : M) + (f.status === 'ok' ? ' está no caminho da meta' : f.status === 'risco' ? ' pode fechar abaixo da meta' : ' pode fechar no vermelho'), day };
 }
 
 // Sunday 19h push: whether to ask this device, and the message. Asks at most once a week; after two asks in a row
@@ -130,7 +131,7 @@ export function sundayAsk(f, { name = '', sent = {}, checkins = [], today }) {
   const last = sent.previsao || null, miss = last && !answered(last) ? (+sent.previsao_miss || 0) + 1 : 0;
   if (last && dayDiff(last, today) < 6) return null;
   if (miss >= 2 && dayDiff(last, today) < 13) return null;
-  const t = forecastText(f), n = String(name || '').trim().split(/\s+/)[0];
-  return { miss, msg: { title: `${n ? n + ', q' : 'Q'}uanto está a fatura aberta?`, body: `${t.line} Digite o valor que aparece no app do banco e veja quanto dá para gastar por dia.`.slice(0, 220), tag: 'previsao' } };
+  const t = forecastText(f, name), n = String(name || '').trim().split(/\s+/)[0];
+  return { miss, msg: { title: `${n ? n + ', q' : 'Q'}uanto está a fatura aberta?`, body: `${t.line} Digite o valor da fatura de vocês no app do banco e veja quanto dá para gastar por dia.`.slice(0, 220), tag: 'previsao' } };
 }
 const addDays = (iso, n) => new Date(Date.parse(iso + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);

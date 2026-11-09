@@ -386,7 +386,7 @@ function mensagens(el) {
   const all = groups.flatMap(g => g.list), bad = all.filter(m => m.problems.length), count = r => all.filter(m => m.problems.some(p => p.rule === r)).length;
   const card = m => `<article class="panel stack msgcard${m.problems.length ? ' msg-bad' : ''}">
       <p class="tiny muted">${m.where ? esc(m.where) : m.channel === 'push' ? 'Push' : 'Aviso no Início'} · <code>${esc(m.id)}</code></p>
-      <p style="margin:0"><strong>${esc(m.title || '—')}</strong></p><p class="small" style="margin:0">${esc(m.text || '')}</p>
+      <p style="margin:0"><strong>${esc(m.title || '—')}</strong></p><p class="small" style="margin:0">${esc(m.text || '')}</p>${m.detail ? `<p class="tiny muted" style="margin:0">${esc(m.detail)}</p>` : ''}
       ${m.action ? `<p class="tiny" style="margin:0">Botão: <span class="tag">${esc(m.action.label)}</span></p>` : m.url ? `<p class="tiny muted" style="margin:0">Abre: <code>${esc(m.url)}</code></p>` : ''}
       ${m.problems.length ? `<ul class="tiny" style="margin:0;color:var(--bad, #b3261e)">${m.problems.map(p => `<li>${esc(p.text)}</li>`).join('')}</ul>` : '<p class="tiny" style="margin:0;color:var(--good, #1b7f4b)">Dentro do manual.</p>'}</article>`;
   el.innerHTML = `<div class="ahead"><h1>Mensagens</h1><span class="tiny muted">${all.length} mensagens · ${bad.length} fora do manual</span></div>

@@ -15,7 +15,8 @@ export function renderForecast(box) {
   if (!box) return;
   const f = familyForecast();
   box.hidden = !f; if (!f) { box.innerHTML = ''; return; }
-  const t = forecastText(f), st = settings(), today = todayISO();
+  const me = S.members.find(m => m.user_id === S.user?.id)?.display_name || '';
+  const t = forecastText(f, me), st = settings(), today = todayISO();
   const billIn = S.txs.some(x => x.month === today.slice(0, 7) && x.source === 'cartao' && !x.manual);
   const tg = checkinTarget(today, +st.cardCloseDay || 24, billIn);
   if (f.nextBill && tg.month === f.nextBill.month) tg.closeDate = f.nextBill.closeDate;
