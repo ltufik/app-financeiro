@@ -149,6 +149,9 @@ update public.categories set recurring = true where recurring is null and grp = 
 -- O arquivo da nota nunca é guardado.
 alter table public.transactions add column if not exists splits jsonb;
 alter table public.transactions add column if not exists receipt jsonb;
+-- "Meu, seu, nosso": um lançamento "só meu" fica visível só para quem é dono; a família vê os totais (private_totals).
+alter table public.transactions add column if not exists private_to uuid references auth.users(id) on delete set null;
+create index if not exists tx_private_idx on public.transactions(household_id, private_to) where private_to is not null;
 
 alter table public.transactions enable row level security;
 alter table public.rules        enable row level security;
@@ -175,11 +178,24 @@ create policy inv_all on public.invites for all using (public.is_member(househol
 do $$
 declare t text;
 begin
-  foreach t in array array['categories', 'transactions', 'rules', 'imports', 'studies'] loop
+  foreach t in array array['categories', 'rules', 'imports', 'studies'] loop
     execute format('drop policy if exists %1$s_all on public.%1$s', t);
     execute format('create policy %1$s_all on public.%1$s for all using (public.is_member(household_id)) with check (public.is_member(household_id))', t);
   end loop;
 end $$;
+
+-- Lançamentos: a família vê tudo o que é da família; o que é "só meu" (private_to), só o dono vê e muda.
+-- Ninguém marca como privado de outra pessoa.
+drop policy if exists transactions_all on public.transactions;
+drop policy if exists tx_select on public.transactions;
+create policy tx_select on public.transactions for select using (public.is_member(household_id) and (private_to is null or private_to = auth.uid()));
+drop policy if exists tx_insert on public.transactions;
+create policy tx_insert on public.transactions for insert with check (public.is_member(household_id) and (private_to is null or private_to = auth.uid()));
+drop policy if exists tx_update on public.transactions;
+create policy tx_update on public.transactions for update using (public.is_member(household_id) and (private_to is null or private_to = auth.uid()))
+  with check (public.is_member(household_id) and (private_to is null or private_to = auth.uid()));
+drop policy if exists tx_delete on public.transactions;
+create policy tx_delete on public.transactions for delete using (public.is_member(household_id) and (private_to is null or private_to = auth.uid()));
 
 -- ---------- Funções chamadas pelo app ----------
 
@@ -316,14 +332,15 @@ begin
       and ((t.source = p_source and t.month = p_month and t.manual = false) or (t.manual = true and t.id = any(coalesce(p_reconcile, '{}'))));
   delete from transactions where household_id = p_household and source = p_source and month = p_month and manual = false;
   delete from transactions where household_id = p_household and manual = true and id = any(coalesce(p_reconcile, '{}'));
-  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt, note)
+  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt, note, private_to)
   select p_household, p_source, p_month,
          nullif(r->>'date', '')::date, r->>'day', coalesce(r->>'description', ''), (r->>'amount')::numeric,
          r->>'category', nullif(r->>'installment', ''), nullif(r->>'card', ''), false,
          coalesce((r->>'pending')::boolean, false), imp, auth.uid(),
          coalesce(case when jsonb_typeof(r->'splits') = 'array' then r->'splits' end, k.sp),
          coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc),
-         left(coalesce(nullif(r->>'note', ''), k.nt), 200)
+         left(coalesce(nullif(r->>'note', ''), k.nt), 200),
+         (select m.user_id from members m where m.household_id = p_household and m.user_id::text = nullif(r->>'private_to', ''))
   from jsonb_array_elements(p_rows) r
   left join lateral (
     select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc, nullif(x->>'nt', '') nt
@@ -358,14 +375,15 @@ begin
   delete from transactions where household_id = p_household and source = p_source and month = p_month and manual = false
     and (card = any(coalesce(p_cards, '{}')) or (p_unknown and card is null));
   delete from transactions where household_id = p_household and manual = true and id = any(coalesce(p_reconcile, '{}'));
-  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt, note)
+  insert into transactions(household_id, source, month, date, day, description, amount, category, installment, card, manual, pending, import_id, created_by, splits, receipt, note, private_to)
   select p_household, p_source, p_month,
          nullif(r->>'date', '')::date, r->>'day', coalesce(r->>'description', ''), (r->>'amount')::numeric,
          r->>'category', nullif(r->>'installment', ''), nullif(r->>'card', ''), false,
          coalesce((r->>'pending')::boolean, false), imp, auth.uid(),
          coalesce(case when jsonb_typeof(r->'splits') = 'array' then r->'splits' end, k.sp),
          coalesce(case when jsonb_typeof(r->'receipt') = 'object' then r->'receipt' end, k.rc),
-         left(coalesce(nullif(r->>'note', ''), k.nt), 200)
+         left(coalesce(nullif(r->>'note', ''), k.nt), 200),
+         (select m.user_id from members m where m.household_id = p_household and m.user_id::text = nullif(r->>'private_to', ''))
   from jsonb_array_elements(p_rows) r
   left join lateral (
     select nullif(x->'sp', 'null'::jsonb) sp, nullif(x->'rc', 'null'::jsonb) rc, nullif(x->>'nt', '') nt
@@ -1039,3 +1057,33 @@ revoke all on function public.survey_context() from public, anon;
 grant execute on function public.survey_context() to authenticated;
 revoke all on function public.product_surveys() from public, anon, authenticated;
 grant execute on function public.product_surveys() to service_role;
+
+-- Totais do que é "só" de outra pessoa da família: por mês, origem e grupo da categoria (nunca descrição,
+-- data ou categoria). A sobra do mês continua certa sem mostrar onde foi o dinheiro.
+create or replace function public.private_totals(p_household uuid)
+returns jsonb language plpgsql security definer stable set search_path = public as $$
+declare out jsonb;
+begin
+  if not public.is_member(p_household) then raise exception 'not_member'; end if;
+  with parts as (
+    select t.month, t.source, t.private_to, coalesce(sp.cat, t.category) as cat,
+           case when sp.amt is null then t.amount else sign(t.amount) * abs(sp.amt) end as amt
+    from transactions t
+    left join lateral (
+      select x->>'category' as cat, (x->>'amount')::numeric as amt
+      from jsonb_array_elements(case when jsonb_typeof(t.splits) = 'array' then t.splits else '[]'::jsonb end) x
+      where coalesce(x->>'category', '') <> '' and coalesce((x->>'amount')::numeric, 0) <> 0) sp on true
+    where t.household_id = p_household and t.private_to is not null and t.private_to <> auth.uid()
+  ), g as (
+    select p.month, p.source, p.private_to as user_id,
+           coalesce(c.grp, case when p.source = 'conta' and p.amt > 0 then 'entrada' else 'dia' end) as grp,
+           coalesce(c.financing, false) as fin, sum(p.amt) as amount, count(*) as n
+    from parts p left join categories c on c.household_id = p_household and c.name = p.cat
+    group by 1, 2, 3, 4, 5
+  )
+  select coalesce(jsonb_agg(jsonb_build_object('month', month, 'source', source, 'user_id', user_id, 'grp', grp, 'fin', fin, 'amount', amount, 'n', n)), '[]'::jsonb)
+    into out from g;
+  return out;
+end $$;
+revoke all on function public.private_totals(uuid) from public, anon;
+grant execute on function public.private_totals(uuid) to authenticated;

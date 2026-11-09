@@ -3,6 +3,7 @@ import { catIndex, monthCalc, sumCalcs, schedule, project, needPmt } from './lib
 import { prepareRules } from './lib/categorize.js';
 import { paceScenarios } from './lib/goalplan.js';
 import { addM, diffM, thisMonth, todayISO } from './lib/format.js';
+import { virtualRows } from './lib/privacy.js';
 import { debtNow, debtOfAsset, investNow, pendingAmortizations } from './lib/debt.js';
 
 export const S = {
@@ -15,9 +16,12 @@ export const S = {
 export function setFamily(f) {
   if (f.household) S.hh = f.household;
   S.members = f.members; S.categories = f.categories; S.rules = f.rules;
-  S.txs = f.transactions.map(t => ({ ...t, amount: +t.amount })); S.imports = f.imports; S.studies = f.studies;
+  S.txs = withPrivate(f.transactions, f.privateTotals); S.imports = f.imports; S.studies = f.studies;
   reindex();
 }
+// The family's entries plus, in place of what is private to someone else, one read-only total per month and group.
+export const withPrivate = (txs, totals) => [...txs.map(t => ({ ...t, amount: +t.amount })), ...virtualRows(totals || [], S.members)];
+export const isMine = t => !!t.private_to && t.private_to === S.user?.id;
 export function reindex() { S.catIdx = catIndex(S.categories); S.prepared = prepareRules(S.rules); }
 
 export const settings = () => S.hh?.settings || {};

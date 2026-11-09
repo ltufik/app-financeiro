@@ -1,6 +1,7 @@
 import { askRule } from '../learnask.js';
 import { renderDups, deleteManual } from '../dupfix.js';
-import { S, txsOf, latestClosed, monthKeys, settings } from '../state.js';
+import { privateButton } from '../private.js';
+import { S, txsOf, latestClosed, monthKeys, settings, isMine } from '../state.js';
 import * as db from '../db.js';
 import { brl, esc, mLong, norm } from '../lib/format.js';
 import { $, toast, catPicker, confirmInline, openNoteSheet } from '../ui.js';
@@ -71,10 +72,14 @@ function draw() {
     // One card per transaction: what and when on the left, amount on the right, category below.
     const tr = document.createElement('li'); tr.className = 'xrow' + (t.pending ? ' pend' : '');
     tr.innerHTML = `<div class="xmain"><span class="xd">${esc(t.description)}${t.installment ? ' <span class="tiny muted">' + esc(t.installment) + '</span>' : ''}</span>
-      <span class="tiny muted">${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}${t.card ? ' · ' + esc(shortTag(t.card)) : ''}${t.manual ? ' · <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}</span>
+      <span class="tiny muted">${esc(t.day || (t.date || '').split('-').reverse().slice(0, 2).join('/'))}${t.card ? ' · ' + esc(shortTag(t.card)) : ''}${t.manual ? ' · <span class="pill at" style="font-size:11px;padding:1px 6px">manual</span>' : ''}${isMine(t) ? ' · <span class="pill priv" style="font-size:11px;padding:1px 6px">só meu</span>' : ''}</span>
       ${t.note ? `<span class="xnote">${esc(t.note)}</span>` : ''}
       ${t.splits?.length ? `<span class="tiny muted splits">Nota${t.receipt?.store ? ' ' + esc(t.receipt.store) : ''}: ${t.splits.map(x => esc(x.category) + ' ' + brl(x.amount)).join(' · ')}</span>` : ''}</div>
       <span class="xv${src === 'conta' && t.amount > 0 ? ' pos' : ''}">${brl(t.amount)}</span><div class="xcat"></div>`;
+    if (t.virtual) { // someone's "só meu" entries: only the total, read-only
+      tr.dataset.virtual = '1'; tr.querySelector('.xcat').innerHTML = `<span class="tiny muted">Só o total aparece para a família.</span>`;
+      tb.append(tr); continue;
+    }
     if (t.splits?.length) {
       tr.dataset.split = '1';
       tr.querySelector('.xcat').innerHTML = `<span class="tiny">Dividido pela nota</span> <button class="chip" type="button" style="font-size:12px">Desfazer</button>`;
@@ -100,6 +105,7 @@ function draw() {
       tr.querySelector('.xcat').append(ok);
     }
     tr.querySelector('.xcat').append(noteButton(t));
+    if (S.members.length > 1) tr.querySelector('.xcat').append(privateButton(t));
     if (t.manual) {
       const del = document.createElement('button'); del.type = 'button'; del.className = 'chip'; del.textContent = 'Apagar';
       del.onclick = async () => { try { if (await deleteManual(t, del)) { toast('Lançamento apagado'); S.render(); } } catch (e) { toast('Não foi possível apagar agora. ' + db.errorText(e)); } };

@@ -1,6 +1,6 @@
 // Boot, sign-in, family selection and tab routing.
 import * as db from './db.js';
-import { S, setFamily, reindex, monthKeys, latestClosed } from './state.js';
+import { S, setFamily, reindex, monthKeys, latestClosed, withPrivate } from './state.js';
 import { mLong, mShort, thisMonth } from './lib/format.js';
 import { $, $$, toast, validate, clearInvalid, configureCatPicker, announce } from './ui.js';
 import { checkEmail, checkPassword, checkName } from './lib/validate.js';
@@ -147,7 +147,7 @@ $('#oOut').onclick = () => signOutSafely(db.sb);
 // ---------- app ----------
 S.reload = async (all = false) => {
   if (all) setFamily(await db.loadFamily(S.hh.id));
-  else { const [txs, imports] = await Promise.all([db.reloadTransactions(S.hh.id), db.sb.from('imports').select('*').eq('household_id', S.hh.id)]); S.txs = txs.map(t => ({ ...t, amount: +t.amount })); S.imports = imports.data || S.imports; }
+  else { const [txs, imports, priv] = await Promise.all([db.reloadTransactions(S.hh.id), db.sb.from('imports').select('*').eq('household_id', S.hh.id), db.privateTotals(S.hh.id)]); S.txs = withPrivate(txs, priv); S.imports = imports.data || S.imports; }
 };
 S.go = (tab, sel, sec) => {
   if (sec) S.sec = sec;

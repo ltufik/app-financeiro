@@ -767,3 +767,8 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .sv-opt{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:inherit;font:inherit;cursor:pointer}
 .sv-opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .surv textarea{width:100%;box-sizing:border-box}
+/* Meu, seu, nosso */
+.pill.priv{background:var(--sunk);color:var(--ink)}
+.priv-box{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.priv-box input{margin-top:3px}
+.xrow[data-virtual] .xd{font-style:italic}

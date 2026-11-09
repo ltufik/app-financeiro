@@ -709,6 +709,26 @@ if (nrows) { // Regras que aprendem: changing one entry offers to move everythin
   const un = await page.evaluate(() => ({ r: window.__db.rules.some(r => r.kind === 'regex' && /ZEBRAFOOD/.test(r.pattern)), c: ['rg1', 'rg2'].map(id => window.__db.transactions.find(t => t.id === id)?.category) }));
   ok('regras: desfazer apaga a regra e devolve as categorias de antes', !un.r && un.c[0] === 'Restaurante' && un.c[1] === 'A classificar', JSON.stringify(un));
 }
+if (nrows) { // Meu, seu, nosso: an entry becomes "só meu"; someone else's private entries show only as a read-only total.
+  const pv = await page.evaluate(async () => { const { S } = await import('/js/state.js'); const { virtualRows } = await import('/js/lib/privacy.js'); const m = new Date().toISOString().slice(0, 7);
+    if (S.members.length < 2) S.members.push({ user_id: 'outra-e2e', display_name: 'Luana Teste', role: 'member' });
+    const t = { id: 'pv1', household_id: S.hh.id, source: 'cartao', month: m, date: m + '-06', day: '06/' + m.slice(5), description: 'PRESENTE SURPRESA E2E', amount: 90, category: 'A classificar', manual: false, splits: null, private_to: null };
+    window.__db.transactions.push({ ...t }); S.txs.push(t);
+    const other = S.members.find(x => x.user_id !== S.user.id);
+    S.txs.push(...virtualRows([{ month: m, source: 'cartao', user_id: other.user_id, grp: 'dia', fin: false, amount: 321, n: 2 }], S.members));
+    S.render(); return { me: S.user.id, other: other.display_name.split(' ')[0] }; });
+  await page.click('[data-tab=resumo]'); await page.click('[data-tab=extrato]'); await page.waitForTimeout(300);
+  await page.locator('#srcChips [data-k=cartao]').click().catch(() => {});
+  await page.fill('#lSearch', 'presente surpresa e2e'); await page.waitForTimeout(300);
+  await page.locator('#lRows li', { hasText: 'PRESENTE SURPRESA E2E' }).locator('button', { hasText: 'Só meu' }).click(); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]');
+  await page.waitForFunction(id => window.__db.transactions.find(t => t.id === 'pv1')?.private_to === id, pv.me, { timeout: 8000 }).catch(() => {});
+  ok('meu, seu, nosso: "Só meu" deixa o lançamento só para quem marcou', (await page.evaluate(() => window.__db.transactions.find(t => t.id === 'pv1')?.private_to)) === pv.me && (await txt('#lRows')).includes('só meu'));
+  await page.fill('#lSearch', 'pessoal de'); await page.waitForTimeout(300);
+  const vr = await txt('#lRows');
+  ok('meu, seu, nosso: o privado de outra pessoa aparece só como total, sem botões', vr.includes(`Pessoal de ${pv.other}`) && vr.includes('Só o total aparece') && (await page.$$('#lRows li[data-virtual] button')).length === 0, vr.slice(0, 200));
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); S.members = S.members.filter(m => m.user_id !== 'outra-e2e'); S.txs = S.txs.filter(t => !t.virtual); });
+  await page.fill('#lSearch', ''); await page.waitForTimeout(200);
+}
 { // Pesquisa de satisfação: the survey of the person's moment as a card on Início (never right after joining); one question at a time.
   await page.click('[data-tab=resumo]'); await page.waitForTimeout(600);
   ok('pesquisa: não aparece para quem acabou de entrar', await page.evaluate(() => document.querySelector('#survBox')?.hidden === true));

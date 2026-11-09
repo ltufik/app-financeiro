@@ -54,9 +54,12 @@ export async function loadFamily(hh) {
     must(await sb.from('members').select('user_id, role, display_name, relation, created_at').eq('household_id', hh)),
     all('categories', hh), all('rules', hh), all('transactions', hh), all('imports', hh), all('studies', hh),
   ]);
-  return { household, members, categories, rules, transactions, imports, studies };
+  return { household, members, categories, rules, transactions, imports, studies, privateTotals: await privateTotals(hh) };
 }
 export const reloadTransactions = hh => all('transactions', hh);
+// "Meu, seu, nosso": totals of what is private to other people of the family (never the details). Before the
+// database is updated the function does not exist: then there is nothing private to add.
+export const privateTotals = async hh => { const r = await sb.rpc('private_totals', { p_household: hh }); return r.error ? [] : r.data || []; };
 
 export const saveSettings = async (hh, settings) => must(await sb.from('households').update({ settings }).eq('id', hh));
 export const renameHousehold = async (hh, name) => must(await sb.from('households').update({ name }).eq('id', hh));

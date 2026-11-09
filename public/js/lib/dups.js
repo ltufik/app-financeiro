@@ -31,7 +31,7 @@ const shift = (iso, n) => new Date(Date.parse(iso + 'T12:00:00Z') + n * 864e5).t
 */
 export function findDups(txs = [], debts = [], skip = []) {
   const no = new Set(skip || []), used = new Set(), pairs = [];
-  const bank = txs.filter(t => !t.manual), ids = new Set(txs.map(t => t.id));
+  const bank = txs.filter(t => !t.manual && !t.virtual), ids = new Set(txs.map(t => t.id));
   const linked = new Set(debts.flatMap(d => (d.log || []).map(e => e.txId).filter(Boolean)));
   for (const m of txs.filter(t => t.manual && !(t.splits || []).length).sort((a, b) => (a.date || '').localeCompare(b.date || ''))) {
     const c = bank.filter(b => !used.has(b.id) && b.source === m.source && same(b.amount, m.amount) && !no.has(`${m.id}|${b.id}`) && !linked.has(b.id)

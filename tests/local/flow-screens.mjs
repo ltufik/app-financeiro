@@ -138,6 +138,13 @@ await step('perguntar_resposta', async () => { await page.fill('#askText', 'quan
 await step('extrato', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(400); });
 await step('anotacao', async () => { await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in'); await page.fill('.nt-in', 'cabeleireiro Lily'); });
 await page.click('.cps .tx').catch(() => {});
+// "Só meu": the switch on an entry, with the confirmation open (family of two people).
+await step('privado', async () => {
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); if (S.members.length < 2) S.members.push({ user_id: 'fic-2', display_name: 'Ana', role: 'member' }); });
+  await page.click('[data-tab=extrato]'); await page.waitForTimeout(300);
+  await page.locator('#lRows li:not([data-split]):not([data-virtual])').first().locator('button', { hasText: 'Só meu' }).click(); await page.waitForSelector('.cfm [data-y]');
+});
+await page.click('.cfm [data-n]').catch(() => {});
 // Survey: the general one, for a family that has used the app for a while; the first question open.
 await step('pesquisa', async () => {
   await page.evaluate(async () => { window.__surveyCtx = { joined: new Date(Date.now() - 40 * 864e5).toISOString(), active_days: 6, history: [] }; (await import('/js/survey.js')).resetSurvey(); });

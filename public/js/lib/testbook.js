@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('meu_seu_nosso', 'Extrato', 'v120', 'ambos', 'Meu, seu, nosso: lançamento só meu',
+    ['Numa família com 2 pessoas, no celular de uma delas, abra o Extrato e toque em "Só meu" num lançamento.', 'No celular da outra pessoa, abra o Extrato do mesmo mês.', 'Volte ao primeiro celular e toque em "Voltar para a família". Teste também a caixa "Só meu" ao lançar falando e na revisão de uma fatura.'],
+    'Quem marcou vê o lançamento com a etiqueta "só meu". A outra pessoa não vê o lançamento: vê uma linha "Pessoal de [nome]" com o total, sem botões, e a sobra do mês é a mesma nos dois celulares. Ao voltar para a família, o lançamento reaparece para os dois. Uma fatura marcada "Só meu" já vem marcada da próxima vez.'),
   t('pesquisa_satisfacao', 'Início', 'v119', 'ambos', 'Pesquisa de satisfação no momento certo',
     ['Com uma conta que usa o app há mais de 2 semanas e tem 2 meses de fatura, abra o Início.', 'No cartão "Sua opinião · 1 minuto", toque em Responder e responda as 3 perguntas.', 'Em outra conta, nova (menos de 3 dias), abra o Início.'],
     'O cartão traz o seu nome e a pesquisa do seu momento (quem usa há tempo vê a nota de 0 a 10). Sem responder, o botão não avança. Ao enviar, aparece o agradecimento e o cartão some. A conta nova não vê pesquisa. "Agora não" some o cartão por 7 dias. Na Central → Pesquisas aparece a resposta.'),

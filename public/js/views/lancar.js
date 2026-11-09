@@ -23,6 +23,7 @@ import { applyMemos } from '../lib/memo.js';
 import { parseCSV, detectColumns, buildEntries, markDuplicates, matchCategory } from '../lib/sheet.js';
 import { renderCash } from '../cash.js';
 import { matchManuals, mergeInto } from '../lib/dups.js';
+import { privateBox, privateValue, cardIsMine, rememberCards } from '../private.js';
 import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX, progressOf, nowHint, failedIndexes } from '../lib/queue.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
@@ -148,6 +149,9 @@ function build(el) {
   $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), resultArea, 'Abrindo o PDF');
   for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => routeFile(f, 'nota'), resultArea, 'Lendo a nota fiscal'); };
 }
+
+// The cards (or account) of the document in review, for "só meu" remembered per card.
+const rvCards = () => [...new Set((R?.rows || []).map(r => r.card).filter(Boolean))];
 
 // A payoff typed before the statement: the financing's log now points to the statement's entry (counted once).
 async function relinkPayoffs(keep, source, month) {
@@ -361,8 +365,10 @@ function renderQ() {
   box.innerHTML = `<div class="tw"><table><thead><tr><th>Data</th><th>Descrição</th><th>Onde</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody></tbody></table></div>
   <p class="tiny muted" style="margin-top:6px">Na conta, saída é negativa. No cartão, compra é positiva.</p>
   <div class="stack qdebts" id="qDebts" hidden></div>
+  ${privateBox('qPriv', Q.priv, Q.length > 1 ? 'estes lançamentos' : 'este lançamento')}
   <div class="rowbtn" style="margin-top:10px"><button class="btn primary" id="qSave" type="button">Salvar ${Q.length > 1 ? Q.length + ' lançamentos' : 'lançamento'}</button><button class="btn" id="qCancel" type="button">Descartar</button></div>`;
   const tb = box.querySelector('tbody');
+  box.querySelector('#qPriv')?.addEventListener('change', e => { Q.priv = e.target.checked; });
   Q.forEach((it, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><input type="date" value="${it.date}" data-f="date" style="min-width:130px"></td><td><input type="text" value="${esc(it.description)}" data-f="description" style="min-width:150px"></td><td><select data-f="source"><option value="cartao"${it.source === 'cartao' ? ' selected' : ''}>Cartão</option><option value="conta"${it.source === 'conta' ? ' selected' : ''}>Conta</option></select></td><td></td><td class="r"><input type="number" step="0.01" value="${it.amount}" data-f="amount" style="width:110px;text-align:right"></td>`;
@@ -399,8 +405,9 @@ function renderQ() {
     if (!await confirmInline($('#qSave'), { title: Q.length > 1 ? `Salvar ${Q.length} lançamentos?` : 'Salvar o lançamento?', text: Q.map(it => `${esc(it.description)}: ${brl(it.amount)} (${it.source === 'cartao' ? 'cartão' : 'conta'}, ${esc(it.category)})`).join('<br>'), yes: 'Sim, salvar' })) return;
     $('#qSave').disabled = true;
     try {
-      const rows = Q.map(it => ({ household_id: S.hh.id, source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
-      const saved = await db.addTransactions(rows); track('lancar.salvar'); homeNews();
+      const priv = privateValue(box, 'qPriv');
+      const rows = Q.map(it => ({ household_id: S.hh.id, ...(priv ? { private_to: priv } : {}), source: it.source, month: it.source === 'cartao' ? cycleMonth(it.date, closeDay()) : it.date.slice(0, 7), date: it.date, day: isoToBr(it.date).slice(0, 5), description: it.description, amount: round2(it.amount), category: it.category, manual: true }));
+      const saved = await db.addTransactions(rows); track('lancar.salvar'); if (priv) track('lancar.privado'); homeNews();
       S.txs.push(...saved.map(t => ({ ...t, amount: +t.amount })));
       // Payments confirmed as amortization come off the financing's balance.
       for (let i = 0; i < Q.length; i++) if (Q[i].debtId && saved[i]) {
@@ -657,7 +664,8 @@ function renderReview() {
     <li>Toque em <strong>Salvar</strong>${QU && !isDone(QU) && QU.i < QU.items.length - 1 ? '. O próximo arquivo começa sozinho' : ''}.</li></ol></div>
   <p class="small" style="margin-top:10px"><span class="pill at">${shown.filter(r => r.pending).length} a classificar</span> <span class="tiny muted">Toque na categoria para trocar. O app aprende.</span></p>
   <div class="tw" style="margin-top:8px;max-height:520px;overflow:auto"><table class="rvcards"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th></tr></thead><tbody id="rvRows"></tbody></table></div>
-  <div id="rvPend" style="margin-top:12px"></div>
+ <div id="rvPend" style="margin-top:12px"></div>
+  ${privateBox('rvPriv', R.priv ??= cardIsMine(source, rvCards()), source === 'cartao' ? 'esta fatura' : 'este extrato')}
   <div class="rowbtn rvactions" style="margin-top:12px"><button class="btn primary" id="rvSave" type="button"${part && !shown.length ? ' disabled' : ''}>${part ? `Salvar ${shown.length} ${shown.length === 1 ? 'novo' : 'novos'}` : `Salvar ${source === 'cartao' ? 'a fatura' : 'o extrato'}`}</button><button class="btn" id="rvCancel" type="button">Descartar</button></div>`;
   const tb = $('#rvRows');
   shown.map((r, i) => [r, i]).sort((a, b) => (b[0].pending ? 1 : 0) - (a[0].pending ? 1 : 0)).forEach(([r]) => {
@@ -670,6 +678,7 @@ function renderReview() {
     $('#rvPend').innerHTML = `<h3>Já lançados por você</h3><p class="tiny muted">Marcados: já aparecem ${source === 'cartao' ? 'nesta fatura' : 'neste extrato'}. Ao salvar fica um só (o do banco), com a categoria e o que você escreveu. Desmarque o que for outro lançamento.</p>` + pend.map((e, i) => `<label class="small" style="display:flex;gap:8px;align-items:center;padding:6px 0"><input type="checkbox" data-i="${i}" style="width:auto" ${e._match ? 'checked' : ''}> ${esc(e.description)} · ${brl(e.amount)}</label>`).join('');
     $('#rvPend').querySelectorAll('input').forEach(inp => inp.onchange = () => { pend[+inp.dataset.i]._match = inp.checked; });
   }
+  $('#rvPriv')?.addEventListener('change', e => { R.priv = e.target.checked; });
   $('#rvMonth').onchange = e => { R.month = e.target.value; R.mm = null; S.txs.forEach(t => { delete t._match; }); renderReview(); };
   $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; docDone('descartado'); };
   $('#rvSave').onclick = async e => {
@@ -688,10 +697,12 @@ async function saveReview(pend) {
   try {
     // A typed entry the document has: the bank's row keeps its category and words (and, after saving, its payoff link).
     const keep = new Map(); for (const e of pend.filter(e => e._match)) { const i = R.mm?.get(e.id); const r = i != null && R.rows[i]; if (r && rows.includes(r)) { Object.assign(r, mergeInto(e, r)); keep.set(e.id, r); } }
-    const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending, ...(r.note ? { note: r.note } : {}) }));
+    const priv = R.priv && S.members.length > 1 ? S.user.id : null;
+    const payload = rows.map(r => ({ ...(priv ? { private_to: priv } : {}), date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending, ...(r.note ? { note: r.note } : {}) }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month) + (R.cmp?.mode === 'complement' ? ' (parte)' : '');
     track('lancar.pdf_ok'); homeNews(); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
-    notifyFamily('imported', { source, month });
+    if (S.members.length > 1) await rememberCards(source, rvCards(), !!priv);
+    if (priv) track('lancar.privado'); else notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
     await relinkPayoffs(keep, source, month).catch(() => {});

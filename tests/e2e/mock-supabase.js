@@ -55,6 +55,7 @@ class Q {
 
 const DEFAULT_CATS = [['Salário', 'renda'], ['Reembolsos', 'entrada'], ['Outras entradas', 'entrada'], ['Mercado', 'dia'], ['Restaurantes e delivery', 'dia'], ['Saúde', 'dia'], ['A classificar', 'dia'], ['Financiamento imobiliário', 'dia', true, true], ['Assinaturas', 'dia', false, true], ['Pagamento da fatura do cartão', 'neutro']];
 const rpcs = {
+  private_totals() { return window.__privTotals || []; },
   survey_context() { return window.__surveyCtx || { joined: new Date().toISOString(), active_days: 1, history: [] }; },
   survey_event({ p_survey, p_kind, p_score, p_answers, p_version }) { (T.surveys ||= []).push({ survey: p_survey, kind: p_kind, score: p_score, answers: p_answers, version: p_version, created_at: new Date().toISOString() }); return null; },
   send_feedback({ p_household, p_kind, p_text, p_answer, p_screen, p_device, p_version }) {

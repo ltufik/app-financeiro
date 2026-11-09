@@ -11,6 +11,7 @@ import { sendPush } from './_webpush.js';
 import { forecast, sundayAsk } from '../public/js/lib/monthend.js';
 import { pendingCash } from '../public/js/lib/cash.js';
 import { findDups } from '../public/js/lib/dups.js';
+import { privatize } from '../public/js/lib/privacy.js';
 
 // Which preference turns each message on, and how many days before the same message can repeat.
 export const TYPES = { repetidos: 'dados', saques: 'dados', juros: 'gastos', tarifas: 'gastos', fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
@@ -81,9 +82,10 @@ export async function runDaily({ supabaseUrl, serviceKey, vapid, fetchImpl = fet
       const categories = await get(`categories?household_id=eq.${hh}&select=name,grp,financing,recurring`);
       let txs = [];
       for (let off = 0; ; off += 1000) {
-        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=id,source,month,date,day,description,note,amount,category,installment,manual,pending,splits&order=id&limit=1000&offset=${off}`);
+        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=id,source,month,date,day,description,note,amount,category,installment,manual,pending,splits,private_to&order=id&limit=1000&offset=${off}`);
         txs = txs.concat(page.map(t => ({ ...t, amount: +t.amount }))); if (page.length < 1000) break;
       }
+      txs = privatize(txs, catIndex(categories), []); // "só meu" entries count as totals; their details never go into a push
       out.families++;
       const ins = familyInsights({ household, categories, txs }, today), week = weekly(txs, catIndex(categories), today);
       for (const sub of list) {
@@ -148,9 +150,10 @@ export async function runForecastAsk({ supabaseUrl, serviceKey, vapid, fetchImpl
       const categories = await get(`categories?household_id=eq.${hh}&select=name,grp,financing,recurring`);
       let txs = [];
       for (let off = 0; ; off += 1000) {
-        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=id,source,month,date,day,description,note,amount,category,installment,manual,pending,splits&order=id&limit=1000&offset=${off}`);
+        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=id,source,month,date,day,description,note,amount,category,installment,manual,pending,splits,private_to&order=id&limit=1000&offset=${off}`);
         txs = txs.concat(page.map(t => ({ ...t, amount: +t.amount }))); if (page.length < 1000) break;
       }
+      txs = privatize(txs, catIndex(categories), mrows);
       const st = household.settings || {}, f = forecast({ txs, categories, settings: st, today });
       if (!f) { out.skipped += list.length; continue; }
       out.families++;

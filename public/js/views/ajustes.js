@@ -112,10 +112,10 @@ export function render(el) {
     <p class="small"><strong>Pra Onde Foi</strong> mostra para onde vai o dinheiro da família: lê faturas e extratos em PDF de qualquer banco, confere os totais e separa por categoria. Versão de teste com família e amigos. Este celular está na versão <strong id="aboutVer">${APP_VERSION}</strong> (aparece também no fim do menu ☰).</p>
     <h3>O que o app guarda</h3>
     <ul class="small">
-      <li>Os lançamentos, as categorias, as metas e os ajustes da sua família. Só quem está na família vê.</li>
+      <li>Os lançamentos, as categorias, as metas e os ajustes da sua família. Só quem está na família vê. O que você marca como "Só meu" (um lançamento, uma fatura ou um extrato) só você vê; o resto da família vê apenas o total do mês.</li>
       <li>De cada nota fiscal, só os itens e valores lidos. A foto não fica guardada.</li>
       <li>De cada pessoa, os dias em que abriu o app e quais telas e botões usou e por quanto tempo (por exemplo, "lançou por voz"), e os erros que aparecerem, para saber o que ajuda e o que melhorar. Nunca valores nem o que foi escrito.</li>
-      <li>As opiniões e dúvidas que você mandar, com a tela em que estava e o tipo de celular.</li>
+      <li>As opiniões e dúvidas que você mandar, com a tela em que estava e o tipo de celular, e as respostas às pesquisas de satisfação (opções e textos curtos, nunca valores).</li>
     </ul>
     <h3>O que o app nunca guarda</h3>
     <ul class="small"><li>O arquivo do PDF, da foto ou do print, inclusive o que chega pelos atalhos do iPhone: é lido e descartado.</li><li>A sua digital ou o seu rosto: ficam no próprio celular. O app guarda só, neste aparelho, o número da chave que o celular criou.</li><li>A senha do PDF.</li><li>Senhas de banco: o app não se conecta ao seu banco.</li></ul>

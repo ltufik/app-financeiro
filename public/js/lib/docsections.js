@@ -343,3 +343,15 @@ export const DOC_PESQUISA = { id: 'pesquisa_doc', title: 'Pesquisa de satisfaç�
 - Nunca para quem acabou de entrar: 3 dias desde a entrada e 2 dias de uso.
 - No máximo uma a cada 30 dias. "Agora não" espera 7 dias; depois de 2, aquela pesquisa não aparece mais. Respondida não volta (a geral volta depois de 90 dias).
 - Regras em lib/survey.js (testadas); tela em survey.js. Guarda em surveys (mostrou, adiou, respondeu; opções e textos curtos, nunca valores). Resultados em Central → Pesquisas (NPS, contagem por opção, textos).` };
+
+export const DOC_PRIVADO = { id: 'meu_seu_nosso_doc', title: 'Meu, seu, nosso (lançamentos privados)', body: `Na família, cada pessoa pode deixar algo "só meu": um lançamento, ou uma fatura ou extrato inteiro. O resto da família vê só o total do mês, e a sobra continua certa.
+## Onde marcar
+- **Extrato**: botão "Só meu" no lançamento (e "Voltar para a família"). Só aparece em famílias com 2 pessoas ou mais.
+- **Lançar falando ou escrevendo**: caixa "Só meu" antes de salvar.
+- **Fatura ou extrato**: caixa "Só meu" na revisão. O app lembra por cartão (households.settings.privateCards) e já deixa marcada da próxima vez. Importação "só meu" não avisa a família.
+## Como é garantido
+- No banco: transactions.private_to. As regras de acesso (RLS) só mostram, mudam ou apagam um lançamento "só meu" para quem é dono. Ninguém marca como privado de outra pessoa; na importação, só vale dono que é da família.
+- A família recebe private_totals: soma por mês, origem (conta ou cartão), pessoa e grupo da categoria, com a quantidade. Nunca descrição, data ou categoria.
+- No app, cada total vira uma linha "Pessoal de Luana", só leitura, que conta na sobra pelo grupo (vgrp em monthCalc). Os gráficos mostram "Pessoal de Luana" como uma categoria.
+- O robô das 9h lê tudo com a chave do servidor, mas troca o privado pelos totais antes de calcular os avisos (privatize): o detalhe nunca vai num push.
+- Regras em lib/privacy.js (testadas, inclusive que a sobra é a mesma com detalhe ou com total) e testes de acesso em test_rls.sql.` };

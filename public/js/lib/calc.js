@@ -28,6 +28,7 @@ export const kindByKey = key => KINDS.find(k => k.key === key);
 export const catIndex = categories => new Map((categories || []).map(c => [c.name, c]));
 
 const groupOf = (t, idx) => {
+  if (t.vgrp) return { grp: t.vgrp, financing: !!t.vfin }; // someone's private entries, as a total (lib/privacy.js)
   const c = idx.get(t.category);
   if (c) return c;
   return { grp: t.source === 'conta' && t.amount > 0 ? 'entrada' : 'dia', financing: false };

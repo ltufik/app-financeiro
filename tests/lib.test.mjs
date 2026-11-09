@@ -1293,3 +1293,28 @@ test('pesquisa: cada um vê a pesquisa do seu momento, nunca logo ao entrar e se
   assert.equal(r.questions[1].counts.previsao, 2); assert.deepEqual(r.questions[2].texts.map(t => t.text), ['mais bancos']);
   assert.ok(Object.values(SURVEYS).every(s => s.questions.length >= 2));
 });
+
+import { privateTotals, virtualRows, privatize, privateCardOwner } from '../public/js/lib/privacy.js';
+test('meu, seu, nosso: o privado vira total para a família e a sobra continua igual', () => {
+  const idx = catIndex([{ name: 'Salário', grp: 'renda' }, { name: 'Roupas', grp: 'dia' }, { name: 'Mercado', grp: 'dia' }, { name: 'Financiamento', grp: 'dia', financing: true }]);
+  const txs = [
+    { id: 1, source: 'conta', month: '2026-11', amount: 10000, category: 'Salário' },
+    { id: 2, source: 'conta', month: '2026-11', amount: -300, category: 'Mercado' },
+    { id: 3, source: 'cartao', month: '2026-11', amount: 250, category: 'Roupas', private_to: 'lu', description: 'LOJA X' },
+    { id: 4, source: 'cartao', month: '2026-11', amount: 150, category: 'Mercado', private_to: 'lu', splits: [{ category: 'Roupas', amount: 100 }, { category: 'Mercado', amount: 50 }] },
+    { id: 5, source: 'conta', month: '2026-11', amount: -2000, category: 'Financiamento', private_to: 'lu' },
+    { id: 6, source: 'conta', month: '2026-11', amount: -80, category: 'Roupas', private_to: 'luiz' },
+  ];
+  const members = [{ user_id: 'lu', display_name: 'Luana Elias' }, { user_id: 'luiz', display_name: 'Luiz' }];
+  const tot = privateTotals(txs, idx, 'luiz');
+  assert.equal(tot.length, 2); assert.equal(tot.find(x => x.source === 'cartao').amount, 400); assert.equal(tot.find(x => x.source === 'cartao').n, 3);
+  const seen = privatize(txs, idx, members, 'luiz');
+  assert.ok(!seen.some(t => t.description === 'LOJA X')); assert.ok(seen.some(t => t.id === 6));
+  const v = virtualRows(tot, members);
+  assert.equal(v[0].description, 'Pessoal de Luana'); assert.ok(v.every(r => r.virtual && !r.manual));
+  // The leftover of the month is the same with the details or with the totals.
+  const full = monthCalc(txs, idx), shown = monthCalc(seen, idx);
+  assert.equal(shown.res, full.res); assert.equal(shown.fin, full.fin); assert.equal(shown.card, full.card);
+  assert.equal(privateCardOwner([{ source: 'cartao', card: '1234', user: 'lu' }], 'cartao', '1234'), 'lu');
+  assert.equal(privateCardOwner([{ source: 'cartao', card: '1234', user: 'lu' }], 'cartao', '9999'), null);
+});

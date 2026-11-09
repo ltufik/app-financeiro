@@ -16,6 +16,7 @@ export function settle({ txs, idx, members, split = {} }) {
   const ids = members.map(m => m.user_id), paid = Object.fromEntries(ids.map(id => [id, 0]));
   let total = 0, unknown = 0;
   for (const t of expandSplits(txs)) {
+    if (t.virtual || t.private_to) continue; // "só meu" is personal: it is not split between the family
     const c = idx.get(t.category); if (!c || !['dia', 'fora'].includes(c.grp)) continue;
     const v = t.source === 'conta' ? -t.amount : +t.amount; if (!v) continue;
     const who = payerOf(t, split);

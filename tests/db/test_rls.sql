@@ -416,3 +416,41 @@ set role anon;
 select public.survey_context();
 \set ON_ERROR_STOP on
 reset role;
+
+-- Meu, seu, nosso: o "só meu" de Helena (membro da família G) some para Gui, que vê só os totais; ninguém marca
+-- como privado de outra pessoa; o servidor (robô das 9h) lê tudo.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000011';
+insert into transactions(household_id, source, month, description, amount, category, private_to) values
+  (:'hg', 'cartao', '2026-11', 'PRESENTE SURPRESA', 300, 'Presentes', '00000000-0000-0000-0000-000000000011'),
+  (:'hg', 'cartao', '2026-11', 'MERCADO', 100, 'Mercado', null);
+select 'privado: a dona vê o seu: ' || ((select count(*) = 2 from transactions where household_id = :'hg'))::text;
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: não marca como privado de outra pessoa)
+insert into transactions(household_id, source, month, description, amount, private_to) values (:'hg', 'conta', '2026-11', 'x', -1, '00000000-0000-0000-0000-000000000010');
+\set ON_ERROR_STOP on
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000010';
+select 'privado: o resto da família não vê o detalhe: ' || ((select count(*) = 1 from transactions where household_id = :'hg'))::text;
+update transactions set private_to = null where description = 'PRESENTE SURPRESA';
+delete from transactions where description = 'PRESENTE SURPRESA';
+reset role;
+select 'privado: nem consegue mudar ou apagar: ' || ((select count(*) = 1 from transactions where description = 'PRESENTE SURPRESA' and private_to is not null))::text;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000010';
+select 'privado: a família vê o total, sem descrição: ' || ((select (x->>'amount')::numeric = 300 and x->>'description' is null and x->>'grp' = 'dia' from jsonb_array_elements(public.private_totals(:'hg')) x))::text;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000011';
+select 'privado: a dona não recebe o próprio total duplicado: ' || ((select jsonb_array_length(public.private_totals(:'hg')) = 0))::text;
+update transactions set private_to = null where description = 'PRESENTE SURPRESA';
+reset role;
+select 'privado: a dona pode voltar para a família: ' || ((select count(*) = 1 from transactions where description = 'PRESENTE SURPRESA' and private_to is null))::text;
+update transactions set private_to = '00000000-0000-0000-0000-000000000011' where description = 'PRESENTE SURPRESA';
+reset role;
+set role service_role;
+select 'privado: o servidor lê tudo: ' || ((select count(*) = 2 from transactions where household_id = :'hg'))::text;
+reset role;
+-- Import: a row marked private to someone outside the family is saved as the family's.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000010';
+select public.replace_month(:'hg', 'conta', '2026-10', '[{"description":"PIX MEU","amount":-50,"private_to":"00000000-0000-0000-0000-000000000010"},{"description":"PIX FORA","amount":-20,"private_to":"00000000-0000-0000-0000-000000000099"}]'::jsonb) is not null as imp_ok;
+select 'privado: na importação, só vale dono da família: ' || ((select bool_and(case description when 'PIX MEU' then private_to is not null else private_to is null end) from transactions where household_id = :'hg' and month = '2026-10'))::text;
+reset role;

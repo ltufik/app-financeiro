@@ -21,7 +21,7 @@ export function rulePattern(label) {
 }
 export const ruleLabel = label => tokens(label).join(' ');
 const re = p => { try { return new RegExp(p); } catch (e) { return null; } };
-export const ruleMatches = (pattern, txs = [], source) => { const r = re(pattern); return !r ? [] : txs.filter(t => (!source || t.source === source) && !(t.splits || []).length && r.test(norm(t.description))); };
+export const ruleMatches = (pattern, txs = [], source) => { const r = re(pattern); return !r ? [] : txs.filter(t => !t.virtual && (!source || t.source === source) && !(t.splits || []).length && r.test(norm(t.description))); };
 
 // The names a description may stand for, most general first: the first useful word, then it with the next one.
 export function ruleCandidates(description) {
