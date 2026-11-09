@@ -77,26 +77,27 @@ export function insights(ctx) {
   // A finished month waiting to be closed.
   if (ctx.toClose) { const n = mName(ctx.toClose); out.push({ id: 'close', tone: 'info', title: `Hora de fechar ${n}`, text: `Confira se falta algo e veja a retrospectiva de ${n}. Leva poucos minutos.`, action: { label: 'Fechar o mês', go: ['fechar'] } }); }
 
-  // The month to talk about: the latest one with the account statement, else the latest with data.
-  const closed = months.filter(k => ctx.has(k, 'conta'));
-  const m = closed[closed.length - 1] || months[months.length - 1];
+  // The month to talk about: the latest FINISHED one (before this month) with the account statement, else the latest
+  // finished with data. The month going on is never "fechou": the forecast (Previsão do mês) speaks for it.
+  const past = months.filter(k => k < cur), closed = past.filter(k => ctx.has(k, 'conta'));
+  const m = closed[closed.length - 1] || past[past.length - 1] || months[months.length - 1], ongoing = !!m && m >= cur;
   if (!m) return out;
   const c = ctx.calc(m), before = months.filter(k => k < m).slice(-3), name = mName(m);
 
   // 2. In the red / saved well
-  if (c.renda > 0 && c.res < 0) {
+  if (!ongoing && c.renda > 0 && c.res < 0) {
     const top = Object.entries(ctx.cats(m)).sort((a, b) => b[1] - a[1]).slice(0, 2).map(e => e[0]).join(' e ');
     out.push({ id: 'red', tone: 'bad', title: `${name[0].toUpperCase() + name.slice(1)} fechou no vermelho`, text: `Saiu ${R(c.res)} a mais do que entrou. Os maiores gastos foram ${top}. Vale olhar onde dá para cortar.`, action: { label: 'Perguntar onde cortar', go: ['perguntar', '#askText'] } });
-  } else if (c.renda > 0 && ctx.goals.savings && c.tx >= ctx.goals.savings) {
+  } else if (!ongoing && c.renda > 0 && ctx.goals.savings && c.tx >= ctx.goals.savings) {
     const eta = ctx.goals.patrimonio && ctx.etaYears ? ctx.etaYears(c.res) : null;
     out.push({ id: 'saved', tone: 'good', title: 'Parabéns, vocês economizaram bem!', text: `Em ${name} guardaram ${P(c.tx)} da renda (queriam ${P(ctx.goals.savings)}).` + (eta != null ? ` Guardando ${R(c.res)} por mês, o sonho de ${R(ctx.goals.patrimonio)} investidos chega em ${eta <= 1 ? 'cerca de 1 ano' : 'cerca de ' + Math.round(eta) + ' anos'}.` : ' Nesse ritmo, o sonho de vocês chega mais rápido.') });
-  } else if (c.renda > 0 && ctx.goals.savings && c.tx < ctx.goals.savings) {
+  } else if (!ongoing && c.renda > 0 && ctx.goals.savings && c.tx < ctx.goals.savings) {
     const gap = ctx.goals.savings * c.renda - c.res;
     out.push({ id: 'below', tone: 'warn', title: 'Guardaram menos do que queriam', text: `Em ${name} guardaram ${P(c.tx)} da renda; o combinado era ${P(ctx.goals.savings)}. Faltaram ${R(gap)}.` });
   }
 
   // 3. Spending above the recent average, and which categories pushed it
-  if (before.length >= 2) {
+  if (!ongoing && before.length >= 2) {
     const base = avg(before.map(k => ctx.calc(k).out));
     if (base > 0 && c.out > base * 1.1 && c.out - base > 200) {
       const cm = ctx.cats(m), cb = {}; before.forEach(k => { const x = ctx.cats(k); for (const n in x) cb[n] = (cb[n] || 0) + x[n] / before.length; });

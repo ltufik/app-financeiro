@@ -488,4 +488,7 @@ export const RELEASES = [
     'Quando entra um valor alto e ele sai para amortizar um financiamento, o app pergunta se o dinheiro foi para isso.',
     'Respondendo "Sim", a entrada sai da sobra do mês (o patrimônio não muda). Antes ela contava como se vocês tivessem guardado.',
   ] } },
+  { id: 'r122', version: 'v122', at: '2026-11-09T21:42:00Z', addBacklog: [{ id: 'mes_atual_nao_fechou', title: 'Aviso dizia que o mês atual "fechou no vermelho"', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Com o extrato parcial de novembro, o Início dizia "Novembro fechou no vermelho" no dia 9', from: [] }, { id: 'comunicacoes_personalizadas', title: 'Revisar todas as mensagens: certas, no momento certo e personalizadas', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Mensagem genérica ou errada faz o app ser só mais um; para divulgar em massa cada aviso precisa falar da família, com os números dela e o que fazer agora', notes: 'Passar por cada aviso do Início e cada push: o momento (mês em andamento ou terminado, dia do mês), o nome e a família, os números da própria família comparados com ela mesma, um próximo passo claro e o tom. Inclui testes que cobrem as frases.', from: [] }], backlog: ['mes_atual_nao_fechou'], news: { id: 'n20261109d', title: 'Avisos do mês mais certos', items: [
+    'O Início não diz mais que o mês "fechou" antes de ele acabar. Os avisos de resultado falam do último mês que terminou; o mês atual fica na Previsão do mês.',
+  ] } },
 ];

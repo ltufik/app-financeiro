@@ -1336,3 +1336,13 @@ test('pesquisa: respostas de teste ficam fora dos resultados', () => {
   const r = surveyResults('nps', [{ survey: 'nps', kind: 'respondeu', score: 2, answers: { _teste: true, ajudou: ['metas'] } }, { survey: 'nps', kind: 'respondeu', score: 10, answers: { ajudou: ['previsao'] } }]);
   assert.equal(r.answered, 1); assert.equal(r.tests, 1); assert.equal(r.questions[0].avg, 10);
 });
+test('insights: o mês que está acontecendo nunca "fechou" (no vermelho ou não)', async () => {
+  const { insights } = await import('../public/js/lib/insights.js');
+  const M = { '2026-10': { res: 3000, renda: 10000, E: 10000, out: 7000, tx: 0.3 }, '2026-11': { res: -354, renda: 10000, E: 10000, out: 10354, tx: -0.03 } };
+  const base = { months: Object.keys(M), calc: k => M[k], cats: () => ({ Escola: 3000 }), fixed: () => 0, manualCount: () => 0, pending: () => 0, goals: { savings: 0.2 }, has: () => true };
+  const a = insights({ ...base, today: '2026-11-09' });
+  assert.ok(!a.some(x => /novembro fechou/i.test(x.title))); assert.ok(!a.some(x => x.id === 'red'));
+  assert.ok(a.some(x => x.id === 'saved' && /outubro/.test(x.text)));
+  const b = insights({ ...base, today: '2026-12-02' });
+  assert.ok(b.some(x => x.id === 'red' && /Novembro fechou no vermelho/.test(x.title)));
+});
