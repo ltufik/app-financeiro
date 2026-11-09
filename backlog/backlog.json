@@ -1,5 +1,30 @@
 [
  {
+  "id": "missoes_e_desafios",
+  "cost": false,
+  "from": [],
+  "notes": "Missões de começo (mandar a 1ª fatura e o extrato, ligar avisos, convidar a família, fechar o 1º mês) e desafios pelo fluxo financeiro, metas e dados do app (ex.: semana sem delivery, gastar até R$ X por dia até o fim do mês, guardar a meta do mês, rever uma assinatura, detalhar os saques). Progresso visível, ligado aos níveis do ano. Desafio aceito pela pessoa, com prazo; push de lembrete e de resultado. Junta com desafio_de_meta_52_semanas_mes_sem_deliv.",
+  "title": "Missões e desafios para chegar nas metas (gamificação)",
+  "where": "Início; Notificações",
+  "effort": "G",
+  "origin": "Luiz",
+  "status": "proximo",
+  "problem": "Informar não basta: o app precisa desafiar a família a agir para chegar nas metas, e hoje quase todos param antes da primeira fatura"
+ },
+ {
+  "id": "claude_no_backlog",
+  "cost": false,
+  "from": [],
+  "tipo": "backend",
+  "notes": "Robô do GitHub com token assinado (sem senha); cópia em backlog/BACKLOG.md; mudanças em backlog/ops/.",
+  "title": "Claude lê e muda o backlog da Central (robô do GitHub)",
+  "where": "Central; GitHub",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "O Claude não via as mudanças feitas na Central nem conseguia criar ou mudar itens"
+ },
+ {
   "id": "cartao_valor_informado",
   "cost": false,
   "from": [],
@@ -30,12 +55,12 @@
   "cost": false,
   "from": [],
   "tipo": "backend",
-  "notes": "Guardar o tipo do aparelho na inscrição (Android, Windows, iPhone, Mac) e testar um por um.",
+  "notes": "Cada aparelho guarda o tipo que o próprio celular informa (Android (Chrome), iPhone, Windows (Edge)…) e a data do último aviso entregue; na Central, \"Testar só este\". O app grava de novo uma vez por versão, então o tipo aparece na próxima abertura.",
   "title": "Lista de aparelhos com o tipo certo, a data e teste por aparelho",
   "where": "Central; Notificações",
   "effort": "P",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Android e Chrome de computador aparecem iguais; não dá para saber qual aparelho é qual"
  },
  {
@@ -94,12 +119,12 @@
   "cost": false,
   "from": [],
   "tipo": "seguranca",
-  "notes": "Conferir cada tabela (avisos, opiniões, uso, erros, atalhos) e testar.",
+  "notes": "Apagar a conta agora também apaga as opiniões, os erros registrados, os avisos enviados, os limites de uso e os convites da pessoa, e tira o id dela dos lançamentos e importações da família que continua (a família passa para outro membro). Corrigido: quem criou a família não conseguia apagar a conta se outra pessoa continuasse. Testado no banco.",
   "title": "Apagar a conta apaga tudo (LGPD)",
   "where": "Menu → Sobre o app",
   "effort": "P",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "O \"apagar minha conta\" existe; falta garantir que leva todos os dados da pessoa"
  },
  {
@@ -120,12 +145,12 @@
   "cost": false,
   "from": [],
   "tipo": "seguranca",
-  "notes": "Revisar app_errors, push_log, usage e os logs da Vercel.",
+  "notes": "Revisados: erros (agora sem valores em reais, sem a parte do endereço depois do \"?\", sem e-mails nem números longos), cliques (só o nome do botão, números viram #), uso (só o nome da ação), avisos (sem o texto) e os logs do servidor (só código e tipo do erro do assistente).",
   "title": "Conferir que nenhum registro guarda dado sensível",
   "where": "Servidor; banco",
   "effort": "P",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Erros e registros podem levar texto de lançamento ou e-mail sem querer"
  },
  {
@@ -133,12 +158,12 @@
   "cost": false,
   "from": [],
   "tipo": "seguranca",
-  "notes": "Por pessoa e por minuto; resposta clara quando passar.",
+  "notes": "Contagem no banco (rate_hit), comum a todas as instâncias; sem o SQL, conta por instância. Assistente 30/min e 300/dia por pessoa; atalho 20/min e 200/dia por código; avisos da família 10/min; push de teste 5/min. O servidor só envia push para Google, Apple, Mozilla e Microsoft.",
   "title": "Limite de uso nas funções do servidor",
   "where": "Servidor",
   "effort": "P",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Sem limite, alguém pode chamar as funções sem parar e gerar custo"
  },
  {
@@ -146,12 +171,12 @@
   "cost": false,
   "from": [],
   "tipo": "seguranca",
-  "notes": "Uma linha de teste por tabela em test_rls.sql (membro, outra família, servidor).",
+  "notes": "Testes automáticos para todas as tabelas: toda tabela com RLS; toda tabela acessível tem regra; visitante só consegue ver um convite. Corrigido: um membro conseguia se promover a dono atualizando a própria linha (agora só muda nome e relação). Funções do app fechadas para visitantes.",
   "title": "Revisar quem lê e grava cada tabela, com teste para todas",
   "where": "Banco",
   "effort": "M",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Uma tabela sem a regra certa pode expor dados de outra família"
  },
  {
@@ -159,12 +184,12 @@
   "cost": false,
   "from": [],
   "tipo": "seguranca",
-  "notes": "Liberar só o próprio site, jsDelivr/cdnjs fixos, Supabase e Pexels; testar no iPhone e no Android.",
+  "notes": "Fase 1 no ar (v114): só observa e registra em Erros. Fase 2: bloquear, depois de alguns dias sem registros dos celulares.",
   "title": "Proteção do navegador contra código de fora (Content-Security-Policy)",
   "where": "Todo o app",
   "effort": "P",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "agora",
   "problem": "O app não diz ao navegador de onde pode carregar código"
  },
  {
@@ -185,12 +210,12 @@
   "cost": false,
   "from": [],
   "tipo": "backend",
-  "notes": "Contar falhas seguidas; depois de 5, sair da lista. 404/410 já saem.",
+  "notes": "Cada rodada marca entregues (zera as falhas) e com erro (soma); com 5 falhas seguidas o aparelho sai da lista. Se o celular ainda tiver a permissão, o app inscreve de novo ao abrir.",
   "title": "Tirar da lista aparelhos que falham sempre",
   "where": "Servidor",
   "effort": "P",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Aparelho que dá erro toda vez (sem ser 404/410) continua recebendo tentativas"
  },
  {
@@ -528,7 +553,7 @@
   "title": "Trazer o histórico de outros apps (Mobills, Organizze)",
   "effort": "P",
   "origin": "Pesquisa de dores (nov/2026)",
-  "status": "agora",
+  "status": "feito",
   "problem": "Quem desistiu de outros apps leva o histórico consigo"
  },
  {
@@ -563,7 +588,7 @@
   "title": "Saques e dinheiro vivo: no que foi gasto?",
   "effort": "P",
   "origin": "Pesquisa de dores (nov/2026)",
-  "status": "agora",
+  "status": "feito",
   "problem": "Compras em dinheiro somem do controle (19,4% esquecem, SPC)"
  },
  {
@@ -1016,7 +1041,7 @@
   "where": "praondefoi.app.br no computador",
   "effort": "M",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "depois",
   "problem": "Às vezes é melhor ver os números e mandar a fatura pelo computador"
  },
  {
@@ -1196,11 +1221,11 @@
   "from": [],
   "notes": "Depois de estimular o uso (mês de exemplo, lembrete do primeiro passo). Poucas perguntas, uma por tela, no máximo uma vez por pessoa; resultado na Central. Respeitar o limite de um pop-up por abertura.",
   "ordem": 2,
-  "title": "Pesquisa de uso dentro do app",
+  "title": "Pesquisa de satisfação dentro do app",
   "where": "Pop-up ao abrir o app; resultados na Central",
   "effort": "P",
   "origin": "Luiz",
-  "status": "depois",
+  "status": "agora",
   "problem": "Saber por que as pessoas usam pouco ou param, sem perguntar por fora do app"
  },
  {
@@ -1237,7 +1262,7 @@
   "where": "",
   "effort": "G",
   "origin": "Equipe",
-  "status": "proximo",
+  "status": "depois",
   "problem": "Canal que o brasileiro mais usa"
  },
  {
@@ -1860,7 +1885,7 @@
   "where": "",
   "effort": "M",
   "origin": "Benchmarking: Copilot, Monarch",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Já aprende regra exata; falta perguntar e generalizar"
  },
  {
@@ -2064,7 +2089,7 @@
   "id": "desafio_de_meta_52_semanas_mes_sem_deliv",
   "cost": false,
   "from": [],
-  "notes": "",
+  "notes": "Entra em missoes_e_desafios.",
   "title": "Desafio de meta (52 semanas, mês sem delivery)",
   "where": "",
   "effort": "P",
