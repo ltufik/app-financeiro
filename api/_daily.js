@@ -13,6 +13,8 @@ import { pendingCash } from '../public/js/lib/cash.js';
 import { findDups } from '../public/js/lib/dups.js';
 import { privatize } from '../public/js/lib/privacy.js';
 import { fundingPairs } from '../public/js/lib/funding.js';
+import { weekly, reminderMessage } from '../public/js/lib/pushtexts.js';
+export { weekly, reminderMessage };
 
 // Which preference turns each message on, and how many days before the same message can repeat.
 export const TYPES = { entrada_amortizacao: 'dados', repetidos: 'dados', saques: 'dados', juros: 'gastos', tarifas: 'gastos', fatura: 'dados', subs_up: 'gastos', budget: 'gastos', close: 'dados', missing: 'dados', ending: 'dados', pending: 'dados', red: 'gastos', high: 'gastos', card: 'gastos', fixed: 'gastos', below: 'gastos', saved: 'conquistas', low: 'conquistas', semanal: 'semanal' };
@@ -23,14 +25,6 @@ const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
 // Today in Brazil (UTC-3), as AAAA-MM-DD, plus weekday (0 = Sunday).
 export function brToday(now = Date.now()) { const d = new Date(now - 3 * 3600e3); return { iso: d.toISOString().slice(0, 10), dow: d.getUTCDay() }; }
 
-export function weekly(txs, idx, today) {
-  const recent = expandSplits(txs).filter(t => t.date && days(today, t.date) >= 0 && days(today, t.date) < 7);
-  const by = {};
-  for (const t of recent) { const c = idx.get(t.category); if (c && c.grp !== 'dia') continue; const v = t.source === 'conta' ? -t.amount : +t.amount; if (v > 0) by[t.category || 'A classificar'] = (by[t.category || 'A classificar'] || 0) + v; }
-  const total = Object.values(by).reduce((a, b) => a + b, 0), top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 2);
-  if (!total) return { id: 'semanal', title: 'Resumo da semana', text: 'Nenhuma despesa lançada nos últimos 7 dias. Lembre de lançar os gastos do pix e do dinheiro.', url: '/?tab=lancar' };
-  return { id: 'semanal', title: 'Resumo da semana', text: `Nos últimos 7 dias saíram ${R(total)} em despesas. Maiores: ${top.map(e => `${e[0]} ${R(e[1])}`).join(', ')}.`, url: '/?tab=resumo' };
-}
 
 // Family's insights, built the same way as the home screen.
 export function familyInsights({ household, categories, txs }, today) {
@@ -104,11 +98,6 @@ export async function runDaily({ supabaseUrl, serviceKey, vapid, fetchImpl = fet
   return out;
 }
 
-// Evening reminder (21h in Brazil): only for people who launched nothing today, once a day.
-// Families with no data at all get the first step (send the statement) instead of the voice reminder.
-export const reminderMessage = (name, { empty = false } = {}) => empty
-  ? { title: `${name ? name.split(' ')[0] + ', o' : 'O'} app de vocês ainda está vazio`, body: 'Mande a última fatura do cartão, em PDF, foto ou print. Em 2 minutos você vê para onde foi o dinheiro.', url: '/?acao=pdf', tag: 'lembrete' }
-  : ({ title: `${name ? name.split(' ')[0] + ', g' : 'G'}astou algo hoje no pix ou em dinheiro?`, body: 'Toque e fale em 5 segundos. O app lança para você.', url: '/?acao=voz', tag: 'lembrete' });
 export async function runReminder({ supabaseUrl, serviceKey, vapid, fetchImpl = fetch, now = Date.now() }) {
   const H = { apikey: serviceKey, 'content-type': 'application/json', ...(serviceKey.startsWith('sb_') ? {} : { authorization: `Bearer ${serviceKey}` }) };
   const get = async path => { const r = await fetchImpl(`${supabaseUrl}/rest/v1/${path}`, { headers: H }); if (!r.ok) throw new Error(`supabase ${r.status} ${path.split('?')[0]}`); return r.json(); };

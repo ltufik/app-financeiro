@@ -356,3 +356,18 @@ export const DOC_PRIVADO = { id: 'meu_seu_nosso_doc', title: 'Meu, seu, nosso (l
 - No app, cada total vira uma linha "Pessoal de Luana", só leitura, que conta na sobra pelo grupo (vgrp em monthCalc). Os gráficos mostram "Pessoal de Luana" como uma categoria.
 - O robô das 9h lê tudo com a chave do servidor, mas troca o privado pelos totais antes de calcular os avisos (privatize): o detalhe nunca vai num push.
 - Regras em lib/privacy.js (testadas, inclusive que a sobra é a mesma com detalhe ou com total) e testes de acesso em test_rls.sql.` };
+
+export const DOC_MENSAGENS = { id: 'mensagens_doc', title: 'Mensagens: o manual e a revisão', body: `Toda mensagem do app (aviso no Início, push) segue um manual. A Central → Mensagens mostra todas, escritas para a família fictícia (Ana e Bruno Souza) em momentos diferentes do mês, e marca o que está fora do manual.
+## O manual
+1. **Momento certo**: o mês em andamento nunca "fechou"; número parcial diz até quando.
+2. **Com o nome**: todo aviso traz o nome da pessoa. Se for da família: "Luiz, os gastos de vocês…".
+3. **Você ou vocês**: aviso da família fala com "vocês"; push pessoal (lembrete, recado) fala com "você".
+4. **Números da família**: aviso de dinheiro traz o valor da própria família.
+5. **Comparado com o normal**: alta ou queda comparada com a média da própria família.
+6. **Próximo passo**: um botão (ou link no push) que leva direto ao lugar.
+7. **Sem frase genérica**: nada de "vale olhar", "faltam dados", "lembre de".
+8. **Curto**: título até 60 letras; texto até 220 (push até 180).
+## Como funciona
+- As regras estão em lib/msgcheck.js (testadas). Os cenários em admin/msgscenarios.js usam as mesmas funções do app e dos robôs (insights, previsão, pushtexts), então o que aparece na Central é o que as pessoas recebem.
+- Os textos dos pushes que não vêm do Início (resumo da semana, lembrete das 21h, avisos da família) ficam em lib/pushtexts.js.
+- Próximo passo: reescrever as mensagens até todas ficarem dentro do manual, e então o teste passa a exigir isso.` };

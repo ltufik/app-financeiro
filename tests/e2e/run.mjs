@@ -1054,6 +1054,11 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.selectOption('.svt select[data-k="plan"]', 'pago'); await ap.click('#svSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
   ok('central: matriz salva', adminStore.services?.items?.[0]?.plan === 'pago');
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-7-servicos.png'), fullPage: true });
+  await atab('mensagens'); await ap.waitForSelector('.msgcard');
+  const mx = await ap.textContent('#aMain');
+  ok('central: mensagens mostra os avisos e pushes da família fictícia, com o que está fora do manual', (await ap.$$('.msgcard')).length >= 20 && mx.includes('fora do manual') && mx.includes('Outubro fechou no vermelho') && mx.includes('Não traz o nome'), mx.slice(0, 200));
+  await ap.click('[data-r="nome"]'); ok('central: mensagens filtra por regra', (await ap.$$('.msgcard')).length >= 10);
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-8-mensagens.png'), fullPage: true });
   await atab('docs'); await ap.waitForSelector('.docsec');
   ok('central: documentação com glossário', (await ap.textContent('#aMain')).includes('Glossário da interface'));
   await ap.click('[data-ed="0"]'); await ap.fill('#dcBody', 'Texto novo da visão geral'); await ap.click('#dcSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);

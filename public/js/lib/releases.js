@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -491,4 +491,5 @@ export const RELEASES = [
   { id: 'r122', version: 'v122', at: '2026-11-09T21:42:00Z', addBacklog: [{ id: 'mes_atual_nao_fechou', title: 'Aviso dizia que o mês atual "fechou no vermelho"', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Com o extrato parcial de novembro, o Início dizia "Novembro fechou no vermelho" no dia 9', from: [] }, { id: 'comunicacoes_personalizadas', title: 'Revisar todas as mensagens: certas, no momento certo e personalizadas', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Mensagem genérica ou errada faz o app ser só mais um; para divulgar em massa cada aviso precisa falar da família, com os números dela e o que fazer agora', notes: 'Passar por cada aviso do Início e cada push: o momento (mês em andamento ou terminado, dia do mês), o nome e a família, os números da própria família comparados com ela mesma, um próximo passo claro e o tom. Inclui testes que cobrem as frases.', from: [] }], backlog: ['mes_atual_nao_fechou'], news: { id: 'n20261109d', title: 'Avisos do mês mais certos', items: [
     'O Início não diz mais que o mês "fechou" antes de ele acabar. Os avisos de resultado falam do último mês que terminou; o mês atual fica na Previsão do mês.',
   ] } },
+  { id: 'r123', version: 'v123', at: '2026-11-09T22:35:00Z', addDocs: [DOC_MENSAGENS], semNovidade: 'Só na Central: a página Mensagens, para revisar todos os avisos e pushes antes da reescrita.', semTeste: 'Só a Central muda (coberta pelo teste automático da Central).' },
 ];

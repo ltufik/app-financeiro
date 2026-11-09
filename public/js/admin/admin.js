@@ -20,11 +20,13 @@ import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS,
 import { homeEngagement } from '../lib/homefeed.js';
 import { CHECKS } from '../lib/health.js';
 import { SURVEYS, surveyResults } from '../lib/survey.js';
+import { RULES, checkMessage } from '../lib/msgcheck.js';
+import { SCENARIOS, PERSON, scenarioMessages, otherPushes } from './msgscenarios.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
-const TABS = ['painel', 'opinioes', 'pesquisas', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
+const TABS = ['painel', 'opinioes', 'pesquisas', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -147,7 +149,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, pesquisas, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
+  ({ painel, opinioes, pesquisas, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -170,7 +172,7 @@ function labelTables(root) {
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
   { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
-  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
+  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['mensagens', 'Mensagens'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
   { id: 'conta', title: 'Sua conta', icon: IC('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), items: [['acesso', 'Acesso e segurança']] },
 ];
@@ -376,6 +378,25 @@ const fail = (el, title, e) => { el.innerHTML = `<div class="ahead"><h1>${title}
 const FB_KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
 const FB_STATUS = { novo: 'Nova', visto: 'Lida', backlog: 'No backlog', resolvido: 'Resolvida' };
 let fbKind = '', fbStatus = 'aberto', replyOpen = null;
+// Mensagens: every notice and push, written for the fictitious family in different moments, checked against the manual.
+let msgRule = '';
+function mensagens(el) {
+  const groups = [...SCENARIOS.map(sc => ({ title: sc.title, desc: sc.desc, today: sc.today, list: scenarioMessages(sc) })), { title: 'Outros pushes e a Previsão do mês', desc: 'Resumo da semana, previsão de domingo, lembrete das 21h e avisos da família.', today: '2026-11-15', list: otherPushes() }];
+  for (const g of groups) for (const m of g.list) m.problems = checkMessage(m, { today: g.today, name: PERSON });
+  const all = groups.flatMap(g => g.list), bad = all.filter(m => m.problems.length), count = r => all.filter(m => m.problems.some(p => p.rule === r)).length;
+  const card = m => `<article class="panel stack msgcard${m.problems.length ? ' msg-bad' : ''}">
+      <p class="tiny muted">${m.where ? esc(m.where) : m.channel === 'push' ? 'Push' : 'Aviso no Início'} · <code>${esc(m.id)}</code></p>
+      <p style="margin:0"><strong>${esc(m.title || '—')}</strong></p><p class="small" style="margin:0">${esc(m.text || '')}</p>
+      ${m.action ? `<p class="tiny" style="margin:0">Botão: <span class="tag">${esc(m.action.label)}</span></p>` : m.url ? `<p class="tiny muted" style="margin:0">Abre: <code>${esc(m.url)}</code></p>` : ''}
+      ${m.problems.length ? `<ul class="tiny" style="margin:0;color:var(--bad, #b3261e)">${m.problems.map(p => `<li>${esc(p.text)}</li>`).join('')}</ul>` : '<p class="tiny" style="margin:0;color:var(--good, #1b7f4b)">Dentro do manual.</p>'}</article>`;
+  el.innerHTML = `<div class="ahead"><h1>Mensagens</h1><span class="tiny muted">${all.length} mensagens · ${bad.length} fora do manual</span></div>
+    <p class="small">Todos os avisos do Início e os pushes, escritos para a família fictícia (${esc(PERSON)} e o marido) em momentos diferentes do mês. São gerados pelas mesmas funções do app: o que aparece aqui é o que as pessoas recebem.</p>
+    <details class="panel"><summary class="small"><strong>O manual (as regras de toda mensagem)</strong></summary><ol class="small">${RULES.map(([k, t, d]) => `<li><strong>${esc(t)}</strong>: ${esc(d)} <span class="tiny muted">(${count(k)} fora)</span></li>`).join('')}</ol></details>
+    <div class="chips"><button class="chip" type="button" data-r="" aria-pressed="${!msgRule}">Todas</button>${RULES.map(([k, t]) => `<button class="chip" type="button" data-r="${k}" aria-pressed="${msgRule === k}">${esc(t)} <span class="tiny muted">${count(k)}</span></button>`).join('')}</div>
+    ${groups.map(g => { const l = g.list.filter(m => !msgRule || m.problems.some(p => p.rule === msgRule)); return l.length ? `<h2>${esc(g.title)}</h2><p class="tiny muted">${esc(g.desc)}</p><div class="stack">${l.map(card).join('')}</div>` : ''; }).join('')}`;
+  el.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { msgRule = b.dataset.r; mensagens(el); });
+}
+
 // Pesquisas de satisfação: each survey with who saw it, answered or said "Agora não", the counts per option and the texts.
 async function pesquisas(el) {
   el.innerHTML = '<div class="ahead"><h1>Pesquisas</h1></div><p class="small muted">Carregando...</p>';

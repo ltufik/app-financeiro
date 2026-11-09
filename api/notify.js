@@ -6,15 +6,8 @@ import { vapidFromEnv } from './push-cron.js';
 import { withRecorder } from './_pushlog.js';
 import { allowed } from './_ratelimit.js';
 
-const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-const mName = k => /^\d{4}-\d{2}$/.test(k || '') ? MES[+k.slice(5) - 1] : 'mês';
-
-export function message({ type, name, family, source, month }) {
-  if (type === 'joined') return { title: `${name} entrou na família`, body: `Agora vocês veem os mesmos números da ${family}.`, url: '/?tab=resumo', tag: 'familia-joined' };
-  if (type === 'imported') return { title: `${name} importou ${source === 'cartao' ? 'a fatura' : 'o extrato'} de ${mName(month)}`, body: 'A sobra do mês já está atualizada.', url: '/?tab=resumo', tag: 'familia-imported' };
-  if (type === 'closed') return { title: `${name} fechou ${mName(month)}`, body: 'Veja a retrospectiva do mês.', url: '/?tab=fechar', tag: 'familia-closed' };
-  return null;
-}
+import { message } from '../public/js/lib/pushtexts.js';
+export { message };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });

@@ -1346,3 +1346,18 @@ test('insights: o mês que está acontecendo nunca "fechou" (no vermelho ou não
   const b = insights({ ...base, today: '2026-12-02' });
   assert.ok(b.some(x => x.id === 'red' && /Novembro fechou no vermelho/.test(x.title)));
 });
+
+import { checkMessage } from '../public/js/lib/msgcheck.js';
+test('manual de mensagens: acha mês errado, falta de nome, de número, de ação e frase genérica', () => {
+  const bad = checkMessage({ channel: 'inicio', id: 'red', title: 'Novembro fechou no vermelho', text: 'Saiu muito. Vale olhar onde dá para cortar.' }, { today: '2026-11-09', name: 'Luiz Elias' });
+  const rules = bad.map(p => p.rule);
+  for (const r of ['momento', 'nome', 'pessoa', 'numero', 'comparacao', 'acao', 'vago']) assert.ok(rules.includes(r), r);
+  const good = checkMessage({ channel: 'inicio', id: 'red', title: 'Luiz, outubro fechou no vermelho', text: 'Os gastos de vocês passaram R$ 1.200 da renda, R$ 900 acima da média de vocês. Escola e Moradia puxaram.', action: { label: 'Ver o que subiu' } }, { today: '2026-11-09', name: 'Luiz Elias' });
+  assert.deepEqual(good, []);
+  assert.deepEqual(checkMessage({ channel: 'push', id: 'lembrete', title: 'Luiz, gastou algo hoje no pix?', text: 'Toque e fale em 5 segundos.', url: '/?acao=voz' }, { today: '2026-11-09', name: 'Luiz' }), []);
+});
+test('central → mensagens: todos os cenários geram mensagens com título e texto', async () => {
+  const m = await import('../public/js/admin/msgscenarios.js');
+  for (const sc of m.SCENARIOS) { const l = m.scenarioMessages(sc); assert.ok(l.length >= 2, sc.id); assert.ok(l.every(x => x.title && x.text), sc.id); }
+  assert.ok(m.otherPushes().every(x => x.title && x.text && (x.url || x.action)));
+});
