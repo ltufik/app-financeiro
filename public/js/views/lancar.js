@@ -22,6 +22,7 @@ import { docKeys, compareStatement, docsText } from '../lib/statements.js';
 import { applyMemos } from '../lib/memo.js';
 import { parseCSV, detectColumns, buildEntries, markDuplicates, matchCategory } from '../lib/sheet.js';
 import { renderCash } from '../cash.js';
+import { matchManuals, mergeInto } from '../lib/dups.js';
 import { makeQueue, advance, isDone, position, queueSummary, STATUS_LABEL, QUEUE_MAX, progressOf, nowHint, failedIndexes } from '../lib/queue.js';
 
 const EXAMPLES = ['gastei 230 no mercado hoje no cartão', 'paguei 350 de terapia por pix', 'recebi 1.950 de reembolso do plano de saúde', 'almoço de 180 no cartão ontem'];
@@ -146,6 +147,16 @@ function build(el) {
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); startFiles([...(e.dataTransfer.files || [])], 'pdf'); };
   $('#pwGo').onclick = () => withBusy('Abrindo o PDF...', () => openPdf($('#pwIn').value), resultArea, 'Abrindo o PDF');
   for (const id of ['#rcCam', '#rcFile']) $(id).onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) withBusy('Lendo a nota...', () => routeFile(f, 'nota'), resultArea, 'Lendo a nota fiscal'); };
+}
+
+// A payoff typed before the statement: the financing's log now points to the statement's entry (counted once).
+async function relinkPayoffs(keep, source, month) {
+  const st = settings(); if (!keep.size || !(st.debts || []).some(d => (d.log || []).some(e => keep.has(e.txId)))) return;
+  const map = new Map();
+  for (const [id, r] of keep) { const t = S.txs.find(x => !x.manual && x.source === source && x.month === month && x.description === r.description && Math.abs(x.amount - round2(r.amount)) < 0.01 && ![...map.values()].includes(x.id)); if (t) map.set(id, t.id); }
+  if (!map.size) return;
+  const next = { ...st, debts: st.debts.map(d => ({ ...d, log: (d.log || []).map(e => map.has(e.txId) ? { ...e, txId: map.get(e.txId) } : e) })) };
+  await db.saveSettings(S.hh.id, next); S.hh.settings = next;
 }
 
 // ---------- manual entries ----------
@@ -605,6 +616,7 @@ async function reviewRows(source, rows, month, info) {
   rows.forEach(r => { r.source = source; const k = classify(r, S.prepared, prevCard); if (k) { r.category = k.category; r.how = k.how; r.pending = false; } });
   applyMemos(rows, source, settings().memos); // personal notes remembered for the same description
   await suggest(source, rows);
+  S.txs.forEach(t => { delete t._match; });
   R = { source, rows, month, info };
   renderReview();
 }
@@ -622,8 +634,10 @@ function renderReview() {
   const thisDoc = keys.length ? docsText(source, keys).replace(/^(a fatura|o extrato) d(o|a|os|as) /, '') : '';
   const otherDocs = docsText(source, cmp.others);
   const Month = mLong(R.month).charAt(0).toUpperCase() + mLong(R.month).slice(1);
-  const pend = txsOf(R.month).filter(t => t.manual && t.source === source);
-  pend.forEach(e => { if (e._match == null) e._match = rows.some(r => Math.abs(r.amount - e.amount) < 0.01); });
+  // Typed entries the document already has (any month the document covers, same amount, dates up to 5 days apart).
+  const mm = R.mm ||= matchManuals(S.txs.filter(t => t.manual && t.source === source && !(t.splits || []).length), rows, R.month);
+  const pend = S.txs.filter(t => mm.has(t.id) || (t.manual && t.source === source && t.month === R.month));
+  pend.forEach(e => { if (e._match == null) e._match = mm.has(e.id); });
   const ks = monthKeys(); const months = [...new Set([R.month, ...ks, addM(ks[ks.length - 1] || R.month, 1)])].sort();
   const tot = shown.reduce((a, r) => a + r.amount, 0);
   const head = source === 'cartao' ? `Fatura de ${mLong(R.month)}: ${brl(tot)}` : `Extrato de ${mLong(R.month)}: ${shown.length} movimentos${part ? ' novos' : ''}`;
@@ -653,10 +667,10 @@ function renderReview() {
     tb.append(tr);
   });
   if (pend.length) {
-    $('#rvPend').innerHTML = `<h3>Lançamentos manuais deste mês</h3><p class="tiny muted">Marcados: já aparecem no documento e serão apagados ao salvar.</p>` + pend.map((e, i) => `<label class="small" style="display:flex;gap:8px;align-items:center;padding:6px 0"><input type="checkbox" data-i="${i}" style="width:auto" ${e._match ? 'checked' : ''}> ${esc(e.description)} · ${brl(e.amount)}</label>`).join('');
+    $('#rvPend').innerHTML = `<h3>Já lançados por você</h3><p class="tiny muted">Marcados: já aparecem ${source === 'cartao' ? 'nesta fatura' : 'neste extrato'}. Ao salvar fica um só (o do banco), com a categoria e o que você escreveu. Desmarque o que for outro lançamento.</p>` + pend.map((e, i) => `<label class="small" style="display:flex;gap:8px;align-items:center;padding:6px 0"><input type="checkbox" data-i="${i}" style="width:auto" ${e._match ? 'checked' : ''}> ${esc(e.description)} · ${brl(e.amount)}</label>`).join('');
     $('#rvPend').querySelectorAll('input').forEach(inp => inp.onchange = () => { pend[+inp.dataset.i]._match = inp.checked; });
   }
-  $('#rvMonth').onchange = e => { R.month = e.target.value; renderReview(); };
+  $('#rvMonth').onchange = e => { R.month = e.target.value; R.mm = null; S.txs.forEach(t => { delete t._match; }); renderReview(); };
   $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; docDone('descartado'); };
   $('#rvSave').onclick = async e => {
     const n = shown.length, nPend = shown.filter(r => r.pending).length;
@@ -672,12 +686,15 @@ async function saveReview(pend) {
   $('#rvSave').disabled = true;
   const { source, month, info } = R, rows = R.save || R.rows;
   try {
+    // A typed entry the document has: the bank's row keeps its category and words (and, after saving, its payoff link).
+    const keep = new Map(); for (const e of pend.filter(e => e._match)) { const i = R.mm?.get(e.id); const r = i != null && R.rows[i]; if (r && rows.includes(r)) { Object.assign(r, mergeInto(e, r)); keep.set(e.id, r); } }
     const payload = rows.map(r => ({ date: r.date || null, day: r.day, description: r.description, amount: round2(r.amount), category: r.category, installment: r.installment || null, card: r.card || null, pending: !!r.pending, ...(r.note ? { note: r.note } : {}) }));
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month) + (R.cmp?.mode === 'complement' ? ' (parte)' : '');
     track('lancar.pdf_ok'); homeNews(); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();
+    await relinkPayoffs(keep, source, month).catch(() => {});
     toast(label + ' salvo'); $('#review').hidden = true; $('#pdfLog').innerHTML = ''; R = null; S.m = month; S.render(); docDone('salvo', label);
   } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#rvSave').disabled = false; }
 }

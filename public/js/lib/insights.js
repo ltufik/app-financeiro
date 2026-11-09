@@ -123,6 +123,8 @@ export function insights(ctx) {
   }
 
   // 4d. Withdrawals not explained yet: cash disappears from the control unless the person says what it paid for.
+  const dups = ctx.dups || 0;
+  if (dups) out.push({ id: 'repetidos', tone: 'warn', title: dups > 1 ? `${dups} lançamentos apareceram duas vezes` : 'Um lançamento apareceu duas vezes', text: 'Você lançou à mão e o extrato ou a fatura trouxe de novo, então ele conta em dobro. Junte com um toque: fica um só, com a sua categoria.', action: { label: 'Ver e juntar', go: ['extrato', '#dupBox'] } });
   const cash = ctx.cashPending || [];
   if (cash.length) {
     const tot = cash.reduce((a, t) => a + Math.abs(+t.amount), 0);

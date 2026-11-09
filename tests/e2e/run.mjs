@@ -709,6 +709,26 @@ if (nrows) { // Regras que aprendem: changing one entry offers to move everythin
   const un = await page.evaluate(() => ({ r: window.__db.rules.some(r => r.kind === 'regex' && /ZEBRAFOOD/.test(r.pattern)), c: ['rg1', 'rg2'].map(id => window.__db.transactions.find(t => t.id === id)?.category) }));
   ok('regras: desfazer apaga a regra e devolve as categorias de antes', !un.r && un.c[0] === 'Restaurante' && un.c[1] === 'A classificar', JSON.stringify(un));
 }
+if (nrows) { // Repetidos: typed by hand and brought again by the bill -> one tap keeps one, with the category and the words; a typed entry can be deleted.
+  const cat0 = await page.evaluate(async () => { const { S } = await import('/js/state.js'); const m = new Date().toISOString().slice(0, 7), c = S.categories.find(x => x.name !== 'A classificar').name;
+    const add = t => { t = { household_id: S.hh.id, source: 'cartao', month: m, amount: 77.7, splits: null, pending: false, ...t }; window.__db.transactions.push({ ...t }); S.txs.push(t); };
+    add({ id: 'dm1', manual: true, date: m + '-03', day: '03/' + m.slice(5), description: 'Presente da Luana', category: c });
+    add({ id: 'db1', manual: false, date: m + '-04', day: '04/' + m.slice(5), description: 'LOJA XYZ E2E', category: 'A classificar', pending: true });
+    add({ id: 'dm2', manual: true, date: m + '-20', day: '20/' + m.slice(5), description: 'Feira E2E apagar', amount: 12.34, category: c });
+    S.render(); return c; });
+  await page.click('[data-tab=resumo]'); await page.click('[data-tab=extrato]'); await page.waitForSelector('#dupBox:not([hidden])', { timeout: 5000 }).catch(() => {});
+  const dx = await txt('#dupBox');
+  ok('repetidos: Extrato mostra o que apareceu duas vezes', dx.includes('apareceu duas vezes') && dx.includes('Presente da Luana') && dx.includes('LOJA XYZ E2E'), dx.slice(0, 300));
+  await page.locator('#dupBox li', { hasText: 'Presente da Luana' }).locator('[data-p]').click();
+  await page.waitForFunction(() => !window.__db.transactions.some(t => t.id === 'dm1'), null, { timeout: 8000 }).catch(() => {});
+  const jb = await page.evaluate(() => ({ m: window.__db.transactions.some(t => t.id === 'dm1'), b: window.__db.transactions.find(t => t.id === 'db1') }));
+  ok('repetidos: juntar deixa um só, com a categoria e o que a pessoa escreveu', !jb.m && jb.b?.category === cat0 && (jb.b?.note || '').includes('Presente da Luana'), JSON.stringify(jb));
+  await page.fill('#lSearch', 'feira e2e apagar'); await page.waitForTimeout(300);
+  await page.locator('#lRows li', { hasText: 'Feira E2E apagar' }).locator('button', { hasText: 'Apagar' }).click(); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]');
+  await page.waitForFunction(() => !window.__db.transactions.some(t => t.id === 'dm2'), null, { timeout: 8000 }).catch(() => {});
+  ok('Extrato: apaga um lançamento feito à mão, mesmo com a fatura no mês', !(await page.evaluate(() => window.__db.transactions.some(t => t.id === 'dm2'))));
+  await page.fill('#lSearch', ''); await page.waitForTimeout(200);
+}
 await sec('metas');
 await page.fill('#gSav', '150'); await page.click('#gSave');
 ok('meta de poupança acima de 100% é recusada', (await txt('#v-ajustes')).includes('Guardar da renda (%): o máximo é 100'));

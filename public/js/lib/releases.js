@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -473,5 +473,10 @@ export const RELEASES = [
   { id: 'r117', version: 'v117', at: '2026-11-08T23:03:00Z', backlog: ['saques_e_dinheiro_vivo', 'regras_que_aprendem_confirmar_antes_de_a'], addDocs: [DOC_SAQUES, DOC_REGRAS], news: { id: 'n20261108b', title: 'Saques e categorias que aprendem', items: [
     'Sacou dinheiro? Em Lançar aparece "No que foi o dinheiro do saque?". Escreva ou fale em poucas palavras, como "200 feira, 100 uber", e o saque passa a contar em cada categoria. Não lembra? Toque em "Não lembro".',
     'Mudou a categoria de um lançamento? O app pergunta se tudo com o mesmo nome vai junto (por exemplo, tudo com IFOOD para Delivery) e mostra antes quantos lançamentos mudam. Dá para desfazer em Categorias.',
+  ] } },
+  { id: 'r118', version: 'v118', at: '2026-11-09T16:38:00Z', addDocs: [DOC_REPETIDOS], addBacklog: [{ id: 'repetidos_lancado_a_mao', title: 'Lançado à mão + extrato: nunca em dobro, sem perder o que a pessoa escreveu', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'M', problem: 'O pix e a amortização lançados antes do extrato perderam a categoria e a descrição ao juntar, a amortização perguntou de novo e não dava para apagar um lançamento à mão depois do extrato', from: [] }], backlog: ['repetidos_lancado_a_mao'], news: { id: 'n20261109a', title: 'Lançou à mão e depois mandou o extrato? Fica um só', items: [
+    'Ao ler o extrato ou a fatura, o app acha o que você já lançou à mão (mesmo que o extrato pegue dois meses) e fica com um só, com a sua categoria e o que você escreveu.',
+    'Uma amortização já informada não pergunta de novo. Se algo aparecer duas vezes, o Extrato mostra e você junta com um toque.',
+    'Agora dá para apagar no Extrato um lançamento feito à mão, a qualquer momento.',
   ] } },
 ];

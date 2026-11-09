@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('repetidos_conciliacao', 'Lançar', 'v118', 'ambos', 'Lançado à mão + extrato: um só',
+    ['Lance à mão um pix ou compra de hoje, com uma categoria e uma descrição sua (ex.: "bolo do aniversário").', 'Quando o extrato ou a fatura com esse lançamento chegar, mande em Lançar e confira "Já lançados por você".', 'Salve e procure o lançamento no Extrato. Em outro lançamento feito à mão, toque em Apagar.'],
+    'Na revisão, o lançamento à mão aparece marcado em "Já lançados por você". Depois de salvar fica um só (o do banco), com a sua categoria e a sua descrição como anotação. Uma amortização já informada não pergunta de novo. Se algum repetido sobrar, o Extrato mostra "apareceu duas vezes" com Juntar. Apagar remove o lançamento feito à mão, com confirmação.'),
   t('regras_que_aprendem', 'Extrato', 'v117', 'ambos', 'Regras que aprendem',
     ['No Extrato, ache um lançamento de um lugar que aparece várias vezes (iFood, Uber, um posto) e mude a categoria.', 'Leia a pergunta, abra "Ajustar o nome" e teste um nome que não está no lançamento; depois volte.', 'Toque em "Sim, todos". Depois, em Menu → Categorias, toque em Desfazer na regra.'],
     'Aparece "Quer que tudo com "…" vá para …?" com quantos lançamentos mudam e exemplos; um nome que não está no lançamento é recusado. Ao aplicar, os outros mudam juntos e o próximo que chegar já vem na categoria. Em Categorias a regra aparece e o Desfazer devolve as categorias de antes. "Só este" muda só aquele lançamento.'),

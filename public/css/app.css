@@ -749,3 +749,7 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .lrn-adj{margin:6px 0 10px}.lrn-adj summary{cursor:pointer}
 .lrn-rules{list-style:none;padding:0;margin:4px 0;display:flex;flex-direction:column;gap:8px}
 .lrn-rules li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+/* Repetidos */
+.dup .eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0}
+.dup-list{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:10px}
+.dup-list li{display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}

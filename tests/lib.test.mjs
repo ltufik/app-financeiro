@@ -1245,3 +1245,25 @@ test('regras que aprendem: acha o nome, conta o que muda e não repete', () => {
   assert.equal(ruleMatches(rulePattern('posto shell'), posto).length, 1);
   assert.deepEqual(undoMoves({ category: 'Delivery', moved: [[1, 'Restaurante'], [2, 'A classificar']] }, [{ id: 1, category: 'Delivery' }, { id: 2, category: 'Mercado' }]), [[1, 'Restaurante']]);
 });
+
+import { matchManuals, findDups, mergeInto } from '../public/js/lib/dups.js';
+test('repetidos: o que foi lançado à mão e veio no extrato vira um só', () => {
+  const manuals = [{ id: 'm1', month: '2026-11', date: '2026-11-02', amount: -458, description: 'Bolo e doces Amanda' }, { id: 'm2', month: '2026-10', date: '2026-10-20', amount: -50 }, { id: 'm3', month: '2026-11', date: '2026-11-03', amount: -130000 }];
+  // Statement saved in October but going into November: the pix of 02/11 still matches; the 50 from 20/10 has no row.
+  const rows = [{ day: '25/10', amount: -10 }, { date: '2026-11-03', amount: -458 }, { day: '04/11', amount: -130000 }, { day: '30/10', amount: -458 }];
+  const m = matchManuals(manuals, rows, '2026-10');
+  assert.equal(m.get('m1'), 1); assert.equal(m.get('m3'), 2); assert.equal(m.has('m2'), false);
+  // Already saved: one pair; a pair marked "não é repetido" is left alone; a typed entry 20 days away is not a pair.
+  const txs = [{ id: 'm1', manual: true, source: 'conta', month: '2026-11', date: '2026-11-02', amount: -458, description: 'Bolo e doces Amanda', category: 'Festas' },
+    { id: 'b1', manual: false, source: 'conta', month: '2026-11', date: '2026-11-03', amount: -458, description: 'PIX ENVIADO AMANDA', category: 'A classificar' },
+    { id: 'm9', manual: true, source: 'conta', month: '2026-11', date: '2026-11-25', amount: -458, description: 'outro' },
+    { id: 'b2', manual: false, source: 'conta', month: '2026-11', date: '2026-11-04', amount: -130000, description: 'TED FINANCIAMENTO' }];
+  const debts = [{ id: 'd1', log: [{ kind: 'amortizacao', value: 130000, date: '2026-11-03', txId: 'gone' }] }];
+  const r = findDups(txs, debts);
+  assert.deepEqual(r.pairs.map(p => [p.manual.id, p.bank.id]), [['m1', 'b1']]);
+  assert.deepEqual(r.orphans.map(o => [o.debt.id, o.bank.id]), [['d1', 'b2']]);
+  assert.equal(findDups(txs, debts, ['m1|b1']).pairs.length, 0);
+  assert.equal(findDups(txs, [{ id: 'd1', log: [{ kind: 'amortizacao', value: 130000, txId: 'b2' }] }]).orphans.length, 0);
+  assert.deepEqual(mergeInto(txs[0], txs[1]), { category: 'Festas', pending: false, note: 'Bolo e doces Amanda' });
+  assert.deepEqual(mergeInto({ description: 'PIX ENVIADO AMANDA', category: 'A classificar' }, { description: 'PIX ENVIADO AMANDA' }), {});
+});

@@ -1,4 +1,5 @@
 import { askRule } from '../learnask.js';
+import { renderDups, deleteManual } from '../dupfix.js';
 import { S, txsOf, latestClosed, monthKeys, settings } from '../state.js';
 import * as db from '../db.js';
 import { brl, esc, mLong, norm } from '../lib/format.js';
@@ -12,7 +13,7 @@ let src = 'cartao', pendOnly = false, q = '', cat = '';
 export function render(el) {
   if (!el.dataset.built) {
     el.dataset.built = '1';
-    el.innerHTML = `<div class="panel"><h2>Lançamentos do mês</h2>
+    el.innerHTML = `<div class="panel stack dup" id="dupBox" hidden></div><div class="panel"><h2>Lançamentos do mês</h2>
       <div class="chips" style="margin-top:10px" id="srcChips"></div>
       <div class="rowbtn" style="margin-top:10px"><input type="search" id="lSearch" placeholder="Buscar" aria-label="Buscar lançamentos" style="flex:1 1 200px"><button class="chip" id="lPend" aria-pressed="false" type="button">Para conferir</button></div>
       <label class="f" style="margin-top:10px">Categoria<select id="lCat" aria-label="Filtrar por categoria"></select></label>
@@ -24,6 +25,7 @@ export function render(el) {
     $('#lPend').onclick = () => { pendOnly = !pendOnly; draw(); };
     $('#lCat').onchange = e => { cat = e.target.value; if (cat) track('extrato.categoria'); draw(); };
   }
+  renderDups($('#dupBox'), { onDone: () => S.render() });
   draw();
 }
 
@@ -98,6 +100,11 @@ function draw() {
       tr.querySelector('.xcat').append(ok);
     }
     tr.querySelector('.xcat').append(noteButton(t));
+    if (t.manual) {
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'chip'; del.textContent = 'Apagar';
+      del.onclick = async () => { try { if (await deleteManual(t, del)) { toast('Lançamento apagado'); S.render(); } } catch (e) { toast('Não foi possível apagar agora. ' + db.errorText(e)); } };
+      tr.querySelector('.xcat').append(del);
+    }
     tb.append(tr);
   }
   // With a category chosen, the total is what went to that category (only the matching parts of a receipt).

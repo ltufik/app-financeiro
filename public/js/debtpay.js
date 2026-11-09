@@ -13,7 +13,7 @@ const brl0 = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 const brD = d => String(d || '').split('-').reverse().join('/');
 export const AMORT_CAT = 'Amortização de financiamento';
 
-async function amortCategory() {
+export async function amortCategory() {
   let c = S.categories.find(x => x.name === AMORT_CAT);
   if (!c) { c = await db.addCategory(S.hh.id, { name: AMORT_CAT, grp: 'neutro', recurring: false }); S.categories.push(c); reindex(); }
   return c.name;

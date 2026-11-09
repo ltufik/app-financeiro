@@ -322,3 +322,13 @@ export const DOC_REGRAS = { id: 'regras_aprendem_doc', title: 'Regras que aprend
 - A regra vale para os próximos lançamentos, antes das regras do próprio app (prioridade 20); o que foi ensinado lançamento por lançamento continua valendo primeiro.
 - Em Categorias, "Regras que vocês ensinaram" lista cada regra com quantos lançamentos ela cobre e "Desfazer": apaga a regra e devolve os lançamentos para a categoria que tinham antes (o app guarda o que mudou em households.settings.ruleLog).
 - Regras em lib/learn.js (testadas); tela em learnask.js. Aparece no Extrato e no Fechar o mês.` };
+
+export const DOC_REPETIDOS = { id: 'repetidos_doc', title: 'Lançado à mão + extrato (repetidos)', body: `O que a pessoa lança à mão (voz, texto, comprovante) conta no mês até o extrato ou a fatura chegar. Quando chega, fica um só.
+## Na importação
+- O app procura os lançamentos à mão da mesma origem (conta ou cartão) no mês em que o documento é salvo e em qualquer mês que as datas do documento cobrem (5 dias de folga), com o mesmo valor e datas até 5 dias de diferença. Cada linha do documento junta com um lançamento só.
+- Na revisão aparecem em "Já lançados por você", marcados. Desmarcar mantém os dois.
+- Ao salvar, fica a linha do banco, que recebe a categoria do lançamento à mão e a descrição dele como anotação (lib/dups.js mergeInto).
+- Se o lançamento à mão abateu um financiamento, o abatimento passa para a linha do banco (não pergunta de novo nem abate duas vezes).
+## Depois
+- findDups (lib/dups.js) acha pares que sobraram (à mão + banco, mesmo valor, até 5 dias) e amortizações cujo lançamento à mão sumiu e cuja linha do extrato não está ligada. O Extrato mostra "apareceu duas vezes" com Juntar, Juntar todos e "Não é repetido" (households.settings.dupSkip). O Início e o aviso das 9h avisam ("repetidos").
+- No Extrato, lançamento feito à mão tem o botão Apagar (com confirmação), a qualquer momento.` };
