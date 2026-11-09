@@ -1,13 +1,14 @@
 // "Repetidos": a typed entry (or a receipt) that the statement brought again. Shown on Extrato (and pointed to from
 // Início); one tap keeps one entry, with the person's category and words, and the financing payoff still counted
 // once. The pairs come from lib/dups.js.
-import { S, settings } from './state.js';
+import { S, settings, reindex } from './state.js';
 import * as db from './db.js';
 import { toast, confirmInline } from './ui.js';
 import { track } from './usage.js';
 import { esc, brl } from './lib/format.js';
 import { findDups, mergeInto } from './lib/dups.js';
-import { amortCategory } from './debtpay.js';
+import { amortCategory, AMORT_CAT } from './debtpay.js';
+import { fundingPairs } from './lib/funding.js';
 
 const brD = d => String(d || '').split('-').reverse().slice(0, 2).join('/');
 export const familyDups = () => findDups(S.txs, settings().debts || [], settings().dupSkip || []);
@@ -72,4 +73,32 @@ export async function deleteManual(t, btn) {
   if (!await confirmInline(btn, { title: 'Apagar este lançamento?', text: `${esc(t.description)}, ${brl(t.amount)}, lançado à mão.${linked ? ' Ele abateu um financiamento: o saldo não muda (para desfazer o abatimento, use Patrimônio).' : ''} Só apague o que não aconteceu ou já veio no extrato.`, yes: 'Sim, apagar', danger: true })) return false;
   await db.deleteTransaction(t.id); S.txs = S.txs.filter(x => x.id !== t.id); track('extrato.apagou_manual');
   return true;
+}
+
+// "Entraram R$ X e saíram R$ X para o financiamento": the income that paid a payoff leaves the month's leftover.
+export const familyFunding = () => fundingPairs(S.txs, S.catIdx, { amortCat: AMORT_CAT, skip: settings().fundSkip || [] });
+async function pontualCategory() {
+  const pont = S.categories.filter(c => c.grp === 'pontual');
+  let c = pont.find(x => /investimento em conta|resgate|entrada pontual|amortiza/i.test(x.name)) || pont[0];
+  if (!c) { c = await db.addCategory(S.hh.id, { name: 'Entrada para amortização', grp: 'pontual', recurring: false }); S.categories.push(c); reindex(); }
+  return c.name;
+}
+export function renderFunding(box, { onDone } = {}) {
+  if (!box) return;
+  const list = familyFunding(); box.hidden = !list.length; if (!list.length) { box.innerHTML = ''; return; }
+  const { payoff: p, income: t } = list[0], A = Math.abs(+p.amount);
+  const debt = (settings().debts || []).find(d => (d.log || []).some(e => e.txId === p.id));
+  box.innerHTML = `<p class="eyebrow">Confira</p><h3>Esse dinheiro foi para a amortização?</h3>
+    <p class="small">Entraram <strong>${brl(t.amount)}</strong> em ${brD(t.date)} (${esc(t.description)}) e saíram <strong>${brl(A)}</strong> em ${brD(p.date)} para ${esc(debt?.name || 'o financiamento')}. Se o dinheiro entrou só para isso, ele não é sobra do mês: hoje o app conta ${brl(t.amount)} como ganho.</p>
+    <div class="rowbtn"><button class="btn primary" type="button" id="fdYes">Sim, foi para a amortização</button><button class="btn" type="button" id="fdNo">Não, é renda do mês</button></div>`;
+  const done = msg => { toast(msg); onDone ? onDone() : renderFunding(box, { onDone }); };
+  box.querySelector('#fdYes').onclick = async e => {
+    e.target.disabled = true;
+    try { const cat = await pontualCategory(); await db.updateTransaction(t.id, { category: cat, pending: false }); t.category = cat; t.pending = false; track('extrato.entrada_amortizacao'); done(`Pronto! A entrada foi para "${cat}" e saiu da sobra do mês. O patrimônio não muda.`); }
+    catch (err) { e.target.disabled = false; toast('Não foi possível salvar agora. ' + db.errorText(err)); }
+  };
+  box.querySelector('#fdNo').onclick = async e => {
+    try { const cur = settings(), next = { ...cur, fundSkip: [...new Set([...(cur.fundSkip || []), t.id])].slice(-200) }; await db.saveSettings(S.hh.id, next); S.hh.settings = next; track('extrato.entrada_e_renda'); done('Combinado. Continua contando como entrada do mês.'); }
+    catch (err) { toast('Não foi possível salvar agora. ' + db.errorText(err)); }
+  };
 }

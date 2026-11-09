@@ -68,6 +68,7 @@ export function surveyDone(id, answers = {}) {
 
 // Central: the results of one survey. rows: product_surveys rows of that survey.
 export function surveyResults(id, rows = []) {
+  const tests = rows.filter(r => r.survey === id && r.answers?._teste).length; rows = rows.filter(r => !r.answers?._teste);
   const s = SURVEYS[id], ans = rows.filter(r => r.survey === id && r.kind === 'respondeu');
   const shown = new Set(rows.filter(r => r.survey === id && r.kind === 'mostrou').map(r => r.name + '|' + r.family)).size;
   const later = rows.filter(r => r.survey === id && r.kind === 'adiou').length;
@@ -80,5 +81,5 @@ export function surveyResults(id, rows = []) {
     for (const r of ans) for (const k of [].concat(r.answers?.[q.id] ?? [])) if (k in counts) counts[k]++;
     return { ...q, counts };
   });
-  return { id, title: s?.title || id, shown, later, answered: ans.length, questions: qs };
+  return { id, title: s?.title || id, shown, later, answered: ans.length, tests, questions: qs };
 }

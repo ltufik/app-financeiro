@@ -729,6 +729,20 @@ if (nrows) { // Meu, seu, nosso: an entry becomes "só meu"; someone else's priv
   await page.evaluate(async () => { const { S } = await import('/js/state.js'); S.members = S.members.filter(m => m.user_id !== 'outra-e2e'); S.txs = S.txs.filter(t => !t.virtual); });
   await page.fill('#lSearch', ''); await page.waitForTimeout(200);
 }
+{ // Money that came in to pay a payoff: the app asks, and "Sim" takes it out of the month's leftover.
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); const m = new Date().toISOString().slice(0, 7);
+    const add = t => { t = { household_id: S.hh.id, source: 'conta', month: m, manual: false, splits: null, pending: false, ...t }; window.__db.transactions.push({ ...t }); S.txs.push(t); };
+    add({ id: 'fd-in', date: m + '-02', day: '02/' + m.slice(5), description: 'TED RECEBIDA E2E', amount: 88000, category: 'Entrada E2E' });
+    add({ id: 'fd-out', date: m + '-04', day: '04/' + m.slice(5), description: 'BOLETO FINANCIAMENTO E2E', amount: -88000, category: 'Amortização de financiamento' });
+    S.render(); });
+  await page.click('[data-tab=resumo]'); await page.click('[data-tab=extrato]'); await page.waitForSelector('#fundBox:not([hidden])', { timeout: 5000 }).catch(() => {});
+  const fb = await txt('#fundBox');
+  ok('entrada × amortização: o app pergunta se o dinheiro foi para a amortização', fb.includes('foi para a amortização') && fb.includes('88.000'), fb.slice(0, 250));
+  await page.click('#fdYes'); await page.waitForFunction(() => window.__db.transactions.find(t => t.id === 'fd-in')?.category !== 'Entrada E2E', null, { timeout: 8000 }).catch(() => {});
+  const fc = await page.evaluate(async () => { const { S } = await import('/js/state.js'); const c = window.__db.transactions.find(t => t.id === 'fd-in')?.category; return { c, grp: S.categories.find(x => x.name === c)?.grp }; });
+  ok('entrada × amortização: "Sim" tira a entrada da sobra (entrada pontual)', fc.grp === 'pontual' && await page.isHidden('#fundBox'), JSON.stringify(fc));
+  await page.evaluate(async () => { const { S } = await import('/js/state.js'); const gone = new Set(['fd-in', 'fd-out']); window.__db.transactions = window.__db.transactions.filter(t => !gone.has(t.id)); S.txs = S.txs.filter(t => !gone.has(t.id)); S.render(); });
+}
 { // Pesquisa de satisfação: the survey of the person's moment as a card on Início (never right after joining); one question at a time.
   await page.click('[data-tab=resumo]'); await page.waitForTimeout(600);
   ok('pesquisa: não aparece para quem acabou de entrar', await page.evaluate(() => document.querySelector('#survBox')?.hidden === true));
@@ -744,7 +758,10 @@ if (nrows) { // Meu, seu, nosso: an entry becomes "só meu"; someone else's priv
   await page.waitForFunction(() => (window.__db.surveys || []).some(s => s.kind === 'respondeu'), null, { timeout: 8000 }).catch(() => {});
   const sr = await page.evaluate(() => (window.__db.surveys || []).find(s => s.kind === 'respondeu'));
   ok('pesquisa: resposta salva com a nota, as opções e o texto', sr?.survey === 'nps' && sr.score === 9 && sr.answers.ajudou.includes('previsao') && sr.answers.falta === 'Ler mais bancos' && await page.isHidden('#survBox'), JSON.stringify(sr));
-  await page.evaluate(() => { window.__surveyCtx = null; });
+  await page.evaluate(async () => { (await import('/js/survey.js')).testSurvey('sem_fatura'); });
+  await page.click('[data-tab=lancar]'); await page.click('[data-tab=resumo]'); await page.waitForSelector('#survBox:not([hidden])', { timeout: 5000 }).catch(() => {});
+  ok('pesquisa: o teste do dono mostra qualquer pesquisa na hora, marcada como teste', (await txt('#survBox')).includes('Teste da pesquisa') && /primeira fatura/.test(await txt('#survBox')));
+  await page.click('#svLater'); await page.evaluate(() => { window.__surveyCtx = null; });
 }
 if (nrows) { // Repetidos: typed by hand and brought again by the bill -> one tap keeps one, with the category and the words; a typed entry can be deleted.
   const cat0 = await page.evaluate(async () => { const { S } = await import('/js/state.js'); const m = new Date().toISOString().slice(0, 7), c = S.categories.find(x => x.name !== 'A classificar').name;

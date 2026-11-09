@@ -484,4 +484,8 @@ export const RELEASES = [
     'Na família, cada um pode deixar um gasto "só meu": no Extrato, ao lançar ou numa fatura inteira (o app lembra o cartão).',
     'O resto da família vê só o total do mês, sem descrição nem categoria, e a sobra continua certa.',
   ] } },
+  { id: 'r121', version: 'v121', updateDocs: [DOC_PESQUISA], at: '2026-11-09T21:30:00Z', addBacklog: [{ id: 'entrada_que_pagou_amortizacao', title: 'Entrada que pagou a amortização não é sobra do mês', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Um valor alto que entrou só para amortizar o financiamento contava como ganho, e novembro aparecia guardando 170 mil', from: [] }], backlog: ['entrada_que_pagou_amortizacao'], news: { id: 'n20261109c', title: 'Recebeu e amortizou? A sobra fica certa', items: [
+    'Quando entra um valor alto e ele sai para amortizar um financiamento, o app pergunta se o dinheiro foi para isso.',
+    'Respondendo "Sim", a entrada sai da sobra do mês (o patrimônio não muda). Antes ela contava como se vocês tivessem guardado.',
+  ] } },
 ];

@@ -9,25 +9,35 @@ import { firstName } from './lib/news.js';
 import { pickSurvey, surveyDone, SURVEYS } from './lib/survey.js';
 
 let ctx = null, loading = null; const seen = new Set();
+// Test mode (Central → Pesquisas → "Testar no celular"): the app opened with ?pesquisa=<id> shows that survey now,
+// whatever the rules say; nothing counts as shown or postponed, and the answer is marked as a test.
+let FORCE = (() => { let v = null; try { v = new URLSearchParams(location.search).get('pesquisa'); if (v) sessionStorage.setItem('fin.pesquisa', v); else v = sessionStorage.getItem('fin.pesquisa'); } catch (e) { /* no storage */ } return SURVEYS[v] ? v : null; })();
+const endTest = () => { try { sessionStorage.removeItem('fin.pesquisa'); } catch (e) { /* no storage */ } };
 const myName = () => firstName(S.members.find(m => m.user_id === S.user?.id)?.display_name);
 const loadCtx = () => loading ||= db.surveyContext().then(c => { ctx = c || {}; }, () => { ctx = null; loading = null; });
 export const resetSurvey = () => { ctx = null; loading = null; seen.clear(); };
 export function currentSurvey() {
+  if (FORCE && !doneTest) return FORCE;
   if (!ctx || !S.user) return null;
   const months = new Set(S.txs.filter(t => !t.manual).map(t => t.month)).size, closed = Object.keys(settings().closed || {}).length;
   return pickSurvey({ now: new Date().toISOString(), joined: ctx.joined, activeDays: +ctx.active_days || 0, months, closed, owner: S.role === 'owner', history: ctx.history || [] });
 }
-const log = (id, kind, extra = {}) => { (ctx.history ||= []).unshift({ survey: id, kind, at: new Date().toISOString() }); return db.surveyEvent(S.hh.id, id, kind, extra.score ?? null, extra.answers ?? null, APP_VERSION); };
+let doneTest = false;
+// Menu → Métricas (owner only): show a survey now, as a test.
+export const testSurvey = id => { if (SURVEYS[id]) { FORCE = id; doneTest = false; seen.delete(id); } };
+const log = (id, kind, extra = {}) => {
+  if (FORCE === id) return kind === 'respondeu' ? db.surveyEvent(S.hh.id, id, kind, extra.score ?? null, { ...(extra.answers || {}), _teste: true }, 'teste') : Promise.resolve(); (ctx.history ||= []).unshift({ survey: id, kind, at: new Date().toISOString() }); return db.surveyEvent(S.hh.id, id, kind, extra.score ?? null, extra.answers ?? null, APP_VERSION); };
 
 export function renderSurvey(box) {
   if (!box) return;
-  if (!ctx) { box.hidden = true; loadCtx().then(() => { if (box.isConnected && ctx) renderSurvey(box); }); return; }
+  if (!ctx && !(FORCE && !doneTest)) { box.hidden = true; loadCtx().then(() => { if (box.isConnected && ctx) renderSurvey(box); }); return; }
   const id = currentSurvey(), s = id && SURVEYS[id]; box.hidden = !s; if (!s) { box.innerHTML = ''; return; }
   if (!seen.has(id)) { seen.add(id); log(id, 'mostrou').catch(() => {}); track('inicio.pesquisa_viu'); }
   const n = myName();
   box.innerHTML = `<p class="eyebrow">Sua opinião · 1 minuto</p><h3>${esc(n ? `${n}, ${s.title[0].toLowerCase()}${s.title.slice(1)}` : s.title)}</h3><p class="small">${esc(s.intro)}</p>
     <div class="rowbtn"><button class="btn primary" type="button" id="svGo">Responder</button><button class="btn" type="button" id="svLater">Agora não</button></div>`;
-  box.querySelector('#svLater').onclick = () => { log(id, 'adiou').catch(() => {}); track('inicio.pesquisa_agora_nao'); box.hidden = true; toast('Combinado. Perguntamos em outro momento.'); };
+  if (FORCE === id) box.querySelector('.eyebrow').textContent = 'Teste da pesquisa · não conta nos resultados';
+  box.querySelector('#svLater').onclick = () => { if (FORCE === id) { doneTest = true; endTest(); } log(id, 'adiou').catch(() => {}); track('inicio.pesquisa_agora_nao'); box.hidden = true; toast('Combinado. Perguntamos em outro momento.'); };
   box.querySelector('#svGo').onclick = () => { track('inicio.pesquisa_abriu'); openSurvey(id, () => { box.hidden = true; }); };
 }
 
@@ -64,7 +74,7 @@ function openSurvey(id, onDone) {
     if (!surveyDone(id, answers)) return;
     const btn = $('#svNext'); btn.disabled = true; btn.textContent = 'Enviando…';
     const score = s.questions.find(q => q.type === 'scale'); 
-    try { await log(id, 'respondeu', { answers, score: score ? answers[score.id] : null }); track('inicio.pesquisa_respondeu'); close(); onDone && onDone(); const n = myName(); toast(`Obrigado${n ? ', ' + n : ''}! Sua resposta já chegou e vai guiar o que fazemos.`); }
+    try { await log(id, 'respondeu', { answers, score: score ? answers[score.id] : null }); if (FORCE === id) { doneTest = true; endTest(); } else track('inicio.pesquisa_respondeu'); close(); onDone && onDone(); const n = myName(); toast(`Obrigado${n ? ', ' + n : ''}! Sua resposta já chegou e vai guiar o que fazemos.`); }
     catch (e) { btn.disabled = false; btn.textContent = 'Enviar'; toast('Não foi possível enviar agora. ' + db.errorText(e)); }
   };
   draw();

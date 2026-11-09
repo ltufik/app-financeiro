@@ -1318,3 +1318,21 @@ test('meu, seu, nosso: o privado vira total para a família e a sobra continua i
   assert.equal(privateCardOwner([{ source: 'cartao', card: '1234', user: 'lu' }], 'cartao', '1234'), 'lu');
   assert.equal(privateCardOwner([{ source: 'cartao', card: '1234', user: 'lu' }], 'cartao', '9999'), null);
 });
+
+import { fundingPairs } from '../public/js/lib/funding.js';
+test('entrada que pagou a amortização: o app pergunta, sem confundir com o salário', () => {
+  const idx = catIndex([{ name: 'Salário', grp: 'renda' }, { name: 'Outras entradas', grp: 'entrada' }, { name: 'Resgate', grp: 'pontual' }, { name: 'Amortização de financiamento', grp: 'neutro' }]);
+  const txs = [
+    { id: 'p', source: 'conta', date: '2026-11-04', amount: -130000, category: 'Amortização de financiamento' },
+    { id: 'in', source: 'conta', date: '2026-11-02', amount: 130000, category: 'Outras entradas' },
+    { id: 'sal', source: 'conta', date: '2026-11-05', amount: 40000, category: 'Salário' },
+  ];
+  assert.deepEqual(fundingPairs(txs, idx).map(x => [x.payoff.id, x.income.id]), [['p', 'in']]);
+  assert.equal(fundingPairs(txs, idx, { skip: ['in'] }).length, 0);
+  assert.equal(fundingPairs(txs.map(t => t.id === 'in' ? { ...t, category: 'Resgate' } : t), idx).length, 0); // already out of the leftover
+  assert.equal(fundingPairs(txs.map(t => t.id === 'in' ? { ...t, date: '2026-09-01' } : t), idx).length, 0); // far away
+});
+test('pesquisa: respostas de teste ficam fora dos resultados', () => {
+  const r = surveyResults('nps', [{ survey: 'nps', kind: 'respondeu', score: 2, answers: { _teste: true, ajudou: ['metas'] } }, { survey: 'nps', kind: 'respondeu', score: 10, answers: { ajudou: ['previsao'] } }]);
+  assert.equal(r.answered, 1); assert.equal(r.tests, 1); assert.equal(r.questions[0].avg, 10);
+});

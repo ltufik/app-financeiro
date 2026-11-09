@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('entrada_amortizacao', 'Início', 'v121', 'ambos', 'Entrada que pagou a amortização',
+    ['Receba um valor alto na conta e use para amortizar um financiamento (confirme o abatimento).', 'Mande o extrato e abra o Início.', 'Toque em "Confirmar" e, no Extrato, em "Sim, foi para a amortização".'],
+    'O Início avisa "R$ … entraram e foram para o financiamento?". No Extrato aparece a pergunta com a entrada e a saída. Com "Sim", a entrada vai para uma categoria de entrada pontual e a sobra do mês volta ao normal; o patrimônio não muda. "Não, é renda do mês" faz a pergunta sumir.'),
   t('meu_seu_nosso', 'Extrato', 'v120', 'ambos', 'Meu, seu, nosso: lançamento só meu',
     ['Numa família com 2 pessoas, no celular de uma delas, abra o Extrato e toque em "Só meu" num lançamento.', 'No celular da outra pessoa, abra o Extrato do mesmo mês.', 'Volte ao primeiro celular e toque em "Voltar para a família". Teste também a caixa "Só meu" ao lançar falando e na revisão de uma fatura.'],
     'Quem marcou vê o lançamento com a etiqueta "só meu". A outra pessoa não vê o lançamento: vê uma linha "Pessoal de [nome]" com o total, sem botões, e a sobra do mês é a mesma nos dois celulares. Ao voltar para a família, o lançamento reaparece para os dois. Uma fatura marcada "Só meu" já vem marcada da próxima vez.'),

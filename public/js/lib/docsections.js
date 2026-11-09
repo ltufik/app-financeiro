@@ -342,6 +342,7 @@ export const DOC_PESQUISA = { id: 'pesquisa_doc', title: 'Pesquisa de satisfaç�
 ## Regras
 - Nunca para quem acabou de entrar: 3 dias desde a entrada e 2 dias de uso.
 - No máximo uma a cada 30 dias. "Agora não" espera 7 dias; depois de 2, aquela pesquisa não aparece mais. Respondida não volta (a geral volta depois de 90 dias).
+- Para testar sem esperar as regras: Menu → Métricas → "Testar uma pesquisa" (só o dono do app) ou o link /?pesquisa=<id> da Central. A resposta vai com _teste e fica fora dos resultados.
 - Regras em lib/survey.js (testadas); tela em survey.js. Guarda em surveys (mostrou, adiou, respondeu; opções e textos curtos, nunca valores). Resultados em Central → Pesquisas (NPS, contagem por opção, textos).` };
 
 export const DOC_PRIVADO = { id: 'meu_seu_nosso_doc', title: 'Meu, seu, nosso (lançamentos privados)', body: `Na família, cada pessoa pode deixar algo "só meu": um lançamento, ou uma fatura ou extrato inteiro. O resto da família vê só o total do mês, e a sobra continua certa.

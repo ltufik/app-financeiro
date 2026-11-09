@@ -382,7 +382,8 @@ async function pesquisas(el) {
   let rows; try { rows = await getView('pesquisas'); } catch (e) { return fail(el, 'Pesquisas', e); }
   const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
   const card = id => { const r = surveyResults(id, rows), max = q => Math.max(1, ...Object.values(q.counts || {}));
-    return `<article class="panel stack"><h2>${esc(r.title)}</h2><p class="tiny muted">Viram ${r.shown} · responderam ${r.answered} (${pct(r.answered, r.shown)}) · "Agora não" ${r.later} · <code>${id}</code></p>
+    return `<article class="panel stack"><h2>${esc(r.title)}</h2><p class="tiny muted">Viram ${r.shown} · responderam ${r.answered} (${pct(r.answered, r.shown)}) · "Agora não" ${r.later}${r.tests ? ` · ${r.tests} de teste (fora da conta)` : ''} · <code>${id}</code></p>
+      <p class="small">Testar no celular: abra <code>${esc(location.origin)}/?pesquisa=${id}</code> <button class="chip" type="button" data-copy="${esc(location.origin)}/?pesquisa=${id}">Copiar link</button> <span class="tiny muted">(mostra esta pesquisa na hora; a resposta fica marcada como teste)</span></p>
       ${r.questions.map(q => `<div class="stack"><p class="small"><strong>${esc(q.q)}</strong></p>${q.type === 'scale' ? `<p class="small">${q.n ? `Média <strong>${String(q.avg).replace('.', ',')}</strong> · NPS <strong>${q.nps}</strong> (${q.n} notas)` : 'Sem notas ainda.'}</p>`
         : q.type === 'text' ? (q.texts.length ? `<ul class="small">${q.texts.map(t => `<li>${esc(t.text)} <span class="tiny muted">— ${esc(t.name || 'Alguém')}, ${dt(t.at)}</span></li>`).join('')}</ul>` : '<p class="tiny muted">Nenhum texto ainda.</p>')
         : `<div class="stack">${q.options.map(([k, l]) => `<div class="tiny"><div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(l)}</span><strong>${q.counts[k]}</strong></div><div style="height:6px;border-radius:3px;background:var(--line)"><div style="height:6px;border-radius:3px;background:var(--accent);width:${q.counts[k] / max(q) * 100}%"></div></div></div>`).join('')}</div>`}</div>`).join('')}</article>`; };
@@ -393,6 +394,7 @@ async function pesquisas(el) {
       <li><strong>Sem fatura</strong>: ainda não mandou fatura ou extrato. <strong>Um mês</strong>: mandou um mês, não fechou e entrou há 10 dias ou mais. <strong>Família</strong>: entrou por convite, já tem fatura e usou 3 dias. <strong>Geral (NPS)</strong>: 2 meses ou um mês fechado e 14 dias de app.</li>
       <li>Aparece como cartão no Início (nunca pop-up), com o nome da pessoa; uma pergunta por vez.</li></ul></details>
     <div class="stack">${Object.keys(SURVEYS).map(card).join('')}</div>`;
+  el.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copy); toast('Link copiado. Abra no celular.'); } catch (e) { toast(b.dataset.copy); } });
 }
 
 async function opinioes(el) {

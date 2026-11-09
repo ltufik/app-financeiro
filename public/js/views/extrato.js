@@ -1,5 +1,5 @@
 import { askRule } from '../learnask.js';
-import { renderDups, deleteManual } from '../dupfix.js';
+import { renderDups, deleteManual, renderFunding } from '../dupfix.js';
 import { privateButton } from '../private.js';
 import { S, txsOf, latestClosed, monthKeys, settings, isMine } from '../state.js';
 import * as db from '../db.js';
@@ -14,7 +14,7 @@ let src = 'cartao', pendOnly = false, q = '', cat = '';
 export function render(el) {
   if (!el.dataset.built) {
     el.dataset.built = '1';
-    el.innerHTML = `<div class="panel stack dup" id="dupBox" hidden></div><div class="panel"><h2>Lançamentos do mês</h2>
+    el.innerHTML = `<div class="panel stack dup" id="fundBox" hidden></div><div class="panel stack dup" id="dupBox" hidden></div><div class="panel"><h2>Lançamentos do mês</h2>
       <div class="chips" style="margin-top:10px" id="srcChips"></div>
       <div class="rowbtn" style="margin-top:10px"><input type="search" id="lSearch" placeholder="Buscar" aria-label="Buscar lançamentos" style="flex:1 1 200px"><button class="chip" id="lPend" aria-pressed="false" type="button">Para conferir</button></div>
       <label class="f" style="margin-top:10px">Categoria<select id="lCat" aria-label="Filtrar por categoria"></select></label>
@@ -27,6 +27,7 @@ export function render(el) {
     $('#lCat').onchange = e => { cat = e.target.value; if (cat) track('extrato.categoria'); draw(); };
   }
   renderDups($('#dupBox'), { onDone: () => S.render() });
+  renderFunding($('#fundBox'), { onDone: () => S.render() });
   draw();
 }
 

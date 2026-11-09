@@ -123,6 +123,8 @@ export function insights(ctx) {
   }
 
   // 4d. Withdrawals not explained yet: cash disappears from the control unless the person says what it paid for.
+  const fund = ctx.funding || [];
+  if (fund.length) { const f = fund[0]; out.push({ id: 'entrada_amortizacao', tone: 'warn', title: `${R(f.income.amount)} entraram e foram para o financiamento?`, text: 'Se esse dinheiro entrou só para a amortização, ele não é sobra do mês. Confirme com um toque e a sobra fica certa.', action: { label: 'Confirmar', go: ['extrato', '#fundBox'] } }); }
   const dups = ctx.dups || 0;
   if (dups) out.push({ id: 'repetidos', tone: 'warn', title: dups > 1 ? `${dups} lançamentos apareceram duas vezes` : 'Um lançamento apareceu duas vezes', text: 'Você lançou à mão e o extrato ou a fatura trouxe de novo, então ele conta em dobro. Junte com um toque: fica um só, com a sua categoria.', action: { label: 'Ver e juntar', go: ['extrato', '#dupBox'] } });
   const cash = ctx.cashPending || [];

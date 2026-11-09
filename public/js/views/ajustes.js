@@ -17,6 +17,8 @@ import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
 import { renderAnnual } from '../annual.js';
 import { renderTaught } from '../learnask.js';
+import { testSurvey } from '../survey.js';
+import { SURVEYS } from '../lib/survey.js';
 import { ASSET_TYPES, UFS, guessAssetType, isVehicle, ipvaOf } from '../lib/annual.js';
 import { renderSecurity, signOutSafely } from '../lock.js';
 import { PHOTOS } from '../photos.js';
@@ -132,6 +134,8 @@ export function render(el) {
     <h3>Testar a jornada neste aparelho</h3>
     <p class="tiny muted">Faz este aparelho voltar a mostrar, ao abrir, o convite para ligar as notificações e o da digital, como para quem acabou de chegar. Os dados não mudam.</p>
     <div><button class="btn" type="button" id="jrReset">Ver de novo os convites de abertura</button></div>
+    <div class="rowbtn"><label class="f" style="flex:1">Testar uma pesquisa<select id="svTest">${Object.entries(SURVEYS).map(([k, v]) => `<option value="${k}">${esc(v.title)}</option>`).join('')}</select></label><button class="btn" type="button" id="svTestGo">Mostrar no Início</button></div>
+    <p class="tiny muted">Mostra a pesquisa agora, sem as regras. A resposta fica marcada como teste e não entra nos resultados.</p>
   </div>
 
   <div class="panel stack" data-sec="contexto">
@@ -181,6 +185,7 @@ export function render(el) {
   if (sec.key === 'divisao') renderSplit($('#splitBox'));
   if (sec.key === 'metricas') {
     renderMetrics($('#metricsBox'));
+    $('#svTestGo').onclick = () => { testSurvey($('#svTest').value); S.go('resumo'); };
     $('#jrReset').onclick = async e => {
       if (!await confirmInline(e.target, { text: 'Mostrar de novo os convites de abertura neste aparelho? O app vai recarregar.', yes: 'Sim, mostrar' })) return;
       try { for (const k of ['fin.pushask.' + S.user.id, 'fin.bio.ask.' + S.user.id]) localStorage.removeItem(k); } catch (err) { /* storage blocked */ }
