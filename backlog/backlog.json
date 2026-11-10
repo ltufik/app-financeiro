@@ -1,5 +1,15 @@
 [
  {
+  "id": "plural_manuais",
+  "from": [],
+  "tipo": "bug",
+  "title": "Etiqueta dizia \"lançamentos manualis\"",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Plural errado na etiqueta do Início"
+ },
+ {
   "id": "previsao_com_o_que_falta",
   "from": [],
   "tipo": "bug",
