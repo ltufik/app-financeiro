@@ -33,6 +33,9 @@ export function lockText({ name = '', minutes = LOCK_DEFAULT, reason = 'parado',
     title: reason === 'manual' ? (c ? 'Você saiu da Central' : 'Você saiu do app') : 'Você foi desconectado por inatividade',
     text: reason === 'manual' ? (c ? 'A Central fica fechada até você entrar de novo.' : 'Os números da família ficam escondidos até você entrar de novo.')
       : `Ficou ${minTxt(lockMinutes(minutes, scope))} sem uso. ${c ? 'Para proteger a Central do produto, ela desconecta sozinha.' : 'Para proteger os números da família, o app desconecta sozinho.'}`,
+    // The entry screen (2.3): one discreet line under "Olá".
+    line: reason === 'manual' ? (c ? 'Você saiu da Central.' : 'Você saiu. Os números de vocês ficam escondidos até entrar de novo.')
+      : `Saímos sozinhos depois de ${minTxt(lockMinutes(minutes, scope))} sem uso, para proteger ${c ? 'a Central' : 'os números de vocês'}.`,
   };
 }
 

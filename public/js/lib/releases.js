@@ -520,4 +520,7 @@ export const RELEASES = [
     'O app sugere desafios a partir dos números de vocês, como voltar o delivery para a média. Aceitem um e acompanhem o progresso no Início.',
     'Cumpriu? Comemoração, selo e aviso para a família. E agora há a sequência de semanas com o app em dia.',
   ] } },
+  { id: 'r2.3.0', version: 'v2.3.0', at: '2026-11-10T11:23:00Z', addBacklog: [{ id: 'entrada_mais_limpa', title: 'Tela de entrada mais limpa (versão A)', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A tela de entrada tinha 7 blocos disputando atenção e parecia estranha', from: [] }], backlog: ['entrada_mais_limpa'], news: { id: 'n20261110e', title: 'Entrar ficou mais simples', items: [
+    'A tela de entrada agora tem só o "Olá", um botão Entrar e o link para usar a senha. Os cuidados com os seus dados continuam a um toque.',
+  ] } },
 ];

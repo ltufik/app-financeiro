@@ -791,3 +791,17 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .ch-home .eyebrow{letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700}
 .ch-bar{display:block;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
 .ch-bar i{display:block;height:100%;background:var(--accent)}
+/* Entry screen, version A (2.3) */
+#lockScreen .lk-a{min-height:min(640px,100%);justify-content:space-between;gap:20px;padding:40px 22px 24px}
+#lockScreen .lk-a .lk-top{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:6vh}
+#lockScreen .lk-a .lk-top img{border-radius:18px}
+#lockScreen .lk-a .lk-name{font-weight:700;font-size:15px;margin-bottom:22px}
+#lockScreen .lk-a h2{margin:0;font-size:32px;line-height:1.15}
+#lockScreen .lk-a .lk-top p{margin:4px 8px 0;max-width:34ch}
+#lockScreen .lk-a .lk-bottom{display:flex;flex-direction:column;align-items:center;gap:12px}
+#lockScreen .lk-a .lk-big{min-height:54px;font-size:17px;gap:10px}
+#lockScreen .lk-a .lk-alt{font-weight:600;font-size:15px}
+#lockScreen .lk-safe{text-align:left;font-size:13px;color:var(--muted);width:100%}
+#lockScreen .lk-safe summary{cursor:pointer;text-align:center;list-style:none}
+#lockScreen .lk-safe summary::-webkit-details-marker{display:none}
+#lockScreen .lk-out{color:var(--muted)}
