@@ -408,3 +408,13 @@ Primeira fatura, Família organizada (as 6 de começo), Mês fechado, Meta batid
 ## Sequência e família (2.2)
 - Semanas seguidas com a família fazendo algo no app (fatura, extrato, lançamento, fatura aberta, missão ou desafio): aparece na faixa ("🔥 3 semanas seguidas") e em Em família; selo "4 semanas seguidas".
 - Em família: o que cada pessoa fez no mês. Missão de começo cumprida ou desafio cumprido avisa o resto da família por push (tipo "conquista", só textos fixos).` };
+
+export const DOC_VER_CONTA = { id: 'ver_conta_doc', title: '"Ver a conta": de onde vem cada número', body: `Todo número que o app calcula para a família tem embaixo um "Ver a conta" fechado: abre uma tabela com cada parte, o total e a explicação. Dá transparência e ensina a conta.
+
+- Previsão do mês (Início): extrato até o dia que ele cobre, renda e contas fixas que faltam, dia a dia, cartão, sobra prevista e quanto cabe por dia.
+- Nível do ano (Início): o que entrou e saiu nos meses com extrato, a sobra e a %, e quanto falta guardar até dezembro para o próximo nível (renda esperada × a % do nível − o que já sobrou).
+- Sonho (Início): investido hoje, o que guardam por mês e por ano, recebimentos, rendimento acima da inflação e o total no prazo; quando chegam lá ou quanto falta.
+- Financiamento (Menu → Patrimônio): saldo informado, parcelas desde então (parte que abate, estimada) e amortizações, chegando no saldo de hoje.
+- Gastos do ano (Menu → Família e metas): por mês, o acumulado dividido pelos meses até ele; o mês mais apertado decide o "separem R$ X por mês" (arredondado para cima de 10 em 10).
+
+Cálculo em lib/explain.js (e forecastBreakdown em lib/monthend.js); a tabela é calcBox em explainui.js, que registra "conta.<onde>" ao abrir.` };

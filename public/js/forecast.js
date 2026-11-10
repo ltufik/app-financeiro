@@ -7,6 +7,7 @@ import { track } from './usage.js';
 import { checkNumber } from './lib/validate.js';
 import { todayISO, esc, brl0, mLong } from './lib/format.js';
 import { forecast, forecastText, forecastBreakdown, checkinTarget } from './lib/monthend.js';
+import { calcBox } from './explainui.js';
 
 const brD = d => String(d || '').split('-').reverse().slice(0, 2).join('/');
 export const familyForecast = () => forecast({ txs: S.txs, categories: S.categories, settings: settings(), today: todayISO() });
@@ -27,13 +28,11 @@ export function renderForecast(box) {
     <p class="small">${esc(t.head)}</p><p class="small"><strong>${esc(t.day)}</strong></p>
     <p class="tiny muted">${esc(basis)}${t.counted ? ' ' + esc(t.counted) : ''}</p>
     ${t.next ? `<p class="small">${esc(t.next)}</p>` : ''}
-    <details class="fc-calc" id="fcCalc"><summary class="small">Ver a conta</summary><table class="small"><tbody>${forecastBreakdown(f).map(r => `<tr class="fc-${r.kind}"><td>${esc(r.label)}</td><td class="num">${r.kind === 'note' ? brl0(r.value) : (r.value < 0 ? '− ' : '') + brl0(Math.abs(r.value))}</td></tr>`).join('')}</tbody></table>
-      <p class="tiny muted">"Pela média" é a mediana dos últimos 3 meses completos de vocês. Uma conta que cai todo mês entra como fixa quando a categoria dela é de conta fixa (Menu → Categorias).</p></details>
+    ${calcBox(forecastBreakdown(f), { id: 'previsao', foot: '"Pela média" é a mediana dos últimos 3 meses completos de vocês. Uma conta que cai todo mês entra como fixa quando a categoria dela é de conta fixa (Menu → Categorias).' })}
     <div class="fc-ask" id="fcMore"><p class="small"><strong>${tg.closed ? `Quanto veio a fatura que fechou dia ${brD(tg.closeDate)}?` : `Quanto está a fatura aberta${tg.month !== today.slice(0, 7) ? ` de ${mLong(tg.month).split(' ')[0]}` : ''} hoje?`}</strong></p>
       <p class="tiny muted">${tg.closed ? 'O valor está no app do banco, na fatura fechada.' : `Está no app do banco (a fatura que fecha dia ${brD(tg.closeDate)}). Tem mais de um cartão? Some as faturas. Leva 10 segundos e deixa a previsão certa.`}</p>
       <div class="rowbtn"><label class="f" style="flex:1">Valor (R$)<input type="number" inputmode="decimal" step="0.01" min="0" id="fcAmount" placeholder="Ex.: 8450"></label><button class="btn primary" type="button" id="fcSave">Atualizar a previsão</button></div></div>`;
   if (S.openForecast) { S.openForecast = false; track('inicio.previsao_aviso'); }
-  box.querySelector('#fcCalc')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.previsao_conta'); });
   const btn = box.querySelector('#fcSave'); if (!btn) return;
   btn.onclick = async () => {
     const inp = box.querySelector('#fcAmount'); clearInvalid(box);

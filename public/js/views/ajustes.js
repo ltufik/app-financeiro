@@ -17,6 +17,8 @@ import { showAllNews, welcomeAlpha } from '../messages.js';
 import { renderApplePay } from '../applepay.js';
 import { renderAnnual } from '../annual.js';
 import { renderTaught } from '../learnask.js';
+import { calcBox } from '../explainui.js';
+import { debtBreakdown } from '../lib/explain.js';
 import { testSurvey } from '../survey.js';
 import { SURVEYS } from '../lib/survey.js';
 import { ASSET_TYPES, UFS, guessAssetType, isVehicle, ipvaOf } from '../lib/annual.js';
@@ -368,6 +370,7 @@ export function render(el) {
     box.hidden = !ds.length;
     box.innerHTML = ds.length ? `<h3>Como está cada financiamento hoje</h3>${ds.map(d => `<div class="dnow"><p class="small"><strong>${esc(d.name)}</strong>: faltam <strong>${brl(d.now.saldo)}</strong>${d.now.months ? ' (estimado)' : ''}</p>
       <ul class="tiny muted">${d.now.history.map(h => `<li>${h.kind === 'inicio' ? `${isoToBr(h.date)}: saldo informado ${brl(h.value)}` : h.kind === 'amortizacao' ? `${isoToBr(h.date)}: amortização −${brl(h.value)}${h.note ? ' (' + esc(h.note) + ')' : ''}${h.at ? ` <button class="linkbtn tiny" type="button" data-undo="${esc(d.id)}" data-at="${esc(h.at)}" data-v="${h.value}">Desfazer</button>` : ''}` : `${esc(h.note)}: −${brl(h.value)}`}</li>`).join('')}</ul>
+      ${calcBox(debtBreakdown(d, d.now), { id: 'financiamento', foot: 'A parte de cada parcela que abate o saldo é estimada pela taxa e pelo tipo de parcela. Com o extrato do financiamento, digite o saldo real acima.' })}
       <details class="help"><summary>Registrar uma amortização</summary><div class="grid3">${num('am' + d.id, 'Valor (R$)', '')}<label class="f">Data<input type="date" id="amd${esc(d.id)}" value="${todayISO()}"></label></div><button class="btn" type="button" data-amort="${esc(d.id)}">Abater do saldo</button></details></div>`).join('')}
       <p class="tiny muted">Com o comprovante, é mais fácil: mande em Lançar e diga que é amortização. Quando chegar o extrato do financiamento, digite o saldo dele acima e salve.</p>` : '';
     box.querySelectorAll('[data-amort]').forEach(b => b.onclick = async () => {

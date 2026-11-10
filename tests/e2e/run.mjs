@@ -393,8 +393,8 @@ if (backup) {
   ok('importar o mesmo backup de novo não duplica (pula os meses)', (await txt('.cfm')).includes('Importar 0 lançamentos') && (await txt('.cfm')).includes('serão pulados'), (await txt('.cfm')).slice(0, 120));
   await page.click('.cfm [data-n]');
   await page.click('[data-tab=resumo]');
-  await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; const c = document.querySelector('#fcCalc'); if (c) c.open = true; });
-  ok('Início: "Ver a conta" da previsão mostra os números até a sobra prevista', (await txt('#fcCalc')).includes('Entradas do mês') && (await txt('#fcCalc')).includes('Sobra prevista') && (await txt('#fcCalc')).includes('Cabem por dia'), (await txt('#fcCalc')).slice(0, 200));
+  await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; const c = document.querySelector('#calc_previsao'); if (c) c.open = true; });
+  ok('Início: "Ver a conta" da previsão mostra os números até a sobra prevista', (await txt('#calc_previsao')).includes('Entradas do mês') && (await txt('#calc_previsao')).includes('Sobra prevista') && (await txt('#calc_previsao')).includes('Cabem por dia'), (await txt('#calc_previsao')).slice(0, 200));
   ok('Início: a previsão fechada diz o principal numa linha', /Previsão: (sobrar|faltar) R\$/.test(await txt('#sum_previsao summary')), await txt('#sum_previsao summary'));
   ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
   await page.click('#fcSave');
@@ -414,6 +414,9 @@ if (backup) {
   { // The pace is the real average of the last complete months, never the old fixed "Ritmo atual".
     const gb = await txt('#goalBox');
     ok('sonho: ritmo pela média real dos últimos 3 meses, com os meses', gb.includes('Média dos últimos 3 meses') && /o que sobrou de verdade em [a-z]{3} a [a-z]{3}/.test(gb) && !gb.includes('Ritmo atual') && gb.includes('Cartão em R$ 17 mil'), gb.slice(0, 300));
+    await page.evaluate(() => { const c = document.querySelector('#calc_sonho'); if (c) c.open = true; });
+    const cs = await txt('#calc_sonho');
+    ok('sonho: "Ver a conta" soma investido, o que guardam e o rendimento até o total', cs.includes('Investido hoje') && cs.includes('Rendimento') && /Em \d+ anos/.test(cs) && cs.includes('Meta de vocês'), cs.slice(0, 300));
     await sec('metas');
     await page.fill('#gPlan', '6000'); await page.fill('#gPlanY', '40000'); await page.click('#gSave'); await page.waitForTimeout(400);
     ok('metas: o plano de quanto conseguem guardar é salvo', await page.evaluate(() => { const h = window.__db.households[0]; return h.settings.goals.planMonthly === 6000 && h.settings.goals.planYearly === 40000; }));
@@ -876,7 +879,7 @@ await page.selectOption('[data-list="debts"] tr:nth-child(1) select[data-k="sist
 ok('patrimônio: parcelas que diminuem (SAC) pedem os meses que faltam', (await txt('#v-ajustes')).includes('quantos meses faltam'));
 await page.selectOption('[data-list="debts"] tr:nth-child(1) select[data-k="sistema"]', 'price'); await page.click('#pSave'); await page.waitForTimeout(200);
 ok('patrimônio salvo: o bem guarda a ligação e o saldo ganha a data', await page.evaluate(() => { const st = window.__db.households[0].settings; return st.assets.find(a => /Guaratuba/.test(a.name)).debtId === 'guaratuba' && !!st.debts.find(d => d.id === 'guaratuba').saldoEm; }));
-await page.click('#pDebtNow .dnow:has-text("Guaratuba") summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]');
+await page.click('#pDebtNow .dnow:has-text("Guaratuba") details.help summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]');
 ok('amortização pede confirmação e diz que o patrimônio sobe', (await txt('.cfm')).includes('patrimônio líquido sobe'));
 const patBefore = await page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').saldo);
 await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
@@ -889,7 +892,10 @@ await page.click('#pDebtNow .dnow:has-text("Guaratuba") [data-undo]'); await pag
 ok('desfazer amortização pede confirmação e diz que volta para o saldo', (await txt('.cfm')).includes('voltam para o saldo'));
 await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 ok('desfazer amortização: sai do histórico e o saldo volta', await page.evaluate(() => !window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').log.some(e => e.value === 130000)) && (await txt('#pDebtNow .dnow:has-text("Guaratuba")')).includes('480.000'), await txt('#pDebtNow .dnow:has-text("Guaratuba")'));
-await page.click('#pDebtNow .dnow:has-text("Guaratuba") summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+{ await page.evaluate(() => { document.querySelectorAll('#pDebtNow [data-calc]').forEach(d => { d.open = true; }); });
+  const cd = await txt('#pDebtNow .dnow:has-text("Guaratuba") [data-calc]');
+  ok('financiamento: "Ver a conta" vai do saldo informado ao saldo de hoje', cd.includes('Saldo informado') && cd.includes('Saldo hoje') && cd.includes('480.000'), cd); }
+await page.click('#pDebtNow .dnow:has-text("Guaratuba") details.help summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; });
@@ -909,6 +915,9 @@ ok('gastos do ano: acha o IPVA (Detran de abril) e o IPTU parcelado', /Detran: R
 ok('gastos do ano: o Detran pergunta de qual veículo, já com o Civic', await page.$eval('#anBox .dpay:has-text("Detran: R$ 2.285") select[data-veh]', s => s.value) === 'Honda Civic Touring 2020');
 await page.click('#anBox .dpay:has-text("Detran: R$ 2.285") [data-yes]'); await page.waitForTimeout(400);
 ok('gastos do ano: confirmado entra no calendário com quanto separar, sugestão e pago no ano', (await txt('#anBox')).includes('Nos próximos 6 meses') && /separem R\$ [\d.]+ por mês/.test(await txt('#anBox')) && /Sugestão: (à vista|parcelar)\./.test(await txt('#anBox')) && /✓ Em 2026: pago R\$ 2\.285 em abril/.test(await txt('#anBox')) && /alíquota de ES \(2%\): R\$ 2\.780 por ano; à vista em abril, com 15% de desconto: R\$ 2\.363/.test(await txt('#anBox')) && await page.evaluate(() => window.__db.households[0].settings.annual?.[0]?.assetName === 'Honda Civic Touring 2020'), (await txt('#anBox')).slice(0, 900));
+{ await page.evaluate(() => { const c = document.querySelector('#calc_gastos_ano'); if (c) c.open = true; });
+  const ca = await txt('#calc_gastos_ano'), sep = (await txt('#anBox')).match(/separem (R\$ [\d.]+) por mês/)?.[1];
+  ok('gastos do ano: "Ver a conta" mostra o acumulado por mês e chega no valor de separem', /÷/.test(ca) && !!sep && ca.includes(sep), ca.slice(0, 400)); }
 if (shots) await page.screenshot({ path: path.join(shots, '05g-gastos-ano.png'), fullPage: true });
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(200);
 // Dynamic home: what is new since the last visit goes to the top, marked.
@@ -926,6 +935,9 @@ await page.click('[data-back]'); await page.waitForTimeout(300);
 ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).includes('A retrospectiva de 2026 até'));
 // Year retrospective, from "Mais detalhes".
 await page.evaluate(() => { document.querySelector('#sum_nivel').open = true; }); await page.click('#sum_nivel [data-retro]');
+{ await page.evaluate(() => { const c = document.querySelector('#calc_nivel'); if (c) c.open = true; });
+  const cn = await txt('#calc_nivel');
+  ok('nível do ano: "Ver a conta" mostra entrou, saiu e sobrou com a %', cn.includes('Entrou em') && cn.includes('Saiu no mesmo período') && /Sobrou \(\d+% do que entrou\)/.test(cn), cn.slice(0, 300)); }
 await page.waitForSelector('#wPage', { state: 'attached', timeout: 5000 }).catch(() => {}); for (let k = 0; k < 12 && !(await page.$('#wPage')); k++) await page.click('#wrapped .w-next');
 await page.click('#wPage'); await page.waitForSelector('.yretro', { timeout: 5000 }).catch(() => {});
 ok('retrospectiva do ano: guardaram, melhor e pior mês, para onde mais foi', /Guardaram/.test(await txt('.yretro')) && /Melhor mês/.test(await txt('.yretro')) && /Mês mais difícil/.test(await txt('.yretro')) && (await page.$$('.yretro .list')).length === 2);

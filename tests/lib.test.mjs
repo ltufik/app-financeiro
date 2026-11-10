@@ -1452,3 +1452,18 @@ test('sequência: semanas seguidas com a família ativa no app', () => {
   assert.equal(weekStreak(['2026-10-06', '2026-11-03'], '2026-11-10').current, 1);
   assert.equal(weekStreak([], '2026-11-10').current, 0);
 });
+
+import { levelBreakdown, dreamBreakdown, debtBreakdown, asideBreakdown } from '../public/js/lib/explain.js';
+test('ver a conta: nível, sonho, financiamento e gastos do ano mostram os números que somam o resultado', () => {
+  const lv = levelBreakdown({ renda: 100000, res: 6000, tx: 0.06, n: 10, positive: 7, months: ['2026-01', '2026-10'] }, { next: 'prata', nextLabel: 'Prata', monthsLeft: 2 });
+  const L = Object.fromEntries(lv.map(x => [x.label.split(':')[0], x.value]));
+  assert.equal(lv.find(x => x.label.startsWith('Sobrou')).value, 6000);
+  assert.equal(lv.find(x => x.label.startsWith('Renda esperada')).value, 120000); assert.equal(lv.find(x => x.label.startsWith('Para Prata')).value, 12000);
+  assert.equal(lv.find(x => x.label === 'Falta guardar até dezembro').value, 6000); assert.equal(lv.find(x => x.label.startsWith('Por mês')).value, 3000);
+  const o = { start: 100000, pmt: 1000, ext: 0, ret: 0, years: 2, receivables: [] }, d = dreamBreakdown(o, [100000, 112000, 124000], 120000, { startYear: 2026 });
+  assert.equal(d.find(x => x.kind === 'total').value, 124000); assert.equal(d.find(x => x.label.startsWith('Rendimento')).value, 0); assert.equal(d.find(x => x.label === 'Chegam lá em').value, '2028');
+  const db = debtBreakdown({ saldoEm: '2026-06-01' }, { base: 350000, months: 4, estimated: 9350, interest: 12000, amortized: 130000, saldo: 210650 });
+  assert.equal(db.reduce((a, x) => a + (x.kind === 'item' ? x.value : 0), 0), db.find(x => x.kind === 'total').value);
+  const a = asideBreakdown([{ month: '2026-12', total: 0 }, { month: '2027-01', total: 4800 }, { month: '2027-02', total: 1200 }]);
+  assert.equal(a.find(x => x.kind === 'total').value, 2400); assert.match(a[0].label, /^janeiro: R\$ 4\.800 · acumulado R\$ 4\.800 ÷ 2 meses = R\$ 2\.400/);
+});

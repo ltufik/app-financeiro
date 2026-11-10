@@ -1,6 +1,8 @@
 // "Gastos do ano" (menu ☰ → Família e metas): IPVA, IPTU, school and the like. The app finds them in the history,
 // the family confirms, and the page shows the next months' calendar, how much to set aside per month and, for each
 // one, whether to pay at once or in installments given the family's situation. Rules in lib/annual.js.
+import { calcBox } from './explainui.js';
+import { asideBreakdown } from './lib/explain.js';
 import { S, settings, goals, closedKeys, calcMonth, txsOf } from './state.js';
 import * as db from './db.js';
 import { esc, brl0, todayISO, mLong } from './lib/format.js';
@@ -54,6 +56,7 @@ export function renderAnnual(box) {
     ${P.cal.some(m => m.total) ? `<div class="anCal" id="anCal"><p class="small"><strong>Nos próximos 6 meses</strong></p>
       <ul class="pbars">${P.cal.map(m => `<li><span class="pm">${mLong(m.month).slice(0, 3)}</span><span class="pb"><i style="width:${Math.round(m.total / Math.max(...P.cal.map(x => x.total), 1) * 100)}%"></i></span><span class="pv num">${brl0(m.total)}</span></li>`).join('')}</ul>
       <p class="small">Para não apertar, <strong>separem ${brl0(P.aside)} por mês</strong> a partir de agora.</p>
+      ${calcBox(asideBreakdown(P.cal), { id: 'gastos_ano' })}
       <details class="help"><summary>O que entra em cada mês</summary><ul class="small">${P.cal.filter(m => m.rows.length).map(m => `<li><strong>${mLong(m.month)}</strong>: ${m.rows.map(r => `${esc(r.name)} ${brl0(r.value)}`).join(', ')}</li>`).join('')}</ul></details></div>` : ''}
     ${P.found.length ? `<div class="stack anFound"><p class="small"><strong>Achamos estes pagamentos no histórico.</strong> Voltam todo ano?</p>${P.found.map((f, i) => `<div class="dpay" data-f="${i}">
       <p class="small"><strong>${esc(f.name)}</strong>: ${brl0(f.total)} ${f.mode === 'parcelado' ? `em ${f.months.length} parcelas, de ${MES(+f.months[0].slice(5))} a ${MES(+f.months[f.months.length - 1].slice(5))}` : `em ${MES(f.start)}`}${f.kind === 'ipva' ? '. É o IPVA?' : f.kind === 'iptu' ? '. É o IPTU?' : f.kind === 'licenciamento' ? '. É o licenciamento do veículo?' : ''}${f.once ? '<br><span class="tiny muted">Valor alto e uma vez só: pode ter sido um gasto que não se repete (como o ITBI de uma compra).</span>' : ''}</p>

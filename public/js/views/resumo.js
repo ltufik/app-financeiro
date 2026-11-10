@@ -1,4 +1,4 @@
-import { S, goals, monthKeys, calcMonth, calcMonths, txsOf, manualOf, nextFatura, patrimonio, presets, projectFor, needPmtFor, hasFinancing } from '../state.js';
+import { S, goals, monthKeys, calcMonth, calcMonths, txsOf, manualOf, nextFatura, patrimonio, presets, projectFor, needPmtFor, hasFinancing, projOpts } from '../state.js';
 import { insights } from '../lib/insights.js';
 import { monthToClose, yearRetro, levelProgress, sundayHabit } from '../lib/closing.js';
 import { budgetStatus, budgetsOf } from '../lib/budget.js';
@@ -25,6 +25,8 @@ import { renderForecast, familyForecast } from '../forecast.js';
 import { cashPending } from '../cash.js';
 import { familyDups, familyFunding } from '../dupfix.js';
 import { renderSurvey } from '../survey.js';
+import { calcBox } from '../explainui.js';
+import { levelBreakdown, dreamBreakdown } from '../lib/explain.js';
 import { renderChallengeHome, activeChallenge, challengeSuggestions } from '../challenges.js';
 import { missions } from '../steps.js';
 import { missionProgress } from '../lib/missions.js';
@@ -279,7 +281,8 @@ function levelHTML() {
   const bar = `<span class="lvbar" aria-hidden="true"><i style="width:${Math.round((p.next ? p.frac : 1) * 100)}%"></i></span>`;
   return sec('nivel', `${MEDAL[p.level]} Nível de ${y}: ${esc(p.label)}`, `${bar}<span class="small">${esc(line)}</span><span class="small">${esc(retroLine(r, y))}</span>`,
     `<div class="panel">${p.next ? `<h3>O que falta para o ${esc(p.nextLabel)}</h3><ul class="small lvmiss">${p.missing.map(m => `<li>${esc(m.text)}.</li>`).join('')}</ul>
-      <p class="tiny muted">Conta com os ${r.n} meses de ${y} que já têm o extrato da conta: sobra de ${brl0(r.res)}, ${pct(r.tx)} do que ganharam; ${r.positive} de ${r.n} meses no azul.</p>` : `<p class="small">Sobra de ${brl0(r.res)} no ano, ${pct(r.tx)} do que ganharam.</p>`}
+      <p class="tiny muted">Conta com os ${r.n} meses de ${y} que já têm o extrato da conta: sobra de ${brl0(r.res)}, ${pct(r.tx)} do que ganharam; ${r.positive} de ${r.n} meses no azul.</p>
+      ${calcBox(levelBreakdown(r, p, goals().savings), { id: 'nivel' })}` : `<p class="small">Sobra de ${brl0(r.res)} no ano, ${pct(r.tx)} do que ganharam.</p>`}
       <h3 style="margin-top:12px">Regras dos níveis</h3>
       <ul class="lvrules small">${p.rules.map(x => `<li class="${x.ok ? 'ok' : ''}"><span aria-hidden="true">${x.ok ? '✓' : '○'}</span><span><strong>${MEDAL[x.level]} ${x.title}</strong>: ${esc(x.text)}</span></li>`).join('')}</ul>
       <div class="rowbtn" style="margin-top:10px"><button class="btn" type="button" data-retro="${y}">Ver a retrospectiva de ${y}</button></div>
@@ -340,6 +343,7 @@ function renderGoal(box, G, pr) {
     <div class="num" style="font-size:26px;font-weight:700;margin-top:6px">${brl0(end)}</div>
     <p class="small muted">${esc(p[0])}${p[3] ? ` (${esc(p[3])})` : ''}: aporte de ${brl0(p[1])}/mês${p[2] ? ' + ' + brl0(p[2]) + '/ano' : ''}, retorno de ${pct(G.ret ?? 0.05)} ao ano acima da inflação. ${end >= G.patrimonio ? 'Nesse ritmo, vocês chegam lá.' : 'Para chegar lá, o aporte mensal precisa ser de ' + brl0(need) + '.'}</p>
     <div class="chips" style="margin-top:10px">${pr.map((x, i) => `<button class="chip" type="button" aria-pressed="${i === goalPreset}" data-i="${i}">${esc(x[0])}</button>`).join('')}</div>
+    ${calcBox(dreamBreakdown(projOpts(p[1], p[2]), pts, G.patrimonio, { startYear: +todayISO().slice(0, 4) }), { id: 'sonho', foot: 'Valores de hoje (o rendimento já desconta a inflação).' })}
     <p class="tiny muted" style="margin-top:6px">Quanto acham que conseguem guardar, a idade e o valor do sonho: menu ☰ → Família e metas → Metas.</p>`;
   box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { goalPreset = +b.dataset.i; renderGoal(box, G, pr); });
 }

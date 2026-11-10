@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -526,5 +526,8 @@ export const RELEASES = [
   { id: 'r2.3.1', version: 'v2.3.1', at: '2026-11-10T11:38:00Z', semNovidade: 'Ajuste interno no caderno de testes da 2.3.0; nada muda no app.', semTeste: 'Os casos da tela de entrada estão na 2.3.0.' },
   { id: 'r2.3.2', version: 'v2.3.2', at: '2026-11-10T21:28:00Z', updateDocs: [DOC_PREVISAO], addBacklog: [{ id: 'previsao_ver_a_conta', title: 'Previsão: "Ver a conta" com todos os números', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não dava para conferir de onde vinha a previsão de sobra', from: [] }, { id: 'central_responsiva_novas', title: 'Central no celular: páginas novas sem rolar para o lado', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Pesquisas, Missões e Mensagens não cabiam na largura do celular', from: [] }], backlog: ['previsao_ver_a_conta', 'central_responsiva_novas'], news: { id: 'n20261110f', title: 'Previsão: veja a conta', items: [
     'Na Previsão do mês, toque em "Ver a conta" e veja cada número: o que já entrou e saiu, o salário e as contas fixas que ainda vão cair, o cartão e quanto cabe por dia.',
+  ] } },
+  { id: 'r2.3.3', version: 'v2.3.3', at: '2026-11-10T23:30:00Z', addDocs: [DOC_VER_CONTA], addBacklog: [{ id: 'ver_conta_todos', title: '"Ver a conta" no nível do ano, sonho, financiamento e gastos do ano', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Os números calculados pelo app não mostravam de onde vinham', from: [] }], backlog: ['ver_conta_todos'], news: { id: 'n20261110g', title: 'Veja a conta de cada número', items: [
+    'Agora o nível do ano, o sonho, o saldo do financiamento e o "separem por mês" dos gastos do ano também têm "Ver a conta": toque e veja cada número que entrou no cálculo.',
   ] } },
 ];
