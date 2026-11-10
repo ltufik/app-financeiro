@@ -69,15 +69,9 @@ export function renderSteps(box) {
   if (!box) return;
   const list = missions(), p = missionProgress(list), ok = m => m.done || m.skipped;
   celebrate(list);
-  if (p.allComplete) { box.hidden = true; return; }
+  // Starter missions done: the big card leaves; the strip under the greeting (renderStrip) keeps them in sight.
+  if (p.starterComplete) { box.hidden = true; box.innerHTML = ''; return; }
   box.hidden = false; box.classList.remove('regua-mini');
-  if (p.starterComplete) { // only extra missions left: one line
-    box.classList.add('regua-mini');
-    box.innerHTML = `<div class="regua-h"><div><h3>Missões extras: ${p.extraDone} de ${p.extraTotal}</h3><p class="tiny muted">Próxima: ${esc(p.next.title)}.</p></div></div>
-      <button class="linkbtn small" type="button" data-all>Ver missões e conquistas</button>`;
-    box.querySelector('[data-all]').onclick = () => S.go('ajustes', null, 'conquistas');
-    return;
-  }
   const m = p.next, st = list.filter(x => x.starter);
   box.innerHTML = `<div class="mis"><p class="eyebrow">Missões de começo · ${p.starterDone} de ${p.starterTotal}</p>
     <div class="mis-dots" role="img" aria-label="${p.starterDone} de ${p.starterTotal} missões cumpridas">${st.map(x => DOT(ok(x))).join('')}</div>
@@ -113,4 +107,15 @@ export function renderConquistas(box) {
   box.querySelectorAll('[data-unskip]').forEach(btn => btn.onclick = () => setSkip(list[+btn.dataset.unskip].key, false, () => renderConquistas(box)));
   const mark = box.querySelector('[data-mark]'); if (mark) mark.onclick = () => { lsSet('fin.installed', '1'); renderConquistas(box); };
   wireInstall(box);
+}
+
+// Início, under "Olá": always in sight once the starter missions are done (outside the "Seu próximo passo" queue).
+export function renderStrip(box) {
+  if (!box) return;
+  const p = missionProgress(missions());
+  if (!p.starterComplete) { box.hidden = true; box.innerHTML = ''; return; }
+  const b = familyBadges(), won = b.filter(x => x.earned).length;
+  box.hidden = false;
+  box.innerHTML = `<button type="button" class="mis-strip"><span class="mis-star" aria-hidden="true">★</span><span class="small"><strong>${won} de ${b.length} selos</strong>${p.next ? ` · Próxima missão: ${esc(p.next.title)}` : ' · Todas as missões cumpridas'}</span><span class="mis-go" aria-hidden="true">›</span></button>`;
+  box.querySelector('button').onclick = () => { track('inicio.conquistas'); S.go('ajustes', null, 'conquistas'); };
 }

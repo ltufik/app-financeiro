@@ -422,6 +422,15 @@ if (backup) {
   ok('ano: sobra R$ 53.494', (await txt('#v-resumo .big')).includes('53.494'));
   const mis = await page.evaluate(() => window.__db.households[0].settings.missionsDone || {});
   ok('missões cumpridas pelos dados importados ficam registradas', !!mis.fatura && !!mis.extrato, JSON.stringify(mis));
+  { // Starter missions done: the big card leaves and a strip under the greeting keeps selos and the next mission in sight.
+    const snap = await page.evaluate(async () => { const { S, latestClosed } = await import('/js/state.js'); const L = latestClosed(), keep = { st: S.hh.settings, tx: S.txs.filter(t => t.month === L).map(t => [t, t.pending, t.category]) };
+      window.__keepMis = keep; S.hh.settings = { ...S.hh.settings, closed: { ...(S.hh.settings.closed || {}), [L]: { at: '2026-10-05' } }, goalsSet: true, skips: { ...(S.hh.settings.skips || {}), avisos: true } };
+      S.txs.forEach(t => { if (t.month === L) { t.pending = false; if (!t.category || t.category === 'A classificar') t.category = 'Mercado'; } }); S.render(); return L; });
+    await page.waitForSelector('#misStrip:not([hidden])', { timeout: 5000 }).catch(() => {});
+    const strip = await txt('#misStrip');
+    ok('com as 6 de começo cumpridas, a faixa de selos e a próxima missão fica abaixo do "Olá"', /\d de 8 selos/.test(strip) && strip.includes('Próxima missão') && await page.isHidden('#stepsBox'), strip);
+    await page.evaluate(async () => { const { S } = await import('/js/state.js'); const k = window.__keepMis; S.hh.settings = k.st; k.tx.forEach(([t, p, c]) => { t.pending = p; t.category = c; }); S.render(); });
+  }
   await page.selectOption('#monthSel', '2026-09');
   const ins = await txt('#insights');
   ok('início mostra insights do mês', (await page.$$('#insights .insight')).length >= 1, ins.slice(0, 200));

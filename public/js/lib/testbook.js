@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('faixa_selos', 'Início', 'v2.0.1', 'ambos', 'Faixa de selos abaixo do "Olá"',
+    ['Numa conta que já cumpriu as 6 missões de começo, abra o Início.', 'Toque na faixa.'],
+    'Logo abaixo do "Olá" aparece "★ X de 8 selos · Próxima missão: …", sempre à vista (fora do "Seu próximo passo"). O toque abre Missões e conquistas. Contas que ainda estão no começo continuam com o cartão grande da missão.'),
   t('missoes_comeco', 'Início', 'v2.0.0', 'ambos', 'Missões de começo e conquistas',
     ['Numa conta nova, abra o Início e veja a missão. Toque em "Ver todas".', 'Volte, mande a fatura de um mês e abra o Início de novo.', 'Na sua conta, abra Menu → Família e metas → Missões e conquistas.'],
     'O Início mostra "Missões de começo · 0 de 6" com a próxima missão, o que ela destrava e um botão que leva direto. Depois de mandar a fatura aparece "Missão cumprida: mande a última fatura do cartão! Próxima: …" uma vez só e a contagem sobe. A página mostra as 6 missões, as 7 extras e os 8 selos (os que faltam com como ganhar). Na sua conta, as missões já cumpridas aparecem feitas, sem comemoração repetida.'),

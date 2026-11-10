@@ -782,3 +782,7 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .selo.on{border-style:solid;border-color:var(--accent);background:var(--sunk)}
 .selo-i{font-size:20px;line-height:1;color:var(--muted)}
 .selo.on .selo-i{color:var(--accent)}
+.mis-strip{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:inherit;font:inherit;cursor:pointer}
+.mis-strip .small{flex:1;min-width:0}
+.mis-star{color:var(--accent);font-size:18px;line-height:1}
+.mis-go{color:var(--muted);font-size:20px;line-height:1}

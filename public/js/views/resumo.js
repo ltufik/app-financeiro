@@ -18,7 +18,7 @@ import { todayISO } from '../lib/format.js';
 import { byCategory } from '../lib/calc.js';
 import { brl, brl0, pct, esc, mLong, mShort } from '../lib/format.js';
 import { meter, pill } from '../ui.js';
-import { renderSteps } from '../steps.js';
+import { renderSteps, renderStrip } from '../steps.js';
 import { demoSummary, DEMO_FAMILY, DEMO_MONTH } from '../lib/demo.js';
 import { track } from '../usage.js';
 import { renderForecast } from '../forecast.js';
@@ -71,6 +71,7 @@ export function render(el) {
 
   const fees = feesHTML(), lvl = levelHTML(), subsAll = findRecurring(S.txs, monthKeys(), { idx: S.catIdx });
   el.innerHTML = `<p class="hello">Olá, ${esc(first())}.</p>
+  <div id="misStrip" hidden></div>
   <div class="panel stack surv-card" id="survBox" hidden></div>
   <section class="todo" id="todo">
     <div class="todo-head"><p class="eyebrow" id="todoEyebrow">Seu próximo passo</p></div>
@@ -136,6 +137,7 @@ export function render(el) {
   el.querySelector('#plansMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.parcelas'); });
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas_lista'); });
   renderSteps(el.querySelector('#stepsBox'));
+  renderStrip(el.querySelector('#misStrip'));
   if (!yr) renderSurvey(el.querySelector('#survBox'));
   renderInsights(el.querySelector('#insights'));
   if (!yr) renderForecast(el.querySelector('#fcBox'));
