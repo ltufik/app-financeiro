@@ -64,6 +64,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'saude') return r.fulfill({ json: { now: { color: 'amarelo', text: 'Com problema: Assistente (chave configurada).', checks: [{ id: 'banco', ok: true, ms: 420 }, { id: 'assistente', ok: false, ms: 0 }] }, history: { runs: 2, bad: 0, list: [{ color: 'verde' }, { color: 'verde' }] } } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'entregas') return r.fulfill({ json: pushHealth([...Array(9).fill({ job: 'diario', ok: true, status: 201 }), { job: 'diario', ok: false, status: 410 }].map(l => ({ ...l, at: new Date(Date.now() - 3 * 36e5).toISOString() })), [{ job: 'diario', ok: true, at: new Date(Date.now() - 3 * 36e5).toISOString() }, { job: 'lembrete', ok: true, at: new Date(Date.now() - 80 * 36e5).toISOString() }]) });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'missoes') return r.fulfill({ json: [{ name: 'Família Teste', since: '2026-11-01T10:00:00Z', done: { fatura: '2026-11-02', extrato: '2026-11-02' } }, { name: 'Família Nova', since: '2026-11-05T10:00:00Z', done: {} }] });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'nav') return r.fulfill({ json: NAV_FIXTURE });
     if (u.pathname === '/api/admin' && r.request().method() === 'PATCH') { const b = JSON.parse(r.request().postData()); adminPatches.push(b); const f = FB_FIXTURE.find(x => x.id === b.feedback); if (f && b.status) f.status = b.status; if (f && b.reply) Object.assign(f, { reply: b.reply, replied_at: '2026-10-30T15:00:00Z', reply_seen: false, status: 'resolvido' }); return r.fulfill({ json: { ok: true, pushed: b.reply ? 1 : 0 } }); }
@@ -233,29 +234,28 @@ ok('pular fecha o tour guiado', !(await page.$('.coach')));
 ok('depois do tour, vai para a fatura', await page.isVisible('#v-lancar #drop'));
 await page.click('[data-tab=resumo]');
 ok('resumo cumprimenta pelo nome', (await txt('#v-resumo')).includes('Boas-vindas, Luiz!'));
-ok('início vazio mostra a régua de preenchimento em 0%', (await txt('#stepsBox')).includes('Use o app por completo') && (await txt('#stepsBox .regua-n')) === '0%', await txt('#stepsBox .regua-n'));
+ok('início vazio mostra a primeira missão de começo (0 de 6)', (await txt('#stepsBox')).includes('Missões de começo · 0 de 6') && (await txt('#stepsBox')).includes('Mande a última fatura do cartão'), await txt('#stepsBox'));
 ok('início vazio mostra um mês de exemplo, marcado como fictício, com o caminho para os números de verdade', (await txt('#demoCard')).includes('Família Exemplo (fictícia)') && (await txt('#demoCard')).includes('Agora com os números de vocês') && await page.isVisible('#demoPdf'));
 if (shots) await page.screenshot({ path: path.join(shots, '02a-exemplo.png'), fullPage: true });
 await page.click('#demoPdf'); await page.waitForTimeout(400);
 ok('do exemplo, "Enviar a última fatura" abre o envio', (await page.getAttribute('.tab[data-tab="lancar"]', 'aria-selected')) === 'true' && await page.isVisible('#v-lancar #drop'));
 await page.click('[data-tab=resumo]');
-ok('régua mostra só os próximos 3 passos, com o que cada um libera', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 3 && (await txt('#stepsBox')).includes('Libera a sobra do mês'));
-await page.click('#stepsBox [data-all]');
-ok('régua mostra todos os passos', (await page.$$('#stepsBox .steps > li:not([hidden])')).length === 12);
-await page.click('#stepsBox [data-skip]');
-await page.waitForFunction(() => document.querySelector('#stepsBox .regua-n')?.textContent !== '0%');
-ok('"não tenho" conta na régua', (await txt('#stepsBox .regua-n')) === '5%' && await page.evaluate(() => window.__db.households[0].settings.skips?.invest === true), await txt('#stepsBox .regua-n'));
-await page.click('#stepsBox [data-unskip]'); await page.waitForFunction(() => document.querySelector('#stepsBox .regua-n')?.textContent === '0%');
-await page.click('#stepsBox [data-all]');
-await page.click('#stepsBox [data-k="0"]');
-ok('passo leva ao envio do PDF', await page.isVisible('#v-lancar #drop'));
+ok('a missão diz o que destrava, com 6 pontinhos de progresso', (await txt('#stepsBox')).includes('Destrava: para onde foi o dinheiro do cartão') && (await page.$$('#stepsBox .mis-dot')).length === 6);
+await page.click('#stepsBox [data-all]'); await page.waitForSelector('#conqBox .steps');
+{ const nLi = (await page.$$('#conqBox .steps > li:not([hidden])')).length, nSel = (await page.$$('#conqBox .selo')).length, ct = await txt('#conqBox');
+  ok('Conquistas mostra as 6 missões de começo, as extras e os selos', nLi === 13 && nSel === 8 && /Selos\s*\d de 8/.test(ct), `${nLi} missões, ${nSel} selos; ${(ct.match(/Selos[^A-Z]*/) || [''])[0]}`); }
+await page.click('#conqBox [data-skip]'); await page.waitForFunction(() => window.__db.households[0].settings.skips?.avisos === true, null, { timeout: 5000 }).catch(() => {});
+ok('"Não quero" conta como feita (avisos)', await page.evaluate(() => window.__db.households[0].settings.skips?.avisos === true) && (await txt('#conqBox')).includes('Marcado: não quero'));
+await page.click('#conqBox [data-unskip]'); await page.waitForFunction(() => !window.__db.households[0].settings.skips?.avisos, null, { timeout: 5000 }).catch(() => {});
+await page.click('#conqBox [data-k="0"]');
+ok('missão leva ao envio do PDF', await page.isVisible('#v-lancar #drop'));
 await page.click('[data-tab=resumo]');
 await shot('02-vazio');
 
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 16 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 17 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
 ok('menu em 4 grupos, só o primeiro aberto', (await page.$$('#drawer .mgroup')).length === 4 && (await page.$$('#drawer .drawer-list:not([hidden])')).length === 1 && await page.isVisible('#drawer [data-sec="metas"]') && !(await page.isVisible('#drawer [data-sec="backup"]')));
 { const v = (fs.readFileSync(path.join(ROOT, 'js/usage.js'), 'utf8').match(/APP_VERSION = '([^']+)'/) || [])[1];
   ok('fim do menu mostra a versão do app', !!v && (await txt('#appVer')).includes('versão ' + v) && !(await page.$('#updNow'))); }
@@ -420,8 +420,8 @@ if (backup) {
   await shot('03-resumo-setembro');
   await page.selectOption('#monthSel', 'ano:2026');
   ok('ano: sobra R$ 53.494', (await txt('#v-resumo .big')).includes('53.494'));
-  const pctNow = +(await txt('#stepsBox .regua-n')).replace('%', '');
-  ok('régua sobe com os dados importados', pctNow >= 60 && pctNow < 100, pctNow + '%');
+  const mis = await page.evaluate(() => window.__db.households[0].settings.missionsDone || {});
+  ok('missões cumpridas pelos dados importados ficam registradas', !!mis.fatura && !!mis.extrato, JSON.stringify(mis));
   await page.selectOption('#monthSel', '2026-09');
   const ins = await txt('#insights');
   ok('início mostra insights do mês', (await page.$$('#insights .insight')).length >= 1, ins.slice(0, 200));
@@ -429,7 +429,7 @@ if (backup) {
 await page.click('#todoMore'); await page.waitForTimeout(100);
 ok('"Depois disso" mostra os outros itens', (await page.$$eval('#closeCard, #debtPayBox, #stepsBox, #insights > .insight', es => es.filter(e => e.offsetParent && e.innerHTML.trim()).length)) > 1);
 await page.click('#todoMore'); await page.waitForTimeout(100);
-  ok('régua fica compacta depois de 40%', !!(await page.$('#stepsBox.regua-mini')) && (await page.$$('#stepsBox .steps li')).length === 0);
+  ok('missão de começo aparece com o progresso', /Missões de começo · [2-5] de 6|Missões extras/.test(await txt('#stepsBox')) || await page.isHidden('#stepsBox'), await txt('#stepsBox'));
   ok('Início: o próximo passo no topo, com botão em cada item', await page.isVisible('#todoEyebrow') && (await page.$$('#insights .insight .act')).length === (await page.$$('#insights .insight')).length);
   ok('Início: seções fechadas com o principal numa linha (sobra, cartão, nível com regras)', !(await page.evaluate(() => document.querySelector('#sum_sobra').open)) && /R\$/.test(await txt('#sum_sobra summary')) && await page.isVisible('#sum_cartao summary') && (await txt('#sum_nivel summary')).includes('Nível de 2026') && (await txt('#sum_nivel')).includes('Regras dos níveis'), await txt('#sum_nivel summary'));
   await page.click('#sum_sobra > summary'); await page.waitForTimeout(150);
@@ -1055,6 +1055,8 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.selectOption('.svt select[data-k="plan"]', 'pago'); await ap.click('#svSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
   ok('central: matriz salva', adminStore.services?.items?.[0]?.plan === 'pago');
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-7-servicos.png'), fullPage: true });
+  await atab('missoes'); await ap.waitForSelector('#aMain table');
+  ok('central: missões mostra o funil e cada família', (await ap.textContent('#aMain')).includes('2 famílias') && (await ap.textContent('#aMain')).includes('Mande a última fatura do cartão1 · 50%'), (await ap.textContent('#aMain')).slice(0, 300));
   await atab('mensagens'); await ap.waitForSelector('.msgcard');
   const mx = await ap.textContent('#aMain');
   ok('central: mensagens mostra os avisos e pushes da família fictícia, todos dentro do manual', (await ap.$$('.msgcard')).length >= 20 && mx.includes('0 fora do manual') && mx.includes('Ana, outubro fechou no vermelho') && (await ap.$$('.msg-bad')).length === 0, mx.slice(0, 200));

@@ -772,3 +772,13 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .priv-box{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
 .priv-box input{margin-top:3px}
 .xrow[data-virtual] .xd{font-style:italic}
+/* Missões e conquistas */
+.mis .eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0}
+.mis-dots{display:flex;gap:6px;margin:6px 0 2px}
+.mis-dot{width:22px;height:6px;border-radius:3px;background:var(--line)}
+.mis-dot.on{background:var(--accent)}
+.selos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.selo{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;min-width:0;overflow-wrap:anywhere}
+.selo.on{border-style:solid;border-color:var(--accent);background:var(--sunk)}
+.selo-i{font-size:20px;line-height:1;color:var(--muted)}
+.selo.on .selo-i{color:var(--accent)}

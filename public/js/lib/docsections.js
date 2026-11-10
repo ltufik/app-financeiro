@@ -374,3 +374,19 @@ export const DOC_MENSAGENS = { id: 'mensagens_doc', title: 'Mensagens: o manual 
 - Desde a v125 todas estão dentro do manual, e o teste (tests/lib.test.mjs) não deixa publicar mensagem fora dele.
 - O nome vem de quem está vendo (Início) ou de quem recebe (push: o robô monta os avisos uma vez por nome).
 - "Sem contar o financiamento": saiu do Início (etiqueta fixa). Aparece no aviso do mês que ficou abaixo da meta quando havia financiamento: "Sem contar o financiamento (R$ X), seriam Y%". O gráfico de quanto guardaram mantém as barras vazadas.` };
+
+export const DOC_MISSOES = { id: 'missoes_doc', title: 'Missões e conquistas (2.0)', body: `O app propõe o que fazer, acompanha e comemora. Nomes provisórios ("Missões", "Conquistas"): ficam só nos textos.
+## Missões de começo (6, em ordem)
+1. Mandar a última fatura do cartão. 2. Mandar o extrato da conta. 3. Conferir os lançamentos marcados. 4. Combinar quanto guardar (Metas). 5. Ligar os avisos no celular (pode marcar "Não quero"). 6. Fechar o primeiro mês.
+- No Início, no lugar da antiga régua: "Missões de começo · 3 de 6", os pontinhos, a próxima missão com o que ela destrava e o botão que leva direto. Completas as 6: uma linha com as missões extras.
+- Cumpridas sozinhas pelos dados (nada para marcar). Na primeira vez, o app registra em households.settings.missionsDone o dia de cada uma e comemora com uma mensagem ("Missão cumprida: …! Próxima: …"). Quem já usava o app teve as já cumpridas registradas sem comemoração.
+## Missões extras (7)
+Sonho, convidar a família, lançar falando, contas fixas do cartão, investimentos e bens, financiamentos e dívidas, instalar o app. Algumas aceitam "Não tenho"/"Uso sozinho" (households.settings.skips).
+## Selos (8)
+Primeira fatura, Família organizada (as 6 de começo), Mês fechado, Meta batida, 3 meses no azul, App bem ensinado (10 categorias ensinadas), Em família, Previsão em dia (fatura aberta em 4 domingos). Os que faltam mostram como ganhar e o progresso ("2 de 3").
+## Onde
+- Menu ☰ → Família e metas → Missões e conquistas (e "Ver todas" na missão do Início).
+- Central → Missões: o funil das 6 de começo (quantas famílias cumpriram cada uma) e cada família.
+- Regras em lib/missions.js (testadas); tela em steps.js.
+## Próximas entregas
+Desafios do mês (sugeridos pelos números da família, aceitos, com prazo e resultado) e sequência e progresso em família.` };

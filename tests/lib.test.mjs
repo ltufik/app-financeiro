@@ -1398,3 +1398,26 @@ test('o financiamento aparece no aviso do mês abaixo da meta, com o número', a
   assert.equal(b.title, 'Luiz, vocês guardaram 12% em outubro');
   assert.match(b.text, /faltaram R\$ 800\. Sem contar o financiamento \(R\$ 2\.200\), seriam 34%: ele também é patrimônio/);
 });
+
+import { missionList, missionProgress, syncMissions, badges } from '../public/js/lib/missions.js';
+test('missões: as 6 de começo em ordem, sozinhas pelos dados, e só comemora o que acabou de acontecer', () => {
+  const none = missionProgress(missionList({}));
+  assert.equal(none.starterTotal, 6); assert.equal(none.starterDone, 0); assert.equal(none.next.key, 'fatura');
+  const some = missionList({ hasCard: true, hasConta: true, hasClosedMonth: true, pending: 3, skips: { avisos: true } });
+  const p = missionProgress(some);
+  assert.equal(p.starterDone, 3); assert.equal(p.next.key, 'conferir'); assert.ok(some.find(m => m.key === 'avisos').skipped);
+  const all = missionList({ hasCard: true, hasConta: true, hasClosedMonth: true, pending: 0, goalsSet: true, pushOn: true, closedCount: 1 });
+  assert.ok(missionProgress(all).starterComplete); assert.equal(missionProgress(all).next.key, 'sonho');
+  // A family that never had missions: what is done is recorded silently; afterwards, only the new one is celebrated.
+  const first = syncMissions(undefined, some, '2026-11-09'); assert.deepEqual(first.newly, []); assert.equal(first.next.fatura, '2026-11-09');
+  const later = syncMissions(first.next, missionList({ hasCard: true, hasConta: true, hasClosedMonth: true, pending: 0 }), '2026-11-10');
+  assert.deepEqual(later.newly, ['conferir']); assert.equal(later.next.conferir, '2026-11-10'); assert.equal(later.next.fatura, '2026-11-09');
+});
+test('selos: ganhos pelo que a família fez, com o progresso do que falta', () => {
+  const b = badges({ hasCard: true, closedCount: 1, goal: 0.2, finished: [{ res: 100, tx: 0.05 }, { res: -50, tx: -0.01 }, { res: 300, tx: 0.25 }, { res: 200, tx: 0.1 }], taught: 4, members: 2, sundays: 1 });
+  const e = Object.fromEntries(b.map(x => [x.id, x]));
+  assert.ok(e.primeira_fatura.earned && e.mes_fechado.earned && e.meta_batida.earned && e.em_familia.earned);
+  assert.ok(!e.tres_no_azul.earned); assert.equal(e.tres_no_azul.progress, '2 de 3');
+  assert.equal(e.app_ensinado.progress, '4 de 10'); assert.equal(e.previsao_em_dia.progress, '1 de 4'); assert.ok(!e.familia_organizada.earned);
+  assert.ok(badges({ finished: [{ res: 1 }, { res: 1 }, { res: 1 }, { res: -1 }] }).find(x => x.id === 'tres_no_azul').earned);
+});

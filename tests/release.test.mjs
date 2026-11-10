@@ -12,7 +12,7 @@ import { APP_VERSION } from './helpers/app-version.mjs';
 
 const ROOT = new URL('../public/', import.meta.url).pathname;
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
-const VERSION = /const VERSION = '(v\d+)'/.exec(read('sw.js'))[1];
+const VERSION = /const VERSION = '(v\d+(?:\.\d+){0,2})'/.exec(read('sw.js'))[1];
 
 test('versão: a do app e a do service worker são a mesma', () => {
   assert.equal(APP_VERSION, VERSION, 'mude APP_VERSION em public/js/usage.js junto com VERSION em public/sw.js');
@@ -57,7 +57,7 @@ test('Central: tudo o que o app registra tem nome legível', () => {
   walk(path.join(ROOT, 'js'));
   const lits = new Set(files.flatMap(f => [...fs.readFileSync(f, 'utf8').matchAll(/track\('([a-z_]+(?:\.[a-z_]+)?)'\)/g)].map(m => m[1])));
   const dyn = ['lancar.falar', 'lancar.nota', 'lancar.pdf', 'lancar.mao', 'atalho.voz', 'atalho.nota', 'atalho.pdf', 'atalho.compartilhar', 'opiniao.erro', 'opiniao.ideia', 'opiniao.critica',
-    ...['inicio', 'lancar', 'graficos', 'perguntar', 'extrato', 'menu', 'fechar'].map(t => 'aba.' + t)];
+    ...['inicio', 'lancar', 'graficos', 'perguntar', 'extrato', 'menu', 'fechar'].map(t => 'aba.' + t), ...['fatura', 'extrato', 'conferir', 'metas', 'avisos', 'fechar', 'sonho', 'convite', 'falar', 'fixas', 'invest', 'dividas', 'instalar'].map(k => 'missao.' + k)];
   for (const k of [...lits, ...dyn]) assert.ok(FEATURE_LABELS[k], `falta FEATURE_LABELS['${k}'] em public/js/admin/content.js`);
 });
 
@@ -70,7 +70,7 @@ test('caderno de testes: versão com algo visível tem casos para testar no celu
   const visible = !!r.news || (r.backlog || []).length > 0 || (r.addBacklog || []).some(i => i.status === 'feito');
   if (visible) assert.ok(testsOf(VERSION).length > 0 || (typeof r.semTeste === 'string' && r.semTeste.length > 10), `adicione os casos da ${VERSION} em public/js/lib/testbook.js (ou explique em semTeste)`);
   assert.equal(new Set(TESTS.map(x => x.id)).size, TESTS.length, 'ids repetidos no caderno');
-  for (const x of TESTS) assert.ok(AREAS.includes(x.area) && x.steps.length && x.expect && /^v\d+$/.test(x.version) && ['ambos', 'android', 'iphone'].includes(x.device), x.id);
+  for (const x of TESTS) assert.ok(AREAS.includes(x.area) && x.steps.length && x.expect && /^v\d+(\.\d+){0,2}$/.test(x.version) && ['ambos', 'android', 'iphone'].includes(x.device), x.id);
 });
 
 test('segurança: a política do navegador (CSP) bloqueia de verdade', async () => {

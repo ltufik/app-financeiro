@@ -15,7 +15,7 @@
 ## Definição de pronto (toda publicação, como numa squad)
 Nada sobe sem isto. `tests/release.test.mjs` cobra os itens marcados com (teste).
 1. Testes passando: `npm test`, `sh tests/db/run.sh` e o e2e (`tests/e2e/run.mjs`).
-2. Versão nova: `VERSION` em `public/sw.js` e `APP_VERSION` em `public/js/usage.js`, iguais (teste).
+2. Versão nova: `VERSION` em `public/sw.js` e `APP_VERSION` em `public/js/usage.js`, iguais (teste). Desde a 2.0 (10/11/2026) o número é `v2.0.1`: correções e mudanças pequenas sobem o último (2.0.1, 2.0.2), funcionalidades grandes o do meio (2.1.0) e mudança de jornada, estrutura ou rebranding o primeiro (3.0.0). O id da entrada em releases.js é `r` + o número (`r2.0.1`).
 3. Entrada da versão em `public/js/lib/releases.js` (teste):
    - `news`: a novidade do pop-up "O que mudou", em palavras simples, sem citar a IA. Sempre que houver algo visível para o usuário, inclusive correção que ele percebe (quem não pediu também precisa saber que voltou a funcionar). Só versões que ninguém além do Luiz vê (Central, robô, ajuste interno) usam `semNovidade`. Push automático (versão e recados) nunca sai entre 22h e 8h: o que foi publicado à noite sai a partir das 8h. Se não houver, `semNovidade` com o motivo. A novidade também vira push para todos (automático, `applyReleases`); quem pediu o item recebe só o push personalizado.
    - `backlog`: ids dos itens concluídos (o "Pedir ao Claude" traz o id). Quem pediu recebe o recado personalizado automático.

@@ -8,7 +8,7 @@ import { suggestBudgets, budgetsOf } from '../lib/budget.js';
 import { esc, todayISO, brl, isoToBr } from '../lib/format.js';
 import { $, toast, validate, invalid, clearInvalid, confirmInline } from '../ui.js';
 import { checkName, checkNumber, checkMonth, checkDate } from '../lib/validate.js';
-import { installHelpHTML, wireInstall, expandSteps } from '../steps.js';
+import { installHelpHTML, wireInstall, renderConquistas } from '../steps.js';
 import { renderInviter } from '../onboarding.js';
 import { SECTIONS, openMenu } from '../menu.js';
 import { renderMetrics } from '../metrics.js';
@@ -79,6 +79,7 @@ export function render(el) {
     <div><button class="btn primary" id="bSave" type="button">Salvar orçamento</button></div>
   </div>
 
+  <div class="panel stack" data-sec="conquistas"><div id="conqBox" class="stack"></div></div>
   <div class="panel stack" data-sec="gastos_ano"><div id="anBox" class="stack"></div></div>
   <div class="panel stack" data-sec="patrimonio">
     <h2>Patrimônio</h2>
@@ -147,7 +148,7 @@ export function render(el) {
 
   <div class="panel stack" data-sec="ajuda">
     <h2>Ajuda</h2>
-    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Ver o que falta preencher</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button><button class="btn" id="hNews" type="button">Ver o que mudou</button><button class="btn" id="hAlpha" type="button">Sobre o teste</button></div>
+    <div class="rowbtn"><button class="btn" id="hTour" type="button">Ver a apresentação de novo</button><button class="btn" id="hSteps" type="button">Ver as missões</button><button class="btn" id="hCoach" type="button">Fazer o tour guiado</button><button class="btn" id="hNews" type="button">Ver o que mudou</button><button class="btn" id="hAlpha" type="button">Sobre o teste</button></div>
     <details class="help"><summary>Instalar o app no celular</summary>${installHelpHTML()}</details>
     <h3 style="margin-top:6px">Aparência</h3>
     <div class="seg" role="radiogroup" aria-label="Aparência" id="themeSeg">${[['light', 'Claro'], ['dark', 'Escuro'], ['auto', 'Igual ao celular']].map(([k, l]) => `<button type="button" class="chip" role="radio" data-theme-opt="${k}" aria-pressed="${theme() === k}" aria-checked="${theme() === k}">${l}</button>`).join('')}</div>
@@ -195,6 +196,7 @@ export function render(el) {
   if (sec.key === 'duvidas') renderDuvidas($('#faqBox'));
   if (sec.key === 'applepay') renderApplePay($('#apBox'));
   if (sec.key === 'gastos_ano') renderAnnual($('#anBox'));
+  if (sec.key === 'conquistas') renderConquistas($('#conqBox'));
   if (sec.key === 'categorias') renderTaught($('#taught'));
   if (sec.key === 'conta') renderSecurity($('#secBox'));
   if (sec.key === 'opiniao') renderFeedback($('#fbBox'));
@@ -208,7 +210,7 @@ export function render(el) {
     if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
     el.querySelectorAll('[data-theme-opt]').forEach(x => { x.setAttribute('aria-pressed', x === b); x.setAttribute('aria-checked', x === b); });
   });
-  $('#hSteps').onclick = () => { expandSteps(); S.go('resumo', '#stepsBox'); };
+  $('#hSteps').onclick = () => S.go('ajustes', null, 'conquistas');
   wireInstall(el);
 
   // family

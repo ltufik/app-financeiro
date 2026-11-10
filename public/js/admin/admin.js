@@ -21,12 +21,13 @@ import { homeEngagement } from '../lib/homefeed.js';
 import { CHECKS } from '../lib/health.js';
 import { SURVEYS, surveyResults } from '../lib/survey.js';
 import { RULES, checkMessage } from '../lib/msgcheck.js';
+import { missionList } from '../lib/missions.js';
 import { SCENARIOS, PERSON, scenarioMessages, otherPushes } from './msgscenarios.js';
 
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
-const TABS = ['painel', 'opinioes', 'pesquisas', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
+const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -149,7 +150,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, pesquisas, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
+  ({ painel, opinioes, pesquisas, missoes, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -171,7 +172,7 @@ function labelTables(root) {
 // ---------- Side menu: three groups that open on click ----------
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
-  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
+  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['missoes', 'Missões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
   { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['mensagens', 'Mensagens'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
   { id: 'conta', title: 'Sua conta', icon: IC('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), items: [['acesso', 'Acesso e segurança']] },
@@ -378,6 +379,19 @@ const fail = (el, title, e) => { el.innerHTML = `<div class="ahead"><h1>${title}
 const FB_KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
 const FB_STATUS = { novo: 'Nova', visto: 'Lida', backlog: 'No backlog', resolvido: 'Resolvida' };
 let fbKind = '', fbStatus = 'aberto', replyOpen = null;
+// Missões: how many families did each mission (the funnel of the start) and where each family is.
+async function missoes(el) {
+  el.innerHTML = '<div class="ahead"><h1>Missões</h1></div><p class="small muted">Carregando...</p>';
+  let fams; try { fams = await getView('missoes'); } catch (e) { return fail(el, 'Missões', e); }
+  const list = missionList({}), st = list.filter(m => m.starter), n = fams.length, pct = a => n ? Math.round(a / n * 100) + '%' : '—';
+  const count = k => fams.filter(f => f.done[k]).length, complete = fams.filter(f => st.every(m => f.done[m.key])).length;
+  el.innerHTML = `<div class="ahead"><h1>Missões</h1><span class="tiny muted">${n} famílias · ${complete} com as 6 de começo</span></div>
+    <p class="small">Cada missão é cumprida sozinha quando os dados mostram (nada para marcar). A data é o dia em que o app percebeu. Famílias que já usavam o app antes das missões têm as já cumpridas com a data da v2.0.</p>
+    <div class="panel stack"><h2>Missões de começo (o funil)</h2>${st.map((m, i) => `<div class="tiny"><div style="display:flex;justify-content:space-between;gap:8px"><span>${i + 1}. ${esc(m.title)}</span><strong>${count(m.key)} · ${pct(count(m.key))}</strong></div><div style="height:6px;border-radius:3px;background:var(--line)"><div style="height:6px;border-radius:3px;background:var(--accent);width:${n ? count(m.key) / n * 100 : 0}%"></div></div></div>`).join('')}</div>
+    <div class="panel stack"><h2>Missões extras</h2>${list.filter(m => !m.starter).map(m => `<p class="tiny" style="margin:0;display:flex;justify-content:space-between"><span>${esc(m.title)}</span><strong>${count(m.key)}</strong></p>`).join('')}</div>
+    <div class="panel"><h2>Por família</h2><div class="tw"><table><thead><tr><th>Família</th><th>Desde</th>${st.map((m, i) => `<th title="${esc(m.title)}">${i + 1}</th>`).join('')}</tr></thead><tbody>${fams.map(f => `<tr><td>${esc(f.name || '—')}</td><td class="num">${dt(f.since)}</td>${st.map(m => `<td>${f.done[m.key] ? '✓' : ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+}
+
 // Mensagens: every notice and push, written for the fictitious family in different moments, checked against the manual.
 let msgRule = '';
 function mensagens(el) {

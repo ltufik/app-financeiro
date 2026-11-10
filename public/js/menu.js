@@ -9,6 +9,7 @@ const I = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 export const SECTIONS = [
   { key: 'familia', title: 'Família e convites', desc: 'Nome da família, quem participa, convidar', group: 'fam', icon: I('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/>') },
   { key: 'divisao', title: 'Quem paga o quê', desc: 'Cartões e conta de cada pessoa, e o acerto do mês', group: 'fam', icon: I('<path d="M7 7h13M7 7l3-3M7 7l3 3M17 17H4M17 17l-3-3M17 17l-3 3"/>') },
+  { key: 'conquistas', title: 'Missões e conquistas', desc: 'O que falta fazer no app e os selos de vocês', group: 'fam', icon: I('<path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z"/>') },
   { key: 'metas', title: 'Metas', desc: 'Limite do cartão, quanto guardar e o sonho de vocês', group: 'fam', icon: I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>') },
   { key: 'gastos_ano', title: 'Gastos do ano', desc: 'IPVA, IPTU, escola: quanto separar e como pagar', group: 'fam', icon: I('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/>') },
   { key: 'patrimonio', title: 'Patrimônio e dívidas', desc: 'Investimentos, bens, dívidas e dinheiro a receber', group: 'fam', icon: I('<path d="M3 10l9-6 9 6M5 10v9h14v-9M10 19v-5h4v5"/>') },

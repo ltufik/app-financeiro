@@ -42,6 +42,7 @@ export const SCREENS = {
   menu: { title: 'Menu ☰', where: 'Botão ☰ no topo', key: 'aba.menu' },
   menu_familia: { title: 'Família e convites', where: 'Menu ☰', key: 'menu.familia' },
   menu_divisao: { title: 'Quem paga o quê', where: 'Menu ☰', key: 'menu.divisao' },
+  menu_conquistas: { title: 'Missões e conquistas', where: 'Menu ☰ → Família e metas (e "Ver todas" na missão do Início)', key: 'menu.conquistas' },
   menu_metas: { title: 'Metas', where: 'Menu ☰', key: 'menu.metas' },
   menu_patrimonio: { title: 'Patrimônio e dívidas', where: 'Menu ☰', key: 'menu.patrimonio' },
   menu_gastos_ano: { title: 'Gastos do ano: achados no histórico', where: 'Menu ☰ → Família e metas → Gastos do ano (e o aviso no Início)', key: ['menu.gastos_ano', 'ano.confirmou', 'ano.nao_volta'] },

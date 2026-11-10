@@ -165,7 +165,7 @@ await page.click('#catMerge .mergecard [data-mj]').catch(() => {}); await page.c
 await page.keyboard.press('Escape').catch(() => {});
 await step('menu', async () => { await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); await page.waitForTimeout(300); });
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-for (const k of ['familia', 'divisao', 'metas', 'gastos_ano', 'patrimonio', 'categorias', 'avisos', 'applepay', 'contexto', 'duvidas', 'opiniao', 'ajuda', 'backup', 'sobre', 'conta']) await step('menu_' + k, () => sec(k));
+for (const k of ['familia', 'divisao', 'conquistas', 'metas', 'gastos_ano', 'patrimonio', 'categorias', 'avisos', 'applepay', 'contexto', 'duvidas', 'opiniao', 'ajuda', 'backup', 'sobre', 'conta']) await step('menu_' + k, () => sec(k));
 await step('lancar_comprovante', async () => {
   await page.evaluate(async () => { const png = await (await fetch('/icons/icon-192.png')).blob(); const c = await caches.open('share'); await c.put('/shared/meta', new Response(JSON.stringify({ text: '', name: 'comprovante.png', type: 'image/png' }))); await c.put('/shared/file', new Response(png, { headers: { 'content-type': 'image/png' } })); });
   await page.goto('https://app.test/?acao=compartilhar'); await page.waitForSelector('#qSave', { timeout: 15000 });

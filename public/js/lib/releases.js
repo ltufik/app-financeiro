@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -502,4 +502,10 @@ export const RELEASES = [
   ] } },
   { id: 'r126', version: 'v126', at: '2026-11-10T00:01:00Z', addBacklog: [{ id: 'plural_manuais', title: 'Etiqueta dizia "lançamentos manualis"', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Plural errado na etiqueta do Início', from: [] }], backlog: ['plural_manuais'], semNovidade: 'Correção de uma palavra na etiqueta do Início; não muda o uso.', semTeste: 'Coberto pelo teste automático do Início.' },
   { id: 'r127', version: 'v127', at: '2026-11-10T00:49:00Z', updateDocs: [DOC_CSP], backlog: ['csp_navegador'], semNovidade: 'Proteção por trás: o navegador passa a recusar código de fora; nada muda no uso.', semTeste: 'Coberta pelo e2e, que já roda com a política bloqueando.' },
+  // From 2.0 on, versions are numbered 2.0.1 (fixes and small changes), 2.x (big features) and x.0 (journey, structure or rebranding).
+  { id: 'r2.0.0', version: 'v2.0.0', at: '2026-11-10T01:12:00Z', addDocs: [DOC_MISSOES], news: { id: 'n20261110a', title: 'Pra Onde Foi 2.0: missões e conquistas', items: [
+    'O app agora mostra o caminho: missões de começo no Início, uma de cada vez, com o que cada uma destrava e um botão que leva direto.',
+    'As missões são cumpridas sozinhas quando vocês fazem, e cada uma é comemorada. Os selos marcam as conquistas de vocês, como 3 meses no azul.',
+    'Tudo fica em Menu → Missões e conquistas.',
+  ] }, addBacklog: [{ id: 'missoes_de_comeco', title: 'Missões de começo, conquistas e selos (2.0)', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'O app informava, mas não puxava a família para agir; só 36% chegavam ao primeiro mês', from: [] }, { id: 'desafios_do_mes', title: 'Desafios do mês (sugeridos pelos números, aceitos, com prazo e resultado)', status: 'proximo', origin: 'Luiz', effort: 'G', problem: 'Depois do começo, falta o que fazer a cada mês para chegar nas metas', from: [] }, { id: 'sequencia_e_familia', title: 'Sequência de semanas em dia e progresso em família', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Conquista vista pelos dois e o hábito semanal', from: [] }], backlog: ['missoes_de_comeco'] },
 ];

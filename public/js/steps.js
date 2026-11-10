@@ -1,5 +1,10 @@
 // Home checklist ("régua de preenchimento") and install help.
-import { S, settings, latestClosed } from './state.js';
+import { S, settings, latestClosed, closedKeys, calcMonth, goals } from './state.js';
+import { toast } from './ui.js';
+import { track } from './usage.js';
+import { todayISO } from './lib/format.js';
+import { missionList, missionProgress, syncMissions, badges } from './lib/missions.js';
+import { sundayHabit } from './lib/closing.js';
 import * as db from './db.js';
 import { esc } from './lib/format.js';
 
@@ -29,67 +34,83 @@ export function wireInstall(root) {
   });
 }
 
-// "Régua": how complete the family's setup is. Each item has a weight and says what it unlocks.
-// Items that don't apply to everyone can be skipped ("não tenho"), saved in the household settings.
-function items() {
-  const t = S.txs, st = settings(), g = st.goals || {}, sk = st.skips || {};
+// Missões (lib/missions.js): the next one on Início, all of them and the selos on Menu → Conquistas.
+function facts() {
+  const t = S.txs.filter(x => !x.virtual), st = settings(), g = st.goals || {};
   const L = latestClosed(), pend = L ? t.filter(x => x.month === L && (x.pending || !x.category || x.category === 'A classificar')).length : 1;
-  return [
-    { key: 'fatura', w: 20, done: t.some(x => x.source === 'cartao' && !x.manual), title: 'Envie a última fatura do cartão', hint: 'PDF baixado no app do banco.', unlocks: 'a sobra do mês e o cartão', go: ['lancar', '#drop'], btn: 'Enviar' },
-    { key: 'extrato', w: 20, done: t.some(x => x.source === 'conta' && !x.manual), title: 'Envie o extrato da conta', hint: 'O mês inteiro, do dia 1 ao último dia.', unlocks: 'receitas, pix e boletos na conta', go: ['lancar', '#drop'], btn: 'Enviar' },
-    { key: 'metas', w: 10, done: !!(+g.cardMonthly || g.savings != null && st.goalsSet), title: 'Combine os limites do mês', hint: 'Até quanto gastar no cartão e quanto guardar da renda.', unlocks: 'avisos de gasto alto', go: ['ajustes', '#gCard', 'metas'], btn: 'Definir' },
-    { key: 'meta', w: 10, done: !!(+g.patrimonio && g.ageGoal), title: 'Defina o sonho de vocês', hint: 'Quanto querem ter investido e com que idade.', unlocks: 'quando vocês chegam lá', go: ['ajustes', '#gPat', 'metas'], btn: 'Definir' },
-    { key: 'invest', w: 5, done: !!(+st.invest?.total || (st.assets || []).length), skip: 'Ainda não tenho', title: 'Informe investimentos e bens', hint: 'Valor investido hoje, imóveis e veículos.', unlocks: 'o patrimônio da família', go: ['ajustes', '#iTotal', 'patrimonio'], btn: 'Informar' },
-    { key: 'dividas', w: 5, done: !!(st.debts || []).length, skip: 'Não tenho', title: 'Cadastre financiamentos e dívidas', hint: 'Saldo, taxa e parcela.', unlocks: 'simulações de quitação', go: ['ajustes', '[data-add="debts"]', 'patrimonio'], btn: 'Cadastrar' },
-    { key: 'fixas', w: 5, done: !!(st.recurring || []).length, skip: 'Não tenho', title: 'Liste as contas fixas do cartão', hint: 'Assinaturas, seguros, planos.', unlocks: 'a previsão da próxima fatura', go: ['ajustes', '[data-add="recurring"]', 'patrimonio'], btn: 'Listar' },
-    { key: 'classificar', w: 5, done: !!L && !pend, title: 'Deixe tudo com categoria', hint: 'Nenhum lançamento "A classificar" no último mês.', unlocks: 'gráficos certos', go: ['extrato', '#lPend'], btn: 'Revisar' },
-    { key: 'convite', w: 5, done: S.members.length > 1, skip: 'Uso sozinho', title: 'Convide quem divide as contas', hint: 'Um link pelo WhatsApp.', unlocks: 'a família toda no mesmo lugar', go: ['ajustes', '#ivName', 'familia'], btn: 'Convidar' },
-    { key: 'falar', w: 5, done: t.some(x => x.manual), title: 'Lance um gasto falando', hint: 'Ex.: "gastei 45 na padaria no pix".', unlocks: 'o mês em dia antes do extrato', go: ['lancar', '#qText'], btn: 'Lançar' },
-    { key: 'avisos', w: 5, done: lsGet('fin.push.on') === '1', skip: 'Não quero', title: 'Ligue os avisos no celular', hint: 'Fatura fechou, mês acabando, gasto alto.', unlocks: 'avisos sem precisar abrir o app', go: ['ajustes', '#pushBox', 'avisos'], btn: 'Ligar' },
-    { key: 'instalar', w: 5, done: isStandalone() || lsGet('fin.installed') === '1', title: 'Instale o app no celular', hint: 'Ícone na tela, abre em tela cheia.', unlocks: 'acesso em um toque', install: true, btn: 'Como?' },
-  ].map(i => ({ ...i, skipped: !i.done && !!sk[i.key] }));
+  return { hasCard: t.some(x => x.source === 'cartao' && !x.manual), hasConta: t.some(x => x.source === 'conta' && !x.manual), hasClosedMonth: !!L, pending: pend,
+    goalsSet: !!(+g.cardMonthly || st.goalsSet), pushOn: lsGet('fin.push.on') === '1', closedCount: Object.keys(st.closed || {}).length,
+    dream: !!(+g.patrimonio && g.ageGoal), invest: !!(+st.invest?.total || (st.assets || []).length), debts: !!(st.debts || []).length, fixas: !!(st.recurring || []).length,
+    members: S.members.length, manualAny: t.some(x => x.manual), installed: isStandalone() || lsGet('fin.installed') === '1', skips: st.skips || {} };
+}
+export const missions = () => missionList(facts());
+export function familyBadges() {
+  const list = missions(), p = missionProgress(list), today = todayISO(), cur = today.slice(0, 7);
+  const finished = closedKeys('conta').filter(k => k < cur).map(k => { const c = calcMonth(k); return { month: k, res: c.res, tx: c.tx }; });
+  return badges({ starterComplete: p.starterComplete, hasCard: list[0].done, closedCount: Object.keys(settings().closed || {}).length, finished, goal: goals().savings,
+    taught: S.rules.filter(r => +r.priority <= 20).length, members: S.members.length, sundays: sundayHabit(settings().checkins || [], today).done });
 }
 
-export const completeness = () => { const l = items(); return Math.round(l.reduce((a, i) => a + (i.done || i.skipped ? i.w : 0), 0)); };
-export function stepsComplete() { return completeness() >= 100; }
+// Done missions are recorded once (households.settings.missionsDone) so each one is celebrated a single time.
+let syncing = false;
+async function celebrate(list) {
+  if (syncing || !S.hh) return; const cur = settings(), { next, newly } = syncMissions(cur.missionsDone, list, todayISO());
+  if (next === cur.missionsDone) return;
+  syncing = true;
+  try { const st = { ...cur, missionsDone: next }; await db.saveSettings(S.hh.id, st); S.hh.settings = st; } catch (e) { /* celebrate next time */ } finally { syncing = false; }
+  if (!newly.length) return;
+  for (const k of newly) track('missao.' + k);
+  const p = missionProgress(list), m = list.find(x => x.key === newly[newly.length - 1]);
+  toast(p.starterComplete && newly.some(k => list.find(x => x.key === k)?.starter) ? 'Missões de começo completas! Vocês ganharam o selo "Família organizada".' : `Missão cumprida: ${m.title.toLowerCase()}!${p.next ? ` Próxima: ${p.next.title.toLowerCase()}.` : ''}`);
+}
 
-let showAll = false, expanded = false;
-export const expandSteps = () => { expanded = true; };
+const DOT = ok => `<span class="mis-dot${ok ? ' on' : ''}" aria-hidden="true"></span>`;
 export function renderSteps(box) {
-  const list = items(), pctDone = completeness();
-  if (pctDone >= 100) { box.hidden = true; return; }
-  const todo = list.filter(i => !i.done && !i.skipped), shown = showAll ? list : todo.slice(0, 3);
-  box.hidden = false;
-  // Once the basics are in, the ruler shrinks to one line on the home screen.
-  if (pctDone >= 40 && !expanded) {
+  if (!box) return;
+  const list = missions(), p = missionProgress(list), ok = m => m.done || m.skipped;
+  celebrate(list);
+  if (p.allComplete) { box.hidden = true; return; }
+  box.hidden = false; box.classList.remove('regua-mini');
+  if (p.starterComplete) { // only extra missions left: one line
     box.classList.add('regua-mini');
-    box.innerHTML = `<div class="regua-h"><div><h3>Use o app por completo</h3><div class="progress regua" role="progressbar" aria-valuenow="${pctDone}" aria-valuemin="0" aria-valuemax="100" aria-label="Preenchimento"><span style="width:${pctDone}%"></span></div></div><span class="regua-n num">${pctDone}%</span></div>
-      <button class="linkbtn small" type="button" data-open>Ver o que falta (${todo.length})</button>`;
-    box.querySelector('[data-open]').onclick = () => { expanded = true; renderSteps(box); };
+    box.innerHTML = `<div class="regua-h"><div><h3>Missões extras: ${p.extraDone} de ${p.extraTotal}</h3><p class="tiny muted">Próxima: ${esc(p.next.title)}.</p></div></div>
+      <button class="linkbtn small" type="button" data-all>Ver missões e conquistas</button>`;
+    box.querySelector('[data-all]').onclick = () => S.go('ajustes', null, 'conquistas');
     return;
   }
-  box.classList.remove('regua-mini');
-  box.innerHTML = `<div class="regua-h"><div><h3>Use o app por completo</h3><p class="tiny muted">${todo.length} ${todo.length > 1 ? 'passos faltam' : 'passo falta'} para ver tudo o que o app pode mostrar.</p></div><span class="regua-n num">${pctDone}%</span></div>
-    <div class="progress regua" role="progressbar" aria-valuenow="${pctDone}" aria-valuemin="0" aria-valuemax="100" aria-label="Preenchimento"><span style="width:${pctDone}%"></span></div>
-    <ul class="steps">${shown.map(it => { const k = list.indexOf(it); return `<li class="${it.done ? 'done' : it.skipped ? 'done skipped' : ''}"><span class="ck" aria-hidden="true">${it.done || it.skipped ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span>
-      <span class="st"><span class="small" style="font-weight:600">${esc(it.title)}</span> <span class="tiny muted">+${it.w}%</span><br><span class="tiny muted">${it.done ? 'Feito.' : it.skipped ? 'Marcado: ' + esc(it.skip.toLowerCase()) + '.' : esc(it.hint) + ' Libera ' + esc(it.unlocks) + '.'}</span>
-      ${!it.done && !it.skipped && it.skip ? `<br><button class="linkbtn tiny" type="button" data-skip="${k}">${esc(it.skip)}</button>` : ''}${it.skipped ? `<br><button class="linkbtn tiny" type="button" data-unskip="${k}">Desfazer</button>` : ''}</span>
-      ${it.done || it.skipped ? '' : `<button class="chip" type="button" data-k="${k}">${it.btn}</button>`}</li>
-      ${it.install && !it.done ? `<li hidden id="installHelp" class="help" style="display:block">${installHelpHTML()}<button class="chip" type="button" data-mark style="margin-top:8px">Já instalei</button></li>` : ''}`; }).join('')}</ul>
-    <div class="rowbtn"><button class="linkbtn small" type="button" data-all>${showAll ? 'Mostrar só o que falta' : 'Ver todos os ' + list.length + ' passos'}</button>${pctDone >= 40 ? '<button class="linkbtn small" type="button" data-close>Recolher</button>' : ''}</div>`;
-  box.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
-    const it = list[+b.dataset.k];
-    if (it.install) { const h = box.querySelector('#installHelp'); if (h) h.hidden = !h.hidden; return; }
-    S.go(it.go[0], it.go[1], it.go[2]);
-  });
-  const setSkip = async (key, v) => {
-    const st = { ...settings(), skips: { ...(settings().skips || {}), [key]: v } };
-    try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; renderSteps(box); } catch (e) { /* keep as is */ }
-  };
-  box.querySelectorAll('[data-skip]').forEach(b => b.onclick = () => setSkip(list[+b.dataset.skip].key, true));
-  box.querySelectorAll('[data-unskip]').forEach(b => b.onclick = () => setSkip(list[+b.dataset.unskip].key, false));
-  box.querySelector('[data-all]').onclick = () => { showAll = !showAll; renderSteps(box); };
-  const cl = box.querySelector('[data-close]'); if (cl) cl.onclick = () => { expanded = false; showAll = false; renderSteps(box); };
-  const mark = box.querySelector('[data-mark]'); if (mark) mark.onclick = () => { lsSet('fin.installed', '1'); renderSteps(box); };
+  const m = p.next, st = list.filter(x => x.starter);
+  box.innerHTML = `<div class="mis"><p class="eyebrow">Missões de começo · ${p.starterDone} de ${p.starterTotal}</p>
+    <div class="mis-dots" role="img" aria-label="${p.starterDone} de ${p.starterTotal} missões cumpridas">${st.map(x => DOT(ok(x))).join('')}</div>
+    <h3>${esc(m.title)}</h3><p class="small">${esc(m.hint)} <span class="muted">Destrava: ${esc(m.unlocks)}.</span></p>
+    <div class="rowbtn"><button class="btn primary" type="button" data-go>${esc(m.btn)}</button>${m.skip ? `<button class="btn" type="button" data-skip>${esc(m.skip)}</button>` : ''}<button class="linkbtn small" type="button" data-all>Ver todas</button></div></div>`;
+  box.querySelector('[data-go]').onclick = () => { track('inicio.missao_abriu'); S.go(m.go[0], m.go[1], m.go[2]); };
+  box.querySelector('[data-all]').onclick = () => S.go('ajustes', null, 'conquistas');
+  const sk = box.querySelector('[data-skip]'); if (sk) sk.onclick = () => setSkip(m.key, true, () => renderSteps(box));
+}
+async function setSkip(key, v, then) {
+  const st = { ...settings(), skips: { ...(settings().skips || {}), [key]: v } };
+  try { await db.saveSettings(S.hh.id, st); S.hh.settings = st; then && then(); } catch (e) { toast('Não foi possível salvar agora.'); }
+}
+
+// Menu → Conquistas: every mission (starter and extra) and the selos.
+export function renderConquistas(box) {
+  if (!box) return;
+  const list = missions(), p = missionProgress(list), b = familyBadges(), ok = m => m.done || m.skipped;
+  const item = m => { const k = list.indexOf(m); return `<li class="${ok(m) ? 'done' : ''}${m.skipped ? ' skipped' : ''}"><span class="ck" aria-hidden="true">${ok(m) ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span>
+    <span class="st"><span class="small" style="font-weight:600">${esc(m.title)}</span><br><span class="tiny muted">${m.done ? 'Feito.' : m.skipped ? 'Marcado: ' + esc(m.skip.toLowerCase()) + '.' : esc(m.hint) + ' Destrava: ' + esc(m.unlocks) + '.'}</span>
+    ${m.skipped ? `<br><button class="linkbtn tiny" type="button" data-unskip="${k}">Desfazer</button>` : !m.done && m.skip ? `<br><button class="linkbtn tiny" type="button" data-skip="${k}">${esc(m.skip)}</button>` : ''}</span>
+    ${ok(m) ? '' : `<button class="chip" type="button" data-k="${k}">${esc(m.btn)}</button>`}</li>${m.install && !m.done ? `<li hidden id="installHelp" class="help" style="display:block">${installHelpHTML()}<button class="chip" type="button" data-mark style="margin-top:8px">Já instalei</button></li>` : ''}`; };
+  const won = b.filter(x => x.earned).length;
+  box.innerHTML = `<h3>Missões de começo <span class="tiny muted">${p.starterDone} de ${p.starterTotal}</span></h3>
+    <div class="mis-dots">${list.filter(m => m.starter).map(m => DOT(ok(m))).join('')}</div>
+    <ul class="steps">${list.filter(m => m.starter).map(item).join('')}</ul>
+    <h3 style="margin-top:14px">Missões extras <span class="tiny muted">${p.extraDone} de ${p.extraTotal}</span></h3>
+    <ul class="steps">${list.filter(m => !m.starter).map(item).join('')}</ul>
+    <h3 style="margin-top:14px">Selos <span class="tiny muted">${won} de ${b.length}</span></h3>
+    <div class="selos">${b.map(x => `<div class="selo${x.earned ? ' on' : ''}"><span class="selo-i" aria-hidden="true">${x.earned ? '★' : '☆'}</span><strong class="small">${esc(x.title)}</strong><span class="tiny muted">${x.earned ? 'Conquistado.' : esc(x.how) + (x.progress ? ` (${esc(x.progress)})` : '')}</span></div>`).join('')}</div>`;
+  box.querySelectorAll('[data-k]').forEach(btn => btn.onclick = () => { const m = list[+btn.dataset.k]; if (m.install) { const h = box.querySelector('#installHelp'); if (h) h.hidden = !h.hidden; return; } track('conquistas.missao_abriu'); S.go(m.go[0], m.go[1], m.go[2]); });
+  box.querySelectorAll('[data-skip]').forEach(btn => btn.onclick = () => setSkip(list[+btn.dataset.skip].key, true, () => renderConquistas(box)));
+  box.querySelectorAll('[data-unskip]').forEach(btn => btn.onclick = () => setSkip(list[+btn.dataset.unskip].key, false, () => renderConquistas(box)));
+  const mark = box.querySelector('[data-mark]'); if (mark) mark.onclick = () => { lsSet('fin.installed', '1'); renderConquistas(box); };
   wireInstall(box);
 }

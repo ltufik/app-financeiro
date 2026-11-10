@@ -59,6 +59,11 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && req.query?.view === 'nav') return res.status(200).json(await rpc('product_nav', { p_days: Math.min(365, Math.max(1, +req.query.days || 30)) }));
     // A failed read says which table and why (shown to the owner in the console), never just "db".
     const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); if (!x.ok) { let m = ''; try { m = (await x.json()).message || ''; } catch (e) { /* no body */ } throw new Error(`banco ${x.status} em ${path.split('?')[0]}${m ? ' (' + m + ')' : ''}`); } return x.json(); };
+    // Missions: which ones each family has done (only households.settings.missionsDone, never the family's numbers).
+    if (req.method === 'GET' && req.query?.view === 'missoes') {
+      const fams = await q('households?select=name,created_at,settings&order=created_at.desc&limit=1000');
+      return res.status(200).json(fams.map(h => ({ name: h.name, since: h.created_at, done: h.settings?.missionsDone || {} })));
+    }
     // Server health now (with times) and the daily checks of the last 7 days.
     if (req.method === 'GET' && req.query?.view === 'saude') {
       const since = new Date(Date.now() - 8 * 864e5).toISOString();

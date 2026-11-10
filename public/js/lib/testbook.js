@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('missoes_comeco', 'Início', 'v2.0.0', 'ambos', 'Missões de começo e conquistas',
+    ['Numa conta nova, abra o Início e veja a missão. Toque em "Ver todas".', 'Volte, mande a fatura de um mês e abra o Início de novo.', 'Na sua conta, abra Menu → Família e metas → Missões e conquistas.'],
+    'O Início mostra "Missões de começo · 0 de 6" com a próxima missão, o que ela destrava e um botão que leva direto. Depois de mandar a fatura aparece "Missão cumprida: mande a última fatura do cartão! Próxima: …" uma vez só e a contagem sobe. A página mostra as 6 missões, as 7 extras e os 8 selos (os que faltam com como ganhar). Na sua conta, as missões já cumpridas aparecem feitas, sem comemoração repetida.'),
   t('mensagens_personalizadas', 'Início', 'v125', 'ambos', 'Avisos com o nome e os números de vocês',
     ['Abra o Início e leia os avisos de cima.', 'Se receber um push (9h, domingo ou 21h), leia o título.', 'Num mês que fechou abaixo da meta por causa do financiamento, leia o aviso do mês.'],
     'Todo aviso começa com o seu nome ("Luiz, …"), fala de vocês com "vocês", traz o valor da família comparado com a média de vocês e tem um botão que leva direto ao lugar. Nada de "vale olhar" ou "faltam dados". A etiqueta "Sem contar o financiamento" saiu do Início; quando o financiamento é o motivo de ficar abaixo da meta, o aviso do mês diz quanto seria sem ele.'),
