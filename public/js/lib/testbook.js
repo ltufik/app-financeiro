@@ -140,7 +140,7 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
-  t('entrada_limpa', 'Entrada', 'v2.3.0', 'ambos', 'Tela de entrada mais limpa',
+  t('entrada_limpa', 'Segurança', 'v2.3.0', 'ambos', 'Tela de entrada mais limpa',
     ['Deixe o app parado até desconectar (ou toque em Sair em Conta) e volte.', 'Toque em Entrar; depois teste "Usar a senha" e "Como cuidamos dos seus dados".'],
     'No meio da tela: o logo, "Olá, [nome]" e uma linha dizendo que o app saiu sozinho depois de X minutos sem uso. Embaixo: um botão grande "Entrar" (pede a digital ou o rosto só ao tocar), o link "Usar a senha", o link dos cuidados (abre a lista, com "Sem senha do banco") e "Não é você? Sair da conta". A novidade do app não aparece aqui: vem depois de entrar.'),
   t('desafios_mes', 'Início', 'v2.2.0', 'ambos', 'Desafio do mês, sequência e família',

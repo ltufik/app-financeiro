@@ -523,4 +523,5 @@ export const RELEASES = [
   { id: 'r2.3.0', version: 'v2.3.0', at: '2026-11-10T11:23:00Z', addBacklog: [{ id: 'entrada_mais_limpa', title: 'Tela de entrada mais limpa (versão A)', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A tela de entrada tinha 7 blocos disputando atenção e parecia estranha', from: [] }], backlog: ['entrada_mais_limpa'], news: { id: 'n20261110e', title: 'Entrar ficou mais simples', items: [
     'A tela de entrada agora tem só o "Olá", um botão Entrar e o link para usar a senha. Os cuidados com os seus dados continuam a um toque.',
   ] } },
+  { id: 'r2.3.1', version: 'v2.3.1', at: '2026-11-10T11:38:00Z', semNovidade: 'Ajuste interno no caderno de testes da 2.3.0; nada muda no app.', semTeste: 'Os casos da tela de entrada estão na 2.3.0.' },
 ];
