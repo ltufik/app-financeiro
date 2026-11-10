@@ -167,6 +167,22 @@ body.admin{background:var(--paper)}
   table.atable td:first-child::before{display:none}
   table.atable td:empty{display:none}
 }
+/* Tablet (standing or lying down) and small laptops: tables with many columns of text (Benchmarking, Matriz de serviços) also become cards,
+   instead of squeezing seven columns into 800 px and breaking words in the middle. */
+@media (min-width:641px) and (max-width:1439px){
+  .tw:has(> table.atable.wide){overflow:visible}
+  table.atable.wide,table.atable.wide tr,table.atable.wide td{display:block;width:100%}
+  table.atable.wide tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;width:100%}
+  table.atable.wide thead{display:none}
+  table.atable.wide tr{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:0}
+  table.atable.wide td{border:0;padding:5px 0;display:flex;justify-content:space-between;align-items:baseline;gap:12px;text-align:right;overflow-wrap:break-word;min-width:0}
+  table.atable.wide td[data-label]::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;text-align:left;flex:none;max-width:40%}
+  table.atable.wide td:first-child{font-weight:700;font-size:15px;text-align:left;display:block}
+  table.atable.wide td:first-child::before{display:none}
+  table.atable.wide td:empty{display:none}
+}
+/* Big screens: the wide tables keep a readable width and scroll sideways inside their panel. */
+@media (min-width:1440px){ table.atable.wide{min-width:980px} }
 
 .kcard .kclaude{align-self:flex-start;font-size:13px}
 .tag.bug{background:var(--bad-soft);color:var(--bad);text-transform:uppercase;letter-spacing:.04em}

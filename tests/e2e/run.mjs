@@ -1148,14 +1148,21 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
   const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
-  for (const [w, h, name] of [[390, 844, 'celular'], [800, 1334, 'tablet em pé'], [1334, 800, 'tablet deitado']]) {
+  // Besides the page not scrolling sideways, nothing may stick out of the screen (cut off) unless it sits in its own sideways scroll.
+  const outside = () => ap.evaluate(() => { const W = innerWidth, bad = [];
+    const scrolls = el => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };
+    for (const el of document.querySelectorAll('#aMain *')) { const r = el.getBoundingClientRect(); if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden') continue;
+      if ((r.right > W + 1 || r.left < -1) && !scrolls(el)) bad.push((el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '')) + ' ' + Math.round(r.right)); }
+    return bad.slice(0, 4); });
+  for (const [w, h, name] of [[390, 844, 'celular'], [768, 1024, 'iPad em pé'], [800, 1334, 'tablet em pé'], [1024, 768, 'iPad deitado'], [1334, 800, 'tablet deitado']]) {
     await ap.setViewportSize({ width: w, height: h }); await ap.waitForTimeout(250);
     const wide = [];
-    for (const t of TABS) { await atab(t); await ap.waitForTimeout(250); if (!(await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))) wide.push(t); }
+    for (const t of TABS) { await atab(t); await ap.waitForTimeout(250); const o = await outside(); if (!(await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)) || o.length) wide.push(t + (o.length ? ' (' + o.join('; ') + ')' : '')); }
     ok(`central (${name}): nenhuma página rola para o lado`, !wide.length, wide.join(', '));
     const drawerMode = await ap.isVisible('#aMenu');
     ok(`central (${name}): menu ${w < 1024 ? 'no botão ☰' : 'na lateral'}`, w < 1024 ? drawerMode && (await txt2(ap, '#aCur')) === 'Acesso e segurança' : !drawerMode && await ap.isVisible('#aNav [data-t="acesso"]'));
-    if (shots) for (const t of ['uso', 'pesquisas', 'missoes', 'mensagens', 'painel']) { await atab(t); await ap.waitForTimeout(300); await ap.screenshot({ path: path.join(shots, `admin-resp-${w}-${t}.png`), fullPage: true }); }
+    if (w >= 641) { await atab('servicos'); await ap.waitForTimeout(200); ok(`central (${name}): Matriz de serviços e Benchmarking viram cards, sem quebrar palavras`, await ap.evaluate(() => getComputedStyle(document.querySelector('table.wide tr')).display === 'block')); }
+    if (shots) for (const t of (w === 800 ? TABS : ['uso', 'pesquisas', 'missoes', 'mensagens', 'painel', 'bench', 'servicos'])) { await atab(t); await ap.waitForTimeout(300); await ap.screenshot({ path: path.join(shots, `admin-resp-${w}-${t}.png`), fullPage: true }); }
   }
   await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('#aMenu'); await ap.waitForTimeout(300);
   ok('central no celular: ☰ abre o menu com os quatro grupos e fecha ao tocar fora', await ap.evaluate(() => document.body.classList.contains('navopen') && document.querySelector('#aNav').getBoundingClientRect().left >= 0) && (await ap.$$('#aNav .agroup')).length === 4);

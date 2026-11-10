@@ -288,7 +288,7 @@ const rowHTML = i => `<div class="brow3"><span><strong>${bugTag(i)}${esc(i.title
 // ---------- Benchmarking ----------
 function bench(el) {
   el.innerHTML = `<div class="ahead"><h1>Benchmarking</h1><span class="tiny muted">Pesquisa de 30/10/2026. Valores sem confirmação estão marcados.</span></div>
-    <div class="panel"><div class="tw"><table class="atable"><thead><tr><th>App</th><th>País</th><th>Foco</th><th>Destaques</th><th>Preço</th><th>Principal reclamação</th></tr></thead>
+    <div class="panel"><div class="tw"><table class="atable wide"><thead><tr><th>App</th><th>País</th><th>Foco</th><th>Destaques</th><th>Preço</th><th>Principal reclamação</th></tr></thead>
     <tbody>${BENCH.map(r => `<tr>${r.map((c, i) => i === 0 ? `<td><strong>${esc(c)}</strong></td>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
     <div class="cgrid">
       <div class="cbox"><h3>O que quase todos têm</h3><p class="small">Categorias com gráfico, orçamento com aviso, metas, cartões, contas a pagar, senha ou biometria. Sincronização automática, que é também a maior fonte de reclamação.</p></div>
@@ -569,7 +569,7 @@ async function servicos(el) {
   el.innerHTML = `<div class="ahead"><h1>Matriz de serviços</h1><button class="btn primary" type="button" id="svSave">Salvar</button></div>
     <p class="small muted">Tudo o que o app oferece, onde fica, se usa IA (custo por uso), em que plano deve ficar quando houver cobrança e quanto foi usado nos últimos ${useDays} dias.</p>
     <div class="mgrid">${[['No ar', c('no_ar')], ['Em teste', c('teste')], ['Planejados', c('planejado')], ['Usam IA', items.filter(x => x.ai !== 'nao').length]].map(([k, v]) => `<div class="mcard"><span class="tiny muted">${k}</span><span class="num">${v}</span></div>`).join('')}</div>
-    <div class="panel"><div class="tw"><table class="atable svt"><thead><tr><th>Serviço</th><th>Onde fica</th><th>Situação</th><th>Plano</th><th>IA</th><th>Depende de</th><th>Uso</th></tr></thead><tbody>
+    <div class="panel"><div class="tw"><table class="atable svt wide"><thead><tr><th>Serviço</th><th>Onde fica</th><th>Situação</th><th>Plano</th><th>IA</th><th>Depende de</th><th>Uso</th></tr></thead><tbody>
     ${items.map((x, i) => { const u = useOf(x.keys); return `<tr><td><strong>${esc(x.name)}</strong><br><span class="tiny muted">${esc(x.what)}</span></td><td class="tiny">${esc(x.where)}</td><td>${sel(i, 'status', SV_STATUS)}</td><td>${sel(i, 'plan', SV_PLAN)}</td><td>${sel(i, 'ai', SV_AI)}</td><td class="tiny">${esc(x.deps)}</td><td class="num">${(x.keys || []).length ? `${u.users} <span class="tiny muted">pessoas<br>${u.n}×</span>` : '<span class="tiny muted">não medido</span>'}</td></tr>`; }).join('')}
     </tbody></table></div></div>`;
   el.querySelectorAll('select[data-k]').forEach(s => s.onchange = () => { items[+s.dataset.i][s.dataset.k] = s.value; });
