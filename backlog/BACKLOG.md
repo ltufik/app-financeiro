@@ -2,14 +2,13 @@
 
 Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 
-## Agora (2)
+## Agora (1)
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
 |  | [seguranca] Proteção do navegador contra código de fora (Content-Security-Policy) | `csp_navegador` | P | Luiz |
-| 2 | Pesquisa de satisfação dentro do app | `pesquisa_no_app` | P | Luiz |
 
-## Próximo (8)
+## Próximo (7)
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
@@ -20,7 +19,6 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 7 | Ver o resultado antes de criar a conta | `resultado_antes_da_conta` | G | Pesquisa de dores (nov/2026) |
 | 9 | Revisão de custos: TV, internet, celular e streaming | `revisao_de_custos_planos` | M | Luiz |
 | 5 | Caixa "a revisar" que chega a zero, com a revisão de domingo | `caixa_a_revisar_que_chega_a_zero` | M | Benchmarking: Copilot |
-| 8 | Meu, seu, nosso (lançamentos e contas privadas) | `meu_seu_nosso_lancamentos_e_contas_priva` | M | Benchmarking: Monarch, Honeydue |
 
 ## Ideia (12)
 
@@ -56,7 +54,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 9 | Plano pago / modelo de negócio | `plano_pago_modelo_de_negocio` | M | Produto |
 | 10 | Cobrança honesta (teste sem cartão, aviso de renovação, cancelar em 1 clique) | `cobranca_honesta_teste_sem_cartao_aviso_` | P | Benchmarking |
 
-## Feito: 134 itens
+## Feito: 140 itens
 
 ## Descartado: 4 itens
 

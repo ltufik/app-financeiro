@@ -1,5 +1,45 @@
 [
  {
+  "id": "previsao_com_o_que_falta",
+  "from": [],
+  "tipo": "bug",
+  "title": "Previsão do mês com o que ainda vai entrar e sair",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Com o extrato parcial, a previsão e o \"quanto dá por dia\" ignoravam o salário que ainda vai entrar e as contas fixas e financiamentos que ainda vão sair"
+ },
+ {
+  "id": "comunicacoes_personalizadas",
+  "from": [],
+  "notes": "Passar por cada aviso do Início e cada push: o momento (mês em andamento ou terminado, dia do mês), o nome e a família, os números da própria família comparados com ela mesma, um próximo passo claro e o tom. Inclui testes que cobrem as frases.",
+  "title": "Revisar todas as mensagens: certas, no momento certo e personalizadas",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Mensagem genérica ou errada faz o app ser só mais um; para divulgar em massa cada aviso precisa falar da família, com os números dela e o que fazer agora"
+ },
+ {
+  "id": "mes_atual_nao_fechou",
+  "from": [],
+  "tipo": "bug",
+  "title": "Aviso dizia que o mês atual \"fechou no vermelho\"",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Com o extrato parcial de novembro, o Início dizia \"Novembro fechou no vermelho\" no dia 9"
+ },
+ {
+  "id": "entrada_que_pagou_amortizacao",
+  "from": [],
+  "tipo": "bug",
+  "title": "Entrada que pagou a amortização não é sobra do mês",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Um valor alto que entrou só para amortizar o financiamento contava como ganho, e novembro aparecia guardando 170 mil"
+ },
+ {
   "id": "repetidos_lancado_a_mao",
   "from": [],
   "tipo": "bug",
@@ -1235,7 +1275,7 @@
   "where": "Pop-up ao abrir o app; resultados na Central",
   "effort": "P",
   "origin": "Luiz",
-  "status": "agora",
+  "status": "feito",
   "problem": "Saber por que as pessoas usam pouco ou param, sem perguntar por fora do app"
  },
  {
@@ -1908,7 +1948,7 @@
   "where": "",
   "effort": "M",
   "origin": "Benchmarking: Monarch, Honeydue",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Casal quer ver o comum sem expor tudo"
  },
  {
