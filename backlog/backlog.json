@@ -1,5 +1,61 @@
 [
  {
+  "id": "entrada_mais_limpa",
+  "from": [],
+  "title": "Tela de entrada mais limpa (versão A)",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "A tela de entrada tinha 7 blocos disputando atenção e parecia estranha"
+ },
+ {
+  "id": "inicio_enxuto_cards_que_abrem",
+  "from": [],
+  "notes": "Cada bloco do Início vira card com uma linha clara e seta para abrir; os banners dinâmicos (retrospectiva, gastos do ano, novidades) passam pelo manual de mensagens (nome, vocês, número, botão que leva ao lugar).",
+  "title": "Revisão do Início: cards que abrem e banners que levam ao lugar certo",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Tem muita coisa no Início; nem tudo precisa aparecer inteiro. Os banners dinâmicos ficam em destaque e precisam levar para onde queremos, como as mensagens"
+ },
+ {
+  "id": "faixa_de_selos",
+  "from": [],
+  "tipo": "bug",
+  "title": "Faixa de selos e próxima missão abaixo do \"Olá\"",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Quem já cumpriu as missões de começo não via as missões no Início (a linha ficava escondida no \"Depois disso\")"
+ },
+ {
+  "id": "sequencia_e_familia",
+  "from": [],
+  "title": "Sequência de semanas em dia e progresso em família",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Conquista vista pelos dois e o hábito semanal"
+ },
+ {
+  "id": "desafios_do_mes",
+  "from": [],
+  "title": "Desafios do mês (sugeridos pelos números, aceitos, com prazo e resultado)",
+  "effort": "G",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Depois do começo, falta o que fazer a cada mês para chegar nas metas"
+ },
+ {
+  "id": "missoes_de_comeco",
+  "from": [],
+  "title": "Missões de começo, conquistas e selos (2.0)",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "O app informava, mas não puxava a família para agir; só 36% chegavam ao primeiro mês"
+ },
+ {
   "id": "plural_manuais",
   "from": [],
   "tipo": "bug",
@@ -249,7 +305,7 @@
   "where": "Todo o app",
   "effort": "P",
   "origin": "Luiz",
-  "status": "agora",
+  "status": "feito",
   "problem": "O app não diz ao navegador de onde pode carregar código"
  },
  {
