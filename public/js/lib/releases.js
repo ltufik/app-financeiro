@@ -524,4 +524,7 @@ export const RELEASES = [
     'A tela de entrada agora tem só o "Olá", um botão Entrar e o link para usar a senha. Os cuidados com os seus dados continuam a um toque.',
   ] } },
   { id: 'r2.3.1', version: 'v2.3.1', at: '2026-11-10T11:38:00Z', semNovidade: 'Ajuste interno no caderno de testes da 2.3.0; nada muda no app.', semTeste: 'Os casos da tela de entrada estão na 2.3.0.' },
+  { id: 'r2.3.2', version: 'v2.3.2', at: '2026-11-10T21:28:00Z', updateDocs: [DOC_PREVISAO], addBacklog: [{ id: 'previsao_ver_a_conta', title: 'Previsão: "Ver a conta" com todos os números', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Não dava para conferir de onde vinha a previsão de sobra', from: [] }, { id: 'central_responsiva_novas', title: 'Central no celular: páginas novas sem rolar para o lado', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Pesquisas, Missões e Mensagens não cabiam na largura do celular', from: [] }], backlog: ['previsao_ver_a_conta', 'central_responsiva_novas'], news: { id: 'n20261110f', title: 'Previsão: veja a conta', items: [
+    'Na Previsão do mês, toque em "Ver a conta" e veja cada número: o que já entrou e saiu, o salário e as contas fixas que ainda vão cair, o cartão e quanto cabe por dia.',
+  ] } },
 ];

@@ -805,3 +805,10 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 #lockScreen .lk-safe summary{cursor:pointer;text-align:center;list-style:none}
 #lockScreen .lk-safe summary::-webkit-details-marker{display:none}
 #lockScreen .lk-out{color:var(--muted)}
+/* Ver a conta (previsão) */
+.fc-calc{margin-top:6px}.fc-calc summary{cursor:pointer;font-weight:600}
+.fc-calc table{width:100%;border-collapse:collapse;margin-top:6px}
+.fc-calc td{padding:5px 0;vertical-align:top;border-bottom:1px solid var(--line)}
+.fc-calc td.num{text-align:right;white-space:nowrap;padding-left:10px;font-variant-numeric:tabular-nums}
+.fc-calc .fc-total td{font-weight:700}
+.fc-calc .fc-note td{color:var(--muted)}

@@ -978,7 +978,7 @@ test('gastos do ano: IPVA pelo veículo do patrimônio e o estado dele', async (
   assert.deepEqual(vehicleSuggestions([], [civic, { name: 'Scooter', value: 17000, tipo: 'moto' }]).map(x => x.asset.name), [civic.name], 'without a state there is no estimate yet');
 });
 
-import { forecast, forecastText, checkinTarget, sundayAsk, closeDateOf } from '../public/js/lib/monthend.js';
+import { forecast, forecastText, forecastBreakdown, checkinTarget, sundayAsk, closeDateOf } from '../public/js/lib/monthend.js';
 test('month-end forecast: history, open bill check-in and the Sunday ask', () => {
   const categories = [{ name: 'Salário', grp: 'renda' }, { name: 'Aluguel', grp: 'dia', recurring: true }, { name: 'Mercado', grp: 'dia' }, { name: 'Obra', grp: 'fora' }];
   const txs = [];
@@ -1379,6 +1379,11 @@ test('previsão: extrato parcial conta o salário que ainda vai entrar e as fixa
   assert.equal(f.res, Math.round(32000 - (454 + 8600 + 2200) - 9000));
   const t = forecastText(f);
   assert.match(t.counted, /^Já conta com R\$ 32\.000 que ainda devem entrar \(Salário\) e R\$ 8\.600 de contas fixas e financiamentos que ainda vão sair \(Financiamento e Escola\), pelo extrato até 08\/11\.$/);
+  // "Ver a conta": every number, adding up to the totals.
+  const b = forecastBreakdown(f), sum = (from, to) => b.slice(from, to).reduce((a, x) => a + x.value, 0);
+  const iE = b.findIndex(x => x.label === 'Entradas do mês'), iR = b.findIndex(x => x.label === 'Sobra prevista');
+  assert.equal(sum(0, iE), b[iE].value); assert.equal(sum(iE + 1, iR) + b[iE].value, b[iR].value);
+  assert.match(b.map(x => x.label).join(' | '), /Já entrou na conta \(extrato até 08\/11\) \| Ainda deve entrar: Salário .* Dia a dia da conta nos 22 dias que o extrato ainda não cobre \(R\$ 100 por dia\)/);
   // The whole month in: nothing on top.
   const full = forecast({ txs: [...txs, { month: '2026-11', source: 'conta', date: '2026-11-30', amount: 16000, category: 'Salário' }], categories, settings: { goals: { savings: 0.2 }, cardCloseDay: 28 }, today: '2026-11-30' });
   assert.equal(full.coming.income.length + full.coming.fixed.length + full.coming.variable, 0);

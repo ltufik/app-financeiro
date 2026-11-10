@@ -176,3 +176,8 @@ body.admin{background:var(--paper)}
 .tscroll{overflow-x:auto}
 .tag.seguranca{background:var(--warn-soft,#fff3d6);color:var(--warn,#9a6700);text-transform:uppercase;letter-spacing:.04em}
 .tag.backend{background:var(--sunk,#eef);color:var(--ink);text-transform:uppercase;letter-spacing:.04em}
+/* Long codes and links never push the page sideways (phone and tablet). */
+#aMain code{overflow-wrap:anywhere;word-break:break-word}
+#aMain .msgcard,#aMain .panel{min-width:0;overflow-wrap:anywhere}
+#aMain .tw{overflow-x:auto;max-width:100%}
+#aMain .chips{display:flex;flex-wrap:wrap;gap:6px}

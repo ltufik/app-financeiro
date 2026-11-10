@@ -140,6 +140,12 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('previsao_ver_a_conta', 'Início', 'v2.3.2', 'ambos', 'Previsão: Ver a conta',
+    ['No Início, abra a Previsão do mês e toque em "Ver a conta".', 'Some as linhas de cima até "Entradas do mês" e confira com o total; faça o mesmo até "Sobra prevista".'],
+    'A conta mostra cada número: o que já entrou e saiu pelo extrato (até o dia que ele cobre), a renda e as contas fixas que ainda devem cair (pela média), o dia a dia nos dias sem extrato, a fatura do cartão (com o valor informado e o ritmo até fechar) e a sobra prevista, a meta e quanto cabe por dia. As linhas somam os totais.'),
+  t('central_celular', 'Central', 'v2.3.2', 'ambos', 'Central no celular e no tablet',
+    ['Abra a Central no celular e passe por Pesquisas, Missões, Mensagens e Painel.'],
+    'Nenhuma página rola para o lado; códigos e links longos quebram a linha e as tabelas rolam dentro do próprio quadro.'),
   t('entrada_limpa', 'Segurança', 'v2.3.0', 'ambos', 'Tela de entrada mais limpa',
     ['Deixe o app parado até desconectar (ou toque em Sair em Conta) e volte.', 'Toque em Entrar; depois teste "Usar a senha" e "Como cuidamos dos seus dados".'],
     'No meio da tela: o logo, "Olá, [nome]" e uma linha dizendo que o app saiu sozinho depois de X minutos sem uso. Embaixo: um botão grande "Entrar" (pede a digital ou o rosto só ao tocar), o link "Usar a senha", o link dos cuidados (abre a lista, com "Sem senha do banco") e "Não é você? Sair da conta". A novidade do app não aparece aqui: vem depois de entrar.'),

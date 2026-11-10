@@ -218,6 +218,7 @@ export const DOC_PREVISAO = { id: 'previsao_doc', title: 'Previsão do mês e o 
 ## Como calcula (lib/monthend.js)
 - Base: os últimos 3 meses completos (com extrato e fatura); precisa de pelo menos 2.
 - Conta: o que já aconteceu no mês (o extrato até o último dia que ele cobre, ou o que foi lançado) mais o que ainda deve acontecer, pelos últimos meses da própria família: a renda que costuma entrar (por categoria, ex.: as duas partes do salário), as contas fixas e os financiamentos que costumam sair (categorias fixas ou de financiamento) e o ritmo normal do dia a dia da conta (pix, débito) nos dias que o extrato ainda não cobre. Extrato do mês inteiro: nada a mais.
+- "Ver a conta" (forecastBreakdown) lista cada número em ordem: já entrou, ainda deve entrar (por renda), entradas do mês; já saiu, ainda deve sair (fixas e financiamentos), dia a dia nos dias sem extrato, fatura do cartão (fatura no app, ou valor informado + ritmo até fechar, ou o normal), sobra prevista, meta e quanto cabe por dia. As linhas somam os totais (teste).
 - A tela diz o que já está contado: "Já conta com R$ 32.000 que ainda devem entrar (Salário) e R$ 8.600 de contas fixas e financiamentos que ainda vão sair, pelo extrato até 08/11".
 - Cartão (conta pelo mês da fatura): a fatura do mês, se já veio; senão, a fatura aberta informada + o ritmo normal de compras novas até o fechamento; sem nada, a mediana das faturas. Só a parte que entra na sobra (o resto é extra ou não conta).
 - Meta: o percentual combinado em Metas sobre a renda fixa de sempre.

@@ -94,7 +94,33 @@ export function forecast({ txs: all, categories, settings = {}, today }) {
   const status = res >= meta ? 'ok' : res >= 0 ? 'risco' : 'vermelho';
   return { month: cur, res: r0(res), meta: r0(meta), renda: r0(renda), goal, status, perDay: r0(perDay), perDayZero: r0(perDayZero), usual: r0(usual), daysLeft, basis, checkin: ck, closeDate,
     card: r0(card), conta: r0(D), entradas: r0(E), hist, nextBill, ignored: pend.size,
-    coming: { income: comingIn.sort((a, b) => b.value - a.value), fixed: comingOut.sort((a, b) => b.value - a.value), variable: r0(varLeft), through: lastSeen } };
+    coming: { income: comingIn.sort((a, b) => b.value - a.value), fixed: comingOut.sort((a, b) => b.value - a.value), variable: r0(varLeft), through: lastSeen },
+    // Every number behind the forecast, for "Ver a conta" (forecastBreakdown).
+    parts: { nowE: r0(now.E), nowD: r0(now.D), varLeft: r0(varLeft), contaPace: r0(contaPace), varDays: full ? 0 : lastSeen ? Math.max(0, lastDayOf(cur) - seenDay) : null,
+      cardNow: r0(now.card), cardPace: r0(pace), share: Math.round(share * 100) / 100, medTotal: r0(medTotal), committed: r0(committed),
+      ck: ck ? { value: r0(+ck.value), date: ck.date, days: Math.max(0, dayDiff(ck.date, closeDate)) } : null } };
+}
+
+// "Ver a conta" on the forecast: each number considered, in order, so the family can check it (and trust it).
+// -> [{ label, value, kind: 'item'|'total'|'note' }]; the items add up to the totals.
+export function forecastBreakdown(f) {
+  if (!f || !f.parts) return [];
+  const p = f.parts, c = f.coming || {}, br = d => `${d.slice(8, 10)}/${d.slice(5, 7)}`, mes = MES[+f.month.slice(5) - 1], out = [];
+  const it = (label, value) => out.push({ label, value: Math.round(value), kind: 'item' }), tot = (label, value) => out.push({ label, value: Math.round(value), kind: 'total' });
+  it(c.through ? `Já entrou na conta (extrato até ${br(c.through)})` : 'Já entrou na conta', p.nowE);
+  for (const x of c.income || []) it(`Ainda deve entrar: ${x.name} (pela média dos últimos meses)`, x.value);
+  tot('Entradas do mês', f.entradas);
+  it(c.through ? `Já saiu da conta (extrato até ${br(c.through)})` : 'Já saiu da conta', -p.nowD);
+  for (const x of c.fixed || []) it(`Ainda deve sair: ${x.name} (${x.financing ? 'financiamento' : 'conta fixa'}, pela média)`, -x.value);
+  if (p.varLeft) it(p.varDays != null ? `Dia a dia da conta nos ${p.varDays} dias que o extrato ainda não cobre (${R(p.contaPace)} por dia)` : 'Dia a dia da conta que ainda falta (pela média dos últimos meses)', -p.varLeft);
+  const sh = p.share < 1 ? `, só a parte que conta na sobra (${Math.round(p.share * 100)}%)` : '';
+  it(f.basis === 'fatura' ? `Fatura do cartão de ${mes} (já no app)`
+    : f.basis === 'checkin' ? `Fatura do cartão: ${R(p.ck.value)} informados em ${br(p.ck.date)} + ${R(p.cardPace)} por dia nos ${p.ck.days} dias até fechar${sh}`
+    : `Fatura do cartão: o normal de vocês (${R(Math.max(p.medTotal, p.committed))})${sh}`, -f.card);
+  tot('Sobra prevista', f.res);
+  out.push({ label: 'Meta do mês', value: f.meta, kind: 'note' });
+  out.push({ label: `Cabem por dia: o ritmo normal de compras novas (${R(f.usual)}) ${f.res >= f.meta ? '+' : '−'} ${R(Math.abs(f.res - f.meta))} ÷ ${f.daysLeft} dias que faltam`, value: f.perDay, kind: 'note' });
+  return out;
 }
 
 // The text of the forecast, the same on Início, in the toast after a check-in and in the Sunday push.

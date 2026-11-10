@@ -64,6 +64,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'saude') return r.fulfill({ json: { now: { color: 'amarelo', text: 'Com problema: Assistente (chave configurada).', checks: [{ id: 'banco', ok: true, ms: 420 }, { id: 'assistente', ok: false, ms: 0 }] }, history: { runs: 2, bad: 0, list: [{ color: 'verde' }, { color: 'verde' }] } } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'entregas') return r.fulfill({ json: pushHealth([...Array(9).fill({ job: 'diario', ok: true, status: 201 }), { job: 'diario', ok: false, status: 410 }].map(l => ({ ...l, at: new Date(Date.now() - 3 * 36e5).toISOString() })), [{ job: 'diario', ok: true, at: new Date(Date.now() - 3 * 36e5).toISOString() }, { job: 'lembrete', ok: true, at: new Date(Date.now() - 80 * 36e5).toISOString() }]) });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'pesquisas') return r.fulfill({ json: [{ survey: 'nps', kind: 'mostrou', name: 'Ana', family: 'Família Teste', at: '2026-11-09T12:00:00Z' }, { survey: 'nps', kind: 'respondeu', score: 9, answers: { nota: 9, ajudou: ['previsao'], falta: 'Ler mais bancos e um texto bem comprido para ver se quebra a linha direitinho no celular sem empurrar a página' }, name: 'Ana', family: 'Família Teste', at: '2026-11-09T12:01:00Z' }] });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'missoes') return r.fulfill({ json: [{ name: 'Família Teste', since: '2026-11-01T10:00:00Z', done: { fatura: '2026-11-02', extrato: '2026-11-02' } }, { name: 'Família Nova', since: '2026-11-05T10:00:00Z', done: {} }] });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'nav') return r.fulfill({ json: NAV_FIXTURE });
@@ -392,7 +393,8 @@ if (backup) {
   ok('importar o mesmo backup de novo não duplica (pula os meses)', (await txt('.cfm')).includes('Importar 0 lançamentos') && (await txt('.cfm')).includes('serão pulados'), (await txt('.cfm')).slice(0, 120));
   await page.click('.cfm [data-n]');
   await page.click('[data-tab=resumo]');
-  await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; });
+  await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; const c = document.querySelector('#fcCalc'); if (c) c.open = true; });
+  ok('Início: "Ver a conta" da previsão mostra os números até a sobra prevista', (await txt('#fcCalc')).includes('Entradas do mês') && (await txt('#fcCalc')).includes('Sobra prevista') && (await txt('#fcCalc')).includes('Cabem por dia'), (await txt('#fcCalc')).slice(0, 200));
   ok('Início: a previsão fechada diz o principal numa linha', /Previsão: (sobrar|faltar) R\$/.test(await txt('#sum_previsao summary')), await txt('#sum_previsao summary'));
   ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
   await page.click('#fcSave');
@@ -1133,7 +1135,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
-  const TABS = ['painel', 'opinioes', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
+  const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
   for (const [w, h, name] of [[390, 844, 'celular'], [800, 1334, 'tablet em pé'], [1334, 800, 'tablet deitado']]) {
     await ap.setViewportSize({ width: w, height: h }); await ap.waitForTimeout(250);
     const wide = [];
@@ -1141,7 +1143,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
     ok(`central (${name}): nenhuma página rola para o lado`, !wide.length, wide.join(', '));
     const drawerMode = await ap.isVisible('#aMenu');
     ok(`central (${name}): menu ${w < 1024 ? 'no botão ☰' : 'na lateral'}`, w < 1024 ? drawerMode && (await txt2(ap, '#aCur')) === 'Acesso e segurança' : !drawerMode && await ap.isVisible('#aNav [data-t="acesso"]'));
-    if (shots) { await atab('uso'); await ap.waitForTimeout(300); await ap.screenshot({ path: path.join(shots, `admin-resp-${w}-uso.png`), fullPage: true }); }
+    if (shots) for (const t of ['uso', 'pesquisas', 'missoes', 'mensagens', 'painel']) { await atab(t); await ap.waitForTimeout(300); await ap.screenshot({ path: path.join(shots, `admin-resp-${w}-${t}.png`), fullPage: true }); }
   }
   await ap.setViewportSize({ width: 390, height: 844 }); await ap.click('#aMenu'); await ap.waitForTimeout(300);
   ok('central no celular: ☰ abre o menu com os quatro grupos e fecha ao tocar fora', await ap.evaluate(() => document.body.classList.contains('navopen') && document.querySelector('#aNav').getBoundingClientRect().left >= 0) && (await ap.$$('#aNav .agroup')).length === 4);
