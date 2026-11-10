@@ -243,7 +243,7 @@ await page.click('[data-tab=resumo]');
 ok('a missão diz o que destrava, com 6 pontinhos de progresso', (await txt('#stepsBox')).includes('Destrava: para onde foi o dinheiro do cartão') && (await page.$$('#stepsBox .mis-dot')).length === 6);
 await page.click('#stepsBox [data-all]'); await page.waitForSelector('#conqBox .steps');
 { const nLi = (await page.$$('#conqBox .steps > li:not([hidden])')).length, nSel = (await page.$$('#conqBox .selo')).length, ct = await txt('#conqBox');
-  ok('Conquistas mostra as 6 missões de começo, as extras e os selos', nLi === 13 && nSel === 8 && /Selos\s*\d de 8/.test(ct), `${nLi} missões, ${nSel} selos; ${(ct.match(/Selos[^A-Z]*/) || [''])[0]}`); }
+  ok('Conquistas mostra as 6 missões de começo, as extras e os selos', nLi === 13 && nSel === 10 && /Selos\s*\d de 10/.test(ct), `${nLi} missões, ${nSel} selos; ${(ct.match(/Selos[^A-Z]*/) || [''])[0]}`); }
 await page.click('#conqBox [data-skip]'); await page.waitForFunction(() => window.__db.households[0].settings.skips?.avisos === true, null, { timeout: 5000 }).catch(() => {});
 ok('"Não quero" conta como feita (avisos)', await page.evaluate(() => window.__db.households[0].settings.skips?.avisos === true) && (await txt('#conqBox')).includes('Marcado: não quero'));
 await page.click('#conqBox [data-unskip]'); await page.waitForFunction(() => !window.__db.households[0].settings.skips?.avisos, null, { timeout: 5000 }).catch(() => {});
@@ -430,8 +430,19 @@ if (backup) {
       S.txs.forEach(t => { if (t.month === L) { t.pending = false; if (!t.category || t.category === 'A classificar') t.category = 'Mercado'; } }); S.render(); return L; });
     await page.waitForSelector('#misStrip:not([hidden])', { timeout: 5000 }).catch(() => {});
     const strip = await txt('#misStrip');
-    ok('com as 6 de começo cumpridas, a faixa de selos e a próxima missão fica abaixo do "Olá"', /\d de 8 selos/.test(strip) && strip.includes('Próxima missão') && await page.isHidden('#stepsBox'), strip);
-    await page.evaluate(async () => { const { S } = await import('/js/state.js'); const k = window.__keepMis; S.hh.settings = k.st; k.tx.forEach(([t, p, c]) => { t.pending = p; t.category = c; }); S.render(); });
+    ok('com as 6 de começo cumpridas, a faixa de selos e a próxima missão fica abaixo do "Olá"', /\d de 10 selos/.test(strip) && strip.includes('Próxima missão') && await page.isHidden('#stepsBox'), strip);
+    // Desafio do mês: suggested from the family's numbers, accepted, followed on Início; the family section shows the streak.
+    await page.click('#misStrip button'); await page.waitForSelector('#chBox');
+    const cx = await txt('#conqBox');
+    ok('conquistas: desafio do mês sugerido pelos números e "Em família" com a sequência', cx.includes('Desafio do mês') && cx.includes('Em família') && /semana|sequência/.test(cx), cx.slice(0, 300));
+    if (await page.$('#chBox [data-acc]')) {
+      await page.click('#chBox [data-acc]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]');
+      await page.waitForFunction(() => window.__db.households[0].settings.challenge?.status === 'ativo', null, { timeout: 5000 }).catch(() => {});
+      ok('desafio aceito fica guardado e aparece no Início com o progresso', await page.evaluate(() => window.__db.households[0].settings.challenge?.status === 'ativo') && (await page.click('[data-tab=resumo]'), await page.waitForSelector('#chHome:not([hidden])', { timeout: 5000 }).then(() => true, () => false)) && (await txt('#chHome')).includes('Desafio de vocês'), await txt('#chHome'));
+      await page.evaluate(async () => { const { S } = await import('/js/state.js'); delete window.__db.households[0].settings.challenge; S.hh.settings = { ...S.hh.settings, challenge: null }; });
+    } else ok('desafio: sem sugestão, a página explica quando aparece', cx.includes('Sem desafio para sugerir agora'));
+    await page.evaluate(async () => { const { S } = await import('/js/state.js'); const k = window.__keepMis; S.hh.settings = { ...k.st, challenge: null }; k.tx.forEach(([t, p, c]) => { t.pending = p; t.category = c; }); S.render(); });
+    await page.click('[data-tab=resumo]');
   }
   await page.selectOption('#monthSel', '2026-09');
   const ins = await txt('#insights');

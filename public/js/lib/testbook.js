@@ -140,6 +140,9 @@ export const TESTS = [
     ['Abra o menu ☰ e role até o fim.', 'Depois de uma versão nova sair, com o app aberto, abra o menu de novo.', 'Saia do app por mais de 1 minuto e volte.'],
     'O fim do menu mostra "versão v85 (de teste)". Com versão nova, aparece "Tem versão nova: atualizar agora"; ao voltar depois de 1 minuto fora, o app já abre na versão nova (a não ser que esteja em Lançar ou com uma revisão aberta).', true),
   // Patrimônio
+  t('desafios_mes', 'Início', 'v2.2.0', 'ambos', 'Desafio do mês, sequência e família',
+    ['Abra Menu → Missões e conquistas e veja o "Desafio do mês". Aceite um.', 'Volte ao Início.', 'Na outra conta da família, espere cumprir um desafio rápido (ex.: conferir os lançamentos) e veja o push.'],
+    'O desafio sugerido usa os números de vocês (ex.: "Delivery abaixo de R$ … em novembro" porque subiu em relação à média). Aceito, o Início mostra "Desafio de vocês" com a barra e o progresso. Cumprido, aparece a comemoração, o selo "Desafio cumprido" e o push para o outro celular. "Em família" mostra a sequência de semanas e o que cada um fez no mês.'),
   t('inicio_cards', 'Início', 'v2.1.0', 'ambos', 'Início enxuto: cards que abrem',
     ['Abra o Início e role até o fim sem abrir nada.', 'Abra a Previsão, a Sobra e o Nível.', 'Num domingo (ou tocando no push de domingo), abra o Início.'],
     'No topo: a faixa de selos (ou a missão) e o seu próximo passo. Abaixo, cards fechados, cada um com uma linha com número (ex.: "Previsão: sobrar R$ … · cabem R$ … por dia", "Patrimônio R$ …", "Em outubro, Luana passa R$ … para Luiz"). A Sobra tem o gráfico de quanto guardaram mês a mês dentro; o Nível tem o botão da retrospectiva. No domingo a Previsão já vem aberta com o campo da fatura aberta.'),

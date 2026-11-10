@@ -28,8 +28,9 @@ export const SCENARIOS = [
   { id: 'meio', title: 'Meio do mês (09/11): outubro no vermelho', desc: 'Outubro fechou com gastos acima do normal; novembro tem o extrato parcial; há saques e um repetido.', today: '2026-11-09', ctx: base() },
   { id: 'comeco', title: 'Começo do mês (03/12): a fatura fechou e falta fechar novembro', desc: 'A fatura do cartão fechou dia 28 e ainda não chegou; novembro terminou e não foi fechado.', today: '2026-12-03',
     ctx: base({ months: [...MONTHS, '2026-11'], has: (k, s) => k <= '2026-10' || (k === '2026-11' && s === 'conta'), toClose: '2026-11', M: { '2026-11': calcOf(3600) } }) },
-  { id: 'fim', title: 'Fim do mês (26/11): outubro bateu a meta', desc: 'Outubro guardou acima da meta e gastou menos que o normal; o cartão está dentro do limite.', today: '2026-11-26',
-    ctx: base({ M: { '2026-10': calcOf(4200, 14000, 9800) }, C: { '2026-10': { Mercado: 1900, Escola: 2400, 'Moradia e contas': 2500, Delivery: 400 } }, cashPending: [], dups: 0, catMerge: 0, recurring: [], budgets: { Delivery: 500 } }) },
+  { id: 'fim', title: 'Fim do mês (26/11): outubro bateu a meta, e um desafio sugerido', desc: 'Outubro guardou acima da meta e gastou menos que o normal; o cartão está dentro do limite.', today: '2026-11-26',
+    ctx: base({ M: { '2026-10': calcOf(4200, 14000, 9800) }, C: { '2026-10': { Mercado: 1900, Escola: 2400, 'Moradia e contas': 2500, Delivery: 400 } }, cashPending: [], dups: 0, catMerge: 0, recurring: [], budgets: { Delivery: 500 },
+      challengeSuggest: { title: 'Delivery abaixo de R$ 650 em novembro', why: 'Em outubro foram R$ 1.400, R$ 775 acima da média de vocês.' } }) },
   { id: 'nova', title: 'Família nova (15/11): só o cartão de outubro', desc: 'Mandou a fatura de outubro, mas não o extrato da conta.', today: '2026-11-15',
     ctx: base({ months: ['2026-10'], has: (k, s) => s === 'cartao' && k === '2026-10', M: { '2026-10': calcOf(0, 0, 5200) }, cashPending: [], dups: 0, catMerge: 0, recurring: [], fees: null, budgets: {}, nextFatura: null }) },
 ];
@@ -53,12 +54,14 @@ export function otherPushes() {
   const ft = forecastText(FC, PERSON), sa = sundayAsk(FC, { name: PERSON, sent: {}, checkins: [], today: '2026-11-15' });
   const r1 = reminderMessage(PERSON), r2 = reminderMessage(PERSON, { empty: true });
   const fam = ['joined', 'imported', 'closed'].map(type => ({ type, m: familyNotice({ type, name: PARTNER.split(' ')[0], to: PERSON.split(' ')[0], family: 'Família Souza', source: 'cartao', month: '2026-10' }) }));
+  const conq = [['missao', 'missao:fechar'], ['desafio', 'desafio:categoria']].map(([w, key]) => ({ w, m: familyNotice({ type: 'conquista', key, name: PARTNER.split(' ')[0], to: PERSON.split(' ')[0] }) }));
   return [
     { channel: 'push', where: 'Domingo, resumo da semana', id: 'semanal', title: w.title, text: w.text, url: w.url },
     { channel: 'push', where: 'Domingo 19h, previsão do mês', id: 'previsao', title: sa?.msg.title, text: sa?.msg.body, url: linkFor('tela', { tab: 'resumo', sec: 'previsao' }) },
     { channel: 'inicio', where: 'Início, Previsão do mês', id: 'previsao', title: ft.title, text: `${ft.head} ${ft.day}`, detail: ft.counted, action: { label: 'Atualizar a previsão' } },
     { channel: 'push', where: '21h, quem não lançou nada hoje', id: 'lembrete', title: r1.title, text: r1.body, url: r1.url },
     { channel: 'push', where: '21h, família ainda sem dados', id: 'lembrete_vazio', title: r2.title, text: r2.body, url: r2.url },
+    ...conq.map(({ w, m }) => ({ channel: 'push', where: w === 'missao' ? `Para o resto da família quando ${PARTNER.split(' ')[0]} cumpre uma missão de começo` : 'Para o resto da família quando cumprem o desafio do mês', id: 'familia_conquista', title: m.title, text: m.body, url: m.url })),
     ...fam.map(({ type, m }) => ({ channel: 'push', where: `Para o resto da família quando ${PARTNER.split(' ')[0]} ${type === 'joined' ? 'entra' : type === 'imported' ? 'manda a fatura' : 'fecha o mês'}`, id: 'familia_' + type, title: m.title, text: m.body, url: m.url })),
   ];
 }

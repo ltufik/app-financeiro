@@ -25,6 +25,9 @@ import { renderForecast, familyForecast } from '../forecast.js';
 import { cashPending } from '../cash.js';
 import { familyDups, familyFunding } from '../dupfix.js';
 import { renderSurvey } from '../survey.js';
+import { renderChallengeHome, activeChallenge, challengeSuggestions } from '../challenges.js';
+import { missions } from '../steps.js';
+import { missionProgress } from '../lib/missions.js';
 
 let goalPreset = 0;
 // Início sections: a clear one-line description; the person opens for the detail (remembered per section).
@@ -76,6 +79,7 @@ export function render(el) {
   const feesLast = (() => { for (const k of [...ks].reverse().filter(k => k <= curK).slice(0, 3)) { const f = feesOf(txsOf(k)); if (f.total >= 1) return { month: k, total: f.total }; } return null; })();
   el.innerHTML = `<p class="hello">Olá, ${esc(first())}.</p>
   <div id="misStrip" hidden></div>
+  <div id="chHome" hidden></div>
   <div class="panel stack surv-card" id="survBox" hidden></div>
   <section class="todo" id="todo">
     <div class="todo-head"><p class="eyebrow" id="todoEyebrow">Seu próximo passo</p></div>
@@ -140,6 +144,7 @@ export function render(el) {
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas_lista'); });
   renderSteps(el.querySelector('#stepsBox'));
   renderStrip(el.querySelector('#misStrip'));
+  renderChallengeHome(el.querySelector('#chHome'));
   if (!yr) renderSurvey(el.querySelector('#survBox'));
   renderInsights(el.querySelector('#insights'));
   if (!yr) renderForecast(el.querySelector('#fcBox'));
@@ -165,7 +170,7 @@ export function homeInsights() {
     pending: k => S.txs.filter(t => t.month === k && (t.pending || !t.category || t.category === 'A classificar')).length,
     fixedCats: [...idx.values()].filter(c => c.grp === 'dia' && c.recurring).map(c => c.name), closeDay: closeDay(),
     ...(() => { const u = {}; for (const t of S.txs) for (const c of (t.splits?.length ? t.splits.map(x => x.category) : [t.category])) if (c) u[c] = (u[c] || 0) + 1; const m = mergeSuggestions(S.categories, u, settings().catKeepApart || []); return { catMerge: m.length, catMergeText: m[0] ? `"${m[0].drop}" e "${m[0].keep}" parecem a mesma coisa. Juntar deixa os gráficos e o orçamento mais claros.` : '' }; })(),
-    goals: G, nextFatura: nextFatura(), checkins: settings().checkins || [], cashPending: cashPending(), dups: (d => d.pairs.length + d.orphans.length)(familyDups()), funding: familyFunding(), budgets: budgetsOf(settings()), recurring: findRecurring(S.txs, monthKeys(), { idx }), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
+    goals: G, nextFatura: nextFatura(), checkins: settings().checkins || [], cashPending: cashPending(), dups: (d => d.pairs.length + d.orphans.length)(familyDups()), funding: familyFunding(), challengeSuggest: !activeChallenge() && missionProgress(missions()).starterComplete ? challengeSuggestions()[0] || null : null, budgets: budgetsOf(settings()), recurring: findRecurring(S.txs, monthKeys(), { idx }), toClose: monthToClose(monthKeys(), settings().closed || {}, todayISO()),
     etaYears: pmt => { if (!(pmt > 0) || !G.patrimonio) return null; const pts = projectFor(pmt, 0, { years: 40 }); const i = pts.findIndex(v => v >= G.patrimonio); return i < 0 ? null : i; },
   }).filter(x => x.id !== 'close'));
 }

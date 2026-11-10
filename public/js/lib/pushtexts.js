@@ -1,6 +1,7 @@
 // Texts of the pushes that do not come from the Início notices: the Sunday summary of the week, the 21h reminder
 // and the family notices. Pure (the robots in api/ send them; Central → Mensagens shows them). Tested in tests/.
 import { expandSplits } from './calc.js';
+import { missionList } from './missions.js';
 
 const days = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
 const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
@@ -25,10 +26,17 @@ export const reminderMessage = (name, { empty = false } = {}) => empty
 const MES_N = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const mName = k => /^\d{4}-\d{2}$/.test(k || '') ? MES_N[+k.slice(5) - 1] : 'mês';
 
-export function message({ type, name, to = '', family, source, month }) {
+const MISSION_TITLES = Object.fromEntries(missionList({}).filter(m => m.starter).map(m => [m.key, m.title]));
+export function message({ type, name, to = '', family, source, month, key }) {
   const hey = t => (to ? `${to}, ${t}` : t[0].toUpperCase() + t.slice(1));
   if (type === 'joined') return { title: hey(`${name} entrou na família`), body: `Agora vocês veem os mesmos números da ${family}. Combinem as metas juntos em Metas.`, url: '/?tab=resumo', tag: 'familia-joined' };
   if (type === 'imported') return { title: hey(`${name} mandou ${source === 'cartao' ? 'a fatura' : 'o extrato'} de ${mName(month)}`), body: 'A sobra de vocês no mês já está atualizada. Toque para ver para onde foi o dinheiro.', url: '/?tab=resumo', tag: 'familia-imported' };
+  if (type === 'conquista') {
+    const [kind, k] = String(key || '').split(':'), m = kind === 'missao' && MISSION_TITLES[k];
+    if (kind === 'missao' && m) return { title: hey(`${name} cumpriu uma missão`), body: `${m}: feito! Vejam o que falta para vocês em Missões e conquistas.`, url: '/?tab=ajustes&sec=conquistas', tag: 'familia-conquista' };
+    if (kind === 'desafio' && /^[a-z_]{2,20}$/.test(k || '')) return { title: hey('vocês cumpriram o desafio do mês'), body: 'Ganharam o selo "Desafio cumprido". Vejam o próximo em Missões e conquistas.', url: '/?tab=ajustes&sec=conquistas', tag: 'familia-conquista' };
+    return null;
+  }
   if (type === 'closed') return { title: hey(`${name} fechou ${mName(month)}`), body: `Vejam juntos a retrospectiva de ${mName(month)}: o que vocês guardaram e o que mais pesou.`, url: '/?tab=fechar', tag: 'familia-closed' };
   return null;
 }

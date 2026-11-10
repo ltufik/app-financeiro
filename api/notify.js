@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   const me = await u.json();
   if (!await allowed(`notify:${me.id}`, [{ limit: 10, window: 60 }, { limit: 100, window: 86400 }], { supabaseUrl: URL_, serviceKey: SERVICE })) return res.status(429).json({ error: 'rate_limited' });
   const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-  if (!/^[0-9a-f-]{36}$/i.test(b.household || '') || !['joined', 'imported', 'closed'].includes(b.type)) return res.status(400).json({ error: 'bad_request' });
+  if (!/^[0-9a-f-]{36}$/i.test(b.household || '') || !['joined', 'imported', 'closed', 'conquista'].includes(b.type)) return res.status(400).json({ error: 'bad_request' });
   const H = { apikey: SERVICE, ...(SERVICE.startsWith('sb_') ? {} : { authorization: `Bearer ${SERVICE}` }) };
   const get = async p => { const r = await fetch(`${URL_}/rest/v1/${p}`, { headers: H }); if (!r.ok) throw new Error('db'); return r.json(); };
   try {
@@ -27,7 +27,8 @@ export default async function handler(req, res) {
     const self = members.find(m => m.user_id === me.id); if (!self) return res.status(403).json({ error: 'not_member' });
     const [hh] = await get(`households?id=eq.${b.household}&select=name`);
     const first = m => String(m?.display_name || '').trim().split(/\s+/)[0];
-    const msgFor = uid => message({ type: b.type, name: first(self) || 'Alguém', to: first(members.find(m => m.user_id === uid)), family: hh?.name || 'família', source: b.source, month: b.month });
+    const msgFor = uid => message({ type: b.type, name: first(self) || 'Alguém', to: first(members.find(m => m.user_id === uid)), family: hh?.name || 'família', source: b.source, month: b.month, key: b.key });
+    if (!msgFor(null)) return res.status(400).json({ error: 'bad_request' });
     const subs = (await get(`push_subscriptions?household_id=eq.${b.household}&user_id=neq.${me.id}&select=id,user_id,endpoint,p256dh,auth,prefs`)).filter(s => s.prefs?.familia !== false);
     let sent = 0;
     await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'familia', run: false }, async () => {

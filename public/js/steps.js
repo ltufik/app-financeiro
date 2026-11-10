@@ -5,6 +5,8 @@ import { track } from './usage.js';
 import { todayISO } from './lib/format.js';
 import { missionList, missionProgress, syncMissions, badges } from './lib/missions.js';
 import { sundayHabit } from './lib/closing.js';
+import { notifyFamily } from './push.js';
+import { renderChallengeSection, familyHTML, familyStreak } from './challenges.js';
 import * as db from './db.js';
 import { esc } from './lib/format.js';
 
@@ -48,7 +50,8 @@ export function familyBadges() {
   const list = missions(), p = missionProgress(list), today = todayISO(), cur = today.slice(0, 7);
   const finished = closedKeys('conta').filter(k => k < cur).map(k => { const c = calcMonth(k); return { month: k, res: c.res, tx: c.tx }; });
   return badges({ starterComplete: p.starterComplete, hasCard: list[0].done, closedCount: Object.keys(settings().closed || {}).length, finished, goal: goals().savings,
-    taught: S.rules.filter(r => +r.priority <= 20).length, members: S.members.length, sundays: sundayHabit(settings().checkins || [], today).done });
+    taught: S.rules.filter(r => +r.priority <= 20).length, members: S.members.length, sundays: sundayHabit(settings().checkins || [], today).done,
+    challenges: (settings().challenges || []).filter(c => c.status === 'cumprido').length, ...(s => ({ streak: s.current, bestStreak: s.best }))(familyStreak()) });
 }
 
 // Done missions are recorded once (households.settings.missionsDone) so each one is celebrated a single time.
@@ -60,6 +63,7 @@ async function celebrate(list) {
   try { const st = { ...cur, missionsDone: next }; await db.saveSettings(S.hh.id, st); S.hh.settings = st; } catch (e) { /* celebrate next time */ } finally { syncing = false; }
   if (!newly.length) return;
   for (const k of newly) track('missao.' + k);
+  for (const k of newly.filter(k => list.find(x => x.key === k)?.starter)) notifyFamily('conquista', { key: 'missao:' + k });
   const p = missionProgress(list), m = list.find(x => x.key === newly[newly.length - 1]);
   toast(p.starterComplete && newly.some(k => list.find(x => x.key === k)?.starter) ? 'Missões de começo completas! Vocês ganharam o selo "Família organizada".' : `Missão cumprida: ${m.title.toLowerCase()}!${p.next ? ` Próxima: ${p.next.title.toLowerCase()}.` : ''}`);
 }
@@ -95,13 +99,16 @@ export function renderConquistas(box) {
     ${m.skipped ? `<br><button class="linkbtn tiny" type="button" data-unskip="${k}">Desfazer</button>` : !m.done && m.skip ? `<br><button class="linkbtn tiny" type="button" data-skip="${k}">${esc(m.skip)}</button>` : ''}</span>
     ${ok(m) ? '' : `<button class="chip" type="button" data-k="${k}">${esc(m.btn)}</button>`}</li>${m.install && !m.done ? `<li hidden id="installHelp" class="help" style="display:block">${installHelpHTML()}<button class="chip" type="button" data-mark style="margin-top:8px">Já instalei</button></li>` : ''}`; };
   const won = b.filter(x => x.earned).length;
-  box.innerHTML = `<h3>Missões de começo <span class="tiny muted">${p.starterDone} de ${p.starterTotal}</span></h3>
+  box.innerHTML = `<div id="chBox" class="stack"></div>
+    <h3 style="margin-top:14px">Missões de começo <span class="tiny muted">${p.starterDone} de ${p.starterTotal}</span></h3>
     <div class="mis-dots">${list.filter(m => m.starter).map(m => DOT(ok(m))).join('')}</div>
     <ul class="steps">${list.filter(m => m.starter).map(item).join('')}</ul>
     <h3 style="margin-top:14px">Missões extras <span class="tiny muted">${p.extraDone} de ${p.extraTotal}</span></h3>
     <ul class="steps">${list.filter(m => !m.starter).map(item).join('')}</ul>
     <h3 style="margin-top:14px">Selos <span class="tiny muted">${won} de ${b.length}</span></h3>
-    <div class="selos">${b.map(x => `<div class="selo${x.earned ? ' on' : ''}"><span class="selo-i" aria-hidden="true">${x.earned ? '★' : '☆'}</span><strong class="small">${esc(x.title)}</strong><span class="tiny muted">${x.earned ? 'Conquistado.' : esc(x.how) + (x.progress ? ` (${esc(x.progress)})` : '')}</span></div>`).join('')}</div>`;
+    <div class="selos">${b.map(x => `<div class="selo${x.earned ? ' on' : ''}"><span class="selo-i" aria-hidden="true">${x.earned ? '★' : '☆'}</span><strong class="small">${esc(x.title)}</strong><span class="tiny muted">${x.earned ? 'Conquistado.' : esc(x.how) + (x.progress ? ` (${esc(x.progress)})` : '')}</span></div>`).join('')}</div>
+    ${familyHTML()}`;
+  renderChallengeSection(box.querySelector('#chBox'), { onChange: () => renderConquistas(box) });
   box.querySelectorAll('[data-k]').forEach(btn => btn.onclick = () => { const m = list[+btn.dataset.k]; if (m.install) { const h = box.querySelector('#installHelp'); if (h) h.hidden = !h.hidden; return; } track('conquistas.missao_abriu'); S.go(m.go[0], m.go[1], m.go[2]); });
   box.querySelectorAll('[data-skip]').forEach(btn => btn.onclick = () => setSkip(list[+btn.dataset.skip].key, true, () => renderConquistas(box)));
   box.querySelectorAll('[data-unskip]').forEach(btn => btn.onclick = () => setSkip(list[+btn.dataset.unskip].key, false, () => renderConquistas(box)));
@@ -116,6 +123,7 @@ export function renderStrip(box) {
   if (!p.starterComplete) { box.hidden = true; box.innerHTML = ''; return; }
   const b = familyBadges(), won = b.filter(x => x.earned).length;
   box.hidden = false;
-  box.innerHTML = `<button type="button" class="mis-strip"><span class="mis-star" aria-hidden="true">★</span><span class="small"><strong>${won} de ${b.length} selos</strong>${p.next ? ` · Próxima missão: ${esc(p.next.title)}` : ' · Todas as missões cumpridas'}</span><span class="mis-go" aria-hidden="true">›</span></button>`;
+  const sk = familyStreak();
+  box.innerHTML = `<button type="button" class="mis-strip"><span class="mis-star" aria-hidden="true">★</span><span class="small"><strong>${won} de ${b.length} selos</strong>${sk.current >= 2 ? ` · 🔥 ${sk.current} semanas seguidas` : ''}${p.next ? ` · Próxima missão: ${esc(p.next.title)}` : ' · Todas as missões cumpridas'}</span><span class="mis-go" aria-hidden="true">›</span></button>`;
   box.querySelector('button').onclick = () => { track('inicio.conquistas'); S.go('ajustes', null, 'conquistas'); };
 }

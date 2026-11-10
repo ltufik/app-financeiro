@@ -1419,5 +1419,31 @@ test('selos: ganhos pelo que a família fez, com o progresso do que falta', () =
   assert.ok(e.primeira_fatura.earned && e.mes_fechado.earned && e.meta_batida.earned && e.em_familia.earned);
   assert.ok(!e.tres_no_azul.earned); assert.equal(e.tres_no_azul.progress, '2 de 3');
   assert.equal(e.app_ensinado.progress, '4 de 10'); assert.equal(e.previsao_em_dia.progress, '1 de 4'); assert.ok(!e.familia_organizada.earned);
+  assert.equal(b.length, 10); assert.ok(!e.desafio_cumprido.earned); assert.equal(e.quatro_semanas.progress, '0 de 4');
+  assert.ok(badges({ challenges: 1, bestStreak: 5 }).filter(x => ['desafio_cumprido', 'quatro_semanas'].includes(x.id)).every(x => x.earned));
   assert.ok(badges({ finished: [{ res: 1 }, { res: 1 }, { res: 1 }, { res: -1 }] }).find(x => x.id === 'tres_no_azul').earned);
+});
+
+import { suggestChallenges, challengeProgress, weekStreak } from '../public/js/lib/challenges.js';
+test('desafios: sugeridos pelos números da família, com progresso e resultado só com os dados completos', () => {
+  const cats = { '2026-08': { Delivery: 600, Mercado: 2000, Escola: 3000 }, '2026-09': { Delivery: 650, Mercado: 2100, Escola: 3000 }, '2026-10': { Delivery: 1400, Mercado: 2050, Escola: 3600 }, '2026-11': { Delivery: 380 } };
+  const f = { today: '2026-11-10', cats, fixed: ['Escola'], pending: 4, cash: 0, checkins: [], forecast: { res: 1800, meta: 2800, perDay: 120 }, subsUp: [] };
+  const s = suggestChallenges(f);
+  assert.equal(s.length, 2); assert.equal(s[0].kind, 'categoria'); assert.equal(s[0].category, 'Delivery'); assert.equal(s[0].target, 650);
+  assert.match(s[0].why, /R\$ 1\.400, R\$ 775 acima da média de vocês/); assert.equal(s[1].kind, 'meta');
+  const ch = { ...s[0], status: 'ativo' };
+  assert.equal(challengeProgress(ch, f).status, 'ativo'); assert.match(challengeProgress(ch, f).text, /R\$ 380 até agora de R\$ 650/);
+  assert.equal(challengeProgress(ch, { ...f, today: '2026-12-02' }).status, 'aguardando');
+  assert.equal(challengeProgress(ch, { ...f, today: '2026-12-02', done: { '2026-11': true }, cats: { ...cats, '2026-11': { Delivery: 600 } } }).status, 'cumprido');
+  assert.equal(challengeProgress(ch, { ...f, today: '2026-12-02', done: { '2026-11': true }, cats: { ...cats, '2026-11': { Delivery: 800 } } }).status, 'nao_deu');
+  assert.equal(challengeProgress({ kind: 'conferir', end: '2026-11-17', month: '2026-11' }, { ...f, pending: 0 }).status, 'cumprido');
+  assert.equal(challengeProgress({ kind: 'domingos', target: 4, start: '2026-11-10', end: '2026-12-07', month: '2026-11' }, { today: '2026-11-24', checkins: [{ date: '2026-11-15' }, { date: '2026-11-23' }] }).text, '2 de 4 domingos.');
+  // Not the same challenge twice in the month.
+  assert.ok(!suggestChallenges(f, [{ key: 'categoria:Delivery', month: '2026-11' }]).some(x => x.category === 'Delivery'));
+});
+test('sequência: semanas seguidas com a família ativa no app', () => {
+  assert.deepEqual(weekStreak(['2026-10-20', '2026-10-28', '2026-11-03', '2026-11-04'], '2026-11-10'), { current: 3, best: 3 });
+  assert.deepEqual(weekStreak(['2026-10-20', '2026-10-28', '2026-11-03', '2026-11-10'], '2026-11-10'), { current: 4, best: 4 });
+  assert.equal(weekStreak(['2026-10-06', '2026-11-03'], '2026-11-10').current, 1);
+  assert.equal(weekStreak([], '2026-11-10').current, 0);
 });

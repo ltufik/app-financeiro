@@ -786,3 +786,8 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .mis-strip .small{flex:1;min-width:0}
 .mis-star{color:var(--accent);font-size:18px;line-height:1}
 .mis-go{color:var(--muted);font-size:20px;line-height:1}
+/* Desafios */
+.ch-home{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:12px 14px;margin:0 0 12px;border:1px solid var(--accent);border-radius:14px;background:var(--card);color:inherit;font:inherit;cursor:pointer}
+.ch-home .eyebrow{letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.ch-bar{display:block;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.ch-bar i{display:block;height:100%;background:var(--accent)}

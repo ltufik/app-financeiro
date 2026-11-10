@@ -129,6 +129,9 @@ export function insights(ctx) {
   }
 
   // 4d. Withdrawals not explained yet: cash disappears from the control unless the person says what it paid for.
+  // A challenge for the month (when there is none going on): from the family's own numbers (lib/challenges.js).
+  const cs = ctx.challengeSuggest;
+  if (cs) out.push({ id: 'desafio', tone: 'info', title: hi('um desafio para vocês este mês'), text: `${cs.title}. ${cs.why}`, action: { label: 'Ver o desafio', go: ['ajustes', null, 'conquistas'] } });
   const fund = ctx.funding || [];
   if (fund.length) { const f = fund[0]; out.push({ id: 'entrada_amortizacao', tone: 'warn', title: hi(`os ${R(f.income.amount)} foram para o financiamento?`), text: `Entraram ${R(f.income.amount)} na conta de vocês e saiu o mesmo para a amortização. Se o dinheiro entrou só para isso, ele não é sobra do mês: confirme com um toque.`, action: { label: 'Confirmar', go: ['extrato', '#fundBox'] } }); }
   const dups = ctx.dups || 0;

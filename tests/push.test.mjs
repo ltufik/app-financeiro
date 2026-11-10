@@ -109,6 +109,9 @@ test('avisos da família: textos de entrou, importou e fechou', async () => {
   assert.equal(message({ type: 'imported', name: 'Luiz', source: 'conta', month: '2026-09' }).title, 'Luiz mandou o extrato de setembro');
   assert.equal(message({ type: 'closed', name: 'Luiz', month: '2026-09' }).url, '/?tab=fechar');
   assert.equal(message({ type: 'imported', name: 'Luana', to: 'Luiz', source: 'cartao', month: '2026-10' }).title, 'Luiz, Luana mandou a fatura de outubro');
+  assert.equal(message({ type: 'conquista', key: 'missao:fechar', name: 'Luana', to: 'Luiz' }).title, 'Luiz, Luana cumpriu uma missão');
+  assert.match(message({ type: 'conquista', key: 'missao:fechar', name: 'Luana' }).body, /^Feche o primeiro mês: feito!/);
+  assert.equal(message({ type: 'conquista', key: 'missao:<script>', name: 'Luana' }), null);
   assert.equal(message({ type: 'x' }), null);
 });
 

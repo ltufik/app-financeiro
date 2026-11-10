@@ -516,4 +516,8 @@ export const RELEASES = [
     'O resto virou cards fechados, cada um com uma linha que já diz o principal (a previsão, a sobra, o cartão, o patrimônio…). Toque para abrir quando quiser o detalhe.',
     'Quanto guardaram mês a mês agora fica dentro da Sobra, e a retrospectiva do ano dentro do Nível.',
   ] } },
+  { id: 'r2.2.0', version: 'v2.2.0', at: '2026-11-10T03:03:00Z', updateDocs: [DOC_MISSOES], backlog: ['desafios_do_mes', 'sequencia_e_familia'], news: { id: 'n20261110d', title: 'Desafios do mês e sequência', items: [
+    'O app sugere desafios a partir dos números de vocês, como voltar o delivery para a média. Aceitem um e acompanhem o progresso no Início.',
+    'Cumpriu? Comemoração, selo e aviso para a família. E agora há a sequência de semanas com o app em dia.',
+  ] } },
 ];

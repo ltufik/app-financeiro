@@ -399,5 +399,11 @@ Primeira fatura, Família organizada (as 6 de começo), Mês fechado, Meta batid
 - Menu ☰ → Família e metas → Missões e conquistas (e "Ver todas" na missão do Início).
 - Central → Missões: o funil das 6 de começo (quantas famílias cumpriram cada uma) e cada família.
 - Regras em lib/missions.js (testadas); tela em steps.js.
-## Próximas entregas
-Desafios do mês (sugeridos pelos números da família, aceitos, com prazo e resultado) e sequência e progresso em família.` };
+## Desafios do mês (2.2)
+- Sugeridos pelos números da própria família (lib/challenges.js), no máximo 2 por vez: a categoria variável que mais subiu no mês passado (voltar à média de vocês), bater a meta do mês (quando a previsão diz que está em risco), zerar os "para conferir", contar os saques, rever uma assinatura que subiu, informar a fatura aberta em 4 domingos.
+- A família aceita um por vez (households.settings.challenge). O Início mostra o desafio com a barra de progresso; a página mostra o detalhe, "Revi" (assinatura) e "Desistir".
+- Resultado pelos dados: categoria e meta só quando a fatura e o extrato do mês chegam ("Esperando a fatura e o extrato…"); os outros na hora. Cumprido: comemoração, selo "Desafio cumprido" e push para o resto da família. Histórico em households.settings.challenges.
+- Sem desafio ativo e com as missões de começo cumpridas, o Início sugere um ("Luiz, um desafio para vocês este mês").
+## Sequência e família (2.2)
+- Semanas seguidas com a família fazendo algo no app (fatura, extrato, lançamento, fatura aberta, missão ou desafio): aparece na faixa ("🔥 3 semanas seguidas") e em Em família; selo "4 semanas seguidas".
+- Em família: o que cada pessoa fez no mês. Missão de começo cumprida ou desafio cumprido avisa o resto da família por push (tipo "conquista", só textos fixos).` };

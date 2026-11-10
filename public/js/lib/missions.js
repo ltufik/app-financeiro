@@ -58,5 +58,7 @@ export function badges(f = {}) {
     { id: 'app_ensinado', title: 'App bem ensinado', how: 'Ensinar 10 categorias ao app (no Extrato ou na revisão).', earned: (+f.taught || 0) >= 10, progress: (+f.taught || 0) >= 10 ? null : `${Math.min(10, +f.taught || 0)} de 10` },
     { id: 'em_familia', title: 'Em família', how: 'Ter mais alguém da família no app.', earned: (+f.members || 0) > 1 },
     { id: 'previsao_em_dia', title: 'Previsão em dia', how: 'Informar a fatura aberta em 4 domingos.', earned: (+f.sundays || 0) >= 4, progress: (+f.sundays || 0) >= 4 ? null : `${+f.sundays || 0} de 4` },
+    { id: 'desafio_cumprido', title: 'Desafio cumprido', how: 'Cumprir um desafio do mês.', earned: (+f.challenges || 0) > 0 },
+    { id: 'quatro_semanas', title: '4 semanas seguidas', how: 'Usar o app 4 semanas seguidas (fatura, extrato, lançamento ou fatura aberta).', earned: (+f.bestStreak || 0) >= 4, progress: (+f.bestStreak || 0) >= 4 ? null : `${Math.min(4, +f.streak || 0)} de 4` },
   ];
 }
