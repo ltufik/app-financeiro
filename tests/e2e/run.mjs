@@ -404,6 +404,7 @@ if (backup) {
   ok('setembro: sobra R$ 2.658,50', hero.includes('2.658,50'), hero);
   const pills = await txt('#v-resumo .hero .chips');
   ok('setembro: guardaram 6% (o "sem o financiamento" saiu do Início e virou aviso)', pills.includes('Guardaram 6% · queriam 20%') && !pills.includes('financiamento'), pills);
+  ok('etiqueta de lançamentos manuais no plural certo', !pills.includes('manualis'), pills);
   ok('próxima fatura com parcelas', (await txt('#v-resumo')).includes('Parcelas R$ 8.401'));
   ok('meta e patrimônio aparecem', (await txt('#v-resumo')).includes('Sonho: R$ 3.000.000 investidos aos 55 anos'));
   { // The pace is the real average of the last complete months, never the old fixed "Ritmo atual".

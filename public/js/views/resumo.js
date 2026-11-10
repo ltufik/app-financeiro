@@ -87,7 +87,7 @@ export function render(el) {
   ${lvl}
   ${sec('sobra', `Sobra ${yr ? 'em ' + S.m.slice(4) + ' até agora' : 'de ' + mLong(S.m)}`, `<span class="big num" style="color:${a.res < 0 ? 'var(--bad)' : 'var(--ink)'}">${brl(a.res)}</span><span class="tiny muted">${a.renda > 0 ? `Guardaram ${pct(a.tx)}${G.savings ? `; a meta é ${pct(G.savings)}` : ''}. ` : ''}Abra para ver receitas, despesas e para onde foi o dinheiro.</span>`,
 `  <div class="panel hero">
-    <div class="chips" style="margin-top:10px">${pill('Guardaram', a.tx, G.savings)}${nMan ? `<span class="pill at">inclui ${nMan} lançamento${nMan > 1 ? 's' : ''} manual${nMan > 1 ? 'is' : ''}</span>` : ''}</div>
+    <div class="chips" style="margin-top:10px">${pill('Guardaram', a.tx, G.savings)}${nMan ? `<span class="pill at">inclui ${nMan} ${nMan > 1 ? 'lançamentos manuais' : 'lançamento manual'}</span>` : ''}</div>
     <div class="row" style="margin-top:14px">${[['Receitas', a.E], ['Despesas', a.out], ['Extras (fora da sobra)', a.EX - a.DX]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
   </div>
   <div class="panel" id="budgetBox" hidden></div>
