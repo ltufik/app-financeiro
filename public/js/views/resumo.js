@@ -21,7 +21,7 @@ import { meter, pill } from '../ui.js';
 import { renderSteps, renderStrip } from '../steps.js';
 import { demoSummary, DEMO_FAMILY, DEMO_MONTH } from '../lib/demo.js';
 import { track } from '../usage.js';
-import { renderForecast } from '../forecast.js';
+import { renderForecast, familyForecast } from '../forecast.js';
 import { cashPending } from '../cash.js';
 import { familyDups, familyFunding } from '../dupfix.js';
 import { renderSurvey } from '../survey.js';
@@ -70,6 +70,10 @@ export function render(el) {
   if (goalPreset >= pr.length) goalPreset = 0;
 
   const fees = feesHTML(), lvl = levelHTML(), subsAll = findRecurring(S.txs, monthKeys(), { idx: S.catIdx });
+  // Numbers for the one-line summaries of the closed cards.
+  const curK = todayISO().slice(0, 7), fin6 = ks.filter(k => k < curK && S.txs.some(t => t.month === k && t.source === 'conta' && !t.manual)).slice(-6).map(calcMonth).filter(c => c.renda > 0);
+  const savedAvg = fin6.length >= 2 ? { avg: fin6.reduce((x, c) => x + c.tx, 0) / fin6.length, n: fin6.length } : null;
+  const feesLast = (() => { for (const k of [...ks].reverse().filter(k => k <= curK).slice(0, 3)) { const f = feesOf(txsOf(k)); if (f.total >= 1) return { month: k, total: f.total }; } return null; })();
   el.innerHTML = `<p class="hello">Olá, ${esc(first())}.</p>
   <div id="misStrip" hidden></div>
   <div class="panel stack surv-card" id="survBox" hidden></div>
@@ -83,15 +87,16 @@ export function render(el) {
     <div id="todoAttn" hidden></div>
     <p class="small todo-done" id="todoDone" hidden>Tudo em dia por aqui. O próximo passo é no domingo: informar a fatura aberta para a previsão ficar certa.</p>
   </section>
-  <div class="panel" id="fcBox" hidden></div>
+  ${yr ? '' : fcCard()}
   <div id="retroCard"></div>
   ${lvl}
-  ${sec('sobra', `Sobra ${yr ? 'em ' + S.m.slice(4) + ' até agora' : 'de ' + mLong(S.m)}`, `<span class="big num" style="color:${a.res < 0 ? 'var(--bad)' : 'var(--ink)'}">${brl(a.res)}</span><span class="tiny muted">${a.renda > 0 ? `Guardaram ${pct(a.tx)}${G.savings ? `; a meta é ${pct(G.savings)}` : ''}. ` : ''}Abra para ver receitas, despesas e para onde foi o dinheiro.</span>`,
+  ${sec('sobra', `Sobra ${yr ? 'em ' + S.m.slice(4) + ' até agora' : 'de ' + mLong(S.m)}`, `<span class="big num" style="color:${a.res < 0 ? 'var(--bad)' : 'var(--ink)'}">${brl(a.res)}</span><span class="small">${!yr && S.m === todayISO().slice(0, 7) ? 'Até agora. ' : ''}${a.renda > 0 ? `Guardaram ${pct(a.tx)}${G.savings ? ` (meta ${pct(G.savings)})` : ''}` : 'Sem renda no período'}${savedAvg ? ` · média de ${pct(savedAvg.avg)} nos últimos ${savedAvg.n} meses` : ''}</span>`,
 `  <div class="panel hero">
     <div class="chips" style="margin-top:10px">${pill('Guardaram', a.tx, G.savings)}${nMan ? `<span class="pill at">inclui ${nMan} ${nMan > 1 ? 'lançamentos manuais' : 'lançamento manual'}</span>` : ''}</div>
     <div class="row" style="margin-top:14px">${[['Receitas', a.E], ['Despesas', a.out], ['Extras (fora da sobra)', a.EX - a.DX]].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${brl0(v)}</span></div>`).join('')}</div>
   </div>
   <div class="panel" id="budgetBox" hidden></div>
+  ${ks.length > 1 ? `<div class="panel"><p class="muted small">A linha tracejada é quanto vocês combinaram guardar.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p><svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg></div>` : ''}
   <div class="panel">
     <h3>Para onde foi o dinheiro${yr ? ' no período' : ''}</h3>
     <p class="muted small">Despesas por categoria, conta e cartão juntos.</p>
@@ -99,7 +104,7 @@ export function render(el) {
     ${top.length > 5 ? `<button class="linkbtn small" type="button" id="catMore">Ver todas as ${top.length} categorias</button>` : ''}
   </div>
 `)}
-  ${sec('cartao', 'Cartão', `<span class="small"><strong>${yr ? 'Média por fatura' : 'Fatura de ' + mShort(S.m)}: ${brl0(a.cardTotal / n)}</strong>${nf ? ` · próxima: ${brl0(nf.total)}` : ''}</span><span class="tiny muted">Abra para ver o limite e as parcelas já comprometidas.</span>`, `  <div class="grid2">
+  ${sec('cartao', 'Cartão', `<span class="small"><strong>${yr ? 'Média por fatura' : 'Fatura de ' + mShort(S.m)}: ${brl0(a.cardTotal / n)}</strong>${nf ? ` · a próxima já está em ${brl0(nf.total)}${G.cardMonthly ? ` (limite ${brl0(G.cardMonthly)})` : ''}` : ''}</span>`, `  <div class="grid2">
     <div class="panel">
       <h3>Cartão</h3>
       <p class="muted small">${yr ? 'Média por fatura' : 'Fatura de ' + mLong(S.m)}${G.cardMonthly ? ' · limite ' + brl0(G.cardMonthly) : ''}</p>
@@ -116,17 +121,14 @@ export function render(el) {
     </div>
   </div>
 `)}
-  ${fees ? sec('banco', 'Quanto o banco cobrou', `<span class="small"><strong>${brl0(feesOf(S.txs.filter(t => t.month > addM(todayISO().slice(0, 7), -12))).total)}</strong> nos últimos 12 meses</span><span class="tiny muted">Juros, IOF, anuidade e tarifas. Abra para ver o que foi cobrado.</span>`, fees) : ''}
+  ${fees ? sec('banco', 'Quanto o banco cobrou', `<span class="small"><strong>${brl0(feesOf(S.txs.filter(t => t.month > addM(todayISO().slice(0, 7), -12))).total)}</strong> em 12 meses de juros, IOF, anuidade e tarifas${feesLast ? ` · ${brl0(feesLast.total)} em ${mShort(feesLast.month)}` : ''}</span>`, fees) : ''}
   <div id="infoBox"></div>
   <div id="homeMore" class="secs">
-  ${sec('fixos', 'Assinaturas e custos fixos', `<span class="small">${subsAll.length ? `<strong>${subsAll.length}</strong> que voltam todo mês · <strong>${brl0(subsAll.filter(x => x.current).reduce((a, x) => a + x.last, 0))}</strong> no último mês` : 'Aparecem quando a mesma conta vier 3 meses seguidos'}</span><span class="tiny muted">O que sai todo mês sem vocês perceberem. Abra para revisar e cortar o que não usam.</span>`, '<div class="panel" id="subsBox"></div>')}
-  ${sec('patrimonio', 'Patrimônio', `<span class="small">${P0.rows.length ? `<strong>${brl0(P0.total)}</strong> em imóveis, veículos e investimentos, já sem o que falta pagar` : 'Ainda não cadastrado'}</span><span class="tiny muted">Abra para ver cada bem e o que falta de cada financiamento.</span>`,
+  ${sec('fixos', 'Assinaturas e custos fixos', `<span class="small">${subsAll.length ? `<strong>${subsAll.length}</strong> que voltam todo mês · <strong>${brl0(subsAll.filter(x => x.current).reduce((a, x) => a + x.last, 0))}</strong> no último mês${(u => u ? ` · ${esc(u.name)} subiu` : '')(subsAll.find(x => x.current && x.rise > 0))}` : 'Aparecem quando a mesma conta vier 3 meses seguidos'}</span>`, '<div class="panel" id="subsBox"></div>')}
+  ${sec('patrimonio', 'Patrimônio', `<span class="small">${P0.rows.length ? `<strong>${brl0(P0.total)}</strong> em imóveis, veículos e investimentos, já sem o que falta pagar` : 'Ainda não cadastrado: informe em Menu → Patrimônio'}</span>`,
     `<div class="panel">${P0.rows.length ? `<ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em Patrimônio e dívidas.</p>'}</div>`)}
-  ${sec('sonho', 'O sonho de vocês', '<span class="tiny muted">Quanto falta e quando chegam lá no ritmo de hoje. Abra para ver e ajustar o plano.</span>', '<div class="panel" id="goalBox"></div>')}
-  ${sec('poupanca', 'Quanto guardaram, mês a mês', `<span class="tiny muted">Quanto da renda sobrou em cada mês, comparado com a meta de ${pct(G.savings || 0.2)}. Abra para ver o gráfico.</span>`,
-    `<div class="panel"><p class="muted small">A linha tracejada é quanto vocês combinaram guardar.${fin ? ' Barras vazadas: sem o financiamento.' : ''}</p><svg class="chart" viewBox="0 0 700 220" role="img" aria-label="Taxa de poupança por mês">${chart(ks, G, fin)}</svg></div>`)}
-  ${sec('retro', `Retrospectiva de ${todayISO().slice(0, 4)}`, '<span class="tiny muted">O ano em uma página, com os meses que já têm o extrato da conta.</span>', `<div class="panel"><button class="btn" type="button" data-retro="${todayISO().slice(0, 4)}">Ver ${todayISO().slice(0, 4)} até agora</button></div>`)}
-  ${S.members.length > 1 && !yr ? sec('divisao', 'Quem pagou o quê', '<span class="tiny muted">O acerto do mês entre vocês. Abra para ver quem passa quanto para quem.</span>', '<div class="panel" id="settleBox" hidden></div>') : '<div class="panel" id="settleBox" hidden></div>'}
+  ${sec('sonho', 'O sonho de vocês', `<span class="small">${dreamLine(G, pr)}</span>`, '<div class="panel" id="goalBox"></div>')}
+  ${S.members.length > 1 && !yr ? sec('divisao', 'Quem pagou o quê', `<span class="small">${esc(settleLine(list[0]))}</span>`, '<div class="panel" id="settleBox" hidden></div>') : '<div class="panel" id="settleBox" hidden></div>'}
   </div>`;
   renderSubs(el.querySelector('#subsBox'));
   if (!yr) renderSettle(el.querySelector('#settleBox'), list[0]);
@@ -171,13 +173,16 @@ export function homeInsights() {
 export const retroKey = y => `fin.retro.${S.hh?.id || ''}.${y}`;
 // Gastos do ano on Início: payments found to confirm; then, when the next 3 months carry R$ 500 or more of them,
 // how much comes and how much to set aside per month (warn when the first one is next month).
+// Banners follow the message manual: the person's name, "vocês", the family's number and a button to the place.
+const me1 = () => String(S.members.find(m => m.user_id === S.user?.id)?.display_name || '').trim().split(/\s+/)[0];
+const hiB = t => (me1() ? `${me1()}, ${t}` : t[0].toUpperCase() + t.slice(1));
 function annualNotice() {
   let P; try { P = annualPlan(); } catch (e) { return []; }
   const go = { label: 'Ver os gastos do ano', go: ['ajustes', null, 'gastos_ano'] };
-  if (P.found.length && !P.items.length) return [{ id: 'ano_achou', tone: 'info', title: 'Gastos que voltam todo ano', text: `Achamos ${P.found.length} no histórico (${P.found.slice(0, 2).map(f => esc(f.name)).join(', ')}${P.found.length > 2 ? '…' : ''}). Confirmem e o app avisa com antecedência quanto separar.`, action: go }];
+  if (P.found.length && !P.items.length) return [{ id: 'ano_achou', tone: 'info', title: hiB(`achamos ${P.found.length} gastos que voltam todo ano`), text: `Estão no histórico de vocês (${P.found.slice(0, 2).map(f => esc(f.name)).join(', ')}${P.found.length > 2 ? '…' : ''}). Confirmem e o app avisa com antecedência quanto separar.`, action: go }];
   if (P.next3 < 500) return [];
   const firstM = P.cal.find(m => m.total > 0), soon = P.cal[0].total > 0;
-  return [{ id: 'ano_previsto', tone: soon ? 'warn' : 'info', title: soon ? `${mLong(P.cal[0].month)[0].toUpperCase() + mLong(P.cal[0].month).slice(1)} tem ${brl0(P.cal[0].total)} de gastos do ano` : 'Gastos do ano chegando', text: `${brl0(P.next3)} nos próximos 3 meses, a partir de ${mLong(firstM.month)}. Separem ${brl0(P.aside)} por mês para não apertar.`, action: go }];
+  return [{ id: 'ano_previsto', tone: soon ? 'warn' : 'info', title: soon ? hiB(`${mLong(P.cal[0].month).split(' ')[0]} tem ${brl0(P.cal[0].total)} de gastos do ano`) : hiB('gastos do ano chegando'), text: `São ${brl0(P.next3)} de vocês nos próximos 3 meses, a partir de ${mLong(firstM.month)}. Separem ${brl0(P.aside)} por mês para não apertar.`, action: go }];
 }
 function retroNotice() {
   const td = todayISO(), out = [];
@@ -186,7 +191,7 @@ function retroNotice() {
     const ms = [...new Set(S.txs.filter(t => t.month.startsWith(y + '-') && t.source === 'conta' && !t.manual).map(t => t.month))].sort();
     if (ms.length < 3 || retroSeen(y)) continue;
     const last = ms[ms.length - 1], full = last === y + '-12', upTo = mLong(last).split(' de ')[0];
-    out.push({ id: 'retro', tone: 'good', title: full ? `O fechamento de ${y} está pronto` : `A retrospectiva de ${y} até ${upTo} está pronta`, text: full ? 'O ano completo: quanto guardaram, a evolução mês a mês, os marcos, o nível e onde dá para melhorar em ' + (+y + 1) + '.' : `${ms.length} meses em telas: quanto guardaram, a evolução, os marcos, o nível até agora e onde dá para melhorar. Ela se atualiza a cada mês fechado.`, action: { label: 'Ver a retrospectiva', go: ['retro', y] } });
+    out.push({ id: 'retro', tone: 'good', title: full ? hiB(`o fechamento de ${y} está pronto`) : hiB(`a retrospectiva de ${y} até ${upTo} está pronta`), text: full ? 'O ano completo: quanto vocês guardaram, a evolução mês a mês, os marcos, o nível e onde dá para melhorar em ' + (+y + 1) + '.' : `${ms.length} meses em telas: quanto vocês guardaram, a evolução, os marcos, o nível até agora e onde dá para melhorar. Ela se atualiza a cada mês fechado.`, action: { label: 'Ver a retrospectiva', go: ['retro', y] } });
     break;
   }
   return out;
@@ -267,11 +272,12 @@ function levelHTML() {
   const low = t => t ? t[0].toLowerCase() + t.slice(1) : 'manter o ritmo';
   const line = p.next ? `Para chegar ao ${p.nextLabel}: ${low(p.missing[0]?.text)}.` : 'Vocês estão no nível mais alto. Agora é manter até dezembro.';
   const bar = `<span class="lvbar" aria-hidden="true"><i style="width:${Math.round((p.next ? p.frac : 1) * 100)}%"></i></span>`;
-  return sec('nivel', `${MEDAL[p.level]} Nível de ${y}: ${esc(p.label)}`, `${bar}<span class="small">${esc(line)}</span><span class="tiny muted">Abra para ver o que falta e as regras de cada nível.</span>`,
+  return sec('nivel', `${MEDAL[p.level]} Nível de ${y}: ${esc(p.label)}`, `${bar}<span class="small">${esc(line)}</span><span class="small">${esc(retroLine(r, y))}</span>`,
     `<div class="panel">${p.next ? `<h3>O que falta para o ${esc(p.nextLabel)}</h3><ul class="small lvmiss">${p.missing.map(m => `<li>${esc(m.text)}.</li>`).join('')}</ul>
       <p class="tiny muted">Conta com os ${r.n} meses de ${y} que já têm o extrato da conta: sobra de ${brl0(r.res)}, ${pct(r.tx)} do que ganharam; ${r.positive} de ${r.n} meses no azul.</p>` : `<p class="small">Sobra de ${brl0(r.res)} no ano, ${pct(r.tx)} do que ganharam.</p>`}
       <h3 style="margin-top:12px">Regras dos níveis</h3>
       <ul class="lvrules small">${p.rules.map(x => `<li class="${x.ok ? 'ok' : ''}"><span aria-hidden="true">${x.ok ? '✓' : '○'}</span><span><strong>${MEDAL[x.level]} ${x.title}</strong>: ${esc(x.text)}</span></li>`).join('')}</ul>
+      <div class="rowbtn" style="margin-top:10px"><button class="btn" type="button" data-retro="${y}">Ver a retrospectiva de ${y}</button></div>
       <p class="tiny muted">O nível muda a cada mês fechado e aparece na retrospectiva do ano.${p.habit?.counts ? '' : ' A partir do quarto domingo com a previsão, o Ouro também pede a fatura aberta informada em pelo menos metade dos domingos.'}</p></div>`);
 }
 
@@ -297,6 +303,28 @@ function plansHTML(nf) {
     <p class="tiny muted">Só as parcelas que já vieram na última fatura; compras parceladas novas entram por cima.</p>
     <ul class="pbars">${first.map(x => `<li><span class="pm">${mShort(x.month)}</span><span class="pb"><i style="width:${Math.round(x.total / max * 100)}%"></i></span><span class="pv num">${brl0(x.total)}</span></li>`).join('')}</ul>
     <details class="help" id="plansMore"><summary>As que mais pesam (${p.items.length})</summary><ul class="small">${p.items.slice(0, 8).map(x => `<li>${esc(x.description)}: ${brl0(x.amount)} por mês, faltam ${x.left} (até ${yy(x.ends)})</li>`).join('')}</ul></details></div>`;
+}
+
+// The forecast as a card: the line says it all; it opens by itself on Sundays and when the Sunday push is tapped.
+function fcCard() {
+  let f = null; try { f = familyForecast(); } catch (e) { f = null; }
+  if (!f) return '<div class="panel" id="fcBox" hidden></div>';
+  const line = `${f.res < 0 ? `Previsão: faltar ${brl0(-f.res)}` : `Previsão: sobrar ${brl0(f.res)}`}${f.meta ? ` (meta ${brl0(f.meta)})` : ''}${f.perDay > 0 ? ` · cabem ${brl0(f.perDay)} por dia` : ''}`;
+  const open = S.openForecast || new Date(todayISO() + 'T12:00:00Z').getUTCDay() === 0;
+  return sec('previsao', `Previsão de ${mLong(f.month).split(' ')[0]}`, `<span class="small">${line}</span>`, '<div class="panel" id="fcBox" hidden></div>').replace('<details class="sum"', open ? '<details open class="sum"' : '<details class="sum"');
+}
+function dreamLine(G, pr) {
+  if (!G.patrimonio) return 'Ainda não definido: diga em Metas quanto querem ter investido';
+  const p = pr[goalPreset] || pr[0]; if (!p) return `Meta de ${brl0(G.patrimonio)} investidos`;
+  const pts = projectFor(p[1], p[2]), i = pts.findIndex(v => v >= G.patrimonio), y = +todayISO().slice(0, 4);
+  return i >= 0 ? `Meta de ${brl0(G.patrimonio)} · no ritmo de hoje, chegam lá em ${y + i}` : `Meta de ${brl0(G.patrimonio)} · no ritmo de hoje, ${brl0(pts[pts.length - 1])}${G.ageGoal ? ` aos ${G.ageGoal} anos` : ''}`;
+}
+const retroLine = (r, y) => `${y} até ${mLong(r.months[r.months.length - 1]).split(' ')[0]}: sobraram ${brl0(r.res)} (${pct(r.tx)} do que ganharam)`;
+function settleLine(month) {
+  if (!month) return 'Sem mês com dados ainda';
+  const r = settle({ txs: txsOf(month), idx: S.catIdx, members: S.members, split: settings().split || {} });
+  const name = id => S.members.find(m => m.user_id === id)?.display_name?.split(' ')[0] || 'Alguém', mm = mLong(month).split(' ')[0];
+  return r.transfers.length ? `Em ${mm}, ` + r.transfers.map(t => `${name(t.from)} passa ${brl0(t.amount)} para ${name(t.to)}`).join('; ') : `Em ${mm}, está tudo equilibrado (${brl0(r.total || 0)} divididos)`;
 }
 
 function renderGoal(box, G, pr) {

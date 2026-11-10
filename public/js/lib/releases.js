@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES } from './docsections.js';
+import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -510,5 +510,10 @@ export const RELEASES = [
   ] }, addBacklog: [{ id: 'missoes_de_comeco', title: 'Missões de começo, conquistas e selos (2.0)', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'O app informava, mas não puxava a família para agir; só 36% chegavam ao primeiro mês', from: [] }, { id: 'desafios_do_mes', title: 'Desafios do mês (sugeridos pelos números, aceitos, com prazo e resultado)', status: 'proximo', origin: 'Luiz', effort: 'G', problem: 'Depois do começo, falta o que fazer a cada mês para chegar nas metas', from: [] }, { id: 'sequencia_e_familia', title: 'Sequência de semanas em dia e progresso em família', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Conquista vista pelos dois e o hábito semanal', from: [] }], backlog: ['missoes_de_comeco'] },
   { id: 'r2.0.1', version: 'v2.0.1', at: '2026-11-10T02:05:00Z', addBacklog: [{ id: 'faixa_de_selos', title: 'Faixa de selos e próxima missão abaixo do "Olá"', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Quem já cumpriu as missões de começo não via as missões no Início (a linha ficava escondida no "Depois disso")', from: [] }, { id: 'inicio_enxuto_cards_que_abrem', title: 'Revisão do Início: cards que abrem e banners que levam ao lugar certo', status: 'agora', origin: 'Luiz', effort: 'M', problem: 'Tem muita coisa no Início; nem tudo precisa aparecer inteiro. Os banners dinâmicos ficam em destaque e precisam levar para onde queremos, como as mensagens', notes: 'Cada bloco do Início vira card com uma linha clara e seta para abrir; os banners dinâmicos (retrospectiva, gastos do ano, novidades) passam pelo manual de mensagens (nome, vocês, número, botão que leva ao lugar).', from: [] }], backlog: ['faixa_de_selos'], news: { id: 'n20261110b', title: 'Selos e missões sempre à vista', items: [
     'Quem já cumpriu as missões de começo vê, logo abaixo do "Olá", quantos selos tem e a próxima missão. Um toque abre Missões e conquistas.',
+  ] } },
+  { id: 'r2.1.0', version: 'v2.1.0', at: '2026-11-10T02:25:00Z', addDocs: [DOC_INICIO_CARDS], backlog: ['inicio_enxuto_cards_que_abrem'], news: { id: 'n20261110c', title: 'Início mais simples', items: [
+    'No topo fica o que pede ação: os selos e a próxima missão, e o seu próximo passo.',
+    'O resto virou cards fechados, cada um com uma linha que já diz o principal (a previsão, a sobra, o cartão, o patrimônio…). Toque para abrir quando quiser o detalhe.',
+    'Quanto guardaram mês a mês agora fica dentro da Sobra, e a retrospectiva do ano dentro do Nível.',
   ] } },
 ];

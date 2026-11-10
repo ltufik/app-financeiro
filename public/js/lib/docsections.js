@@ -375,6 +375,17 @@ export const DOC_MENSAGENS = { id: 'mensagens_doc', title: 'Mensagens: o manual 
 - O nome vem de quem está vendo (Início) ou de quem recebe (push: o robô monta os avisos uma vez por nome).
 - "Sem contar o financiamento": saiu do Início (etiqueta fixa). Aparece no aviso do mês que ficou abaixo da meta quando havia financiamento: "Sem contar o financiamento (R$ X), seriam Y%". O gráfico de quanto guardaram mantém as barras vazadas.` };
 
+export const DOC_INICIO_CARDS = { id: 'inicio_cards_doc', title: 'Início enxuto: destaque e cards que abrem (2.1)', body: `O Início tem destaque no topo e o resto em cards fechados, cada um com uma linha que já diz o principal (sempre com número) e uma seta para abrir.
+## Destaque
+1. Faixa de selos e próxima missão (para quem já cumpriu as de começo) ou o cartão da missão de começo.
+2. Pesquisa de satisfação, quando é o momento da pessoa.
+3. Seu próximo passo: os avisos (manual de mensagens), um por vez, com "Depois disso". Os banners de retrospectiva e gastos do ano entram aqui, também com nome, "vocês", número e botão.
+## Cards fechados
+- Previsão do mês: "Previsão: sobrar R$ X (meta R$ Y) · cabem R$ Z por dia". Abre sozinho no domingo e quando o push de domingo é tocado (o campo da fatura aberta fica dentro).
+- Sobra do mês (com o gráfico de quanto guardaram mês a mês dentro; "Até agora." no mês em andamento; média dos últimos meses).
+- Nível do ano (com a retrospectiva do ano dentro).
+- Cartão, Quanto o banco cobrou (12 meses e o último mês), Assinaturas e custos fixos (quantas, total, o que subiu), Patrimônio, O sonho de vocês (meta e quando chegam lá), Quem pagou o quê (quem passa quanto para quem; só em família), Outros avisos.
+- Juntados: "Quanto guardaram, mês a mês" foi para Sobra; "Retrospectiva do ano" foi para Nível. O "Abra para ver…" saiu: a seta já diz.` };
 export const DOC_MISSOES = { id: 'missoes_doc', title: 'Missões e conquistas (2.0)', body: `O app propõe o que fazer, acompanha e comemora. Nomes provisórios ("Missões", "Conquistas"): ficam só nos textos.
 ## Missões de começo (6, em ordem)
 1. Mandar a última fatura do cartão. 2. Mandar o extrato da conta. 3. Conferir os lançamentos marcados. 4. Combinar quanto guardar (Metas). 5. Ligar os avisos no celular (pode marcar "Não quero"). 6. Fechar o primeiro mês.

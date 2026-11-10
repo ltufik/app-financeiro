@@ -392,6 +392,8 @@ if (backup) {
   ok('importar o mesmo backup de novo não duplica (pula os meses)', (await txt('.cfm')).includes('Importar 0 lançamentos') && (await txt('.cfm')).includes('serão pulados'), (await txt('.cfm')).slice(0, 120));
   await page.click('.cfm [data-n]');
   await page.click('[data-tab=resumo]');
+  await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; });
+  ok('Início: a previsão fechada diz o principal numa linha', /Previsão: (sobrar|faltar) R\$/.test(await txt('#sum_previsao summary')), await txt('#sum_previsao summary'));
   ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
   await page.click('#fcSave');
   ok('previsão: fatura aberta vazia é recusada com aviso', await page.isVisible('#fcBox .invalid, #fcBox [aria-invalid="true"]'));
@@ -877,6 +879,7 @@ ok('desfazer amortização: sai do histórico e o saldo volta', await page.evalu
 await page.click('#pDebtNow .dnow:has-text("Guaratuba") summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
+await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; });
 ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')), await txt('#fcBox'));
 ok('previsão: com a fatura do mês no app, conta a fatura e pede a aberta do mês seguinte', (await txt('#fcBox')).includes('já no app') && /Quanto está a fatura aberta de (dezembro|janeiro) hoje\?/.test(await txt('#fcMore')), await txt('#fcBox'));
 await page.fill('#fcAmount', '5000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
@@ -884,7 +887,7 @@ ok('previsão: a fatura aberta do mês seguinte vira a previsão dessa fatura', 
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
 // Gastos do ano: found in the history (the April Detran payment is the IPVA), confirmed, on the calendar.
-ok('Início: avisa os gastos que voltam todo ano', (await txt('#insights')).includes('Gastos que voltam todo ano') || (await page.evaluate(() => { document.querySelector('#todoMore')?.click(); return true; }) && (await txt('#insights')).includes('Gastos que voltam todo ano')));
+ok('Início: avisa os gastos que voltam todo ano (com o nome)', /Luiz, achamos \d+ gastos que voltam todo ano/.test(await txt('#insights')) || (await page.evaluate(() => { document.querySelector('#todoMore')?.click(); return true; }) && /Luiz, achamos \d+ gastos que voltam todo ano/.test(await txt('#insights'))));
 // The car's state decides the IPVA: Patrimônio asks it (the Civic is registered in ES, 2%, 15% at once in April).
 ok('patrimônio salva tipo e estado de cada bem', await page.evaluate(() => { const a = window.__db.households[0].settings.assets; const c = a.find(x => /Civic/.test(x.name)), s = a.find(x => /Scooter/.test(x.name)), g = a.find(x => /Guaratuba/.test(x.name)); return c.tipo === 'carro' && c.uf === 'ES' && s.tipo === 'moto' && g.tipo === 'imovel'; }));
 await sec('gastos_ano');
@@ -899,7 +902,7 @@ await page.click('[data-tab=resumo]'); await page.waitForTimeout(200);
 await page.evaluate(() => localStorage.setItem('fin.feed.' + window.__db.households[0].id, '{}'));
 await page.click('[data-tab=extrato]'); await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início dinâmico: aviso novo no topo, marcado', !!(await page.$('#insights .insight.fresh:first-child .newtag')) && await page.evaluate(() => document.querySelector('#insights').compareDocumentPosition(document.querySelector('.hero')) & 4));
-ok('retrospectiva do ano até o último mês aparece no topo do Início até ser aberta', (await txt('#insights')).includes('A retrospectiva de 2026 até setembro está pronta'));
+ok('retrospectiva do ano até o último mês aparece no topo do Início até ser aberta', (await txt('#insights')).includes('Luiz, a retrospectiva de 2026 até setembro está pronta'));
 await page.evaluate(() => document.querySelector('#insights [data-go*="retro"]').click()); await page.waitForSelector('#wrapped', { timeout: 5000 }).catch(() => {});
 ok('retrospectiva abre como histórias em tela cheia, com foto', !!(await page.$('#wrapped .w-photo')) && await page.isVisible('#wrapped') && (await txt('#wrapped')).includes('A primeira retrospectiva de vocês') && (await page.$$('#wrapped .w-bars span')).length >= 7);
 if (shots) await page.screenshot({ path: path.join(shots, '03f-historias-1.png') });
@@ -909,7 +912,7 @@ await page.click('#wPage'); await page.waitForSelector('.yretro', { timeout: 500
 await page.click('[data-back]'); await page.waitForTimeout(300);
 ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).includes('A retrospectiva de 2026 até'));
 // Year retrospective, from "Mais detalhes".
-await page.evaluate(() => { document.querySelector('#sum_retro').open = true; }); await page.click('#homeMore [data-retro]');
+await page.evaluate(() => { document.querySelector('#sum_nivel').open = true; }); await page.click('#sum_nivel [data-retro]');
 await page.waitForSelector('#wPage', { state: 'attached', timeout: 5000 }).catch(() => {}); for (let k = 0; k < 12 && !(await page.$('#wPage')); k++) await page.click('#wrapped .w-next');
 await page.click('#wPage'); await page.waitForSelector('.yretro', { timeout: 5000 }).catch(() => {});
 ok('retrospectiva do ano: guardaram, melhor e pior mês, para onde mais foi', /Guardaram/.test(await txt('.yretro')) && /Melhor mês/.test(await txt('.yretro')) && /Mês mais difícil/.test(await txt('.yretro')) && (await page.$$('.yretro .list')).length === 2);
