@@ -501,4 +501,5 @@ export const RELEASES = [
     'A etiqueta "Sem contar o financiamento" saiu do Início: quando o financiamento é o motivo de ficar abaixo da meta, o aviso do mês mostra quanto vocês guardariam sem ele.',
   ] } },
   { id: 'r126', version: 'v126', at: '2026-11-10T00:01:00Z', addBacklog: [{ id: 'plural_manuais', title: 'Etiqueta dizia "lançamentos manualis"', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Plural errado na etiqueta do Início', from: [] }], backlog: ['plural_manuais'], semNovidade: 'Correção de uma palavra na etiqueta do Início; não muda o uso.', semTeste: 'Coberto pelo teste automático do Início.' },
+  { id: 'r127', version: 'v127', at: '2026-11-10T00:49:00Z', updateDocs: [DOC_CSP], backlog: ['csp_navegador'], semNovidade: 'Proteção por trás: o navegador passa a recusar código de fora; nada muda no uso.', semTeste: 'Coberta pelo e2e, que já roda com a política bloqueando.' },
 ];

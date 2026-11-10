@@ -279,8 +279,8 @@ export const DOC_CSP = { id: 'csp_doc', title: 'Proteção do navegador (CSP)', 
 - Estilos: o próprio site e o Google Fonts (estilos dentro das telas continuam permitidos). Fontes: Google Fonts. Fotos: o site, data:/blob: e Pexels.
 - Conexões: o site, o Supabase (https e wss) e as CDNs acima. Nada de iframe nem formulário para fora; o app não pode ser aberto dentro de outro site.
 ## Em duas fases
-1. Só observa (Content-Security-Policy-Report-Only): nada é bloqueado; o que seria bloqueado vira erro "Segurança (CSP) bloquearia …" na Central → Erros.
-2. Bloqueia (Content-Security-Policy): depois de alguns dias sem nenhum desses erros nos celulares de verdade.
+1. Só observou (Content-Security-Policy-Report-Only), da v114 à v126: nada foi bloqueado e nenhum "Segurança (CSP) bloquearia …" apareceu na Central → Erros.
+2. Bloqueia (Content-Security-Policy), desde a v127. O que for recusado vira erro "Segurança (CSP) bloqueou …" na Central → Erros: se aparecer, liberar o endereço na política (vercel.json) ou tirar o que carrega de fora.
 ## Testes
 - O e2e serve as páginas com a política valendo (bloqueando), mais o endereço do leitor de PDF de teste; qualquer recusa quebra "sem erros no console".` };
 export const DOC_LIMITES = { id: 'limites_doc', title: 'Limite de uso das funções do servidor', body: `Para ninguém chamar as funções sem parar (abuso ou conta alta), cada uma tem limite por pessoa (api/_ratelimit.js).

@@ -72,3 +72,9 @@ test('caderno de testes: versão com algo visível tem casos para testar no celu
   assert.equal(new Set(TESTS.map(x => x.id)).size, TESTS.length, 'ids repetidos no caderno');
   for (const x of TESTS) assert.ok(AREAS.includes(x.area) && x.steps.length && x.expect && /^v\d+$/.test(x.version) && ['ambos', 'android', 'iphone'].includes(x.device), x.id);
 });
+
+test('segurança: a política do navegador (CSP) bloqueia de verdade', async () => {
+  const v = JSON.parse((await import('node:fs')).readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const h = v.headers.flatMap(x => x.headers).map(x => x.key);
+  assert.ok(h.includes('Content-Security-Policy') && !h.includes('Content-Security-Policy-Report-Only'));
+});
