@@ -531,4 +531,7 @@ export const RELEASES = [
     'Agora o nível do ano, o sonho, o saldo do financiamento e o "separem por mês" dos gastos do ano também têm "Ver a conta": toque e veja cada número que entrou no cálculo.',
   ] } },
   { id: 'r2.3.4', version: 'v2.3.4', at: '2026-11-10T22:45:00Z', semNovidade: 'Só a Central (Benchmarking e Matriz de serviços no tablet); nada muda no app.', semTeste: 'Só a Central; o teste automático confere a Central no celular, em dois tablets em pé e deitados.', addBacklog: [{ id: 'central_tablet_tabelas', title: 'Central no tablet: tabelas largas viram cards', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'No tablet, Benchmarking e Matriz de serviços espremiam 6 e 7 colunas e quebravam as palavras no meio', from: [] }], backlog: ['central_tablet_tabelas'] },
+  { id: 'r2.3.5', version: 'v2.3.5', at: '2026-11-11T00:50:00Z', addBacklog: [{ id: 'amortizacao_repetida', title: 'Amortização contada duas vezes (digitada e pelo comprovante)', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A mesma amortização de R$ 130 mil entrou duas vezes no financiamento e o saldo caiu demais', from: [] }], backlog: ['amortizacao_repetida'], news: { id: 'n20261110h', title: 'Amortização não conta duas vezes', items: [
+    'Se vocês contarem a mesma amortização duas vezes (digitada e depois pelo comprovante ou pelo extrato), o app junta as duas numa só. E em Patrimônio, uma que já estava repetida aparece marcada para desfazer.',
+  ] } },
 ];

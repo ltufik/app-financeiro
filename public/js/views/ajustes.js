@@ -1,5 +1,5 @@
 import { S, settings, goals, reindex, monthKeys, txsOf, presets, debtsNow } from '../state.js';
-import { SISTEMAS, debtNow, debtOfAsset } from '../lib/debt.js';
+import { SISTEMAS, debtNow, debtOfAsset, repeatedAmortizations } from '../lib/debt.js';
 import { renderPendingPayments, applyAmortization, undoAmortization } from '../debtpay.js';
 import * as db from '../db.js';
 import { track, APP_VERSION } from '../usage.js';
@@ -369,7 +369,7 @@ export function render(el) {
     const ds = debtsNow().filter(d => d.name);
     box.hidden = !ds.length;
     box.innerHTML = ds.length ? `<h3>Como está cada financiamento hoje</h3>${ds.map(d => `<div class="dnow"><p class="small"><strong>${esc(d.name)}</strong>: faltam <strong>${brl(d.now.saldo)}</strong>${d.now.months ? ' (estimado)' : ''}</p>
-      <ul class="tiny muted">${d.now.history.map(h => `<li>${h.kind === 'inicio' ? `${isoToBr(h.date)}: saldo informado ${brl(h.value)}` : h.kind === 'amortizacao' ? `${isoToBr(h.date)}: amortização −${brl(h.value)}${h.note ? ' (' + esc(h.note) + ')' : ''}${h.at ? ` <button class="linkbtn tiny" type="button" data-undo="${esc(d.id)}" data-at="${esc(h.at)}" data-v="${h.value}">Desfazer</button>` : ''}` : `${esc(h.note)}: −${brl(h.value)}`}</li>`).join('')}</ul>
+      <ul class="tiny muted">${d.now.history.map(h => `<li>${h.kind === 'inicio' ? `${isoToBr(h.date)}: saldo informado ${brl(h.value)}` : h.kind === 'amortizacao' ? `${isoToBr(h.date)}: amortização −${brl(h.value)}${h.note ? ' (' + esc(h.note) + ')' : ''}${repeatedAmortizations(d.now.history).has(h.at) ? ' <span class="tag bad">parece repetida: é a mesma de cima? Se for, toque em Desfazer nesta</span>' : ''}${h.at ? ` <button class="linkbtn tiny" type="button" data-undo="${esc(d.id)}" data-at="${esc(h.at)}" data-v="${h.value}">Desfazer</button>` : ''}` : `${esc(h.note)}: −${brl(h.value)}`}</li>`).join('')}</ul>
       ${calcBox(debtBreakdown(d, d.now), { id: 'financiamento', foot: 'A parte de cada parcela que abate o saldo é estimada pela taxa e pelo tipo de parcela. Com o extrato do financiamento, digite o saldo real acima.' })}
       <details class="help"><summary>Registrar uma amortização</summary><div class="grid3">${num('am' + d.id, 'Valor (R$)', '')}<label class="f">Data<input type="date" id="amd${esc(d.id)}" value="${todayISO()}"></label></div><button class="btn" type="button" data-amort="${esc(d.id)}">Abater do saldo</button></details></div>`).join('')}
       <p class="tiny muted">Com o comprovante, é mais fácil: mande em Lançar e diga que é amortização. Quando chegar o extrato do financiamento, digite o saldo dele acima e salve.</p>` : '';

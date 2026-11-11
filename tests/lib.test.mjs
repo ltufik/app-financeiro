@@ -1467,3 +1467,16 @@ test('ver a conta: nível, sonho, financiamento e gastos do ano mostram os núme
   const a = asideBreakdown([{ month: '2026-12', total: 0 }, { month: '2027-01', total: 4800 }, { month: '2027-02', total: 1200 }]);
   assert.equal(a.find(x => x.kind === 'total').value, 2400); assert.match(a[0].label, /^janeiro: R\$ 4\.800 · acumulado R\$ 4\.800 ÷ 2 meses = R\$ 2\.400/);
 });
+
+test('amortização repetida: mesmo valor em até 10 dias é a mesma; o histórico marca a segunda', async () => {
+  const { sameAmortization, repeatedAmortizations } = await import('../public/js/lib/debt.js');
+  const log = [{ kind: 'amortizacao', value: 130000, date: '2026-11-04', at: 'a1', txId: 't1' }];
+  assert.ok(sameAmortization(log, 130000, '2026-11-04'));
+  assert.ok(sameAmortization(log, 129500, '2026-11-12'));
+  assert.equal(sameAmortization(log, 130000, '2026-11-20'), null);
+  assert.equal(sameAmortization(log, 36000, '2026-11-09'), null);
+  const h = [{ kind: 'inicio' }, ...log, { kind: 'amortizacao', value: 130000, date: '2026-11-04', at: 'a2', txId: null }, { kind: 'amortizacao', value: 36000, date: '2026-11-09', at: 'a3' }];
+  assert.deepEqual([...repeatedAmortizations(h)], ['a2']);
+  // Two different payments of the same value (two statement lines) are not flagged.
+  assert.equal(repeatedAmortizations([{ kind: 'amortizacao', value: 5000, date: '2026-11-01', at: 'x', txId: 'p1' }, { kind: 'amortizacao', value: 5000, date: '2026-11-05', at: 'y', txId: 'p2' }]).size, 0);
+});

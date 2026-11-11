@@ -49,6 +49,20 @@ export function debtNow(d, today) {
 }
 const brDate = d => (d || '').split('-').reverse().join('/');
 
+// The same payoff told twice (the receipt and then the statement line, or typed and then the receipt):
+// same value (within 1%) and dates up to 10 days apart. Returns the entry already in the log, or null.
+const days = (a, b) => Math.abs(Date.parse(a + 'T12:00:00Z') - Date.parse(b + 'T12:00:00Z')) / 864e5;
+export function sameAmortization(log = [], value, date, skip = null) {
+  const v = Math.abs(+value) || 0;
+  return (log || []).find(e => e && e !== skip && e.kind === 'amortizacao' && v > 0 && Math.abs(+e.value - v) <= v * 0.01 && e.date && date && days(e.date, date) <= 10) || null;
+}
+// In a financing's history, the payoffs that repeat an earlier one (their "at"): shown with a warning to undo.
+export function repeatedAmortizations(history = []) {
+  const seen = [], out = new Set();
+  for (const h of history) { if (h?.kind !== 'amortizacao') continue; const twin = sameAmortization(seen, h.value, h.date); if (twin && (!twin.txId || !h.txId || twin.txId === h.txId)) out.add(h.at); seen.push(h); }
+  return out;
+}
+
 // Which financing a property uses: the one it was linked to; otherwise the one with the same name words or the same balance.
 const plain = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const STOP = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'financiamento', 'emprestimo', 'casa', 'apartamento', 'ap', 'apto', 'imovel', 'carro', 'em', 'no', 'na']);

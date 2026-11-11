@@ -7,7 +7,7 @@ import * as db from './db.js';
 import { toast, confirmInline } from './ui.js';
 import { track } from './usage.js';
 import { todayISO, esc } from './lib/format.js';
-import { debtNow } from './lib/debt.js';
+import { debtNow, sameAmortization } from './lib/debt.js';
 
 const brl0 = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 const brD = d => String(d || '').split('-').reverse().join('/');
@@ -22,6 +22,15 @@ export async function amortCategory() {
 // The financing's log gets the payment; the transaction (when saved) moves to the amortization category.
 export async function applyAmortization(debtId, { value, date, txId = null, note = '' }) {
   const prevCategory = txId ? S.txs.find(x => x.id === txId)?.category || null : null;
+  const st0 = settings(), d0 = (st0.debts || []).find(x => x.id === debtId), dup = d0 && sameAmortization(d0.log, value, date);
+  // Already told (typed or by the receipt) and now the other half of the same payment: one entry, linked to the payment.
+  if (dup && (!dup.txId || !txId || dup.txId === txId)) {
+    const debts = st0.debts.map(d => d !== d0 ? d : { ...d, log: d.log.map(e => e !== dup ? e : { ...e, txId: e.txId || txId, prevCategory: e.prevCategory || prevCategory }) });
+    const next = { ...st0, debts }; await db.saveSettings(S.hh.id, next); S.hh.settings = next;
+    if (txId) { const cat = await amortCategory(), t = S.txs.find(x => x.id === txId); await db.updateTransaction(txId, { category: cat }); if (t) t.category = cat; }
+    track('patrimonio.amortizou_repetida');
+    return debtNow(debts.find(x => x.id === debtId), todayISO()).saldo;
+  }
   const st = settings(), debts = (st.debts || []).map(d => d.id !== debtId ? d : { ...d, log: [...(d.log || []), { date, at: new Date().toISOString(), kind: 'amortizacao', value: Math.abs(+value), txId, prevCategory, note: String(note || '').slice(0, 140) }] });
   const d = debts.find(x => x.id === debtId); if (!d) throw new Error('financiamento não encontrado');
   const next = { ...st, debts };

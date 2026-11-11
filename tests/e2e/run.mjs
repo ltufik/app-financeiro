@@ -896,6 +896,10 @@ ok('desfazer amortização: sai do histórico e o saldo volta', await page.evalu
   const cd = await txt('#pDebtNow .dnow:has-text("Guaratuba") [data-calc]');
   ok('financiamento: "Ver a conta" vai do saldo informado ao saldo de hoje', cd.includes('Saldo informado') && cd.includes('Saldo hoje') && cd.includes('480.000'), cd); }
 await page.click('#pDebtNow .dnow:has-text("Guaratuba") details.help summary'); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+{ const n = () => page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').log.filter(e => e.kind === 'amortizacao').length), before = await n();
+  await page.click('#pDebtNow .dnow:has-text("Guaratuba") details.help summary').catch(() => {}); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
+  ok('amortização contada de novo (mesmo valor, mesma semana) não abate duas vezes', await n() === before && (await txt('#pDebtNow .dnow:has-text("Guaratuba")')).includes('350.000'), await txt('#pDebtNow .dnow:has-text("Guaratuba")'));
+}
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; });
