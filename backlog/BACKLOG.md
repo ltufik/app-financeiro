@@ -48,7 +48,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 9 | Plano pago / modelo de negócio | `plano_pago_modelo_de_negocio` | M | Produto |
 | 10 | Cobrança honesta (teste sem cartão, aviso de renovação, cancelar em 1 clique) | `cobranca_honesta_teste_sem_cartao_aviso_` | P | Benchmarking |
 
-## Feito: 148 itens
+## Feito: 153 itens
 
 ## Descartado: 4 itens
 

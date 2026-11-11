@@ -1,5 +1,53 @@
 [
  {
+  "id": "amortizacao_repetida",
+  "from": [],
+  "tipo": "bug",
+  "title": "Amortização contada duas vezes (digitada e pelo comprovante)",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "A mesma amortização de R$ 130 mil entrou duas vezes no financiamento e o saldo caiu demais"
+ },
+ {
+  "id": "central_tablet_tabelas",
+  "from": [],
+  "tipo": "bug",
+  "title": "Central no tablet: tabelas largas viram cards",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "No tablet, Benchmarking e Matriz de serviços espremiam 6 e 7 colunas e quebravam as palavras no meio"
+ },
+ {
+  "id": "ver_conta_todos",
+  "from": [],
+  "title": "\"Ver a conta\" no nível do ano, sonho, financiamento e gastos do ano",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Os números calculados pelo app não mostravam de onde vinham"
+ },
+ {
+  "id": "central_responsiva_novas",
+  "from": [],
+  "tipo": "bug",
+  "title": "Central no celular: páginas novas sem rolar para o lado",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Pesquisas, Missões e Mensagens não cabiam na largura do celular"
+ },
+ {
+  "id": "previsao_ver_a_conta",
+  "from": [],
+  "title": "Previsão: \"Ver a conta\" com todos os números",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Não dava para conferir de onde vinha a previsão de sobra"
+ },
+ {
   "id": "entrada_mais_limpa",
   "from": [],
   "title": "Tela de entrada mais limpa (versão A)",
