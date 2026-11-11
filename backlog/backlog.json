@@ -1,5 +1,24 @@
 [
  {
+  "id": "mapa_dados",
+  "from": [],
+  "title": "Mapa dos dados na Central e varredura nos testes",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Sem saber onde cada dado afeta, não dá para validar uma mudança e sempre aparecem erros"
+ },
+ {
+  "id": "bem_saldo_duplo",
+  "from": [],
+  "tipo": "bug",
+  "title": "Bens: \"Quanto falta pagar\" descontava a amortização de novo",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "O bem ligado ao financiamento mostrava R$ 220 mil enquanto o financiamento mostrava R$ 350 mil"
+ },
+ {
   "id": "amortizacao_repetida",
   "from": [],
   "tipo": "bug",
