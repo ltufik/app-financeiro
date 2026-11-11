@@ -899,6 +899,13 @@ await page.click('#pDebtNow .dnow:has-text("Guaratuba") details.help summary'); 
 { const n = () => page.evaluate(() => window.__db.households[0].settings.debts.find(d => d.id === 'guaratuba').log.filter(e => e.kind === 'amortizacao').length), before = await n();
   await page.click('#pDebtNow .dnow:has-text("Guaratuba") details.help summary').catch(() => {}); await page.fill('#amguaratuba', '130000'); await page.click('[data-amort="guaratuba"]'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
   ok('amortização contada de novo (mesmo valor, mesma semana) não abate duas vezes', await n() === before && (await txt('#pDebtNow .dnow:has-text("Guaratuba")')).includes('350.000'), await txt('#pDebtNow .dnow:has-text("Guaratuba")'));
+  // Varredura (Mapa dos dados → saldo_financiamento): every screen that shows the balance shows the same number.
+  await page.evaluate(() => { document.querySelectorAll('#pDebtNow [data-calc]').forEach(d => { d.open = true; }); });
+  const n0 = s => +String(s || '').replace(/[^\d,]/g, '').split(',')[0];
+  const where = await page.evaluate(() => { const row = [...document.querySelectorAll('[data-list="assets"] tr')].find(tr => /Guaratuba/.test(tr.querySelector('input[data-k="name"]')?.value || '')), drow = [...document.querySelectorAll('[data-list="debts"] tr')].find(tr => /Guaratuba/.test(tr.querySelector('input[data-k="name"]')?.value || '')), card = [...document.querySelectorAll('#pDebtNow .dnow')].find(d => /Guaratuba/.test(d.textContent));
+    return { card: card?.querySelector('p strong:nth-of-type(2)')?.textContent, conta: [...(card?.querySelectorAll('.fc-total td.num') || [])].pop()?.textContent, campo: drow?.querySelector('input[data-k="saldo"]')?.value, bem: row?.querySelector('input[data-t="linked"]')?.value }; });
+  const vals = Object.values(where).map(n0);
+  ok('varredura: o saldo do financiamento é o mesmo no card, no Ver a conta, no campo do financiamento e no bem ligado', vals.every(v => v === 350000), JSON.stringify(where));
 }
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
@@ -1151,7 +1158,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
-  const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
+  const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
   // Besides the page not scrolling sideways, nothing may stick out of the screen (cut off) unless it sits in its own sideways scroll.
   const outside = () => ap.evaluate(() => { const W = innerWidth, bad = [];
     const scrolls = el => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };

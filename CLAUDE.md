@@ -23,6 +23,7 @@ Nada sobe sem isto. `tests/release.test.mjs` cobra os itens marcados com (teste)
    - `addBacklog`: itens novos combinados na conversa.
 4. Central em dia: toda página do menu e toda tela nova em `public/js/admin/flows.js` (tela e jornada em fluxo) e em `tests/local/flow-screens.mjs` (teste); seção na Documentação (`addDocs` no release) quando é funcionalidade nova; nomes legíveis em `content.js` para tudo o que o app registra com `track` (teste); matriz de serviços (teste); FAQ em `lib/faq.js`; documentação quando o processo muda.
 5. Caderno de testes e projetos feitos: toda versão com algo visível adiciona os casos em `public/js/lib/testbook.js` (passos num celular de verdade e o que deve acontecer; teste) e tudo o que foi entregue vira item `feito` no backlog (`addBacklog`/`backlog`). Sem caso, `semTeste` com o motivo.
+5a. Mapa dos dados (`lib/datamap.js`, Central → Mapa dos dados): mudou um dado guardado ou um cálculo? Atualizar a linha e conferir TODAS as telas de "Aparece em" (varredura). Cada número tem uma função só; nenhuma tela refaz a conta (teste cobra dado gravado fora do mapa e função inexistente; o e2e confere o saldo do financiamento em todas as telas).
 5b. Privacidade: se mudou o que o app guarda, atualizar a página Sobre o app.
 6. Banco: `schema.sql` re-rodável e testado; avisar o Luiz para rodar no Supabase.
 7. Depois de publicar: buscar o commit do robô das telas (GitHub Actions) e contar ao Luiz o que mudou, o que ele precisa fazer e o que testar.

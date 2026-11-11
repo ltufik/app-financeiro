@@ -418,3 +418,12 @@ export const DOC_VER_CONTA = { id: 'ver_conta_doc', title: '"Ver a conta": de on
 - Gastos do ano (Menu → Família e metas): por mês, o acumulado dividido pelos meses até ele; o mês mais apertado decide o "separem R$ X por mês" (arredondado para cima de 10 em 10).
 
 Cálculo em lib/explain.js (e forecastBreakdown em lib/monthend.js); a tabela é calcBox em explainui.js, que registra "conta.<onde>" ao abrir.` };
+
+export const DOC_MAPA = { id: 'mapa_dados_doc', title: 'Mapa dos dados: o que cada dado muda', body: `Central → Planejar → Mapa dos dados (lib/datamap.js) lista:
+
+- Números que o app calcula: como, qual função (uma só por número), que dados usa e em que telas aparece.
+- Dados guardados: onde a família preenche e o que muda quando mudam.
+
+Regra de toda publicação: mudou um dado ou um cálculo, atualize a linha no mapa e confira TODAS as telas de "Aparece em". Nenhuma tela refaz uma conta: chama a função do número.
+
+Os testes cobram: todo dado gravado em households.settings está no mapa; cada número aponta uma função que existe e dados que estão no mapa; e o teste do app inteiro faz a varredura do saldo do financiamento (card, Ver a conta, campo do financiamento, bem ligado e Início mostram o mesmo valor).` };

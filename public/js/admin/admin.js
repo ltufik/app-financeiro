@@ -20,6 +20,7 @@ import { SERVICES, SV_STATUS, SV_PLAN, SV_AI, DOCS, FEATURE_LABELS, AREA_LABELS,
 import { homeEngagement } from '../lib/homefeed.js';
 import { CHECKS } from '../lib/health.js';
 import { SURVEYS, surveyResults } from '../lib/survey.js';
+import { DATA, NUMBERS } from '../lib/datamap.js';
 import { RULES, checkMessage } from '../lib/msgcheck.js';
 import { missionList } from '../lib/missions.js';
 import { SCENARIOS, PERSON, scenarioMessages, otherPushes } from './msgscenarios.js';
@@ -27,7 +28,7 @@ import { SCENARIOS, PERSON, scenarioMessages, otherPushes } from './msgscenarios
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
-const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'bench', 'preco', 'desenho', 'acesso'];
+const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -150,7 +151,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, pesquisas, missoes, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, bench, preco, desenho, acesso })[t]($('#aMain'));
+  ({ painel, opinioes, pesquisas, missoes, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, mapa, bench, preco, desenho, acesso })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -173,7 +174,7 @@ function labelTables(root) {
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
   { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['missoes', 'Missões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
-  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['mensagens', 'Mensagens'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação']] },
+  { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['mensagens', 'Mensagens'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação'], ['mapa', 'Mapa dos dados']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
   { id: 'conta', title: 'Sua conta', icon: IC('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), items: [['acesso', 'Acesso e segurança']] },
 ];
@@ -574,6 +575,35 @@ async function servicos(el) {
     </tbody></table></div></div>`;
   el.querySelectorAll('select[data-k]').forEach(s => s.onchange = () => { items[+s.dataset.i][s.dataset.k] = s.value; });
   $('#svSave').onclick = async e => { if (!await confirmInline(e.target, { text: 'Salvar a matriz de serviços?', yes: 'Sim, salvar' })) return; await save('services', 'Matriz salva.'); };
+}
+
+// ---------- Mapa dos dados ----------
+// Each stored field (where it is filled, what it changes) and each calculated number (one function, which screens).
+// Changed a field or a calculation? Every screen in "Aparece em" must be checked (lib/datamap.js).
+function mapa(el) {
+  const nById = Object.fromEntries(NUMBERS.map(n => [n.id, n]));
+  const chip = a => nById[a] ? `<a href="#n-${esc(a)}" class="tag">${esc(nById[a].what)}</a>` : `<span class="tag">${esc(a)}</span>`;
+  const draw = q => {
+    const f = s => !q || s.toLowerCase().includes(q);
+    const nums = NUMBERS.filter(n => f([n.what, n.fn, n.file, n.rule, ...n.inputs, ...n.shows].join(' ')));
+    const data = DATA.filter(d => f([d.key, d.what, d.fill, ...d.affects].join(' ')));
+    $('#mpBody').innerHTML = `<div class="panel stack"><h2>Números que o app calcula (${nums.length})</h2>
+      <p class="tiny muted">Cada número tem uma função só. Toda tela que mostra o número chama essa função; nenhuma tela refaz a conta.</p>
+      <div class="tw"><table class="atable wide"><thead><tr><th>Número</th><th>Como é calculado</th><th>Função</th><th>Usa os dados</th><th>Aparece em</th></tr></thead><tbody>
+      ${nums.map(n => `<tr id="n-${esc(n.id)}"><td><strong>${esc(n.what)}</strong></td><td class="small">${esc(n.rule)}</td><td class="tiny"><code>${esc(n.fn)}</code> em ${esc(n.file)}${n.via ? `<br>via ${esc(n.via)}` : ''}</td><td>${n.inputs.map(i => `<a href="#d-${esc(i)}" class="tag">${esc(i)}</a>`).join(' ')}</td><td class="small"><ul class="avlist">${n.shows.map(s => `<li>${esc(s)}</li>`).join('')}</ul></td></tr>`).join('')}
+      </tbody></table></div></div>
+      <div class="panel stack"><h2>Dados guardados (${data.length})</h2>
+      <p class="tiny muted">Configurações da família ficam em households.settings; lançamentos, categorias e regras em tabelas. "Muda" lista os números e as partes do app que mudam quando o dado muda.</p>
+      <div class="tw"><table class="atable wide"><thead><tr><th>Dado</th><th>O que é</th><th>Onde se preenche</th><th>Muda</th></tr></thead><tbody>
+      ${data.map(d => `<tr id="d-${esc(d.key)}"><td><code>${esc(d.key)}</code><br><span class="tiny muted">${d.store === 'tabela' ? 'tabela' : 'settings'}</span></td><td class="small">${esc(d.what)}</td><td class="small">${esc(d.fill)}</td><td>${d.affects.map(chip).join(' ')}</td></tr>`).join('')}
+      </tbody></table></div></div>`;
+  };
+  el.innerHTML = `<div class="ahead"><h1>Mapa dos dados</h1><span class="tiny muted">${NUMBERS.length} números · ${DATA.length} dados</span></div>
+    <p class="small muted">Onde cada dado é preenchido, o que ele muda e em que telas cada número aparece. Mudou um dado ou um cálculo? Confira todas as telas da linha dele antes de publicar.</p>
+    <label class="f">Buscar<input type="search" id="mpQ" placeholder="ex.: financiamento, debts, Início"></label>
+    <div id="mpBody" class="stack"></div>`;
+  $('#mpQ').oninput = e => draw(e.target.value.trim().toLowerCase());
+  draw('');
 }
 
 // ---------- Documentação ----------

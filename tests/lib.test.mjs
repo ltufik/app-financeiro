@@ -1480,3 +1480,23 @@ test('amortização repetida: mesmo valor em até 10 dias é a mesma; o históri
   // Two different payments of the same value (two statement lines) are not flagged.
   assert.equal(repeatedAmortizations([{ kind: 'amortizacao', value: 5000, date: '2026-11-01', at: 'x', txId: 'p1' }, { kind: 'amortizacao', value: 5000, date: '2026-11-05', at: 'y', txId: 'p2' }]).size, 0);
 });
+
+test('Mapa dos dados: todo dado que o app grava em settings está no mapa; números apontam funções que existem', async () => {
+  const { DATA, NUMBERS } = await import('../public/js/lib/datamap.js');
+  const fs = await import('node:fs'), path = await import('node:path');
+  const files = []; const walk = d => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) { if (!p.includes('admin')) walk(p); } else if (p.endsWith('.js')) files.push(p); } };
+  walk('public/js');
+  const keys = new Set(DATA.map(d => d.key)), written = new Set();
+  const WRITE = [/\.\.\.(?:cur|st|st0|st2|settings\(\)|S\.hh\.settings)\s*,\s*([a-zA-Z]+)\s*[:,}]/g, /\bsave\(\{\s*([a-zA-Z]+)\s*:/g];
+  for (const f of files) { const src = fs.readFileSync(f, 'utf8'); for (const re of WRITE) for (const m of src.matchAll(re)) written.add(m[1]); }
+  const NOT_SETTINGS = new Set(['label']); // learnask.js spreads a local "cur" (the question on screen), not the settings
+  const missing = [...written].filter(k => !keys.has(k) && !NOT_SETTINGS.has(k));
+  assert.deepEqual(missing, [], 'Dados gravados em households.settings que não estão em lib/datamap.js (diga onde se preenche e o que mudam): ' + missing.join(', '));
+  for (const n of NUMBERS) {
+    const src = fs.readFileSync(path.join('public/js', n.file), 'utf8');
+    assert.match(src, new RegExp(`export (async )?(function|const) ${n.fn}\\b`), `${n.id}: ${n.fn} não existe em ${n.file}`);
+    for (const i of n.inputs) assert.ok(keys.has(i), `${n.id} usa "${i}", que não está em DATA`);
+    assert.ok(n.shows.length && n.rule, `${n.id}: diga em que telas aparece e como é calculado`);
+  }
+  for (const d of DATA) assert.ok(d.what && d.fill && d.affects.length, `${d.key}: falta o que é, onde se preenche ou o que muda`);
+});

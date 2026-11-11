@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -533,5 +533,11 @@ export const RELEASES = [
   { id: 'r2.3.4', version: 'v2.3.4', at: '2026-11-10T22:45:00Z', semNovidade: 'Só a Central (Benchmarking e Matriz de serviços no tablet); nada muda no app.', semTeste: 'Só a Central; o teste automático confere a Central no celular, em dois tablets em pé e deitados.', addBacklog: [{ id: 'central_tablet_tabelas', title: 'Central no tablet: tabelas largas viram cards', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'No tablet, Benchmarking e Matriz de serviços espremiam 6 e 7 colunas e quebravam as palavras no meio', from: [] }], backlog: ['central_tablet_tabelas'] },
   { id: 'r2.3.5', version: 'v2.3.5', at: '2026-11-11T00:50:00Z', addBacklog: [{ id: 'amortizacao_repetida', title: 'Amortização contada duas vezes (digitada e pelo comprovante)', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A mesma amortização de R$ 130 mil entrou duas vezes no financiamento e o saldo caiu demais', from: [] }], backlog: ['amortizacao_repetida'], news: { id: 'n20261110h', title: 'Amortização não conta duas vezes', items: [
     'Se vocês contarem a mesma amortização duas vezes (digitada e depois pelo comprovante ou pelo extrato), o app junta as duas numa só. E em Patrimônio, uma que já estava repetida aparece marcada para desfazer.',
+  ] } },
+  { id: 'r2.3.6', version: 'v2.3.6', at: '2026-11-11T01:40:00Z', addDocs: [DOC_MAPA], addBacklog: [
+    { id: 'bem_saldo_duplo', title: 'Bens: "Quanto falta pagar" descontava a amortização de novo', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O bem ligado ao financiamento mostrava R$ 220 mil enquanto o financiamento mostrava R$ 350 mil', from: [] },
+    { id: 'mapa_dados', title: 'Mapa dos dados na Central e varredura nos testes', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Sem saber onde cada dado afeta, não dá para validar uma mudança e sempre aparecem erros', from: [] }],
+    backlog: ['bem_saldo_duplo', 'mapa_dados'], news: { id: 'n20261110i', title: 'Saldo do financiamento igual em todo lugar', items: [
+    'Em Patrimônio, o "Quanto falta pagar" do bem agora mostra o mesmo saldo do financiamento ligado a ele.',
   ] } },
 ];
