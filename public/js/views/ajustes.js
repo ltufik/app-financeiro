@@ -27,6 +27,7 @@ import { PHOTOS } from '../photos.js';
 import { platformOf, phoneSteps, testOutcome } from '../lib/pushask.js';
 import { toCSV } from '../lib/csv.js';
 import { mergeSuggestions, mergeSettings, pairKey } from '../lib/catmerge.js';
+import { SUNDAY_HOURS, sundayHour } from '../lib/review.js';
 import { PUSH_TYPES, pushStatus, currentPrefs, enablePush, savePrefs, disablePush, sendTest, isIOS } from '../push.js';
 
 const LISTS = {
@@ -607,7 +608,7 @@ async function renderPush(box) {
   const prefs = await currentPrefs().catch(() => ({ dados: true, gastos: true, conquistas: true, semanal: true }));
   box.innerHTML = `${st === 'on' ? '<p class="status ok">Avisos ligados neste celular.</p>' : ''}
     <fieldset class="pushtypes"><legend class="small muted">Quero ser avisado sobre</legend>
-    ${PUSH_TYPES.map(t => `<label class="radio"><input type="checkbox" data-pt="${t.key}" ${prefs[t.key] !== false ? 'checked' : ''}><span><strong>${t.label}</strong><br><span class="tiny muted">${t.hint}</span></span></label>`).join('')}</fieldset>
+    ${PUSH_TYPES.map(t => `<label class="radio"><input type="checkbox" data-pt="${t.key}" ${prefs[t.key] !== false ? 'checked' : ''}><span><strong>${t.label}</strong><br><span class="tiny muted">${t.hint}</span></span></label>${t.key === 'previsao' ? `<label class="f small pt-hour">Horário da revisão de domingo<select id="pHour">${SUNDAY_HOURS.map(h => `<option value="${h}" ${sundayHour(prefs) === h ? 'selected' : ''}>${h}h</option>`).join('')}</select></label>` : ''}`).join('')}</fieldset>
     <div class="rowbtn">${st === 'on' ? '<button class="btn" type="button" id="pTest">Enviar aviso de teste</button><button class="btn danger" type="button" id="pOff">Desligar avisos</button>' : '<button class="btn primary" type="button" id="pOn">Ativar avisos neste celular</button>'}</div>
     <p class="status" id="pMsg" role="status" hidden></p>
     ${st === 'on' ? `<div class="pcheck stack" id="pCheck" hidden><p><strong>Mandamos um aviso de teste.</strong> Ele apareceu na tela do celular?</p>
@@ -617,11 +618,14 @@ async function renderPush(box) {
       <ol class="small">${phoneSteps(platformOf(navigator.userAgent)).map(x => `<li>${esc(x)}</li>`).join('')}</ol>
       <p class="tiny muted">Depois, volte aqui e toque em Enviar aviso de teste.</p></details>` : ''}`;
   const say = (k, t) => { const p = $('#pMsg'); p.hidden = false; p.className = 'status ' + k; p.textContent = t; };
-  const read = () => Object.fromEntries([...box.querySelectorAll('[data-pt]')].map(i => [i.dataset.pt, i.checked]));
+  const types = () => Object.fromEntries([...box.querySelectorAll('[data-pt]')].map(i => [i.dataset.pt, i.checked]));
+  const read = () => ({ ...types(), domingoHora: +($('#pHour')?.value || 9) });
   box.querySelectorAll('[data-pt]').forEach(i => i.onchange = async () => {
-    if (!Object.values(read()).some(Boolean)) { i.checked = true; say('err', 'Deixe pelo menos um tipo de aviso ligado, ou toque em Desligar avisos.'); return; }
+    if (!Object.values(types()).some(Boolean)) { i.checked = true; say('err', 'Deixe pelo menos um tipo de aviso ligado, ou toque em Desligar avisos.'); return; }
     if (st === 'on') { try { await savePrefs(read()); say('ok', 'Preferências salvas.'); } catch (e) { say('err', 'Não foi possível salvar. Verifique a internet.'); } }
   });
+  const hourSel = $('#pHour');
+  if (hourSel) hourSel.onchange = async () => { if (st !== 'on') return; try { await savePrefs(read()); track('avisos.horario_domingo'); say('ok', `Revisão de domingo às ${hourSel.value}h.`); } catch (e) { say('err', 'Não foi possível salvar. Verifique a internet.'); } };
   if (st !== 'on' && focus) setTimeout(() => { const b = $('#pOn'); if (!b) return; b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.add('pulse'); b.focus({ preventScroll: true }); }, 80);
   if (st !== 'on') $('#pOn').onclick = async () => {
     say('busy', 'O celular vai pedir permissão. Toque em Permitir.');

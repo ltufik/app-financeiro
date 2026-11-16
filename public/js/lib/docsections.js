@@ -433,3 +433,18 @@ Os testes cobram: todo dado gravado em households.settings está no mapa; cada n
 - O que guardaram no ano: Início (Nível e Ver a conta), histórias e a página da retrospectiva.
 - Sobra do mês: Início.
 - Previsão do mês: a linha do Início e a "Sobra prevista" do Ver a conta.` };
+
+export const DOC_REVISAO = { id: 'revisao_doc', title: 'Caixa a revisar e revisão de domingo', body: `Tudo o que espera a família fica numa fila só (lib/review.js, reviewQueue), na ordem do que mais muda os números:
+
+1. Entradas que pagaram uma amortização (fundingPairs).
+2. Pagamentos que podem abater um financiamento (pendingAmortizations).
+3. Repetidos: lançado à mão e trazido pelo extrato, ou amortização órfã (findDups).
+4. Saques sem destino dos últimos 70 dias (pendingCash).
+5. Categorias sem certeza (pendentes ou "A classificar") dos últimos 3 meses. Os meses mais velhos continuam no Fechar o mês.
+
+Onde aparece:
+- Início: a linha "N para revisar", com o resumo e os minutos (uns 20 segundos por item). Some quando chega a zero.
+- Tela de revisão (review.js): um por vez, com a barra "x de N". Categoria: Ok, trocar (o app pergunta se vale para as próximas) ou ver depois. Os outros tipos usam as telas que o app já tinha para eles. "Ver depois" tira só da tela aberta; a linha do Início continua contando.
+- Ao zerar: "Tudo em dia", a fatura aberta (se não foi informada nos últimos 2 dias) e a sequência de semanas. Zerar grava settings.reviews e conta para a sequência.
+- Aviso de domingo (api/_daily.js, runSundayReview): no horário que cada pessoa escolhe em Notificações (prefs.domingoHora, 8h a 21h, 9h por padrão), uma vez por semana. Com itens: "Luiz, 5 minutos para fechar a semana". Sem itens e sem a fatura: pede a fatura. Tudo em dia: vai o resumo da semana. Tocar abre a revisão. O Vercel chama de hora em hora aos domingos (vercel.json, &h=). Substituiu o aviso da previsão das 19h; o resumo da semana não sai mais às 9h para quem tem a revisão ligada.
+- O aviso não conta os lançamentos "só meu".` };

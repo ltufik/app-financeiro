@@ -37,6 +37,7 @@ export const DATA = [
   { key: 'missionsDone', store: 'settings', what: 'Missões e selos já comemorados', fill: 'Automático ao cumprir', affects: ['missões', 'avisos à família'] },
   { key: 'challenge', store: 'settings', what: 'Desafio do mês aceito', fill: 'Início → Desafios → Aceitar', affects: ['desafio do mês'] },
   { key: 'challenges', store: 'settings', what: 'Histórico dos desafios', fill: 'Automático ao fim do mês', affects: ['desafio do mês', 'selos'] },
+  { key: 'reviews', store: 'settings', what: 'Revisões que zeraram a caixa a revisar (data, quantos itens, quem)', fill: 'Automático ao zerar a caixa a revisar', affects: ['sequência de semanas', 'missões'] },
   { key: 'dupSkip', store: 'settings', what: 'Pares que a família disse que não são repetidos', fill: 'Extrato → Repetidos → "Não é repetido"', affects: ['repetidos'] },
   { key: 'fundSkip', store: 'settings', what: 'Entradas que a família disse que não pagaram amortização', fill: 'Pergunta "Esse dinheiro pagou a amortização?"', affects: ['sobra_mes'] },
   { key: 'cashSkip', store: 'settings', what: 'Saques que a família não lembra onde gastou', fill: 'Lançar → Saques → "Não lembro"', affects: ['saques'] },
@@ -66,6 +67,8 @@ export const NUMBERS = [
   { id: 'gastos_ano', what: 'Gastos do ano e quanto separar por mês', fn: 'setAside', file: 'lib/annual.js', via: 'calendar (lib/annual.js)', inputs: ['annual', 'annualSkip', 'assets', 'transactions'],
     shows: ['Menu → Gastos do ano e Ver a conta', 'Início: aviso de gasto do ano'], rule: 'Por mês, o acumulado ÷ os meses até ele; o mês mais apertado decide, arredondado de 10 em 10.' },
   { id: 'orcamento', what: 'Orçamento por categoria no mês', fn: 'budgetStatus', file: 'lib/budget.js', inputs: ['budgets', 'transactions', 'categories'], shows: ['Início: avisos de orçamento', 'Avisos no celular'], rule: 'Gasto da categoria no mês contra o limite e o ritmo do mês.' },
+  { id: 'caixa_revisar', what: 'Quantos itens a família tem para revisar', fn: 'reviewQueue', file: 'lib/review.js', inputs: ['transactions', 'categories', 'debts', 'debtSkip', 'dupSkip', 'cashSkip', 'fundSkip'],
+    shows: ['Início: linha "N para revisar"', 'Tela de revisão: "x de N"', 'Aviso de domingo no celular'], rule: 'Categorias sem certeza dos últimos 3 meses + repetidos + saques sem destino + pagamentos que podem abater financiamento + entradas que pagaram amortização. "Ver depois" tira só da tela aberta. O aviso não conta os lançamentos "só meu".' },
   { id: 'limite_cartao', what: 'Fatura contra o limite combinado', fn: 'forecast', file: 'lib/monthend.js', inputs: ['transactions', 'goals', 'cardCloseDay', 'recurring'], shows: ['Início: Previsão (cartão)', 'Avisos no celular'], rule: 'Fatura do mês e a aberta contra o limite da fatura das Metas.' },
 ];
 

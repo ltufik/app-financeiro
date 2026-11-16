@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -541,4 +541,10 @@ export const RELEASES = [
     'Em Patrimônio, o "Quanto falta pagar" do bem agora mostra o mesmo saldo do financiamento ligado a ele.',
   ] } },
   { id: 'r2.3.7', version: 'v2.3.7', at: '2026-11-16T23:30:00Z', semNovidade: 'Só testes: a varredura confere os números em todas as telas; nada muda no app.', semTeste: 'Só testes automáticos.', updateDocs: [DOC_MAPA], addBacklog: [{ id: 'varredura_numeros', title: 'Varredura: patrimônio, guardado no ano, sobra e previsão iguais em todas as telas', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Um número calculado diferente numa tela só aparecia quando alguém via a divergência', from: [] }], backlog: ['varredura_numeros', 'missoes_e_desafios'] },
+  { id: 'r2.4.0', version: 'v2.4.0', at: '2026-11-17T01:30:00Z', addDocs: [DOC_REVISAO], updateDocs: [DOC_MAPA], addBacklog: [
+    { id: 'horario_revisao_domingo', title: 'Horário da revisão de domingo escolhido por cada pessoa', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Cada família tem o seu jeito de domingo', from: [] }],
+    backlog: ['caixa_a_revisar_que_chega_a_zero', 'horario_revisao_domingo'], news: { id: 'n20261116a', title: 'Para revisar: tudo num lugar só', items: [
+    'No topo do Início, a linha "para revisar" junta o que espera vocês: categorias, repetidos, saques e pagamentos de financiamento. Toque e resolva um por vez até chegar a zero.',
+    'Aos domingos, um aviso de 5 minutos abre a revisão e pergunta a fatura aberta. Escolha o horário em Menu ☰ → Notificações (9h se não escolher).',
+  ] } },
 ];

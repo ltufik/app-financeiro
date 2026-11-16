@@ -12,14 +12,25 @@ import { calcBox } from './explainui.js';
 const brD = d => String(d || '').split('-').reverse().slice(0, 2).join('/');
 export const familyForecast = () => forecast({ txs: S.txs, categories: S.categories, settings: settings(), today: todayISO() });
 
+// The open (or just closed) card bill the person read in the bank app: saved for the forecast; returns the toast text.
+export const checkinNow = () => { const today = todayISO(); return checkinTarget(today, +settings().cardCloseDay || 24, S.txs.some(x => x.month === today.slice(0, 7) && x.source === 'cartao' && !x.manual)); };
+export async function saveCheckin(v, where = 'inicio') {
+  const today = todayISO(), tg = checkinNow();
+  const cur = settings(), next = { ...cur, checkins: [...(cur.checkins || []), { date: today, month: tg.month, value: Math.round(v * 100) / 100, by: S.user?.id || null }].slice(-40) };
+  await db.saveSettings(S.hh.id, next); S.hh.settings = next; track(where === 'revisao' ? 'revisao.fatura' : 'inicio.previsao_checkin');
+  const nf = familyForecast(), nt = nf && forecastText(nf);
+  return nt ? `Pronto! ${tg.month === today.slice(0, 7) ? nt.day : nt.next || nt.day}` : 'Pronto! Previsão atualizada.';
+}
+// Checked in the last 2 days (the Sunday push does not ask again either).
+export const checkedInRecently = () => (settings().checkins || []).some(c => c && c.date >= new Date(Date.parse(todayISO() + 'T12:00:00Z') - 2 * 864e5).toISOString().slice(0, 10));
+
 export function renderForecast(box) {
   if (!box) return;
   const f = familyForecast();
   box.hidden = !f; if (!f) { box.innerHTML = ''; return; }
   const me = S.members.find(m => m.user_id === S.user?.id)?.display_name || '';
   const t = forecastText(f, me), st = settings(), today = todayISO();
-  const billIn = S.txs.some(x => x.month === today.slice(0, 7) && x.source === 'cartao' && !x.manual);
-  const tg = checkinTarget(today, +st.cardCloseDay || 24, billIn);
+  const tg = checkinNow();
   if (f.nextBill && tg.month === f.nextBill.month) tg.closeDate = f.nextBill.closeDate;
   const basis = f.basis === 'fatura' ? `Com a fatura de ${mLong(f.month)} já no app.` : f.basis === 'checkin' ? `Com a fatura aberta de ${brl0(f.checkin.value)} informada em ${brD(f.checkin.date)}.` : `Estimada pelo jeito de gastar de vocês nos últimos ${f.hist.length} meses. Fica mais certa com a fatura aberta.`;
   const tone = f.status === 'ok' ? 'good' : f.status === 'risco' ? 'warn' : 'bad';
@@ -41,11 +52,7 @@ export function renderForecast(box) {
     if (!await confirmInline(btn, { title: 'Atualizar a previsão?', text: `${brl0(v)} como ${tg.closed ? 'a fatura que fechou' : 'a fatura aberta de hoje'}. O app usa esse valor só para a previsão; os lançamentos continuam vindo do PDF.`, yes: 'Sim, atualizar' })) return;
     btn.disabled = true;
     try {
-      const cur = settings(), next = { ...cur, checkins: [...(cur.checkins || []), { date: today, month: tg.month, value: Math.round(v * 100) / 100, by: S.user?.id || null }].slice(-40) };
-      await db.saveSettings(S.hh.id, next); S.hh.settings = next; track('inicio.previsao_checkin');
-      const nf = familyForecast(), nt = nf && forecastText(nf);
-      toast(nt ? `Pronto! ${tg.month === today.slice(0, 7) ? nt.day : nt.next || nt.day}` : 'Pronto! Previsão atualizada.');
-      S.render();
+      toast(await saveCheckin(v)); S.render();
     } catch (err) { btn.disabled = false; toast('Não foi possível salvar agora. ' + db.errorText(err)); }
   };
 }

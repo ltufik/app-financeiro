@@ -1063,17 +1063,17 @@ test('push health: deliveries by robot, late robots and the alert', () => {
   const runs = [
     { at: '2026-11-09T12:00:00Z', job: 'diario', ok: true }, { at: '2026-11-09T12:00:05Z', job: 'versao', ok: true },
     { at: '2026-11-06T00:00:00Z', job: 'lembrete', ok: true }, // 3 days ago: late
-    { at: '2026-11-08T22:00:00Z', job: 'previsao', ok: false },
+    { at: '2026-11-08T22:00:00Z', job: 'domingo', ok: false },
   ];
   const logs = [
     ...Array(8).fill({ job: 'diario', ok: true, status: 201 }), { job: 'diario', ok: false, status: 410 },
-    ...Array(3).fill({ job: 'previsao', ok: true, status: 201 }), ...Array(3).fill({ job: 'previsao', ok: false, status: 500 }),
+    ...Array(3).fill({ job: 'domingo', ok: true, status: 201 }), ...Array(3).fill({ job: 'domingo', ok: false, status: 500 }),
   ].map(l => ({ ...l, at: '2026-11-08T22:00:00Z' }));
   const h = pushHealth(logs, runs, now);
   const j = Object.fromEntries(h.jobs.map(x => [x.job, x]));
-  assert.equal(j.diario.late, false); assert.equal(j.lembrete.late, true); assert.equal(j.lembrete.hoursAgo, 85); assert.equal(j.previsao.lastOk, false);
+  assert.equal(j.diario.late, false); assert.equal(j.lembrete.late, true); assert.equal(j.lembrete.hoursAgo, 85); assert.equal(j.domingo.lastOk, false);
   const d = h.byJob.find(b => b.job === 'diario'); assert.deepEqual([d.sent, d.ok, d.gone, d.failed], [9, 8, 1, 0]);
-  assert.deepEqual(h.alerts.map(a => a.job), ['lembrete', 'previsao', 'previsao']);
+  assert.deepEqual(h.alerts.map(a => a.job), ['lembrete', 'domingo', 'domingo']);
   assert.match(h.alerts[0].text, /^Lembrete da noite \(21h\) não roda há 4 dias\.$/);
   assert.match(h.alerts[2].text, /só 50% foram entregues/);
   assert.deepEqual(h.errors, [{ text: 'resposta 500', n: 3 }, { text: 'resposta 410', n: 1 }]);
@@ -1499,4 +1499,35 @@ test('Mapa dos dados: todo dado que o app grava em settings está no mapa; núme
     assert.ok(n.shows.length && n.rule, `${n.id}: diga em que telas aparece e como é calculado`);
   }
   for (const d of DATA) assert.ok(d.what && d.fill && d.affects.length, `${d.key}: falta o que é, onde se preenche ou o que muda`);
+});
+
+test('caixa a revisar: junta categorias, repetidos, saques, financiamento e entradas numa fila só', async () => {
+  const { reviewQueue, reviewSummary, sundayReview, sundayHour, reviewMinutes } = await import('../public/js/lib/review.js');
+  const idx = new Map([['Salário', { grp: 'renda' }], ['Mercado', { grp: 'dia' }], ['Amortização de financiamento', { grp: 'fora' }]]);
+  const txs = [
+    { id: 1, source: 'cartao', month: '2026-11', date: '2026-11-10', description: 'DROGARIA', amount: 186.4, category: 'Farmácia', pending: true },
+    { id: 2, source: 'cartao', month: '2026-11', date: '2026-11-11', description: 'LOJA X', amount: 50, category: 'A classificar' },
+    { id: 3, source: 'cartao', month: '2026-06', date: '2026-06-11', description: 'VELHO', amount: 50, category: 'A classificar' },
+    { id: 4, source: 'conta', month: '2026-11', date: '2026-11-08', description: 'Pix Amanda', amount: -458, category: 'Mercado', manual: true },
+    { id: 5, source: 'conta', month: '2026-11', date: '2026-11-08', description: 'PIX ENVIADO AMANDA', amount: -458, category: 'Mercado' },
+    { id: 6, source: 'conta', month: '2026-11', date: '2026-11-03', description: 'SAQUE 24H', amount: -400, category: 'Mercado' },
+  ];
+  const q = reviewQueue({ txs, idx, settings: {}, today: '2026-11-16' });
+  assert.deepEqual(q.counts, { entrada: 0, amortizacao: 0, repetido: 1, saque: 1, categoria: 2 });
+  assert.equal(q.total, 4);
+  assert.equal(q.items[0].kind, 'repetido', 'o que muda os números vem antes das categorias');
+  assert.equal(q.items.find(i => i.key === 'c1').suggestion, 'Farmácia'); assert.equal(q.items.find(i => i.key === 'c2').suggestion, '');
+  assert.ok(!q.items.some(i => i.key === 'c3'), 'categoria de meses antigos fica no Fechar o mês');
+  assert.equal(reviewSummary(q.counts), '2 categorias, 1 repetido e 1 saque');
+  assert.equal(reviewSummary({ categoria: 1 }), '1 categoria');
+  const q2 = reviewQueue({ txs, idx, settings: { dupSkip: ['4|5'], cashSkip: [6] }, today: '2026-11-16' });
+  assert.equal(q2.total, 2, '"não é repetido" e "não lembro" saem da caixa');
+  assert.equal(reviewMinutes(4), 1); assert.equal(reviewMinutes(30), 10);
+  assert.equal(sundayHour({}), 9); assert.equal(sundayHour({ domingoHora: 19 }), 19); assert.equal(sundayHour({ domingoHora: 23 }), 9, 'nunca à noite');
+  const p = sundayReview({ total: 4, counts: q.counts, name: 'Luiz Tufik', today: '2026-11-15' });
+  assert.match(p.msg.title, /^Luiz, 5 minutos para fechar a semana$/);
+  assert.match(p.msg.body, /4 lançamentos para revisar \(2 categorias, 1 repetido e 1 saque\) e a fatura aberta de vocês/);
+  assert.equal(sundayReview({ total: 4, counts: q.counts, today: '2026-11-15', sent: { domingo: '2026-11-15' } }), null, 'uma vez por semana');
+  assert.match(sundayReview({ total: 0, today: '2026-11-15', name: 'Paty' }).msg.title, /^Paty, a semana já está revisada/);
+  assert.equal(sundayReview({ total: 0, checkedIn: true, today: '2026-11-15' }), null, 'tudo em dia: sem aviso');
 });

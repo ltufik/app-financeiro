@@ -26,6 +26,7 @@ import { cashPending } from '../cash.js';
 import { familyDups, familyFunding } from '../dupfix.js';
 import { renderSurvey } from '../survey.js';
 import { calcBox } from '../explainui.js';
+import { renderReviewLine, openReview } from '../review.js';
 import { levelBreakdown, dreamBreakdown } from '../lib/explain.js';
 import { renderChallengeHome, activeChallenge, challengeSuggestions } from '../challenges.js';
 import { missions } from '../steps.js';
@@ -80,6 +81,7 @@ export function render(el) {
   const savedAvg = fin6.length >= 2 ? { avg: fin6.reduce((x, c) => x + c.tx, 0) / fin6.length, n: fin6.length } : null;
   const feesLast = (() => { for (const k of [...ks].reverse().filter(k => k <= curK).slice(0, 3)) { const f = feesOf(txsOf(k)); if (f.total >= 1) return { month: k, total: f.total }; } return null; })();
   el.innerHTML = `<p class="hello">Olá, ${esc(first())}.</p>
+  <div id="rvLine" hidden></div>
   <div id="misStrip" hidden></div>
   <div id="chHome" hidden></div>
   <div class="panel stack surv-card" id="survBox" hidden></div>
@@ -145,6 +147,8 @@ export function render(el) {
   el.querySelector('#plansMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.parcelas'); });
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas_lista'); });
   renderSteps(el.querySelector('#stepsBox'));
+  renderReviewLine(el.querySelector('#rvLine'));
+  if (S.openReview) { S.openReview = false; openReview('aviso'); }
   renderStrip(el.querySelector('#misStrip'));
   renderChallengeHome(el.querySelector('#chHome'));
   if (!yr) renderSurvey(el.querySelector('#survBox'));

@@ -957,6 +957,34 @@ ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).in
   ok('varredura: Início mostra o mesmo patrimônio (total e cada bem) e o mesmo "sobrou no ano" das histórias', patSum.includes(EXP.pat) && JSON.stringify(patRows) === JSON.stringify(EXP.rows) && niv.includes(EXP.ano) && niv.includes(EXP.anoPct + '%'), JSON.stringify({ patSum, patRows, niv: niv.slice(0, 200), EXP }));
   const sob = await page.evaluate(async () => { const st = await import('/js/state.js'), f = await import('/js/lib/format.js'); return { exp: f.brl(st.calcMonth(st.S.m).res).replace(/\s/g, ' '), y: st.S.m.length === 4 }; });
   if (!sob.y) ok('varredura: a sobra do mês no Início é a da conta do mês', (await txt('#sum_sobra')).replace(/\s/g, ' ').includes(sob.exp), sob.exp + ' | ' + (await txt('#sum_sobra')).slice(0, 160)); }
+  // Caixa a revisar: the Início line, one at a time, "Ver depois", Ok on a category, and zero.
+  const rvTotal = () => page.evaluate(async () => (await import('/js/review.js')).reviewNow().total);
+  const n0 = await rvTotal(), line = await txt('#rvLine');
+  ok('caixa a revisar: a linha do Início mostra o total da fila, com o nome e "de vocês"', n0 > 0 && line.includes(`${n0} para revisar`) && line.includes('Luiz, falta conferir') && line.includes('de vocês'), n0 + ' | ' + line);
+  if (shots) await page.screenshot({ path: path.join(shots, '03r-revisar-linha.png') });
+  await page.click('#rvOpen'); await page.waitForSelector('#caixa');
+  ok('caixa a revisar: abre em tela cheia, um por vez, com "1 de N"', (await txt('#caixa .rv-head')).includes(`1 de ${n0}`), await txt('#caixa .rv-head'));
+  for (let k = 0; k < 40 && !(await page.$('#rvOk')); k++) { await page.click('#rvLater'); await page.waitForTimeout(60); }
+  if (shots) await page.screenshot({ path: path.join(shots, '03r-revisar-categoria.png') });
+  const hadOk = !!(await page.$('#rvOk'));
+  if (hadOk) { await page.click('#rvOk'); await page.waitForTimeout(400); }
+  ok('caixa a revisar: Ok aceita a categoria sugerida, a barra anda e a fila diminui', hadOk && await rvTotal() === n0 - 1 && ((await txt('#caixa .rv-head')).includes(`2 de ${n0}`) || (await txt('#caixa')).includes('para depois')), await txt('#caixa'));
+  await page.click('#rvBack'); await page.waitForTimeout(300);
+  ok('caixa a revisar: ao voltar, a linha do Início conta o que ficou (Ver depois continua contando)', (await txt('#rvLine')).includes(`${n0 - 1} para revisar`), await txt('#rvLine'));
+  // Zero: everything resolved (in memory only, restored right after).
+  const snap = await page.evaluate(async () => { const st = await import('/js/state.js'), m = await import('/js/review.js'), q = m.reviewNow();
+    const keep = { txs: st.S.txs.map(t => ({ id: t.id, pending: t.pending, category: t.category })), settings: st.S.hh.settings };
+    const ids = new Set(q.items.filter(i => i.kind === 'categoria').map(i => i.tx.id));
+    st.S.txs.forEach(t => { if (ids.has(t.id)) { t.pending = false; t.category = 'Mercado'; } });
+    st.S.hh.settings = { ...keep.settings, dupSkip: [...(keep.settings.dupSkip || []), ...q.items.filter(i => i.kind === 'repetido' && !i.orphan).map(i => `${i.manual.id}|${i.bank.id}`)], cashSkip: [...(keep.settings.cashSkip || []), ...q.items.filter(i => i.kind === 'saque').map(i => i.tx.id)], debtSkip: [...(keep.settings.debtSkip || []), ...q.items.filter(i => i.kind === 'amortizacao').map(i => i.tx.id)], fundSkip: [...(keep.settings.fundSkip || []), ...q.items.filter(i => i.kind === 'entrada').map(i => i.income.id)] };
+    window.__rvKeep = keep; return m.reviewNow().total; });
+  if (snap === 0) { await page.evaluate(async () => (await import('/js/review.js')).openReview()); await page.waitForSelector('#caixa .rv-done');
+    if (shots) await page.screenshot({ path: path.join(shots, '03r-revisar-zero.png') });
+    ok('caixa a revisar: em zero, "Tudo em dia" com o nome e a sequência', /Tudo em dia, Luiz/.test(await txt('#caixa')), await txt('#caixa'));
+    await page.click('#rvClose'); await page.waitForTimeout(300);
+    ok('caixa a revisar: em zero, a linha some do Início', await page.evaluate(() => document.getElementById('rvLine')?.hidden === true)); }
+  else ok('caixa a revisar: dá para zerar a fila', false, 'sobrou ' + snap);
+  await page.evaluate(async () => { const st = await import('/js/state.js'), k = window.__rvKeep, by = new Map(k.txs.map(x => [x.id, x])); st.S.txs.forEach(t => { const o = by.get(t.id); if (o) { t.pending = o.pending; t.category = o.category; } }); st.S.hh.settings = k.settings; st.reindex(); st.S.render(); });
 // Year retrospective, from "Mais detalhes".
 await page.evaluate(() => { document.querySelector('#sum_nivel').open = true; }); await page.click('#sum_nivel [data-retro]');
 { await page.evaluate(() => { const c = document.querySelector('#calc_nivel'); if (c) c.open = true; });
@@ -1452,7 +1480,7 @@ ok('menu mostra "Desligadas neste celular" em Notificações', (await txt('#draw
 await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 await sec('avisos');
 await page.waitForSelector('#pOn');
-ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 8 && (await txt('#pushBox')).includes('Resumo da semana') && (await txt('#pushBox')).includes('Previsão do mês'));
+ok('página de notificações mostra os tipos de aviso', (await page.$$('#pushBox [data-pt]')).length === 8 && (await txt('#pushBox')).includes('Resumo da semana') && (await txt('#pushBox')).includes('Revisão de domingo') && (await page.$eval('#pHour', e => e.value).catch(() => '')) === '9');
 await page.uncheck('#pushBox [data-pt="semanal"]');
 await page.evaluate(() => { window.__permAnswer = 'default'; });
 await page.click('#pOn');
@@ -1614,7 +1642,7 @@ ok('depois de excluir aparece a mensagem na tela de login', (await txt('#aMsg'))
 await shot('10-excluida');
 ok('sem erros no console', !errors.length, errors.join(' | '));
 
-} catch (e) { if (e !== SMOKE_DONE) results.push(['FAIL', 'exceção: ' + e.message.split('\n')[0], errors.join(' | ')]); if (shots) await page.screenshot({ path: path.join(shots, 'erro.png'), fullPage: true }).catch(() => {}); try { results.push(['info', 'log', await txt('#dLog') + ' / ' + await txt('#pdfLog')]); } catch (x) {} }
+} catch (e) { if (e !== SMOKE_DONE) results.push(['FAIL', 'exceção: ' + e.message.split('\n').slice(0, 6).join(' ¦ '), errors.join(' | ')]); if (shots) await page.screenshot({ path: path.join(shots, 'erro.png'), fullPage: true }).catch(() => {}); try { results.push(['info', 'log', await txt('#dLog') + ' / ' + await txt('#pdfLog')]); } catch (x) {} }
 // Install sheet on phones (separate browser contexts with phone user agents).
 for (const [name, uaStr, expect] of [
   ['iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', 'Adicionar à Tela de Início'],

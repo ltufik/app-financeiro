@@ -53,7 +53,8 @@ test('avisos do dia: escolhe um por aparelho, respeita preferências e não repe
   const week = { id: 'semanal', title: 's', text: 's' };
   assert.equal(pick(list, week, {}, today, 3).id, 'red');
   assert.equal(pick(list, week, { prefs: { gastos: false } }, today, 3).id, 'saved');
-  assert.equal(pick(list, week, { prefs: { gastos: false } }, today, 0).id, 'semanal');
+  assert.equal(pick(list, week, { prefs: { gastos: false, previsao: false } }, today, 0).id, 'semanal');
+  assert.notEqual(pick(list, week, { prefs: { gastos: false } }, today, 0)?.id, 'semanal', 'no domingo o resumo da semana vai com a revisão de domingo');
   assert.equal(pick(list, week, { last_sent: { red: '2026-11-01' } }, today, 3).id, 'saved');
   assert.equal(pick(list, week, { last_sent: { red: '2026-10-01' } }, today, 3).id, 'red');
   assert.equal(pick([], week, { prefs: { semanal: false } }, today, 0), null);
@@ -165,4 +166,40 @@ test('novidade publicada vira push para todos; quem pediu recebe só o personali
   assert.deepEqual(sent.sort(), ['u1', 'u2'], 'u1: o recado com o nome; u2: a novidade; u3 desligou as novidades');
   assert.equal(newsPush([{ id: 'a', title: 'X', items: ['Y'] }, { id: 'b', title: 'Z' }]).body, 'Y E mais 1 novidade no sininho.');
   assert.equal(newsPush([{ id: 'a', title: 'X' }], 'Mari Souza').title, 'Mari, novidade no Pra Onde Foi: X');
+});
+
+test('revisão de domingo: só no horário de cada aparelho, uma vez, abre a revisão e conta o que espera', async () => {
+  const { runSundayReview } = await import('../api/_daily.js');
+  const { generateVapidKeys } = await import('../api/_webpush.js');
+  const nodeCrypto = await import('node:crypto');
+  const vapid = { ...generateVapidKeys(), subject: 'mailto:x@y.z' };
+  const ecdh = nodeCrypto.createECDH('prime256v1'); ecdh.generateKeys();
+  const key = { p256dh: ecdh.getPublicKey('base64url'), auth: nodeCrypto.randomBytes(16).toString('base64url') };
+  const subs = [
+    { id: 1, household_id: 'h', user_id: 'u1', endpoint: 'https://fcm.googleapis.com/fcm/send/1', ...key, prefs: {}, last_sent: {} },
+    { id: 2, household_id: 'h', user_id: 'u2', endpoint: 'https://fcm.googleapis.com/fcm/send/2', ...key, prefs: { domingoHora: 19 }, last_sent: {} },
+    { id: 3, household_id: 'h', user_id: 'u1', endpoint: 'https://fcm.googleapis.com/fcm/send/3', ...key, prefs: { previsao: false }, last_sent: {} },
+  ];
+  const txs = [
+    { id: 10, source: 'cartao', month: '2026-11', date: '2026-11-10', description: 'DROGARIA', amount: 186.4, category: 'Farmácia', pending: true },
+    { id: 11, source: 'conta', month: '2026-11', date: '2026-11-03', description: 'SAQUE 24H', amount: -400, category: 'Mercado' },
+  ];
+  const sent = [], patched = [];
+  const fetchImpl = async (url, opt = {}) => {
+    const u = String(url);
+    if (u.startsWith('https://fcm.googleapis.com/fcm/send/')) { sent.push({ to: u, body: opt.body }); return { ok: true, status: 201, text: async () => '' }; }
+    if (opt.method === 'PATCH') { patched.push(JSON.parse(opt.body)); return { ok: true, json: async () => [] }; }
+    const j = u.includes('push_subscriptions') ? subs : u.includes('households') ? [{ id: 'h', name: 'Família', settings: {} }] : u.includes('members') ? [{ user_id: 'u1', display_name: 'Luiz Tufik' }, { user_id: 'u2', display_name: 'Paty' }]
+      : u.includes('categories') ? [{ name: 'Mercado', grp: 'dia' }, { name: 'Farmácia', grp: 'dia' }] : u.includes('transactions') ? txs : [];
+    return { ok: true, json: async () => j };
+  };
+  const sunday9 = Date.parse('2026-11-15T12:10:00Z'); // domingo, 9h10 em Brasília
+  const r = await runSundayReview({ supabaseUrl: 'https://s.supabase.co', serviceKey: 'k', vapid, hour: 9, fetchImpl, now: sunday9 });
+  assert.equal(r.sent, 1, 'só o aparelho das 9h com a revisão ligada: ' + JSON.stringify(r));
+  assert.equal(sent[0].to, 'https://fcm.googleapis.com/fcm/send/1');
+  assert.equal(patched[0].last_sent.domingo, '2026-11-15');
+  const r19 = await runSundayReview({ supabaseUrl: 'https://s.supabase.co', serviceKey: 'k', vapid, hour: 19, fetchImpl, now: Date.parse('2026-11-15T22:05:00Z') });
+  assert.equal(r19.sent, 1); assert.equal(sent[1].to, 'https://fcm.googleapis.com/fcm/send/2');
+  const monday = await runSundayReview({ supabaseUrl: 'https://s.supabase.co', serviceKey: 'k', vapid, hour: 9, fetchImpl, now: Date.parse('2026-11-16T12:10:00Z') });
+  assert.equal(monday.sent, 0, 'só aos domingos');
 });

@@ -1,7 +1,7 @@
 // Daily notifications. Vercel Cron calls this once a day (see vercel.json) with Authorization: Bearer CRON_SECRET.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET; optional VAPID_SUBJECT.
 import { cleanUrl } from './config.js';
-import { runDaily, runReminder, runForecastAsk } from './_daily.js';
+import { runDaily, runReminder, runForecastAsk, runSundayReview } from './_daily.js';
 import { rest, applyReleases } from './_loop.js';
 import { withRecorder } from './_pushlog.js';
 import { sendPush } from './_webpush.js';
@@ -35,6 +35,11 @@ export default async function handler(req, res) {
   if (!secret || req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ error: 'unauthorized' });
   const supabaseUrl = cleanUrl(process.env.SUPABASE_URL), serviceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim(), vapid = vapidFromEnv();
   if (!supabaseUrl || !serviceKey || !vapid.publicKey || !vapid.privateKey) return res.status(503).json({ error: 'not_configured' });
+  const q = new URL(String(req.url || '/'), 'https://x.local').searchParams;
+  if ((req.query?.tipo || q.get('tipo')) === 'domingo') {
+    const hour = +(req.query?.h || q.get('h'));
+    try { return res.status(200).json(await withRecorder({ supabaseUrl, serviceKey, job: 'domingo' }, () => runSundayReview({ supabaseUrl, serviceKey, vapid, hour }))); } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
+  }
   if (String(req.query?.tipo || '') === 'previsao' || /tipo=previsao/.test(String(req.url || ''))) {
     try { return res.status(200).json(await withRecorder({ supabaseUrl, serviceKey, job: 'previsao' }, () => runForecastAsk({ supabaseUrl, serviceKey, vapid }))); } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
   }

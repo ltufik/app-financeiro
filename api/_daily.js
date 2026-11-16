@@ -9,6 +9,7 @@ import { addM } from '../public/js/lib/format.js';
 import { feesOf } from '../public/js/lib/bankfees.js';
 import { sendPush } from './_webpush.js';
 import { forecast, sundayAsk } from '../public/js/lib/monthend.js';
+import { reviewQueue, sundayReview, sundayHour } from '../public/js/lib/review.js';
 import { pendingCash } from '../public/js/lib/cash.js';
 import { findDups } from '../public/js/lib/dups.js';
 import { privatize } from '../public/js/lib/privacy.js';
@@ -53,7 +54,8 @@ export function pick(list, week, sub, today, dow) {
   const bill = list.find(x => x.id === 'fatura' && ok(x)); if (bill) return bill; // the monthly habit comes first
   const urgent = list.find(x => (x.tone === 'bad' || x.tone === 'warn') && ok(x));
   if (urgent) return urgent;
-  if (dow === 0 && week && ok(week)) return week;
+  // On Sunday the week summary goes with the Sunday review (runSundayReview), at the hour the person chose.
+  if (dow === 0 && week && ok(week) && prefs.previsao === false) return week;
   return list.find(x => ok(x)) || null;
 }
 
@@ -120,6 +122,49 @@ export async function runReminder({ supabaseUrl, serviceKey, vapid, fetchImpl = 
       if (!r.ok) { out.errors++; continue; }
       out.sent++;
       await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${s.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ last_sent: { ...(s.last_sent || {}), lembrete: today } }) });
+    } catch (e) { out.errors++; }
+  }
+  return out;
+}
+
+// Sunday review, at the hour each person picked in Notificações (9h by default): what waits in the "a revisar" box
+// and the open card bill, opening the review. Nothing waiting and the bill given: the week summary instead. Vercel
+// calls it every Sunday hour from 8h to 21h (vercel.json, &h=); each device only at its own hour, once a week.
+export async function runSundayReview({ supabaseUrl, serviceKey, vapid, hour, fetchImpl = fetch, now = Date.now() }) {
+  const H = { apikey: serviceKey, 'content-type': 'application/json', ...(serviceKey.startsWith('sb_') ? {} : { authorization: `Bearer ${serviceKey}` }) };
+  const get = async path => { const r = await fetchImpl(`${supabaseUrl}/rest/v1/${path}`, { headers: H }); if (!r.ok) throw new Error(`supabase ${r.status} ${path.split('?')[0]}`); return r.json(); };
+  const { iso: today, dow } = brToday(now), from = addM(today.slice(0, 7), -4);
+  const out = { families: 0, sent: 0, skipped: 0, removed: 0, errors: 0 };
+  if (dow !== 0) return out;
+  const subs = (await get('push_subscriptions?select=*')).filter(s => s.prefs?.previsao !== false && sundayHour(s.prefs) === +hour && (s.last_sent || {}).domingo !== today);
+  const byHh = {}; for (const s of subs) (byHh[s.household_id] ||= []).push(s);
+  for (const [hh, list] of Object.entries(byHh)) {
+    try {
+      const [household] = await get(`households?id=eq.${hh}&select=id,name,settings`);
+      if (!household) continue;
+      const mrows = await get(`members?household_id=eq.${hh}&select=user_id,display_name`);
+      const categories = await get(`categories?household_id=eq.${hh}&select=name,grp,financing,recurring`), idx = catIndex(categories);
+      let txs = [];
+      for (let off = 0; ; off += 1000) {
+        const page = await get(`transactions?household_id=eq.${hh}&month=gte.${from}&select=id,source,month,date,day,description,note,amount,category,installment,manual,pending,splits,private_to&order=id&limit=1000&offset=${off}`);
+        txs = txs.concat(page.map(t => ({ ...t, amount: +t.amount }))); if (page.length < 1000) break;
+      }
+      txs = privatize(txs, idx, []); // "só meu" entries never go into a push
+      const st = household.settings || {}, q = reviewQueue({ txs, idx, settings: st, today });
+      const checkedIn = (st.checkins || []).some(c => c && c.date >= new Date(Date.parse(today + 'T12:00:00Z') - 2 * 864e5).toISOString().slice(0, 10));
+      out.families++;
+      for (const sub of list) {
+        if (!mrows.some(m => m.user_id === sub.user_id)) { out.skipped++; continue; }
+        const nm = String(mrows.find(m => m.user_id === sub.user_id)?.display_name || '').trim().split(/\s+/)[0];
+        let m = sundayReview({ total: q.total, counts: q.counts, name: nm, checkedIn, sent: sub.last_sent || {}, today })?.msg, url = linkFor('tela', { tab: 'resumo', sec: 'revisar' });
+        if (!m && sub.prefs?.semanal !== false) { const w = weekly(txs, idx, today, nm); if (w) { m = { title: w.title, body: w.text.slice(0, 220), tag: 'semanal' }; url = w.url || linkFor('tela', { tab: 'resumo' }); } }
+        if (!m) { out.skipped++; continue; }
+        const r = await sendPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { ...m, url }, vapid, fetchImpl).catch(() => ({ ok: false }));
+        if (r.gone) { await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${sub.id}`, { method: 'DELETE', headers: H }); out.removed++; continue; }
+        if (!r.ok) { out.errors++; continue; }
+        out.sent++;
+        await fetchImpl(`${supabaseUrl}/rest/v1/push_subscriptions?id=eq.${sub.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ last_sent: { ...(sub.last_sent || {}), domingo: today, ...(m.tag === 'semanal' ? { semanal: today } : {}) } }) });
+      }
     } catch (e) { out.errors++; }
   }
   return out;

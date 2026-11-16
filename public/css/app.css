@@ -812,3 +812,35 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .fc-calc td.num{text-align:right;white-space:nowrap;padding-left:10px;font-variant-numeric:tabular-nums}
 .fc-calc .fc-total td{font-weight:700}
 .fc-calc .fc-note td{color:var(--muted)}
+/* Caixa "a revisar": the line on Início and the full-screen review (one item at a time). */
+.rv-line{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;border-radius:16px;padding:14px 16px;background:var(--deep);color:var(--deep-ink);font:inherit;cursor:pointer;min-height:64px}
+.rv-line .rv-n{width:46px;height:46px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;flex:none}
+.rv-line .rv-t{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.rv-line .rv-t .small{color:var(--deep-soft)}
+.rv-line svg{color:var(--deep-soft);flex:none}
+body.noscroll{overflow:hidden}
+#caixa{position:fixed;inset:0;z-index:90;background:var(--paper);color:var(--ink);overflow-y:auto;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 0 calc(env(safe-area-inset-bottom,0px) + 16px)}
+#caixa .rv-head{display:flex;align-items:center;gap:12px;padding:4px 16px 10px;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
+#caixa .rv-head h2{flex:1;margin:0}
+#caixa .rv-x{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+#caixa .rv-bar{height:8px;border-radius:999px;background:var(--sunk);margin:0 16px;max-width:608px;align-self:center;width:calc(100% - 32px);overflow:hidden}
+#caixa .rv-bar span{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s ease}
+#caixa .rv-main{flex:1;display:flex;flex-direction:column;gap:14px;padding:18px 16px 0;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
+#caixa .rv-tag{align-self:flex-start;background:var(--accent-soft);color:var(--ink);font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px}
+#caixa .rv-tag.warn{background:var(--warn-soft)}
+#caixa .rv-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+#caixa .rv-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+#caixa .rv-row strong{font-size:17px;overflow-wrap:anywhere}
+#caixa .rv-v{font-size:21px;font-weight:700;white-space:nowrap}
+#caixa .rv-sug{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+#caixa .rv-cat{font-family:var(--display);font-size:23px;font-weight:700}
+#caixa .rv-acts{display:flex;flex-direction:column;gap:10px;margin-top:auto}
+#caixa .rv-acts .btn{min-height:52px;width:100%;justify-content:center;font-size:17px}
+#caixa .rv-acts .linkbtn{min-height:44px;align-self:center}
+#caixa .rv-foot{text-align:center}
+#caixa .rv-host h3{margin-top:0}
+#caixa .rv-done{background:var(--deep);color:var(--deep-ink);border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+#caixa .rv-done h3{font-size:26px;margin:0}
+#caixa .rv-done .small{color:var(--deep-soft)}
+#caixa .rv-ok{width:62px;height:62px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+#caixa .rv-run{gap:4px}

@@ -14,6 +14,7 @@ export const SCREENS = {
   inicio_exemplo: { title: 'Mês de exemplo', where: 'Início, enquanto a família não tem dados', key: null },
   inicio: { title: 'Início', where: 'Aba Início', key: 'aba.inicio' },
   inicio_mais: { title: 'Mais detalhes', where: 'Início → fim da tela', key: 'aba.inicio' },
+  revisar: { title: 'Caixa a revisar (um por vez)', where: 'Início: linha "N para revisar" ou o aviso de domingo', key: ['revisao.abriu', 'revisao.abriu_aviso'] },
   retro_evolucao: { title: 'Retrospectiva: evolução e onde melhorar', where: 'Telas da retrospectiva, antes do nível', key: 'retro.ano' },
   retro_historias: { title: 'Retrospectiva em histórias (nível)', where: 'Início: aviso "A retrospectiva está pronta" ou Mais detalhes → Retrospectiva do ano', key: ['retro.ano', 'retro.compartilhar'] },
   retro_ano: { title: 'Retrospectiva do ano', where: 'Início → Mais detalhes → Retrospectiva do ano (em dezembro e janeiro, cartão no topo)', key: ['retro.ano', 'retro.compartilhar'] },
@@ -80,7 +81,7 @@ export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
-    { title: 'Dentro das abas', screens: ['inicio_mais', 'retro_evolucao', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
+    { title: 'Dentro das abas', screens: ['inicio_mais', 'revisar', 'retro_evolucao', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_gastos_ano', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
@@ -114,6 +115,9 @@ export const FLOWS = [
     st('lancar', 'Abre Lançar'), st('lancar_falar', 'Fala "gastei 45 na padaria no pix" e toca em Interpretar'), st('lancar_salvo', 'Confere e salva')] },
   { id: 'nota', title: 'Nota fiscal', desc: 'Uma compra com itens de categorias diferentes.', steps: [
     st('lancar', 'Abre Lançar'), st('lancar_nota', 'Envia a foto; cada item ganha a sua categoria'), st('lancar_salvo', 'Salva a nota', 'lancar.nota_ok')] },
+  { id: 'revisao', title: 'Revisão de domingo', desc: 'Cinco minutos por semana: a caixa a revisar chega a zero e a previsão fica exata.', steps: [
+    st('avisos_celular', 'Domingo, no horário escolhido: "Luiz, 5 minutos para fechar a semana"', 'revisao.abriu_aviso'), st('revisar', 'Um por vez: Ok, trocar a categoria, juntar repetido ou ver depois', 'revisao.ok'),
+    st('revisar', 'Chega a zero: "Tudo em dia" e a fatura aberta', 'revisao.zerou')] },
   { id: 'fechar', title: 'Fechar o mês', desc: 'O ritual mensal que faz a família voltar.', steps: [
     st('inicio', 'Cartão "Hora de fechar o mês"', null), st('fechar', 'Confere o que falta, vê a retrospectiva e fecha')] },
   { id: 'gastos_ano', title: 'Gastos do ano: IPVA, IPTU e escola sem susto', desc: 'O app acha no histórico, a família confirma, e ele mostra o calendário, quanto separar por mês e se vale pagar à vista ou parcelar.', steps: [

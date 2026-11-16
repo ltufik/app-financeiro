@@ -12,7 +12,7 @@ export function linkFor(kind, { id, tab, sec } = {}) {
   if (kind === 'central' && SECS.test(sec || '')) return `/admin.html#${sec}`;
   if ((kind === 'novidade' || kind === 'recado') && ID.test(String(id ?? ''))) return `/?abrir=${kind}&id=${encodeURIComponent(id)}`;
   if (kind === 'avisos') return '/?abrir=avisos';
-  if (kind === 'tela' && TABS.includes(tab)) return `/?tab=${tab}${(tab === 'ajustes' && SECS.test(sec || '')) || (tab === 'lancar' && sec === 'pdf') || (tab === 'resumo' && sec === 'previsao') ? '&sec=' + sec : ''}`;
+  if (kind === 'tela' && TABS.includes(tab)) return `/?tab=${tab}${(tab === 'ajustes' && SECS.test(sec || '')) || (tab === 'lancar' && sec === 'pdf') || (tab === 'resumo' && (sec === 'previsao' || sec === 'revisar')) ? '&sec=' + sec : ''}`;
   return '/';
 }
 
@@ -23,6 +23,6 @@ export function parseLink(url, base = 'https://app.local') {
   if ((abrir === 'novidade' || abrir === 'recado') && ID.test(id || '')) return { abrir, id };
   if (abrir === 'avisos') return { abrir };
   const tab = p.get('tab'), sec = p.get('sec');
-  if (TABS.includes(tab)) return { tab, ...((tab === 'ajustes' && SECS.test(sec || '')) || (tab === 'lancar' && sec === 'pdf') || (tab === 'resumo' && sec === 'previsao') ? { sec } : {}) };
+  if (TABS.includes(tab)) return { tab, ...((tab === 'ajustes' && SECS.test(sec || '')) || (tab === 'lancar' && sec === 'pdf') || (tab === 'resumo' && (sec === 'previsao' || sec === 'revisar')) ? { sec } : {}) };
   return null;
 }

@@ -33,7 +33,7 @@ export const challengeSuggestions = () => suggestChallenges(challengeFacts(), se
 // The weekly streak: weeks in a row with something done in the app.
 export function familyStreak() {
   const st = settings(), dates = [...(st.checkins || []).map(c => c?.date), ...(S.imports || []).map(i => i.created_at), ...S.txs.filter(t => t.manual).map(t => t.created_at),
-    ...Object.values(st.missionsDone || {}), ...(st.challenges || []).map(c => c.accepted), st.challenge?.accepted];
+    ...(st.reviews || []).map(r => r?.date), ...Object.values(st.missionsDone || {}), ...(st.challenges || []).map(c => c.accepted), st.challenge?.accepted];
   return weekStreak(dates.filter(Boolean).map(d => String(d).slice(0, 10)), todayISO());
 }
 
