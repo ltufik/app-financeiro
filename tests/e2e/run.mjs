@@ -396,6 +396,8 @@ if (backup) {
   await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; const c = document.querySelector('#calc_previsao'); if (c) c.open = true; });
   ok('Início: "Ver a conta" da previsão mostra os números até a sobra prevista', (await txt('#calc_previsao')).includes('Entradas do mês') && (await txt('#calc_previsao')).includes('Sobra prevista') && (await txt('#calc_previsao')).includes('Cabem por dia'), (await txt('#calc_previsao')).slice(0, 200));
   ok('Início: a previsão fechada diz o principal numa linha', /Previsão: (sobrar|faltar) R\$/.test(await txt('#sum_previsao summary')), await txt('#sum_previsao summary'));
+  { const sumV = ((await txt('#sum_previsao summary')).match(/Previsão: (?:sobrar|faltar) (R\$ [\d.]+)/) || [])[1], rowV = await page.evaluate(() => { const tr = [...document.querySelectorAll('#calc_previsao tr')].find(r => /Sobra prevista/.test(r.textContent)); return tr?.querySelector('td.num')?.textContent.replace('− ', '').trim(); });
+    ok('varredura: a previsão na linha do Início é a mesma "Sobra prevista" do Ver a conta', !!sumV && sumV === rowV, sumV + ' vs ' + rowV); }
   ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
   await page.click('#fcSave');
   ok('previsão: fatura aberta vazia é recusada com aviso', await page.isVisible('#fcBox .invalid, #fcBox [aria-invalid="true"]'));
@@ -941,9 +943,20 @@ ok('retrospectiva abre como histórias em tela cheia, com foto', !!(await page.$
 if (shots) await page.screenshot({ path: path.join(shots, '03f-historias-1.png') });
 const wtexts = []; for (let k = 0; k < 12 && !(await page.$('#wShare')); k++) { await page.click('#wrapped .w-next'); await page.waitForTimeout(120); wtexts.push(await txt('#wrapped .w-slide')); if (shots && /nível (de vocês|até agora)/i.test(wtexts[wtexts.length - 1])) await page.screenshot({ path: path.join(shots, '03g-historias-nivel.png') }); }
 ok('histórias: guardaram, patrimônio e sonho, marcos e o nível Prata por porcentagem', wtexts.some(t => /Vocês guardaram/i.test(t)) && wtexts.some(t => /patrimônio de vocês hoje/i.test(t)) && wtexts.some(t => /marcos do ano/i.test(t) && /saíram do vermelho/.test(t)) && wtexts.some(t => /nível até agora em 2026/i.test(t) && /Prata/.test(t) && /Para o ouro/.test(t)) && wtexts.some(t => /Retrospectiva até setembro/.test(t) && /O 2026 da Família Elias/.test(t)) && wtexts.some(t => /evolução no ano/i.test(t)) && wtexts.some(t => /Onde dá para melhorar/.test(t) && /faltaram R\$/.test(t)), wtexts.join(' || ').slice(0, 600));
+// Varredura (Mapa dos dados): each number comes from one function, and every screen that shows it shows the same value.
+const EXP = await page.evaluate(async () => { const st = await import('/js/state.js'), f = await import('/js/lib/format.js'), cl = await import('/js/lib/closing.js');
+  const y = new Date().toISOString().slice(0, 4), r = cl.yearRetro({ year: y, txs: st.S.txs, idx: st.S.catIdx, goals: st.goals() }), P = st.patrimonio();
+  return { pat: f.brl0(P.total), rows: P.rows.map(x => f.brl0(x.value)), ano: f.brl0(r.res), anoPct: Math.round(r.tx * 100) }; });
+ok('varredura: patrimônio líquido e o que guardaram no ano iguais nas histórias e na conta', wtexts.some(t => /patrimônio de vocês hoje/i.test(t) && t.includes(EXP.pat)) && wtexts.some(t => /Vocês guardaram/i.test(t) && t.includes(EXP.ano)), JSON.stringify(EXP));
 await page.click('#wPage'); await page.waitForSelector('.yretro', { timeout: 5000 }).catch(() => {});
+ok('varredura: a retrospectiva do ano (página) mostra o mesmo que as histórias e o nível', (await txt('.yretro .retro-big .num')) === EXP.ano, (await txt('.yretro .retro-big .num')) + ' vs ' + EXP.ano);
 await page.click('[data-back]'); await page.waitForTimeout(300);
 ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).includes('A retrospectiva de 2026 até'));
+{ await page.evaluate(() => { for (const id of ['sum_patrimonio', 'sum_nivel', 'calc_nivel', 'sum_sobra']) { const d = document.getElementById(id); if (d) d.open = true; } });
+  const patSum = await txt('#sum_patrimonio summary'), patRows = await page.$$eval('#sum_patrimonio .list li .amt', els => els.map(e => e.textContent.trim())), niv = await txt('#calc_nivel');
+  ok('varredura: Início mostra o mesmo patrimônio (total e cada bem) e o mesmo "sobrou no ano" das histórias', patSum.includes(EXP.pat) && JSON.stringify(patRows) === JSON.stringify(EXP.rows) && niv.includes(EXP.ano) && niv.includes(EXP.anoPct + '%'), JSON.stringify({ patSum, patRows, niv: niv.slice(0, 200), EXP }));
+  const sob = await page.evaluate(async () => { const st = await import('/js/state.js'), f = await import('/js/lib/format.js'); return { exp: f.brl(st.calcMonth(st.S.m).res).replace(/\s/g, ' '), y: st.S.m.length === 4 }; });
+  if (!sob.y) ok('varredura: a sobra do mês no Início é a da conta do mês', (await txt('#sum_sobra')).replace(/\s/g, ' ').includes(sob.exp), sob.exp + ' | ' + (await txt('#sum_sobra')).slice(0, 160)); }
 // Year retrospective, from "Mais detalhes".
 await page.evaluate(() => { document.querySelector('#sum_nivel').open = true; }); await page.click('#sum_nivel [data-retro]');
 { await page.evaluate(() => { const c = document.querySelector('#calc_nivel'); if (c) c.open = true; });

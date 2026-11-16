@@ -426,4 +426,10 @@ export const DOC_MAPA = { id: 'mapa_dados_doc', title: 'Mapa dos dados: o que ca
 
 Regra de toda publicação: mudou um dado ou um cálculo, atualize a linha no mapa e confira TODAS as telas de "Aparece em". Nenhuma tela refaz uma conta: chama a função do número.
 
-Os testes cobram: todo dado gravado em households.settings está no mapa; cada número aponta uma função que existe e dados que estão no mapa; e o teste do app inteiro faz a varredura do saldo do financiamento (card, Ver a conta, campo do financiamento, bem ligado e Início mostram o mesmo valor).` };
+Os testes cobram: todo dado gravado em households.settings está no mapa; cada número aponta uma função que existe e dados que estão no mapa; e o teste do app inteiro faz a varredura: compara cada tela com a função do número.
+
+- Saldo do financiamento: card, Ver a conta, campo do financiamento, bem ligado e Início.
+- Patrimônio líquido: Início (total e cada bem) e as histórias da retrospectiva.
+- O que guardaram no ano: Início (Nível e Ver a conta), histórias e a página da retrospectiva.
+- Sobra do mês: Início.
+- Previsão do mês: a linha do Início e a "Sobra prevista" do Ver a conta.` };

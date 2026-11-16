@@ -540,4 +540,5 @@ export const RELEASES = [
     backlog: ['bem_saldo_duplo', 'mapa_dados'], news: { id: 'n20261110i', title: 'Saldo do financiamento igual em todo lugar', items: [
     'Em Patrimônio, o "Quanto falta pagar" do bem agora mostra o mesmo saldo do financiamento ligado a ele.',
   ] } },
+  { id: 'r2.3.7', version: 'v2.3.7', at: '2026-11-16T23:30:00Z', semNovidade: 'Só testes: a varredura confere os números em todas as telas; nada muda no app.', semTeste: 'Só testes automáticos.', updateDocs: [DOC_MAPA], addBacklog: [{ id: 'varredura_numeros', title: 'Varredura: patrimônio, guardado no ano, sobra e previsão iguais em todas as telas', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Um número calculado diferente numa tela só aparecia quando alguém via a divergência', from: [] }], backlog: ['varredura_numeros', 'missoes_e_desafios'] },
 ];
