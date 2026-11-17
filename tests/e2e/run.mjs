@@ -987,21 +987,40 @@ ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).in
   await page.evaluate(async () => { const st = await import('/js/state.js'), k = window.__rvKeep, by = new Map(k.txs.map(x => [x.id, x])); st.S.txs.forEach(t => { const o = by.get(t.id); if (o) { t.pending = o.pending; t.category = o.category; } }); st.S.hh.settings = k.settings; st.reindex(); st.S.render(); });
 // Revisão de custos e seguros (real data): the Início card, the list, one item, "Cancelei" and the insurance page.
 { await page.waitForTimeout(300);
-  const C = await page.evaluate(async () => { const m = await import('/js/costs.js'), f = await import('/js/lib/format.js'), c = m.familyCosts(), s = m.familyInsurance(); return { total: f.brl0(c.total).replace(/\s/g, ' '), year: f.brl0(c.year).replace(/\s/g, ' '), names: c.items.filter(x => x.current).map(x => x.name), risen: c.risen.map(x => [x.name, x.risePct]), ins: f.brl0(s.yearWithFinancing).replace(/\s/g, ' '), insItems: s.items.map(x => x.name) }; });
+  const C = await page.evaluate(async () => { const m = await import('/js/costs.js'), f = await import('/js/lib/format.js'), c = m.familyCosts(), s = m.familyInsurance(); return { total: f.brl0(c.total).replace(/\s/g, ' '), year: f.brl0(c.year).replace(/\s/g, ' '), names: c.items.filter(x => x.current).map(x => x.name), tel: { now: f.brl0(c.telecom.now).replace(/\s/g, ' '), diff: f.brl0(c.telecom.diff).replace(/\s/g, ' '), q: c.questions.length, hard: c.questions.some(q => !q.soft) }, risen: c.risen.map(x => [x.name, x.risePct]), ins: f.brl0(s.yearWithFinancing).replace(/\s/g, ' '), insItems: s.items.map(x => x.name) }; });
   ok('revisão de custos: acha Vivo, Spotify e Amazon Prime nos dados de verdade; a Vivo (duas linhas) não aparece como "subiu"', ['Vivo', 'Spotify', 'Amazon Prime'].every(n => C.names.includes(n)) && !C.risen.some(([n]) => n === 'Vivo'), JSON.stringify(C));
   const card = await txt('#costCard');
-  ok('revisão de custos: card no Início só com motivo (custos ou seguros), com o nome e o total no ano', !card || (/^Luiz, /.test(card) && ((card.replace(/\s/g, ' ').includes(C.year) && card.includes('de vocês')) || card.replace(/\s/g, ' ').includes(C.ins))), card);
+  ok('contas de casa: com perguntas abertas, o card compara o grupo (vocês pagam R$ x a menos), com o nome', C.tel.hard && /^Luiz, vocês pagam /.test(card) && card.replace(/\s/g, ' ').includes(C.tel.diff + ' a menos por mês'), card + JSON.stringify(C.tel));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-card.png') });
+  // The questions, one per screen, until the view by house.
+  if (await page.$('#costOpen')) { await page.click('#costOpen'); await page.waitForSelector('#custos .cs-q'); }
+  const qc = await txt('#csQCount');
+  ok('contas de casa: o card abre as perguntas, uma por tela, com "1 de N"', qc === `1 de ${C.tel.q}`, qc);
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-contas-pergunta.png') });
+  for (let i = 0; i < 8 && !(await page.$('#csTelNow')); i++) {
+    if (await page.$('#csQSave')) { const hs = await page.$$('#custos [data-house]:not([data-house="+"])'); if (hs.length) await hs[i % hs.length].click(); await page.click('#custos [data-svc="internet"]'); await page.click('#csQSave'); }
+    else if (await page.$('#custos [data-stop="trocou"]')) await page.click('#custos [data-stop="trocou"]');
+    else if (await page.$('#custos [data-unk=""]')) await page.click('#custos [data-unk=""]');
+    else if (await page.$('#csCelNo')) await page.click('#csCelNo');
+    await page.waitForTimeout(500);
+  }
+  const H = await page.evaluate(async () => { const m = await import('/js/costs.js'), f = await import('/js/lib/format.js'), c = m.familyCosts(); return { now: f.brl0(c.telecom.now).replace(/\s/g, ' '), sum: Math.round(c.telecom.houses.reduce((a, h) => a + h.total, 0) * 100) / 100, raw: c.telecom.now, names: c.telecom.houses.map(h => h.name), q: c.questions.length }; });
+  const casas = (await txt('#custos')).replace(/\s/g, ' ');
+  ok('contas de casa: respondidas as perguntas, a tela por casa mostra cada casa do Patrimônio', !!(await page.$('#csTelNow')) && H.q === 0 && H.names.includes('Apartamento de São Paulo') && H.names.includes('Casa de Guaratuba'), JSON.stringify(H) + casas.slice(0, 300));
+  ok('varredura: o total de telefone e internet de hoje é o mesmo na tela por casa e na soma das casas', (await txt('#csTelNow')).replace(/\s/g, ' ') === H.now && Math.abs(H.sum - H.raw) < 0.01 && H.now === C.tel.now, JSON.stringify(H) + ' ' + C.tel.now);
+  ok('contas de casa: a conta que parou fica no fim, e o card do Início sai depois das respostas', casas.includes('Contas que pararam') && casas.includes('Trocada em') && await page.evaluate(async () => { const m = await import('/js/costs.js'), l = await import('/js/lib/costs.js'); return l.costsNotice(m.familyCosts(), 'Luiz')?.kind !== 'contexto'; }), casas.slice(0, 400));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-contas-casas.png') });
   await page.evaluate(async () => (await import('/js/costs.js')).openCosts('lista')); await page.waitForSelector('#custos');
   const list = (await txt('#custos')).replace(/\s/g, ' ');
   ok('varredura: o total por mês e no ano da revisão é o mesmo do card do Início', list.includes(`${C.total} por mês`) && list.includes(`${C.year} no ano`), list.slice(0, 300));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-lista.png') });
-  await page.click('#custos [data-item="Vivo"]'); await page.waitForSelector('#custos .cs-bars');
+  const vivoKey = await page.evaluate(() => document.querySelector('#custos [data-item^="Vivo@"]')?.dataset.item);
+  await page.click(`#custos [data-item="${vivoKey}"]`); await page.waitForSelector('#custos .cs-bars');
   ok('revisão de custos: uma conta mostra as barras por mês, o custo no ano e as três escolhas', /no ano de vocês|a mais no ano/.test(await txt('#custos')) && (await page.$$('#custos .cs-bar')).length >= 3 && !!(await page.$('#custos [data-s="cancelei"]')), await txt('#custos'));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-item.png') });
   await page.click('#custos [data-s="cancelei"]'); await page.waitForTimeout(500);
   const eco = await txt('#custos');
-  ok('revisão de custos: Cancelei mostra a economia no ano e tira a conta do total', /a menos no ano/.test(eco) && eco.includes('Vivo') && await page.evaluate(async () => { const m = await import('/js/costs.js'); return !m.familyCosts().groups.some(g => g.items.some(x => x.name === 'Vivo')); }), eco.slice(0, 300));
+  ok('revisão de custos: Cancelei mostra a economia no ano e tira a conta do total', /a menos no ano/.test(eco) && eco.includes('Vivo') && await page.evaluate(async k => { const m = await import('/js/costs.js'); return !m.familyCosts().groups.some(g => g.items.some(x => x.key === k)); }, vivoKey), eco.slice(0, 300));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-economia.png') });
   await page.click('#csBack'); await page.waitForTimeout(200);
   await page.click('#csIns'); await page.waitForSelector('#custos .cs-use');

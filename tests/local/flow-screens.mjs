@@ -99,6 +99,14 @@ await step('inicio', () => page.waitForSelector('#todo'));
 await step('revisar', async () => { await page.evaluate(async () => { const m = await import('/js/review.js'); m.openReview(); }); await page.waitForSelector('#caixa'); });
 await page.evaluate(() => { document.getElementById('caixa')?.remove(); document.body.classList.remove('noscroll'); });
 await step('custos', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('lista'); }); await page.waitForSelector('#custos'); });
+// Phone and internet lines for the questions and the view by house (the fictional family has none): only on screen.
+await page.evaluate(async () => { const st = await import('/js/state.js'), add = (month, source, description, amount, category) => st.S.txs.push({ id: 'tel-' + month + description + amount, month, source, description, amount, category, manual: false, pending: false, telShot: true });
+  for (const m of ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']) add(m, m < '2026-08' ? 'conta' : 'cartao', m < '2026-08' ? 'VIVO FIBRA' : 'CONTA VIVO', m < '2026-08' ? -129.9 : 129.9, 'Moradia e contas');
+  for (const m of ['2026-09', '2026-10']) add(m, 'cartao', 'CONTA VIVO', 59.9, 'Moradia e contas');
+  for (const m of ['2026-05', '2026-06', '2026-07']) add(m, 'conta', 'CLARO', -89.9, 'Moradia e contas'); });
+await step('custos_perguntas', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('perguntas'); }); await page.waitForSelector('#custos .cs-q'); });
+await step('custos_casas', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('casas'); }); await page.waitForSelector('#csTelNow'); });
+await page.evaluate(async () => { const st = await import('/js/state.js'); st.S.txs = st.S.txs.filter(t => !t.telShot); document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); });
 await step('seguros', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('seguros'); }); await page.waitForSelector('#custos'); });
 await page.evaluate(() => { document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); });
 await step('inicio_mais', async () => { await page.evaluate(() => { ['fixos', 'patrimonio', 'sonho'].forEach(k => { const d = document.querySelector('#sum_' + k); if (d) d.open = true; }); }); }, { scrollTo: '#homeMore' });

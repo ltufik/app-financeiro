@@ -1564,7 +1564,56 @@ test('revisão de custos: acha celular, streaming e apps, quanto subiu desde o m
   // Two Vivo lines (the house and a new internet) are not "Vivo went up".
   const two = [...txs, { id: 'n1', month: '2026-05', source: 'cartao', description: 'CONTA VIVO', amount: 100, category: 'Contas' }, { id: 'n2', month: '2026-06', source: 'cartao', description: 'CONTA VIVO', amount: 100, category: 'Contas' }];
   const c4 = costsReview({ txs: two, idx, settings: {}, today: '2026-06-20' });
-  assert.equal(c4.items.find(x => x.name === 'Vivo')?.risePct || 0, 0);
+  const vs = c4.items.filter(x => x.name === 'Vivo');
+  assert.equal(vs.length, 2, 'duas contas da Vivo, não uma');
+  assert.equal(vs.find(x => x.last === 100).risePct, 0, 'a conta nova não "subiu"');
+  assert.equal(vs.find(x => x.last === 320).risePct, 31, 'a conta de sempre subiu de verdade');
+  assert.ok(c4.questions.some(q => q.kind === 'linha' && q.second && q.value === 100), 'pergunta de onde é a conta nova');
+});
+
+test('contas de casa: separa as contas da operadora, entende débito para cartão, pergunta o contexto e compara o grupo', async () => {
+  const { costsReview, costsNotice, telecomLines, houseList } = await import('../public/js/lib/costs.js');
+  const idx = new Map([['Moradia e contas', { grp: 'dia' }], ['Casa', { grp: 'dia' }]]);
+  const txs = [], add = (month, source, description, v) => txs.push({ id: month + description + v, month, source, description, amount: source === 'conta' ? -v : v, category: 'Moradia e contas' });
+  // Luiz's real story: Vivo of the São Paulo flat by debit (Jan to Jun), then by card; Claro until June; a new Vivo (new house) from August.
+  [245.41, 245.41, 245.41, 204.54, 197.25, 220].forEach((v, i) => add(`2026-0${i + 1}`, 'conta', 'Vivo', v));
+  [300.04, 224.39, 224.39, 224.39, 137.86, 289.9].forEach((v, i) => add(`2026-0${i + 1}`, 'conta', 'Claro', v));
+  ['2026-07', '2026-08', '2026-09'].forEach(m => add(m, 'cartao', 'CONTA VIVO', 220));
+  add('2026-07', 'conta', 'PIX Telefonica Vivo', 166); add('2026-07', 'cartao', 'CONTA VIVO', 48.38);
+  ['2026-08', '2026-09'].forEach(m => add(m, 'cartao', 'CONTA VIVO', 100));
+  add('2026-09', 'conta', 'MERCADO', 50); add('2026-09', 'cartao', 'PADARIA', 10);
+  const L = telecomLines({ txs, idx, settings: {} });
+  assert.deepEqual(L.map(x => x.key).sort(), ['Claro@2026-01', 'Vivo@2026-01', 'Vivo@2026-08'], 'três contas: a Claro, a Vivo de sempre e a Vivo nova; a Claro de R$ 300 a R$ 138 é uma conta só');
+  const old = L.find(x => x.key === 'Vivo@2026-01');
+  assert.deepEqual(old.payChange, { month: '2026-07', from: 'conta', to: 'cartao' }, 'do débito para o cartão: a mesma conta');
+  assert.deepEqual(old.extras.map(e => e.value).sort(), [166, 48.38], 'Pix e cobrança avulsa de julho não viram conta');
+  const settings = { assets: [{ name: 'Apartamento de São Paulo', value: 750000 }, { name: 'Casa de Guaratuba', value: 800000 }, { name: 'Honda Civic', value: 139000 }] };
+  assert.deepEqual(houseList(settings), ['Apartamento de São Paulo', 'Casa de Guaratuba'], 'casas são os imóveis do Patrimônio');
+  const c = costsReview({ txs, idx, settings, today: '2026-10-05' });
+  assert.equal(c.risen.length, 0, 'nada "subiu": é conta nova e troca de forma de pagar');
+  assert.equal(c.telecom.then, 545.45); assert.equal(c.telecom.seen, 320); assert.equal(c.telecom.diff, 225.45); assert.equal(c.telecom.thenMonth, '2026-01');
+  assert.deepEqual(c.questions.map(q => q.kind + ':' + q.key), ['linha:Vivo@2026-08', 'linha:Vivo@2026-01', 'parou:Claro@2026-01']);
+  assert.equal(c.questions[0].second, true); assert.equal(c.questions[2].swapTo, 'Vivo'); assert.equal(c.questions[2].min, 137.86);
+  const n = costsNotice(c, 'Luiz Tufik');
+  assert.equal(n.title, 'Luiz, vocês pagam R$ 225 a menos por mês do que em janeiro'); assert.equal(n.kind, 'contexto'); assert.match(n.text, /Três perguntas/);
+  // Answered: houses and services, Claro swapped. Then the mobile question shows up (no mobile line), soft (no card).
+  const ans = { ...settings, costs: { lines: { 'Vivo@2026-08': { house: 'Casa de Guaratuba', services: ['internet'] }, 'Vivo@2026-01': { house: 'Apartamento de São Paulo', services: ['internet', 'tv'] } }, items: { 'Claro@2026-01': { status: 'trocou', at: '2026-10-05' } } } };
+  const c2 = costsReview({ txs, idx, settings: ans, today: '2026-10-05' });
+  assert.deepEqual(c2.questions.map(q => q.kind), ['celular']);
+  assert.equal(costsNotice(c2, 'Luiz'), null, 'só a pergunta do celular: nada de card');
+  assert.equal(c2.savings.year, 0, 'trocou não é economia');
+  assert.deepEqual(c2.telecom.houses.map(h => [h.name, h.total]), [['Apartamento de São Paulo', 220], ['Casa de Guaratuba', 100], ['Contas que pararam', 0]]);
+  assert.equal(c2.items.find(x => x.key === 'Vivo@2026-01').title, 'Vivo · internet e TV');
+  // The mobile line they pay elsewhere enters the total, not the comparison.
+  const c3 = costsReview({ txs, idx, settings: { ...ans, costs: { ...ans.costs, celular: { status: 'informado', brand: 'TIM', value: 110 } } }, today: '2026-10-05' });
+  assert.equal(c3.questions.length, 0); assert.equal(c3.telecom.now, 430); assert.equal(c3.telecom.seen, 320); assert.equal(c3.total, c2.total + 110);
+  // A charge from an unknown small provider is asked about; once named it is a phone/internet line.
+  const local = [...txs]; ['2026-07', '2026-08', '2026-09'].forEach(m => local.push({ id: 'lf' + m, month: m, source: 'cartao', description: 'FIBRALINK TELECOM', amount: 99.9, category: 'Moradia e contas' }));
+  const c4 = costsReview({ txs: local, idx, settings: ans, today: '2026-10-05' });
+  const unk = c4.questions.find(q => q.kind === 'desconhecido'); assert.equal(unk?.name, 'Fibralink Telecom');
+  const c5 = costsReview({ txs: local, idx, settings: { ...ans, costs: { ...ans.costs, providers: { [unk.key]: { name: 'Fibralink Telecom', services: ['internet'] } } } }, today: '2026-10-05' });
+  assert.ok(c5.items.some(x => x.name === 'Fibralink Telecom' && x.group === 'telefone'));
+  assert.ok(!c5.questions.some(q => q.kind === 'desconhecido'));
 });
 
 test('seguros: soma por seguradora nos últimos 12 meses, o ano estimado e o seguro dentro do financiamento', async () => {

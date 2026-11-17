@@ -4,7 +4,8 @@
 
 /*
   facts: { hasCard, hasConta, hasClosedMonth (a month with statement), pending (entries to check in it), goalsSet,
-    pushOn, closedCount, dream, invest, debts, fixas, members, manualAny, installed, skips: { key: true } }
+    pushOn, closedCount, dream, invest, debts, fixas, members, manualAny, installed, skips: { key: true },
+    telLines (current phone/internet lines), telAsk (lines still without house or service), celAsk, celDone }
 */
 export function missionList(f = {}) {
   const sk = f.skips || {};
@@ -23,8 +24,11 @@ export function missionList(f = {}) {
     { key: 'fixas', done: !!f.fixas, skip: 'Não tenho', title: 'Liste as contas fixas do cartão', hint: 'Assinaturas, seguros, planos.', unlocks: 'a previsão da próxima fatura', go: ['ajustes', '[data-add="recurring"]', 'patrimonio'], btn: 'Listar' },
     { key: 'invest', done: !!f.invest, skip: 'Ainda não tenho', title: 'Informe investimentos e bens', hint: 'Valor investido hoje, imóveis e veículos.', unlocks: 'o patrimônio da família', go: ['ajustes', '#iTotal', 'patrimonio'], btn: 'Informar' },
     { key: 'dividas', done: !!f.debts, skip: 'Não tenho', title: 'Cadastre financiamentos e dívidas', hint: 'Saldo, taxa e parcela.', unlocks: 'o saldo que diminui sozinho', go: ['ajustes', '[data-add="debts"]', 'patrimonio'], btn: 'Cadastrar' },
+    // Shown only when they make sense: phone and internet bills found (and no mobile line among them).
+    { key: 'contas_casa', hidden: !(+f.telLines > 0), done: +f.telLines > 0 && !(+f.telAsk > 0), title: 'Conte de onde é cada conta', hint: 'A casa e o serviço de cada conta de telefone, internet e TV.', unlocks: 'quanto custa cada casa, sem confundir conta nova com conta que subiu', open: 'perguntas', btn: 'Contar' },
+    { key: 'celular', hidden: !f.celAsk && !f.celDone, done: !!f.celDone, title: 'Conte do celular', hint: 'Não achamos conta de celular no extrato nem na fatura.', unlocks: 'a conta completa de telefone e internet', open: 'perguntas', btn: 'Contar' },
     { key: 'instalar', done: !!f.installed, title: 'Instale o app no celular', hint: 'Ícone na tela, abre em tela cheia.', unlocks: 'acesso em um toque', install: true, btn: 'Como?' },
-  ].map(m => ({ ...m, skipped: !m.done && !!m.skip && !!sk[m.key] }));
+  ].filter(m => !m.hidden).map(m => ({ ...m, skipped: !m.done && !!m.skip && !!sk[m.key] }));
 }
 
 export const missionProgress = list => {

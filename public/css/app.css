@@ -864,3 +864,10 @@ body.noscroll{overflow:hidden}
 #custos .cs-type select{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:var(--card);color:var(--ink);margin-top:4px;min-height:32px}
 #custos .cs-use{background:var(--warn-soft);border-color:transparent}
 #custos .rowbtn .btn{flex:1}
+#custos .cs-q{font-family:var(--display);font-size:21px;line-height:1.25;margin:0;text-wrap:balance}
+#custos .cs-fs{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+#custos .cs-fs legend{font-weight:600;font-size:15px;margin-bottom:8px;padding:0}
+#custos .cs-chips{flex-wrap:wrap;gap:8px}
+#custos .cs-chips .chip{min-height:44px;padding:0 16px;font-size:15px;font-weight:600}
+#custos .cs-house{padding:6px 4px 0}
+#custos .cs-house .num{font-weight:700;white-space:nowrap}

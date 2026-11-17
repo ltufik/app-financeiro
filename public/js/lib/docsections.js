@@ -392,8 +392,9 @@ export const DOC_MISSOES = { id: 'missoes_doc', title: 'Missões e conquistas (2
 1. Mandar a última fatura do cartão. 2. Mandar o extrato da conta. 3. Conferir os lançamentos marcados. 4. Combinar quanto guardar (Metas). 5. Ligar os avisos no celular (pode marcar "Não quero"). 6. Fechar o primeiro mês.
 - No Início, no lugar da antiga régua: "Missões de começo · 3 de 6", os pontinhos, a próxima missão com o que ela destrava e o botão que leva direto. Completas as 6: uma linha com as missões extras.
 - Cumpridas sozinhas pelos dados (nada para marcar). Na primeira vez, o app registra em households.settings.missionsDone o dia de cada uma e comemora com uma mensagem ("Missão cumprida: …! Próxima: …"). Quem já usava o app teve as já cumpridas registradas sem comemoração.
-## Missões extras (7)
+## Missões extras (7, mais 2 quando fazem sentido)
 Sonho, convidar a família, lançar falando, contas fixas do cartão, investimentos e bens, financiamentos e dívidas, instalar o app. Algumas aceitam "Não tenho"/"Uso sozinho" (households.settings.skips).
+Só quando fazem sentido (2.6): "Conte de onde é cada conta" (há contas de telefone e internet sem casa ou serviço) e "Conte do celular" (nenhuma conta é de celular). Abrem as perguntas rápidas das contas de casa; sem contas de telefone e internet, não aparecem.
 ## Selos (8)
 Primeira fatura, Família organizada (as 6 de começo), Mês fechado, Meta batida, 3 meses no azul, App bem ensinado (10 categorias ensinadas), Em família, Previsão em dia (fatura aberta em 4 domingos). Os que faltam mostram como ganhar e o progresso ("2 de 3").
 ## Onde
@@ -453,7 +454,16 @@ export const DOC_CUSTOS = { id: 'custos_doc', title: 'Revisão de custos e segur
 - Entra o que findRecurring acha (a mesma cobrança em 3 dos últimos 4 meses) e que é de celular, internet, TV, streaming ou apps (tabela de marcas em BRANDS; condomínio, financiamento e seguros ficam fora).
 - Uma linha por marca. "Subiu" compara o último mês com o mês mais antigo dos últimos 12 meses, pela marca (o banco muda o texto ao longo do ano).
 - Cada conta: Vou rever (em 7 dias volta no card do Início), Cancelei (sai do total e vira economia: valor × 12; confirmada quando a cobrança some) ou Manter assim. Tudo em settings.costs.items.
-- Card no Início só quando algo subiu, parou de cobrar ou um "Vou rever" venceu.
+- Card no Início só quando há pergunta de contexto, algo subiu de verdade, parou de cobrar ou um "Vou rever" venceu.
+
+Contas de casa: telefone, internet e TV (telecomLines, telecomSummary, contextQuestions; telas "Perguntas rápidas" e "Por casa"):
+- Cada cobrança da operadora (Vivo, Claro, TIM, Oi, Sky, Algar e os provedores que a família nomeou) vai para a conta da mesma marca com o valor mais perto (até 45%; 20% para uma conta vista uma vez só), uma por mês. Mesmo número de contas que no mês anterior: é a mesma conta com preço novo.
+- Duas contas da mesma operadora viram duas contas (ex.: Vivo de R$ 220 e Vivo de R$ 100 de outra casa). Débito para cartão é a mesma conta (payChange). Cobrança vista uma vez só, fora do último mês, é avulsa (extras: um Pix de conta atrasada) e não vira conta.
+- "Subiu" só quando é a mesma conta, uma cobrança por mês, ficando mais cara.
+- Perguntas, uma por tela: casa e serviço de cada conta (a casa só quando há mais de uma conta ou casa; as casas vêm dos imóveis de Patrimônio e das que a família nomeia); a conta que parou nos últimos 6 meses (Cancelamos, que vira economia; Trocamos, que não vira economia; Ainda pagamos de outro jeito, que continua no total); uma cobrança mensal de R$ 60 a R$ 400 de nome desconhecido, numa categoria de casa ou contas ("É internet, TV ou celular?"); e o celular quando nenhuma conta é de celular (operadora e valor, que entram como "informado por vocês").
+- O grupo inteiro é comparado com o mês mais antigo dos últimos 12 (ex.: R$ 545 em janeiro, R$ 320 agora). O card do Início, enquanto há perguntas, mostra essa comparação ("vocês pagam R$ 225 a menos por mês") em vez de tratar a soma como aumento.
+- Missões extras que só aparecem quando fazem sentido: "Conte de onde é cada conta" e "Conte do celular".
+- Tudo em settings.costs: lines (casa e serviços por conta, chave marca@primeiro mês), houses (casas nomeadas), providers e notTelecom (as respostas sobre nomes desconhecidos), celular, items (decisões, inclusive trocou e fora).
 
 Seguros (insuranceSummary):
 - Categoria Seguros nos últimos 12 meses, por seguradora (tipo adivinhado pelo nome; a família troca).

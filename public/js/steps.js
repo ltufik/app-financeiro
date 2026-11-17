@@ -8,6 +8,7 @@ import { sundayHabit } from './lib/closing.js';
 import { notifyFamily } from './push.js';
 import { renderChallengeSection, familyHTML, familyStreak } from './challenges.js';
 import * as db from './db.js';
+import { familyCosts, openCosts } from './costs.js';
 import { esc } from './lib/format.js';
 
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -43,7 +44,13 @@ function facts() {
   return { hasCard: t.some(x => x.source === 'cartao' && !x.manual), hasConta: t.some(x => x.source === 'conta' && !x.manual), hasClosedMonth: !!L, pending: pend,
     goalsSet: !!(+g.cardMonthly || st.goalsSet), pushOn: lsGet('fin.push.on') === '1', closedCount: Object.keys(st.closed || {}).length,
     dream: !!(+g.patrimonio && g.ageGoal), invest: !!(+st.invest?.total || (st.assets || []).length), debts: !!(st.debts || []).length, fixas: !!(st.recurring || []).length,
-    members: S.members.length, manualAny: t.some(x => x.manual), installed: isStandalone() || lsGet('fin.installed') === '1', skips: st.skips || {} };
+    members: S.members.length, manualAny: t.some(x => x.manual), installed: isStandalone() || lsGet('fin.installed') === '1', skips: st.skips || {}, ...telFacts() };
+}
+function telFacts() {
+  try {
+    const c = familyCosts(), q = c.questions;
+    return { telLines: c.telecom.count, telAsk: q.filter(x => x.kind === 'linha').length, celAsk: q.some(x => x.kind === 'celular'), celDone: !!(settings().costs || {}).celular };
+  } catch (e) { return {}; }
 }
 export const missions = () => missionList(facts());
 export function familyBadges() {
@@ -81,7 +88,7 @@ export function renderSteps(box) {
     <div class="mis-dots" role="img" aria-label="${p.starterDone} de ${p.starterTotal} missões cumpridas">${st.map(x => DOT(ok(x))).join('')}</div>
     <h3>${esc(m.title)}</h3><p class="small">${esc(m.hint)} <span class="muted">Destrava: ${esc(m.unlocks)}.</span></p>
     <div class="rowbtn"><button class="btn primary" type="button" data-go>${esc(m.btn)}</button>${m.skip ? `<button class="btn" type="button" data-skip>${esc(m.skip)}</button>` : ''}<button class="linkbtn small" type="button" data-all>Ver todas</button></div></div>`;
-  box.querySelector('[data-go]').onclick = () => { track('inicio.missao_abriu'); S.go(m.go[0], m.go[1], m.go[2]); };
+  box.querySelector('[data-go]').onclick = () => { track('inicio.missao_abriu'); if (m.open) return openCosts(m.open); S.go(m.go[0], m.go[1], m.go[2]); };
   box.querySelector('[data-all]').onclick = () => S.go('ajustes', null, 'conquistas');
   const sk = box.querySelector('[data-skip]'); if (sk) sk.onclick = () => setSkip(m.key, true, () => renderSteps(box));
 }
@@ -109,7 +116,7 @@ export function renderConquistas(box) {
     <div class="selos">${b.map(x => `<div class="selo${x.earned ? ' on' : ''}"><span class="selo-i" aria-hidden="true">${x.earned ? '★' : '☆'}</span><strong class="small">${esc(x.title)}</strong><span class="tiny muted">${x.earned ? 'Conquistado.' : esc(x.how) + (x.progress ? ` (${esc(x.progress)})` : '')}</span></div>`).join('')}</div>
     ${familyHTML()}`;
   renderChallengeSection(box.querySelector('#chBox'), { onChange: () => renderConquistas(box) });
-  box.querySelectorAll('[data-k]').forEach(btn => btn.onclick = () => { const m = list[+btn.dataset.k]; if (m.install) { const h = box.querySelector('#installHelp'); if (h) h.hidden = !h.hidden; return; } track('conquistas.missao_abriu'); S.go(m.go[0], m.go[1], m.go[2]); });
+  box.querySelectorAll('[data-k]').forEach(btn => btn.onclick = () => { const m = list[+btn.dataset.k]; if (m.install) { const h = box.querySelector('#installHelp'); if (h) h.hidden = !h.hidden; return; } track('conquistas.missao_abriu'); if (m.open) return openCosts(m.open); S.go(m.go[0], m.go[1], m.go[2]); });
   box.querySelectorAll('[data-skip]').forEach(btn => btn.onclick = () => setSkip(list[+btn.dataset.skip].key, true, () => renderConquistas(box)));
   box.querySelectorAll('[data-unskip]').forEach(btn => btn.onclick = () => setSkip(list[+btn.dataset.unskip].key, false, () => renderConquistas(box)));
   const mark = box.querySelector('[data-mark]'); if (mark) mark.onclick = () => { lsSet('fin.installed', '1'); renderConquistas(box); };

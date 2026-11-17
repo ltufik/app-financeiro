@@ -7,13 +7,14 @@ import { track } from './usage.js';
 import { toast, invalid, clearInvalid } from './ui.js';
 import { esc, brl, brl0, todayISO, mLong } from './lib/format.js';
 import { checkNumber } from './lib/validate.js';
-import { costsReview, costsNotice, insuranceSummary, insuranceNotice, INSURANCE_TYPES } from './lib/costs.js';
+import { costsReview, costsNotice, insuranceSummary, insuranceNotice, INSURANCE_TYPES, SERVICES, houseList, houseName, servicesText } from './lib/costs.js';
 
 export const familyCosts = () => costsReview({ txs: S.txs, idx: S.catIdx, settings: settings(), today: todayISO() });
 export const familyInsurance = () => insuranceSummary({ txs: S.txs, settings: settings(), today: todayISO(), debts: settings().debts || [] });
 const firstName = () => String(S.members.find(m => m.user_id === S.user?.id)?.display_name || '').trim().split(/\s+/)[0];
 const BACK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
 const CHECK = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const GOOD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8l6 6 4-4 6 7"/><path d="M15 17h5v-5"/></svg>';
 const UP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16l6-6 4 4 6-7"/><path d="M15 7h5v5"/></svg>';
 const SHIELD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/></svg>';
 const TIPS = {
@@ -30,16 +31,16 @@ export function renderCostCard(box) {
   const name = firstName(), c = familyCosts(), cn = costsNotice(c, name), s = cn ? null : familyInsurance(), sn = s && insuranceNotice(s, name, todayISO());
   const n = cn || sn;
   box.hidden = !n; if (!n) { box.innerHTML = ''; return; }
-  box.innerHTML = `<article class="insight warn cost-card"><span class="ii" aria-hidden="true">${cn ? UP : SHIELD}</span><div><h3>${esc(n.title)}</h3><p class="small">${esc(n.text)}</p><button class="btn small act" type="button" id="costOpen">${esc(n.action)}</button></div></article>`;
-  box.querySelector('#costOpen').onclick = () => { track(cn ? 'custos.abriu_inicio' : 'seguros.abriu_inicio'); openCosts(cn ? (c.due.length ? 'item:' + c.due[0].key : 'lista') : 'seguros'); };
+  box.innerHTML = `<article class="insight ${cn?.good ? 'good' : 'warn'} cost-card"><span class="ii" aria-hidden="true">${cn ? (cn.good ? GOOD : UP) : SHIELD}</span><div><h3>${esc(n.title)}</h3><p class="small">${esc(n.text)}</p><button class="btn small act" type="button" id="costOpen">${esc(n.action)}</button></div></article>`;
+  box.querySelector('#costOpen').onclick = () => { track(cn ? 'custos.abriu_inicio' : 'seguros.abriu_inicio'); openCosts(cn ? (cn.kind === 'contexto' ? 'perguntas' : c.due.length ? 'item:' + c.due[0].key : 'lista') : 'seguros'); };
 }
 
-let view = 'lista';
+let view = 'lista', asked = 0, qTotal = 0;
 export function openCosts(start = 'lista') {
   document.getElementById('custos')?.remove();
   const el = document.createElement('div'); el.id = 'custos'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'csTitle');
   document.body.append(el); document.body.classList.add('noscroll');
-  view = start; track('custos.abriu'); draw();
+  view = start; asked = 0; qTotal = 0; track('custos.abriu'); draw();
 }
 function close() { document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); S.render(); }
 const go = v => { view = v; draw(); document.getElementById('custos')?.scrollTo?.(0, 0); };
@@ -50,6 +51,8 @@ function draw() {
   if (view === 'seguros') return drawInsurance(el);
   if (view === 'economia') return drawSavings(el);
   if (view.startsWith('item:')) return drawItem(el, view.slice(5));
+  if (view === 'perguntas' || view.startsWith('perguntar:')) return drawQuestion(el, view.startsWith('perguntar:') ? view.slice(10) : null);
+  if (view === 'casas') return drawHouses(el);
   drawList(el);
 }
 
@@ -60,13 +63,16 @@ function drawList(el) {
       <span class="small">${brl0(c.year)} no ano${c.risen.length ? ` · ${c.risen.length} ${c.risen.length > 1 ? 'subiram' : 'subiu'}` : ''}${c.stopped.length ? ` · ${c.stopped.length} ${c.stopped.length > 1 ? 'pararam' : 'parou'} de cobrar` : ''}</span></section>
     ${c.savings.year ? `<button type="button" class="rv-card cs-save" id="csSavings"><strong>Com o que cancelaram: ${brl0(c.savings.year)} a menos no ano</strong><span class="small muted">Ver o que foi cancelado e o que está a rever</span></button>` : ''}
     ${c.stopped.map(x => `<div class="status ok cs-stop" data-key="${esc(x.key)}"><span>${esc(x.name)} não veio no último mês. Se cancelaram, são ${brl0(x.last * 12)} a menos no ano.</span><span class="rowbtn"><button type="button" class="chip" data-cancel="${esc(x.key)}">Cancelamos</button><button type="button" class="chip" data-keep="${esc(x.key)}">Ainda pago</button></span></div>`).join('')}
-    ${c.groups.map(g => `<p class="eyebrow">${esc(g.label)}</p><div class="rv-card cs-list">${g.items.map(x => `<button type="button" class="cs-row" data-item="${esc(x.key)}"><span class="cs-name"><span>${esc(x.name)}</span><span class="tiny muted">${brl0(x.year)} no ano</span></span><span class="cs-val"><strong>${brl(x.last)}</strong>${status(x)}</span></button>`).join('')}</div>`).join('')}
+    ${c.questions.length ? `<button type="button" class="rv-card cs-save" id="csAsk"><strong>${c.questions.length === 1 ? 'Uma pergunta' : c.questions.length + ' perguntas'} sobre as contas de casa</strong><span class="small muted">Para não confundir conta nova (outra casa, outro celular) com conta que subiu.</span></button>` : ''}
+    ${c.groups.map(g => `<p class="eyebrow">${esc(g.label)}${g.id === 'telefone' ? ' · <button type="button" class="linkbtn small" id="csHouses">ver por casa</button>' : ''}</p><div class="rv-card cs-list">${g.items.map(x => `<button type="button" class="cs-row" data-item="${esc(x.key)}"><span class="cs-name"><span>${esc(x.title || x.name)}</span><span class="tiny muted">${x.house ? esc(houseName(x.house)) + ' · ' : ''}${brl0(x.year)} no ano</span></span><span class="cs-val"><strong>${brl(x.last)}</strong>${status(x)}</span></button>`).join('')}</div>`).join('')}
     ${!c.groups.length ? '<p class="small muted">Nenhuma conta de celular, internet, streaming ou app voltou em 3 dos últimos 4 meses. Elas aparecem aqui quando a mesma cobrança vier todo mês.</p>' : ''}
     ${s.items.length ? `<button type="button" class="rv-card cs-save" id="csIns"><strong>Seguros: uns ${brl0(s.yearWithFinancing)} no ano</strong><span class="small muted">${s.items.length} ${s.items.length > 1 ? 'seguros' : 'seguro'} no extrato e na fatura. Já usaram algum?</span></button>` : ''}
   </main>`;
   el.querySelector('#csBack').onclick = close;
   el.querySelectorAll('[data-item]').forEach(b => b.onclick = () => go('item:' + b.dataset.item));
   el.querySelector('#csSavings')?.addEventListener('click', () => go('economia'));
+  el.querySelector('#csAsk')?.addEventListener('click', () => go('perguntas'));
+  el.querySelector('#csHouses')?.addEventListener('click', () => go('casas'));
   el.querySelector('#csIns')?.addEventListener('click', () => go('seguros'));
   el.querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => decide(b.dataset.cancel, 'cancelei', b));
   el.querySelectorAll('[data-keep]').forEach(b => b.onclick = () => decide(b.dataset.keep, 'manter', b));
@@ -80,6 +86,7 @@ async function decide(key, status, btn) {
     if (status) items[key] = { status, at: todayISO(), value: x.last, by: S.user?.id || null }; else delete items[key];
     await saveSt({ ...cur, costs: { ...(cur.costs || {}), items } });
     track('custos.' + (status || 'desfez'));
+    if (view === 'perguntas') { asked++; toast(status === 'cancelei' ? `Pronto: ${brl0(x.last * 12)} a menos no ano` : 'Combinado'); draw(); return; }
     if (status === 'cancelei') { toast(`Pronto: ${brl0(x.last * 12)} a menos no ano`); go('economia'); }
     else if (status === 'rever') { toast('Combinado: em 7 dias o app pergunta como foi'); go('lista'); }
     else { toast(status === 'manter' ? 'Combinado' : 'Voltou a ser acompanhado'); go('lista'); }
@@ -88,15 +95,19 @@ async function decide(key, status, btn) {
 
 function drawItem(el, key) {
   const c = familyCosts(), x = c.items.find(i => i.key === key); if (!x) return go('lista');
-  const name = firstName(), h = x.history.length ? x.history : [{ month: x.lastMonth, value: x.last }], max = Math.max(...h.map(p => p.value), 1);
+  const name = firstName(), h = x.history?.length ? x.history : [{ month: x.lastMonth, value: x.last }], max = Math.max(...h.map(p => p.value), 1);
   const story = x.risePct
     ? `${name ? name + ', a' : 'A'} conta ${x.group === 'telefone' ? 'da' : 'do'} ${esc(x.name)} de vocês era ${brl0(x.first)} em ${MES(x.firstMonth)}. Agora são ${brl0(x.rise)} a mais por mês, ${brl0(x.rise * 12)} a mais no ano.`
-    : `${name ? name + ', o' : 'O'} ${esc(x.name)} vem ${brl(x.last)} por mês desde ${MES(x.firstMonth)}: ${brl0(x.year)} no ano de vocês.`;
+    : `${name ? name + ', ' : ''}${x.group === 'telefone' ? (name ? 'a' : 'A') + ' conta da' : (name ? 'o' : 'O')} ${esc(x.name)}${x.line && x.services?.length ? ' (' + esc(servicesText(x.services)) + ')' : ''} vem ${brl(x.last)} por mês desde ${MES(x.firstMonth)}: ${brl0(x.year)} no ano de vocês.`;
+  const more = [x.payChange ? `Passou ${x.payChange.from === 'conta' ? 'do débito para o cartão' : 'do cartão para o débito'} em ${MES(x.payChange.month)}: é a mesma conta.` : '',
+    x.extras?.length ? `${x.extras.map(e => `Em ${MES(e.month)} veio também ${brl(e.value)} avulso`).join('; ')} (fora da conta do mês).` : '',
+    x.manual ? 'Informado por vocês: não aparece no extrato nem na fatura.' : ''].filter(Boolean);
   el.innerHTML = `${head(x.name, true, x.risePct ? `<span class="rv-tag warn">Subiu ${x.risePct}%</span>` : '')}<main class="rv-main">
     <section class="rv-card"><div class="rv-row"><span class="small muted">${esc(mLong(x.lastMonth))}</span><span class="num rv-v">${brl0(x.last)}</span></div>
-      <p class="small">${story}</p>
+      <p class="small">${story}</p>${more.map(t => `<p class="small muted">${esc(t)}</p>`).join('')}
       <div class="cs-bars" role="img" aria-label="${esc(x.name)} por mês">${h.map(p => `<span class="cs-bar${p.month === x.lastMonth ? ' now' : ''}" style="height:${Math.max(6, Math.round(p.value / max * 120))}px" title="${esc(MES(p.month))}: ${brl(p.value)}"></span>`).join('')}</div>
       <div class="cs-months tiny muted">${h.map(p => `<span>${esc(MES(p.month).slice(0, 3))}</span>`).join('')}</div></section>
+    ${x.line ? `<section class="rv-card"><div class="rv-row"><strong>${esc(x.house ? houseName(x.house) : 'Casa ainda não informada')}</strong><button type="button" class="linkbtn small" id="csCtx">Mudar</button></div><span class="small muted">${x.services?.length ? esc(servicesText(x.services)[0].toUpperCase() + servicesText(x.services).slice(1)) : 'Serviço ainda não informado'}</span></section>` : ''}
     <section class="rv-card"><strong>O que costuma funcionar</strong><span class="small muted">${TIPS[x.group]}</span></section>
     <div class="rv-acts">
       <button type="button" class="btn primary" data-s="rever">Vou rever</button>
@@ -106,6 +117,7 @@ function drawItem(el, key) {
     </div>
     <p class="tiny muted rv-foot">"Vou rever": em 7 dias o app pergunta no Início como foi, e confere na próxima conta se o valor caiu.</p></main>`;
   el.querySelector('#csBack').onclick = () => go('lista');
+  el.querySelector('#csCtx')?.addEventListener('click', () => go(x.manual ? 'perguntar:celular' : 'perguntar:' + x.key));
   el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => decide(x.key, b.dataset.s || null, b));
 }
 
@@ -161,4 +173,116 @@ async function drawInsurance(el) {
     }
     try { const c2 = settings(); await saveSt({ ...c2, insurance: { ...(c2.insurance || {}), financing: vals } }); track('seguros.financiamento'); toast('Seguro do financiamento salvo'); draw(); } catch (e) { toast('Não foi possível salvar agora. ' + db.errorText(e)); }
   };
+}
+
+// ---------- Contas de casa: the questions (one per screen) and the view by house ----------
+const OPERATORS = ['Vivo', 'Claro', 'TIM', 'Oi', 'Outra'];
+async function saveCosts(patch) { const cur = settings(), costs = { ...(cur.costs || {}) }; patch(costs); await saveSt({ ...cur, costs }); }
+const chipsHTML = (name, opts, sel, multi) => `<div class="rowbtn cs-chips" role="group" data-group="${name}">${opts.map(([v, l]) => `<button type="button" class="chip" data-${name}="${esc(v)}" aria-pressed="${(multi ? sel.includes(v) : sel === v) ? 'true' : 'false'}">${esc(l)}</button>`).join('')}</div>`;
+function wireChips(el, name, multi) {
+  el.querySelectorAll(`[data-${name}]`).forEach(b => b.onclick = () => {
+    if (!multi) el.querySelectorAll(`[data-${name}]`).forEach(o => o.setAttribute('aria-pressed', 'false'));
+    b.setAttribute('aria-pressed', multi && b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    if (name === 'house') { const n = el.querySelector('#csNewHouse'); if (n) n.hidden = b.dataset.house !== '+'; }
+  });
+}
+const picked = (el, name) => [...el.querySelectorAll(`[data-${name}][aria-pressed="true"]`)].map(b => b.dataset[name]);
+
+function drawQuestion(el, only) {
+  const c = familyCosts(), name = firstName();
+  let q = only ? c.questions.find(x => x.key === only) : c.questions[0];
+  if (only && !q) {
+    // Changing an answer: build the question for this line from the item (or the informed mobile line).
+    if (only === 'celular') q = { kind: 'celular', key: 'celular', edit: true };
+    else { const x = c.items.find(i => i.key === only); if (!x) return go('lista'); q = { kind: 'linha', key: x.key, brand: x.name, value: x.last, startMonth: x.startMonth, second: false, payChange: x.payChange, askHouse: true, services: x.services || [], house: x.house, edit: true }; }
+  }
+  if (!q) { if (asked) toast('Pronto: as contas de casa estão certas'); return go('casas'); }
+  if (!only) qTotal = Math.max(qTotal, asked + c.questions.length);
+  const count = only ? '' : `<span class="small muted" id="csQCount">${asked + 1} de ${qTotal}</span>`;
+  const houses = houseList(settings()), hopts = [...(houses.length ? houses : ['principal']).map(h => [h, houseName(h)]), ['+', '+ Outra casa']];
+  const back = () => only ? go(only === 'celular' ? 'casas' : 'item:' + only) : close();
+  let body = '';
+  if (q.kind === 'linha') {
+    const since = q.payChange ? `No cartão desde ${MES(q.payChange.month)}, antes no débito` : `Desde ${MES(q.startMonth)}`;
+    body = `<section class="rv-card"><span class="small muted">${esc(since)}</span>
+      <h3 class="cs-q">${q.second ? `Apareceu uma segunda conta da ${esc(q.brand)}, de ${brl0(q.value)}. De onde ela é?` : `${name && !q.edit ? esc(name) + ', a' : 'A'} conta da ${esc(q.brand)} de ${brl0(q.value)} é de onde?`}</h3>
+      ${q.payChange ? `<p class="small">Ela passou ${q.payChange.from === 'conta' ? 'do débito para o cartão' : 'do cartão para o débito'} em ${MES(q.payChange.month)}. O app já entendeu que é a mesma conta.</p>` : ''}
+      ${q.askHouse ? `<fieldset class="cs-fs"><legend>Casa</legend>${chipsHTML('house', hopts, q.house || (houses.length ? '' : 'principal'), false)}
+        <label class="f" id="csNewHouse" hidden>Nome da casa<input id="csHouseName" maxlength="40" placeholder="Ex.: Casa da praia"></label></fieldset>` : ''}
+      <fieldset class="cs-fs"><legend>O que tem nela</legend>${chipsHTML('svc', Object.entries(SERVICES), q.services || [], true)}</fieldset></section>
+      <div class="rv-acts"><button type="button" class="btn primary" id="csQSave">${only ? 'Salvar' : 'Continuar'}</button></div>`;
+  } else if (q.kind === 'parou') {
+    body = `<section class="rv-card"><span class="small muted">Não veio mais desde ${MES(q.since)}</span>
+      <h3 class="cs-q">A ${esc(q.brand)} (${q.min === q.max ? brl0(q.max) : `${brl0(q.min)} a ${brl0(q.max)}`} por mês) parou de aparecer. ${name ? esc(name) + ', v' : 'V'}ocês cancelaram ou trocaram?</h3>
+      <p class="small muted">Se trocaram, o app não conta como economia: a conta nova já está no total.</p></section>
+      <div class="rv-acts"><button type="button" class="btn" data-stop="cancelei">Cancelamos</button><button type="button" class="btn" data-stop="trocou">${q.swapTo ? `Trocamos pela ${esc(q.swapTo)}` : 'Trocamos de operadora'}</button><button type="button" class="linkbtn" data-stop="fora">Ainda pagamos, de outro jeito</button></div>`;
+  } else if (q.kind === 'desconhecido') {
+    body = `<section class="rv-card"><span class="small muted">Vem todo mês</span>
+      <h3 class="cs-q">"${esc(q.name)}" vem uns ${brl0(q.value)} por mês. É internet, TV ou celular?</h3>
+      <p class="small muted">Provedores do bairro têm nomes que o app não conhece. Contando, a conta entra nas contas de casa.</p></section>
+      <div class="rv-acts">${Object.entries(SERVICES).map(([k, l]) => `<button type="button" class="btn" data-unk="${k}">${esc(l)}</button>`).join('')}<button type="button" class="linkbtn" data-unk="">Não é</button></div>`;
+  } else {
+    const cel = (settings().costs || {}).celular || {};
+    body = `<section class="rv-card"><h3 class="cs-q">E os celulares de vocês?</h3>
+      <p class="small">Não achamos conta de celular no extrato nem na fatura. Se pagam em outro lugar (outro cartão, a empresa), contem a operadora e o valor para a conta de casa ficar completa.</p>
+      <fieldset class="cs-fs"><legend>Operadora</legend>${chipsHTML('op', OPERATORS.map(o => [o, o]), OPERATORS.includes(cel.brand) ? cel.brand : (cel.brand ? 'Outra' : ''), false)}</fieldset>
+      <label class="f">Quanto por mês, todos os celulares (R$)<input id="csCelValue" type="number" inputmode="decimal" step="0.01" min="0" value="${cel.value ?? ''}" placeholder="Ex.: 110"></label></section>
+      <div class="rv-acts"><button type="button" class="btn primary" id="csCelSave">Salvar</button><button type="button" class="linkbtn" id="csCelNo">Não temos ou a empresa paga</button></div>`;
+  }
+  el.innerHTML = `${head(only ? 'Contas de casa' : 'Perguntas rápidas', true, count)}<main class="rv-main">${body}
+    <p class="tiny muted rv-foot">Dá para mudar depois: Revisão de custos → ver por casa → a conta → Mudar.</p></main>`;
+  el.querySelector('#csBack').onclick = back;
+  wireChips(el, 'house', false); wireChips(el, 'svc', true); wireChips(el, 'op', false);
+  const after = () => { if (only) return go(only === 'celular' ? 'casas' : 'item:' + only); asked++; draw(); };
+  el.querySelector('#csQSave')?.addEventListener('click', async e => {
+    clearInvalid(el); const sv = picked(el, 'svc'); let house = q.askHouse ? picked(el, 'house')[0] : (q.house || 'principal');
+    if (q.askHouse && !house) return invalid(el.querySelector('[data-group="house"]'), 'De qual casa é esta conta?');
+    if (house === '+') { const inp = el.querySelector('#csHouseName'), v = inp.value.trim(); if (v.length < 2) return invalid(inp, 'Dê um nome para a casa (ex.: Casa da praia).'); house = v; }
+    if (!sv.length) return invalid(el.querySelector('[data-group="svc"]'), 'O que vem nesta conta? Escolha pelo menos um.');
+    e.target.disabled = true;
+    try {
+      await saveCosts(cs => { cs.lines = { ...(cs.lines || {}), [q.key]: { house, services: sv, at: todayISO() } }; if (!houses.includes(house) && house !== 'principal') cs.houses = [...(cs.houses || []), house]; });
+      track('custos.contexto'); after();
+    } catch (err) { e.target.disabled = false; toast('Não foi possível salvar agora. ' + db.errorText(err)); }
+  });
+  el.querySelectorAll('[data-stop]').forEach(b => b.onclick = () => decide(q.key, b.dataset.stop, b));
+  el.querySelectorAll('[data-unk]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { await saveCosts(cs => { if (b.dataset.unk) cs.providers = { ...(cs.providers || {}), [q.key]: { name: q.name, services: [b.dataset.unk] } }; else cs.notTelecom = { ...(cs.notTelecom || {}), [q.key]: true }; }); track(b.dataset.unk ? 'custos.provedor' : 'custos.nao_provedor'); after(); }
+    catch (err) { b.disabled = false; toast('Não foi possível salvar agora. ' + db.errorText(err)); }
+  });
+  el.querySelector('#csCelSave')?.addEventListener('click', async e => {
+    clearInvalid(el); const op = picked(el, 'op')[0], inp = el.querySelector('#csCelValue'), v = +String(inp.value).replace(',', '.');
+    if (!op) return invalid(el.querySelector('[data-group="op"]'), 'Qual é a operadora dos celulares?');
+    const er = checkNumber(v, { min: 1, max: 5000, label: 'O valor dos celulares' }); if (er) return invalid(inp, er);
+    e.target.disabled = true;
+    try { await saveCosts(cs => { cs.celular = { status: 'informado', brand: op === 'Outra' ? 'Outra operadora' : op, value: Math.round(v * 100) / 100, at: todayISO() }; }); track('custos.celular'); after(); }
+    catch (err) { e.target.disabled = false; toast('Não foi possível salvar agora. ' + db.errorText(err)); }
+  });
+  el.querySelector('#csCelNo')?.addEventListener('click', async e => {
+    e.target.disabled = true;
+    try { await saveCosts(cs => { cs.celular = { status: 'nao', at: todayISO() }; }); track('custos.sem_celular'); after(); }
+    catch (err) { e.target.disabled = false; toast('Não foi possível salvar agora.'); }
+  });
+}
+
+function drawHouses(el) {
+  const c = familyCosts(), t = c.telecom, name = firstName(), mo = t.thenMonth ? MES(t.thenMonth) : '';
+  const cmp = t.diff >= 30 ? `${brl0(t.diff)} a menos por mês do que em ${mo} (${brl0(t.then)}): uns ${brl0(t.diff * 12)} a menos no ano.`
+    : t.diff <= -30 ? `${brl0(-t.diff)} a mais por mês do que em ${mo} (${brl0(t.then)}).` : t.thenMonth && t.thenMonth < t.lastMonth ? `Quase igual a ${mo} (${brl0(t.then)}).` : '';
+  const gone = x => ['cancelei', 'trocou'].includes(x.status) || !x.current;
+  const row = x => `<button type="button" class="cs-row" data-item="${esc(x.key)}"><span class="cs-name"><span>${esc(x.name)}${x.services?.length ? ' · ' + esc(servicesText(x.services)) : ''}</span><span class="tiny muted">${gone(x)
+    ? (x.status === 'trocou' ? 'Trocada' : x.status === 'cancelei' ? 'Cancelada' : 'Parou') + ` em ${MES(x.lastMonth)}`
+    : x.manual ? 'Informado por vocês' : x.elsewhere ? 'Pagam de outro jeito' : x.payChange ? `${x.payChange.to === 'cartao' ? 'Cartão' : 'Débito'}, desde ${MES(x.payChange.month)}` : `Desde ${MES(x.startMonth)}`}</span></span><strong class="${gone(x) ? 'muted' : ''}">${brl(x.last)}</strong></button>`;
+  el.innerHTML = `${head('Telefone, internet e TV')}<main class="rv-main">
+    <section class="rv-done cs-hero"><span class="small">${name ? esc(name) + ', p' : 'P'}or mês, hoje</span><span class="num cs-big" id="csTelNow">${brl0(t.now)}</span>${cmp ? `<span class="small" id="csTelCmp">${cmp}</span>` : ''}</section>
+    ${c.questions.length ? `<button type="button" class="rv-card cs-save" id="csAsk"><strong>${c.questions.length === 1 ? 'Falta uma pergunta' : `Faltam ${c.questions.length} perguntas`}</strong><span class="small muted">Para separar as contas por casa e por serviço.</span></button>` : ''}
+    ${t.houses.map(h => `<div class="rv-row cs-house"><strong>${esc(h.name)}</strong><span class="num">${brl0(h.total)}</span></div><div class="rv-card cs-list">${h.items.map(row).join('')}</div>`).join('')}
+    ${!t.houses.length ? '<p class="small muted">Nenhuma conta de celular, internet ou TV nos últimos meses.</p>' : ''}
+    <p class="tiny muted">Duas contas da mesma operadora são separadas pelo valor; mudar do débito para o cartão continua sendo a mesma conta. Toque numa conta para mudar a casa ou o serviço.</p>
+  </main>`;
+  el.querySelector('#csBack').onclick = () => go('lista');
+  el.querySelector('#csAsk')?.addEventListener('click', () => go('perguntas'));
+  el.querySelectorAll('[data-item]').forEach(b => b.onclick = () => go('item:' + b.dataset.item));
+  track('custos.casas');
 }
