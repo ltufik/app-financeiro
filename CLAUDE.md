@@ -11,6 +11,7 @@
 - Ajustes ficam no menu lateral (`menu.js`), uma página por seção (`S.sec`). Gráficos personalizados ficam em `households.settings.charts`; a lógica está em `lib/charts.js`.
 - Fotos: Pexels License (gratuita), carregadas de images.pexels.com (sem crédito na tela por enquanto; rever antes de abrir ao público), cada foto usada uma vez só; se não carregarem, aparece a ilustração SVG equivalente (`photos.js`).
 - Claude Design: design system "Pra Onde Foi" (https://claude.ai/artifact/7WXbMJPSgXEjiyMZZEExix: tokens tirados de `public/css/app.css`, componentes `pof-*`, README com o jeito de falar) e o quadro "Pra Onde Foi: mapa do app" (https://claude.ai/artifact/GtU8qjLB5j4ByC32p5x8EF: as fotos de `public/flows` por seção e as jornadas). Tela nova: desenhar antes no Claude Design com esse design system e, depois de publicar, subir a foto nova do robô para o quadro. Mudou cor, fonte ou componente no app: atualizar o design system.
+- Funil e alarmes: `lib/funnel.js` (Central → Funil e alarmes e o e-mail diário das 9h, `api/_email.js`, Resend com `RESEND_API_KEY`). Etapa nova da jornada ou alarme novo: mudar ali, nos dois ao mesmo tempo.
 - Telas da Central (Fluxos) e do convite para instalar: geradas no GitHub Actions (`.github/workflows/telas.yml`) com fotos e fontes reais e a família fictícia de `tests/fixtures/`. Não gerar aqui (sem acesso ao Pexels e ao Google Fonts); depois de publicar, buscar o commit do robô.
 
 ## Definição de pronto (toda publicação, como numa squad)

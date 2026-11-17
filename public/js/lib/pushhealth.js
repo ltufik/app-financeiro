@@ -8,6 +8,7 @@ export const ROBOTS = {
   versao: { label: 'Novidades das versões (9h)', hours: 26 },
   lembrete: { label: 'Lembrete da noite (21h)', hours: 26 },
   domingo: { label: 'Revisão de domingo (8h às 21h)', hours: 8 * 24 + 2 },
+  email: { label: 'E-mail diário de funil e alarmes (9h)', hours: 26 },
 };
 export const JOB_LABELS = { ...Object.fromEntries(Object.entries(ROBOTS).map(([k, v]) => [k, v.label])), familia: 'Avisos da família', teste: 'Pushes de teste', recado: 'Respostas às opiniões', novidade: 'Novidade enviada pela Central' };
 const MIN_FOR_RATE = 5, LOW_RATE = 0.8;

@@ -197,3 +197,5 @@ body.admin{background:var(--paper)}
 #aMain .msgcard,#aMain .panel{min-width:0;overflow-wrap:anywhere}
 #aMain .tw{overflow-x:auto;max-width:100%}
 #aMain .chips{display:flex;flex-wrap:wrap;gap:6px}
+.alarm{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-left:4px solid #B7791F;background:var(--sunk, #F7F3EC);border-radius:4px}
+.alarm.vermelho{border-left-color:#B42318}

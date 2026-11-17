@@ -1673,3 +1673,32 @@ test('seguros: soma por seguradora nos últimos 12 meses, o ano estimado e o seg
   assert.match(insuranceNotice(s, 'Luiz', '2026-06-20').title, /^Luiz, vocês pagam uns R\$ 8\.450 por ano em seguros$/);
   assert.equal(insuranceNotice({ ...s, seenAt: '2026-03-01' }, 'Luiz', '2026-06-20'), null, 'uma vez por ano');
 });
+
+test('funil e alarmes: etapas em sequência, onde cada um parou, alarmes do e-mail diário', async () => {
+  const { funnel, stageOf, healthAlarms, healthEmail, daysSince } = await import('../public/js/lib/funnel.js');
+  const today = '2026-11-17';
+  const people = [
+    { name: 'Luiz', family: 'Família Elias', household: 'h1', signed_up: '2026-09-01', first_import: '2026-09-02', months: 10, closed: true, week2: true, days_7: 5, last_seen: '2026-11-17' },
+    { name: 'Ana', family: 'Família Souza', household: 'h2', signed_up: '2026-11-10', first_import: null, months: 0, closed: false, week2: true, days_7: 0, last_seen: '2026-11-11' },
+    { name: '', family: 'Família Lima', household: 'h3', signed_up: '2026-10-01', first_import: '2026-10-02', months: 1, closed: false, week2: false, days_7: 0, last_seen: '2026-10-05' },
+    { name: 'Bia', family: null, household: null, signed_up: '2026-11-16', first_import: null, months: 0, closed: false, week2: false, days_7: 1, last_seen: '2026-11-16' },
+  ];
+  const f = funnel(people);
+  assert.deepEqual(f.map(x => x.n), [4, 3, 2, 1, 1, 1, 1], 'cada etapa conta só quem passou pelas anteriores');
+  assert.equal(f[3].conv, 50); assert.equal(f[0].pct, 100);
+  assert.equal(stageOf(people[0]), null); assert.equal(stageOf(people[1]).key, 'extrato'); assert.equal(stageOf(people[3]).key, 'familia');
+  assert.equal(daysSince('2026-11-10T13:00:00Z', today), 7);
+  const a = healthAlarms({ people, errors_24h: 6, errors_top: [{ message: 'x is undefined', n: 6, version: 'v2.8.0' }], opened_yesterday: 0, today }, { pushAlerts: [{ job: 'diario', text: 'Avisos do dia atrasados' }] });
+  const ids = a.map(x => x.id);
+  assert.ok(ids.includes('novos_parados') && a.find(x => x.id === 'novos_parados').text.includes('Ana (7 dias)'), 'Ana criou há 7 dias e não mandou extrato; Bia só há 1 dia: ainda não');
+  assert.ok(!a.find(x => x.id === 'novos_parados').text.includes('Bia'));
+  assert.ok(!ids.includes('sumiram'), 'mais de 30 dias sem abrir já não é alarme diário');
+  assert.ok(ids.includes('ninguem_ontem')); assert.equal(a[0].level, 'vermelho', 'vermelhos primeiro');
+  assert.ok(ids.includes('erros') && ids.includes('robo_diario'));
+  const m = healthEmail({ people, opened_yesterday: 0, today }, a, { centralUrl: 'https://app.test/admin.html#funil' });
+  assert.match(m.subject, /^Pra Onde Foi · \d+ alarmes \(2 vermelhos\) · 17\/11$/); assert.match(m.html, /admin\.html#funil/); assert.match(m.text, /Mandaram o 1º extrato ou fatura: 2 \(50%\)/);
+  assert.equal(healthEmail({ people: [], today }, [], {}).subject, 'Pra Onde Foi · tudo em dia · 17/11');
+  // Someone that used the app and stopped 7 to 30 days ago.
+  const g = healthAlarms({ people: [{ ...people[2], last_seen: '2026-11-05' }], opened_yesterday: 1, today });
+  assert.match(g.find(x => x.id === 'sumiram').text, /Alguém da Família Lima \(12 dias\)/);
+});

@@ -65,6 +65,10 @@ async function addRoutes(t) {
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'entregas') return r.fulfill({ json: pushHealth([...Array(9).fill({ job: 'diario', ok: true, status: 201 }), { job: 'diario', ok: false, status: 410 }].map(l => ({ ...l, at: new Date(Date.now() - 3 * 36e5).toISOString() })), [{ job: 'diario', ok: true, at: new Date(Date.now() - 3 * 36e5).toISOString() }, { job: 'lembrete', ok: true, at: new Date(Date.now() - 80 * 36e5).toISOString() }]) });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'feedback') return r.fulfill({ json: FB_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'pesquisas') return r.fulfill({ json: [{ survey: 'nps', kind: 'mostrou', name: 'Ana', family: 'Família Teste', at: '2026-11-09T12:00:00Z' }, { survey: 'nps', kind: 'respondeu', score: 9, answers: { nota: 9, ajudou: ['previsao'], falta: 'Ler mais bancos e um texto bem comprido para ver se quebra a linha direitinho no celular sem empurrar a página' }, name: 'Ana', family: 'Família Teste', at: '2026-11-09T12:01:00Z' }] });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'funil') { const fl = await import('../../public/js/lib/funnel.js'); const h = { today: '2026-11-17', opened_yesterday: 1, errors_24h: 0, errors_top: [], people: [
+      { name: 'Luiz', family: 'Família Teste', household: 'h1', signed_up: '2026-09-01', first_import: '2026-09-02', months: 3, closed: true, week2: true, days_7: 4, last_seen: '2026-11-17' },
+      { name: 'Ana', family: 'Família Nova', household: 'h2', signed_up: '2026-11-12', first_import: null, months: 0, closed: false, week2: false, days_7: 1, last_seen: '2026-11-12' }] };
+      return r.fulfill({ json: { ...h, alarms: fl.healthAlarms(h, {}), lastEmail: null, emailReady: false } }); }
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'missoes') return r.fulfill({ json: [{ name: 'Família Teste', since: '2026-11-01T10:00:00Z', done: { fatura: '2026-11-02', extrato: '2026-11-02' } }, { name: 'Família Nova', since: '2026-11-05T10:00:00Z', done: {} }] });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'usage') return r.fulfill({ json: USE_FIXTURE });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'nav') return r.fulfill({ json: NAV_FIXTURE });
@@ -1239,6 +1243,10 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.selectOption('.svt select[data-k="plan"]', 'pago'); await ap.click('#svSave'); await ap.waitForSelector('.cfm'); await ap.click('.cfm [data-y]'); await ap.waitForTimeout(300);
   ok('central: matriz salva', adminStore.services?.items?.[0]?.plan === 'pago');
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-7-servicos.png'), fullPage: true });
+  await atab('funil'); await ap.waitForSelector('#aMain table');
+  const fx = (await ap.textContent('#aMain')).replace(/\s+/g, ' ');
+  ok('central: funil e alarmes mostra o funil, o alarme da pessoa nova parada, o próximo passo de cada um e o aviso da chave do e-mail', fx.includes('Mandaram o 1º extrato ou fatura1 · 50%') && fx.includes('1 pessoa nova parada') && fx.includes('Ana (5 dias)') && fx.includes('Mandar o 1º extrato ou fatura') && fx.includes('falta a chave RESEND_API_KEY'), fx.slice(0, 600));
+  if (shots) await ap.screenshot({ path: path.join(shots, 'admin-funil.png'), fullPage: true });
   await atab('missoes'); await ap.waitForSelector('#aMain table');
   ok('central: missões mostra o funil e cada família', (await ap.textContent('#aMain')).includes('2 famílias') && (await ap.textContent('#aMain')).includes('Mande a última fatura do cartão1 · 50%'), (await ap.textContent('#aMain')).slice(0, 300));
   await atab('mensagens'); await ap.waitForSelector('.msgcard');
@@ -1294,7 +1302,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
-  const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
+  const TABS = ['painel', 'funil', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
   // Besides the page not scrolling sideways, nothing may stick out of the screen (cut off) unless it sits in its own sideways scroll.
   const outside = () => ap.evaluate(() => { const W = innerWidth, bad = [];
     const scrolls = el => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };

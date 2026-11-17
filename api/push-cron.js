@@ -8,6 +8,7 @@ import { sendPush } from './_webpush.js';
 import { pushHealth, healthAlertMessage } from '../public/js/lib/pushhealth.js';
 import { linkFor } from '../public/js/lib/links.js';
 import { runHealth } from './health.js';
+import { dailyEmail } from './_email.js';
 
 // After the 9h robots: if a robot is late, failed or delivers badly, one push to the owner's devices (ADMIN_EMAILS),
 // opening the Central on "Avisos no celular". Best effort.
@@ -54,7 +55,9 @@ export default async function handler(req, res) {
     const server = await withRecorder({ supabaseUrl, serviceKey, job: 'servidor' }, async () => { const h = await runHealth({ supabaseUrl, serviceKey }); return { color: h.color, text: h.text, ...(h.color === 'vermelho' ? { error: h.text } : {}) }; }).catch(e => ({ color: 'vermelho', text: String(e.message || e) }));
     const extra = server.color === 'vermelho' ? [{ job: 'servidor', text: `Servidor: ${server.text}` }] : [];
     const health = await withRecorder({ supabaseUrl, serviceKey, job: 'saude', run: false }, () => healthCheck({ supabaseUrl, serviceKey, vapid, admins, extra })).catch(e => ({ error: String(e.message || e) }));
-    res.status(200).json({ ...daily, releases, server, health });
+    // The daily e-mail to the owner: funnel and alarms (api/_email.js). A failure is recorded, never blocks the rest.
+    const email = await withRecorder({ supabaseUrl, serviceKey, job: 'email' }, () => dailyEmail({ supabaseUrl, serviceKey, admins })).catch(e => ({ error: String(e.message || e) }));
+    res.status(200).json({ ...daily, releases, server, health, email });
   }
   catch (e) { res.status(500).json({ error: String(e.message || e) }); }
 }

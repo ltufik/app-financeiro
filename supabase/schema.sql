@@ -1087,3 +1087,31 @@ begin
 end $$;
 revoke all on function public.private_totals(uuid) from public, anon;
 grant execute on function public.private_totals(uuid) to authenticated;
+
+-- Funil por pessoa e o que alimenta os alarmes do e-mail diário (lib/funnel.js). Só o servidor chama.
+-- Nada de valores da família: só datas e contagens (quando entrou, quando mandou extrato, quantos meses, se fechou, quando abriu).
+create or replace function public.product_health()
+returns jsonb language sql security definer set search_path = public, auth as $$
+  with m1 as (select distinct on (user_id) user_id, household_id, display_name, created_at from members order by user_id, created_at),
+  ppl as (
+    select u.id, u.created_at as signed_up, m1.display_name as name, h.name as family, m1.household_id as household, m1.created_at as joined,
+      (select min(i.created_at) from imports i where i.household_id = m1.household_id and i.source in ('conta', 'cartao')) as first_import,
+      (select count(distinct t.month) from transactions t where t.household_id = m1.household_id and not t.manual) as months,
+      (coalesce(jsonb_typeof(h.settings->'closed'), '') = 'object' and h.settings->'closed' <> '{}'::jsonb) as closed,
+      (select max(a.day) from activity a where a.user_id = u.id) as last_seen,
+      (select count(*) from activity a where a.user_id = u.id and a.day > current_date - 7) as days_7,
+      exists (select 1 from activity a where a.user_id = u.id and a.day >= (u.created_at at time zone 'America/Sao_Paulo')::date + 7) as week2
+    from auth.users u left join m1 on m1.user_id = u.id left join households h on h.id = m1.household_id
+  )
+  select jsonb_build_object(
+    'people', (select coalesce(jsonb_agg(to_jsonb(ppl) order by ppl.signed_up desc), '[]'::jsonb) from ppl),
+    'errors_24h', (select count(*) from app_errors where at > now() - interval '24 hours'),
+    'errors_top', (select coalesce(jsonb_agg(jsonb_build_object('message', message, 'n', n, 'version', version) order by n desc), '[]'::jsonb)
+                   from (select message, max(version) as version, count(*) as n from app_errors where at > now() - interval '24 hours' group by message order by count(*) desc limit 5) e),
+    'opened_yesterday', (select count(distinct user_id) from activity where day = (now() at time zone 'America/Sao_Paulo')::date - 1),
+    'today', (now() at time zone 'America/Sao_Paulo')::date,
+    'at', now()
+  );
+$$;
+revoke all on function public.product_health() from public, anon, authenticated;
+grant execute on function public.product_health() to service_role;

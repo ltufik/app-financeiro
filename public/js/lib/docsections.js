@@ -470,6 +470,22 @@ Seguros (insuranceSummary):
 - O ano é o que foi pago dividido pelos meses com extrato, vezes 12, mais o seguro dentro do financiamento que a família informa (MIP e DFI).
 - Aviso no Início uma vez por ano. Pergunta se já usaram e lembra da assistência que muitos seguros já incluem. Tudo em settings.insurance.` };
 
+export const DOC_FUNIL = { id: 'funil_alarmes', title: 'Funil e alarmes (2.9)', body: `Central → Acompanhar → Funil e alarmes, e o mesmo conteúdo num e-mail diário para o Luiz às 9h.
+
+O funil (lib/funnel.js, com os dados de product_health no banco: só datas e contagens, nunca valores da família):
+1. Criaram a conta → 2. Entraram numa família → 3. Mandaram o 1º extrato ou fatura → 4. Têm 2 meses ou mais → 5. Fecharam um mês → 6. Voltaram na 2ª semana → 7. Usaram nos últimos 7 dias.
+Cada etapa conta só quem passou por ela e por todas as anteriores; entre parênteses, a conversão da etapa anterior. A tabela "Por pessoa" mostra o próximo passo de cada um, há quantos dias criou a conta e o último uso.
+
+Alarmes (healthAlarms, os mesmos na Central e no e-mail; vermelhos primeiro):
+- Pessoas novas paradas: conta de 2 a 30 dias, sem extrato nem fatura.
+- Pessoas que usavam e sumiram: mandaram extrato e não abrem há 7 a 30 dias.
+- Etapa fraca: da etapa 3 em diante, menos de 40% da etapa anterior (com 3 pessoas ou mais).
+- Ninguém abriu o app ontem.
+- Erros do app nas últimas 24 horas (vermelho com 5 ou mais), com as mensagens mais comuns e a versão.
+- Robôs e avisos no celular com problema (as mesmas regras de Avisos no celular).
+
+E-mail: api/_email.js, chamado pelo robô das 9h (api/push-cron.js), registrado em job_runs como "email". Usa o Resend: RESEND_API_KEY no Vercel (e MAIL_FROM se tiver domínio próprio; sem ele, o Resend só entrega no e-mail da própria conta). Sem a chave, o robô roda, registra o motivo e a Central avisa.` };
+
 export const DOC_COMBO = { id: 'combo_doc', title: 'Combo numa operadora (2.7)', body: `Quando a mesma casa tem internet ou TV numa operadora e celular em outra (lib/costs.js, comboChance), a tela "por casa" mostra "Pode sair mais barato" e leva às opções. Desde a 2.8, toda casa com conta de telefone, internet ou TV tem "Ver ofertas para esta casa" (houseChance): a mesma busca, por planos mais baratos com os mesmos serviços, inclusive provedores do bairro; o combo continua como destaque.
 O porquê do CEP aparece duas vezes: embaixo de cada casa ("Com o CEP desta casa, o app procura… que chegue nessa rua, inclusive provedores do bairro") e no topo da tela do CEP ("Para procurar… que chegue de verdade nessa casa, o app precisa do CEP. Sem ele, mostraria preços de outra cidade ou ofertas que não atendem a rua de vocês"), antes dos três motivos.
 

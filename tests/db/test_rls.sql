@@ -169,6 +169,15 @@ set role authenticated;
 \echo (o erro a seguir é esperado: pessoa logada não lê métricas)
 select public.product_metrics();
 reset role;
+set role service_role;
+select 'funil: o servidor lê o funil por pessoa, sem valores: ' || ((select jsonb_array_length(x->'people') >= 1 and not (x::text ~ 'amount') and (x->'people'->0) ? 'last_seen' from (select public.product_health() as x) y))::text;
+reset role;
+set role authenticated;
+\set ON_ERROR_STOP off
+\echo (o erro a seguir é esperado: pessoa logada não lê o funil)
+select public.product_health();
+\set ON_ERROR_STOP on
+reset role;
 
 -- Central do produto: só o servidor lê e escreve
 set role service_role;

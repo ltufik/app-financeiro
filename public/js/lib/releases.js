@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_FUNIL, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -572,4 +572,10 @@ export const RELEASES = [
     semTeste: 'Coberto pelo teste automático do combo (um imóvel só) e pelo caso combo_ofertas do caderno.' },
   { id: 'r2.8.0', version: 'v2.8.0', at: '2026-11-17T10:00:00Z', updateDocs: [DOC_COMBO], news: { id: 'n20261117f', title: 'Ofertas para cada casa', items: ['Em Revisão de custos → ver por casa, toda casa tem "Ver ofertas para esta casa": com o CEP, o app procura internet, TV ou celular mais baratos que cheguem na rua de vocês, inclusive provedores do bairro. Antes, isso só aparecia quando dava para juntar tudo numa operadora.', 'O app explica antes por que precisa do CEP: o preço e a fibra mudam de rua para rua.'] },
     addBacklog: [{ id: 'ofertas_por_casa', title: 'Ofertas para qualquer casa (não só combo), com o porquê do CEP na própria tela', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Quem tem tudo numa operadora, ou só internet, nunca via o CEP nem ofertas', from: ['combo_operadora'] }], backlog: ['ofertas_por_casa'] },
+  { id: 'r2.9.0', version: 'v2.9.0', at: '2026-11-17T12:00:00Z', addDocs: [DOC_FUNIL], semNovidade: 'Funil e alarmes na Central e e-mail diário só para o Luiz: nada muda para as famílias.',
+    semTeste: 'Só a Central e o e-mail do dono: coberto pelo teste automático (funil, alarmes e e-mail) e pelo e2e da Central.',
+    addBacklog: [
+      { id: 'funil_alarmes', title: 'Funil da jornada por pessoa e alarmes, na Central e num e-mail diário às 9h', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Poucos dados e nenhum aviso de quem empaca ou some: o time só descobre olhando a Central', from: [] },
+      { id: 'jornada_for_dummies', title: 'Revisão da jornada "for dummies": funções que aparecem ao terminar algo, nomes fáceis, muita comunicação e jornadas ligadas (sem procurar)', status: 'agora', origin: 'Luiz', effort: 'G', problem: 'Até quem pediu a função não acha (ex.: revisão de custos a 3 toques, dentro de um cartão fechado); pode ser por isso que as pessoas não continuam', from: ['funil_alarmes'] },
+    ], backlog: ['funil_alarmes'] },
 ];

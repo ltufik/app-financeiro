@@ -12,6 +12,7 @@ import { pricingCalc } from '../lib/pricing.js';
 import { FAQ, FAQ_TOPICS } from '../lib/faq.js';
 import { NEWS, replyTemplate, replyTitle } from '../lib/news.js';
 import { SCREENS, FLOWS, flowFunnel } from './flows.js';
+import { funnel, stageOf, daysSince, personName } from '../lib/funnel.js';
 import { buildSummary } from './summary.js';
 import { testText } from '../lib/pushinfo.js';
 import { RELEASES } from '../lib/releases.js';
@@ -28,7 +29,7 @@ import { SCENARIOS, PERSON, scenarioMessages, otherPushes } from './msgscenarios
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
-const TABS = ['painel', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
+const TABS = ['painel', 'funil', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -151,7 +152,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, opinioes, pesquisas, missoes, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, mapa, bench, preco, desenho, acesso })[t]($('#aMain'));
+  ({ painel, funil, opinioes, pesquisas, missoes, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, mapa, bench, preco, desenho, acesso })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -173,7 +174,7 @@ function labelTables(root) {
 // ---------- Side menu: three groups that open on click ----------
 const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV = [
-  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['missoes', 'Missões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
+  { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['funil', 'Funil e alarmes'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['missoes', 'Missões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
   { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['mensagens', 'Mensagens'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação'], ['mapa', 'Mapa dos dados']] },
   { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
   { id: 'conta', title: 'Sua conta', icon: IC('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), items: [['acesso', 'Acesso e segurança']] },
@@ -380,6 +381,24 @@ const fail = (el, title, e) => { el.innerHTML = `<div class="ahead"><h1>${title}
 const FB_KIND = { erro: 'Erro', ideia: 'Ideia', critica: 'Crítica', duvida: 'Dúvida' };
 const FB_STATUS = { novo: 'Nova', visto: 'Lida', backlog: 'No backlog', resolvido: 'Resolvida' };
 let fbKind = '', fbStatus = 'aberto', replyOpen = null;
+// Funil e alarmes: the journey of each person (product_health) and the alarms of the daily e-mail, with the same rules (lib/funnel.js).
+async function funil(el) {
+  el.innerHTML = '<div class="ahead"><h1>Funil e alarmes</h1></div><p class="small muted">Carregando...</p>';
+  let d; try { d = await getView('funil'); } catch (e) { return fail(el, 'Funil e alarmes', e); }
+  const ppl = d.people || [], f = funnel(ppl), t = d.today, le = d.lastEmail, ls = le?.summary || {};
+  const mail = !d.emailReady ? 'O e-mail diário ainda não sai: falta a chave RESEND_API_KEY no Vercel (resend.com → API Keys). Os alarmes abaixo são os mesmos que iriam no e-mail.'
+    : !le ? 'O e-mail diário sai todo dia às 9h, depois dos robôs. Ainda não saiu nenhum.'
+    : le.ok ? (ls.sent ? `Último e-mail: ${new Date(le.at).toLocaleString('pt-BR')} (${esc(ls.subject || '')}).` : `Último envio não saiu: ${esc(ls.reason || 'motivo desconhecido')}.`)
+    : `O último envio falhou (${new Date(le.at).toLocaleString('pt-BR')}): ${esc(ls.error || ls.value || '')}.`;
+  const row = p => { const st = stageOf(p), seen = daysSince(p.last_seen, t); return `<tr><td>${esc(personName(p))}</td><td>${esc(p.family || '—')}</td><td>${daysSince(p.signed_up, t)} dias</td><td>${st ? esc(st.label.replace(/^(Criaram|Entraram|Mandaram|Têm|Fecharam|Voltaram|Usaram)/, m => ({ Criaram: 'Criar', Entraram: 'Entrar', Mandaram: 'Mandar', Têm: 'Ter', Fecharam: 'Fechar', Voltaram: 'Voltar', Usaram: 'Usar' })[m])) : 'Fez tudo'}</td><td>${seen == null ? 'nunca' : seen === 0 ? 'hoje' : seen + ' dias'}</td><td>${+p.days_7 || 0}</td></tr>`; };
+  el.innerHTML = `<div class="ahead"><h1>Funil e alarmes</h1><span class="tiny muted">${ppl.length} pessoas · abriram ontem: ${+d.opened_yesterday || 0}</span></div>
+    <p class="small">${mail}</p>
+    <div class="panel stack"><h2>Alarmes de hoje</h2>${(d.alarms || []).length ? d.alarms.map(a => `<div class="alarm ${a.level}"><strong>${esc(a.title)}</strong><span class="small">${esc(a.text)}</span></div>`).join('') : '<p class="small">Nenhum alarme hoje.</p>'}</div>
+    <div class="panel stack"><h2>O funil da jornada</h2><p class="tiny muted">Cada etapa conta quem passou por ela e por todas as anteriores. Entre parênteses, quantos passaram da etapa anterior.</p>
+      ${f.map((x, i) => `<div class="tiny"><div style="display:flex;justify-content:space-between;gap:8px"><span>${i + 1}. ${esc(x.label)}</span><strong>${x.n} · ${x.pct}%${i ? ` (${x.conv}%)` : ''}</strong></div><div style="height:6px;border-radius:3px;background:var(--line)"><div style="height:6px;border-radius:3px;background:var(--accent);width:${x.pct}%"></div></div></div>`).join('')}</div>
+    <div class="panel"><h2>Por pessoa</h2><div class="tw"><table><thead><tr><th>Pessoa</th><th>Família</th><th>Desde</th><th>Próximo passo</th><th>Último uso</th><th>Dias na semana</th></tr></thead><tbody>${ppl.map(row).join('') || '<tr><td colspan="6">Ninguém ainda.</td></tr>'}</tbody></table></div></div>`;
+}
+
 // Missões: how many families did each mission (the funnel of the start) and where each family is.
 async function missoes(el) {
   el.innerHTML = '<div class="ahead"><h1>Missões</h1></div><p class="small muted">Carregando...</p>';
