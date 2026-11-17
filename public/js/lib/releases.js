@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -562,4 +562,9 @@ export const RELEASES = [
       { id: 'contas_casa_contexto', title: 'Contas de casa com contexto: contas separadas por operadora, perguntas (casa, serviço, parou, celular, provedor desconhecido) e a visão por casa', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Somar as cobranças da operadora no mês e avisar que subiu, sem entender que era outra casa ou a troca do débito para o cartão', from: ['custos_linhas_misturadas'] },
       { id: 'combo_operadora', title: 'Combo numa operadora: pedir o CEP, buscar ofertas reais (inclusive provedor do bairro), economia no ano e o site; se a busca falhar, dizer e indicar onde procurar', status: 'agora', origin: 'Luiz', effort: 'M', problem: 'Quem tem internet e TV numa operadora e celular em outra paga mais do que precisa e não sabe quanto economizaria', from: ['contas_casa_contexto'] },
     ], backlog: ['contas_casa_contexto'] },
+  { id: 'r2.7.0', version: 'v2.7.0', at: '2026-11-17T05:00:00Z', addDocs: [DOC_COMBO], news: { id: 'n20261117d', title: 'Combo de internet, TV e celular', items: [
+    'Quando a mesma casa tem internet ou TV numa operadora e celular em outra, o app mostra "Pode sair mais barato". Com o CEP da casa, ele procura ofertas reais nos sites das operadoras e de provedores do bairro, mostra quanto vocês economizam no ano e leva ao site.',
+    'Se não der para ver os preços, o app diz o motivo, mostra onde procurar e faz a conta da oferta que vocês digitarem. O CEP fica guardado só para as próximas buscas e dá para apagar na mesma tela.'] },
+    addBacklog: [{ id: 'combo_casa_padrao', title: 'Contas de casa: com um imóvel só, as contas já vão para ele (em vez de "Onde vocês moram")', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Família com um imóvel via "Onde vocês moram" e o nome do imóvel como duas casas', from: ['contas_casa_contexto'] }],
+    backlog: ['combo_operadora', 'combo_casa_padrao'] },
 ];

@@ -7,7 +7,9 @@ import { track } from './usage.js';
 import { toast, invalid, clearInvalid } from './ui.js';
 import { esc, brl, brl0, todayISO, mLong } from './lib/format.js';
 import { checkNumber } from './lib/validate.js';
-import { costsReview, costsNotice, insuranceSummary, insuranceNotice, INSURANCE_TYPES, SERVICES, houseList, houseName, servicesText } from './lib/costs.js';
+import { costsReview, costsNotice, insuranceSummary, insuranceNotice, INSURANCE_TYPES, SERVICES, houseList, houseName, servicesText,
+  comboChance, offerPrompt, cleanOffers, offerSavings, typedSavings, OPERATOR_SITES, COMPARE_SITE, cleanCep, fmtCep, OFFER_DAYS } from './lib/costs.js';
+import { searchJSON, aiErrorText } from './ai.js';
 
 export const familyCosts = () => costsReview({ txs: S.txs, idx: S.catIdx, settings: settings(), today: todayISO() });
 export const familyInsurance = () => insuranceSummary({ txs: S.txs, settings: settings(), today: todayISO(), debts: settings().debts || [] });
@@ -53,6 +55,7 @@ function draw() {
   if (view.startsWith('item:')) return drawItem(el, view.slice(5));
   if (view === 'perguntas' || view.startsWith('perguntar:')) return drawQuestion(el, view.startsWith('perguntar:') ? view.slice(10) : null);
   if (view === 'casas') return drawHouses(el);
+  if (view === 'combo' || view === 'cep') return drawCombo(el);
   drawList(el);
 }
 
@@ -207,7 +210,7 @@ function drawQuestion(el, only) {
     body = `<section class="rv-card"><span class="small muted">${esc(since)}</span>
       <h3 class="cs-q">${q.second ? `Apareceu uma segunda conta da ${esc(q.brand)}, de ${brl0(q.value)}. De onde ela é?` : `${name && !q.edit ? esc(name) + ', a' : 'A'} conta da ${esc(q.brand)} de ${brl0(q.value)} é de onde?`}</h3>
       ${q.payChange ? `<p class="small">Ela passou ${q.payChange.from === 'conta' ? 'do débito para o cartão' : 'do cartão para o débito'} em ${MES(q.payChange.month)}. O app já entendeu que é a mesma conta.</p>` : ''}
-      ${q.askHouse ? `<fieldset class="cs-fs"><legend>Casa</legend>${chipsHTML('house', hopts, q.house || (houses.length ? '' : 'principal'), false)}
+      ${q.askHouse ? `<fieldset class="cs-fs"><legend>Casa</legend>${chipsHTML('house', hopts, q.house || (houses.length === 1 ? houses[0] : houses.length ? '' : 'principal'), false)}
         <label class="f" id="csNewHouse" hidden>Nome da casa<input id="csHouseName" maxlength="40" placeholder="Ex.: Casa da praia"></label></fieldset>` : ''}
       <fieldset class="cs-fs"><legend>O que tem nela</legend>${chipsHTML('svc', Object.entries(SERVICES), q.services || [], true)}</fieldset></section>
       <div class="rv-acts"><button type="button" class="btn primary" id="csQSave">${only ? 'Salvar' : 'Continuar'}</button></div>`;
@@ -235,7 +238,7 @@ function drawQuestion(el, only) {
   wireChips(el, 'house', false); wireChips(el, 'svc', true); wireChips(el, 'op', false);
   const after = () => { if (only) return go(only === 'celular' ? 'casas' : 'item:' + only); asked++; draw(); };
   el.querySelector('#csQSave')?.addEventListener('click', async e => {
-    clearInvalid(el); const sv = picked(el, 'svc'); let house = q.askHouse ? picked(el, 'house')[0] : (q.house || 'principal');
+    clearInvalid(el); const sv = picked(el, 'svc'); let house = q.askHouse ? picked(el, 'house')[0] : (q.house || houses[0] || 'principal');
     if (q.askHouse && !house) return invalid(el.querySelector('[data-group="house"]'), 'De qual casa é esta conta?');
     if (house === '+') { const inp = el.querySelector('#csHouseName'), v = inp.value.trim(); if (v.length < 2) return invalid(inp, 'Dê um nome para a casa (ex.: Casa da praia).'); house = v; }
     if (!sv.length) return invalid(el.querySelector('[data-group="svc"]'), 'O que vem nesta conta? Escolha pelo menos um.');
@@ -267,7 +270,7 @@ function drawQuestion(el, only) {
 }
 
 function drawHouses(el) {
-  const c = familyCosts(), t = c.telecom, name = firstName(), mo = t.thenMonth ? MES(t.thenMonth) : '';
+  const c = familyCosts(), t = c.telecom, name = firstName(), mo = t.thenMonth ? MES(t.thenMonth) : '', ch = comboChance(c, settings());
   const cmp = t.diff >= 30 ? `${brl0(t.diff)} a menos por mês do que em ${mo} (${brl0(t.then)}): uns ${brl0(t.diff * 12)} a menos no ano.`
     : t.diff <= -30 ? `${brl0(-t.diff)} a mais por mês do que em ${mo} (${brl0(t.then)}).` : t.thenMonth && t.thenMonth < t.lastMonth ? `Quase igual a ${mo} (${brl0(t.then)}).` : '';
   const gone = x => ['cancelei', 'trocou'].includes(x.status) || !x.current;
@@ -279,10 +282,133 @@ function drawHouses(el) {
     ${c.questions.length ? `<button type="button" class="rv-card cs-save" id="csAsk"><strong>${c.questions.length === 1 ? 'Falta uma pergunta' : `Faltam ${c.questions.length} perguntas`}</strong><span class="small muted">Para separar as contas por casa e por serviço.</span></button>` : ''}
     ${t.houses.map(h => `<div class="rv-row cs-house"><strong>${esc(h.name)}</strong><span class="num">${brl0(h.total)}</span></div><div class="rv-card cs-list">${h.items.map(row).join('')}</div>`).join('')}
     ${!t.houses.length ? '<p class="small muted">Nenhuma conta de celular, internet ou TV nos últimos meses.</p>' : ''}
+    ${ch ? `<section class="rv-done cs-hero cs-combo"><span class="eyebrow cs-eb">Pode sair mais barato</span><strong>${esc(cap(servicesText([...new Set(ch.fixed.flatMap(x => x.services).filter(k => k !== 'celular'))])))} na ${esc([...new Set(ch.fixed.map(x => x.name))].join(' e '))}, celular na ${esc([...new Set(ch.mobile.map(x => x.name))].join(' e '))}. Juntar tudo numa operadora costuma ter desconto.</strong><button type="button" class="btn" id="csCombo">Ver opções para ${esc(ch.name)}</button></section>` : ''}
     <p class="tiny muted">Duas contas da mesma operadora são separadas pelo valor; mudar do débito para o cartão continua sendo a mesma conta. Toque numa conta para mudar a casa ou o serviço.</p>
   </main>`;
   el.querySelector('#csBack').onclick = () => go('lista');
   el.querySelector('#csAsk')?.addEventListener('click', () => go('perguntas'));
+  el.querySelector('#csCombo')?.addEventListener('click', () => { track('combo.abriu'); go('combo'); });
   el.querySelectorAll('[data-item]').forEach(b => b.onclick = () => go('item:' + b.dataset.item));
   track('custos.casas');
+}
+
+// ---------- Combo: the CEP first (and why), a search on the operators' sites, real offers or an honest "we could not" ----------
+let searching = null, lastResult = null;
+const fresh = at => at && Date.now() - Date.parse(at) < OFFER_DAYS * 864e5;
+const ddmm = iso => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`; };
+const EXT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>';
+
+function drawCombo(el) {
+  const c = familyCosts(), ch = comboChance(c, settings()); if (!ch) return go('casas');
+  const cs = settings().costs || {}, cep = (cs.ceps || {})[ch.house] || '', cache = (cs.offers || {})[ch.house];
+  if (searching) return drawSearching(el, ch, cep);
+  const res = lastResult && lastResult.house === ch.house && lastResult.cep === cep ? lastResult : (cache && cache.cep === cep && fresh(cache.at) ? cache : null);
+  if (view === 'combo' && cep && res) return drawOffers(el, ch, res);
+  drawCep(el, ch, cep);
+}
+
+function drawCep(el, ch, cep) {
+  const PIN = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+  const HOME = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M10 21v-6h4v6"/></svg>';
+  const LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  el.innerHTML = `${head('Opções para ' + ch.name)}<main class="rv-main">
+    <h3 class="cs-q">Primeiro, o CEP da casa</h3>
+    <section class="rv-card cs-why"><strong>Por que precisamos dele</strong>
+      <div class="cs-why-i">${PIN}<span class="small">O preço e a fibra mudam de rua para rua. Sem o CEP, o app mostraria ofertas que talvez nem cheguem aí.</span></div>
+      <div class="cs-why-i">${HOME}<span class="small">Com ele dá para achar também provedores do bairro, que muitas vezes custam menos que as grandes.</span></div>
+      <div class="cs-why-i">${LOCK}<span class="small">Guardamos só o CEP, ligado a ${esc(ch.name)}, para as próximas buscas. Vocês podem apagar quando quiserem.</span></div></section>
+    <label class="f">CEP<input id="csCep" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" value="${esc(fmtCep(cep))}"></label>
+    <div class="rv-acts"><button type="button" class="btn primary" id="csSearch">Buscar opções</button>${cep ? '<button type="button" class="linkbtn" id="csCepDel">Apagar o CEP</button>' : ''}</div>
+    <p class="tiny muted rv-foot">A busca olha os sites das operadoras e de provedores da região e pode levar até um minuto. Hoje vocês pagam ${brl(ch.pay)} por mês nessas contas.</p></main>`;
+  el.querySelector('#csBack').onclick = () => go('casas');
+  const inp = el.querySelector('#csCep');
+  inp.oninput = () => { const d = cleanCep(inp.value).slice(0, 8); inp.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; };
+  el.querySelector('#csSearch').onclick = async e => {
+    clearInvalid(el); const d = cleanCep(inp.value);
+    if (d.length !== 8) return invalid(inp, 'O CEP tem 8 números (ex.: 01310-100).');
+    e.target.disabled = true;
+    try { if (d !== cep) await saveCosts(cs => { cs.ceps = { ...(cs.ceps || {}), [ch.house]: d }; }); }
+    catch (err) { e.target.disabled = false; return toast('Não foi possível salvar agora. ' + db.errorText(err)); }
+    runSearch(ch, d);
+  };
+  el.querySelector('#csCepDel')?.addEventListener('click', async e => {
+    e.target.disabled = true;
+    try { await saveCosts(cs => { const c2 = { ...(cs.ceps || {}) }, o2 = { ...(cs.offers || {}) }; delete c2[ch.house]; delete o2[ch.house]; cs.ceps = c2; cs.offers = o2; }); lastResult = null; track('combo.apagou_cep'); toast('CEP apagado'); draw(); }
+    catch (err) { e.target.disabled = false; toast('Não foi possível apagar agora.'); }
+  });
+}
+
+function drawSearching(el, ch, cep) {
+  el.innerHTML = `${head('Opções para ' + ch.name)}<main class="rv-main"><section class="rv-card cs-wait" aria-live="polite"><span class="cs-spin" aria-hidden="true"></span>
+    <strong>Procurando ofertas para o CEP ${esc(fmtCep(cep))}</strong><span class="small muted">Olhando os sites das operadoras e dos provedores da região. Pode levar até um minuto.</span></section>
+    <div class="rv-acts"><button type="button" class="linkbtn" id="csStop">Cancelar</button></div></main>`;
+  el.querySelector('#csBack').onclick = () => { searching?.abort(); };
+  el.querySelector('#csStop').onclick = () => { searching?.abort(); };
+}
+
+async function runSearch(ch, cep) {
+  const ctrl = new AbortController(); searching = ctrl; view = 'combo'; draw();
+  let res;
+  try { res = { ...cleanOffers(await searchJSON(offerPrompt(ch, cep), { signal: ctrl.signal })), err: null }; }
+  catch (e) { res = { place: '', offers: [], tried: [], err: e.code || 'erro' }; }
+  searching = null;
+  if (res.err === 'cancelled') { track('combo.cancelou'); return go('cep'); }
+  lastResult = { ...res, house: ch.house, cep, at: new Date().toISOString() };
+  // Only a search that found offers is kept (7 days): a failed one is tried again next time.
+  if (res.offers.length) saveCosts(cs => { cs.offers = { ...(cs.offers || {}), [ch.house]: { cep, at: lastResult.at, place: res.place, offers: res.offers, tried: res.tried } }; }).catch(() => {});
+  const good = res.offers.some(o => (offerSavings(o, ch)?.month || 0) > 0);
+  track('combo.buscou'); track(good ? 'combo.achou' : 'combo.nao_achou');
+  if (document.getElementById('custos')) { view = 'combo'; draw(); }
+}
+
+function drawOffers(el, ch, res) {
+  const name = firstName(), rows = res.offers.map(o => ({ o, s: offerSavings(o, ch) })).filter(x => x.s && x.s.month > 0).sort((a, b) => b.s.year1 - a.s.year1);
+  if (!rows.length) return drawNoOffers(el, ch, res);
+  const what = x => `${x.name} (${servicesText(x.services)})`;
+  el.innerHTML = `${head(rows.length === 1 ? '1 opção para o ' + fmtCep(res.cep) : rows.length + ' opções para o ' + fmtCep(res.cep))}<main class="rv-main">
+    <p class="small">${name ? esc(name) + ', h' : 'H'}oje vocês pagam <strong>${brl(ch.pay)} por mês</strong>: ${esc(ch.items.map(x => `${x.name} ${servicesText(x.services)} (${brl0(x.last)})`).join(', '))}.</p>
+    ${rows.map(({ o, s }) => { const all = ch.services.every(k => o.services.includes(k)); return `<section class="rv-card cs-offer${all ? ' all' : ''}">
+      <div class="rv-row"><strong>${esc(o.operator)}${o.plan ? ' · ' + esc(o.plan) : ''}</strong>${all ? '<span class="rv-tag">Tudo junto</span>' : o.local ? '<span class="rv-tag warn">Local</span>' : ''}</div>
+      <div class="cs-price"><span class="num cs-big">${brl(o.price)}</span><span class="small muted">por mês${o.promoMonths ? ` nos ${o.promoMonths} primeiros meses` : ''}</span></div>
+      <span class="small muted">${[o.promoMonths ? `Depois, ${brl(o.priceAfter)}.` : '', cap(servicesText(o.services)) + (o.speed ? `, ${o.speed} Mega` : '') + (o.mobileLines ? `, ${o.mobileLines} ${o.mobileLines > 1 ? 'linhas' : 'linha'} de celular` : '') + '.', `No lugar de ${s.replaces.map(what).join(' e ')}.`].filter(Boolean).join(' ')}</span>
+      <div class="cs-gain"><strong>${brl0(s.year1)} a menos no primeiro ano</strong>${o.promoMonths ? `<span class="small muted">${s.after > 0 ? `Depois da promoção, ${brl0(s.after)} a menos por ano.` : 'Depois da promoção, fica mais caro que hoje: vale negociar antes de acabar.'}</span>` : `<span class="small muted">${brl0(s.month)} a menos por mês.</span>`}</div>
+      <a class="btn primary cs-site" href="${esc(o.url)}" target="_blank" rel="noopener noreferrer" data-op="${esc(o.operator)}">Ver no site ${o.local ? 'do provedor' : 'da ' + esc(o.operator)} ${EXT}</a></section>`; }).join('')}
+    <p class="tiny muted">Preços vistos nos sites em ${ddmm(res.at)}, para o CEP ${esc(fmtCep(res.cep))}${res.place ? ` (${esc(res.place)})` : ''}. Podem mudar: confirmem no site antes de contratar, e vejam quantas linhas de celular vêm no plano. O app não recebe nada das operadoras.</p>
+    <div class="rv-acts"><button type="button" class="btn" id="csAgain">Buscar de novo</button><button type="button" class="linkbtn" id="csCepEdit">Mudar o CEP</button></div></main>`;
+  wireResult(el, ch);
+}
+
+function drawNoOffers(el, ch, res) {
+  const name = firstName(), failed = res.tried.filter(t => !t.ok).map(t => t.site), some = res.offers.length;
+  const why = res.err ? `A busca não terminou: ${aiErrorText({ code: res.err }).toLowerCase().replace(/\.$/, '')}.`
+    : some ? `Achamos ${some === 1 ? 'uma oferta' : some + ' ofertas'}, mas nenhuma sai mais barata que os ${brl(ch.pay)} que vocês pagam hoje nessas contas.`
+    : failed.length ? `${failed.length === 1 ? 'O site' : 'Os sites'} ${failed.join(', ').replace(/, ([^,]*)$/, ' e $1')} não ${failed.length === 1 ? 'deixou' : 'deixaram'} consultar agora, e não achamos provedor do bairro com preço publicado.`
+    : 'Não achamos preço publicado para esse CEP.';
+  const sites = [...new Set([...ch.brands, 'Vivo', 'Claro', 'TIM'])].filter(b => OPERATOR_SITES[b]).map(b => [b + (b === 'Claro' ? ' Multi' : ''), OPERATOR_SITES[b]]);
+  el.innerHTML = `${head('Opções para o ' + fmtCep(res.cep))}<main class="rv-main">
+    <section class="rv-card"><h3 class="cs-q" id="csNoTitle">${name ? esc(name) + ', ' : ''}${some && !res.err ? 'as ofertas que achamos não saem mais baratas' : 'não conseguimos ver os preços de hoje'}</h3>
+      <span class="small">${esc(why)} Preferimos não chutar um valor.</span></section>
+    <section class="rv-card cs-list cs-links"><strong class="cs-lt">Onde procurar com o CEP de vocês</strong>
+      ${sites.map(([n, u]) => `<a class="cs-row" href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-op="${esc(n)}"><span>${esc(n)}</span>${EXT}</a>`).join('')}
+      <a class="cs-row" href="${esc(COMPARE_SITE.url)}" target="_blank" rel="noopener noreferrer" data-op="comparador"><span>${esc(COMPARE_SITE.name)}</span>${EXT}</a></section>
+    <section class="rv-card"><strong>Achou uma oferta? O app faz a conta</strong>
+      <label class="f">Preço por mês da oferta, com ${esc(servicesText(ch.services))} (R$)<input id="csTyped" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Ex.: 249,90"></label>
+      <button type="button" class="btn" id="csCalc">Calcular</button><p class="small" id="csTypedOut" aria-live="polite"></p>
+      <span class="small muted">Comparamos com os ${brl(ch.pay)} que vocês pagam hoje e mostramos a diferença no ano.</span></section>
+    <div class="rv-acts"><button type="button" class="btn primary" id="csAgain">Tentar de novo</button><button type="button" class="linkbtn" id="csCepEdit">Mudar o CEP</button></div></main>`;
+  wireResult(el, ch);
+  el.querySelector('#csCalc').onclick = () => {
+    clearInvalid(el); const inp = el.querySelector('#csTyped'), v = +String(inp.value).replace(',', '.'), er = checkNumber(v, { min: 1, max: 5000, label: 'O preço da oferta' });
+    if (er) return invalid(inp, er);
+    const s = typedSavings(v, ch), out = el.querySelector('#csTypedOut');
+    out.textContent = s.month > 0 ? `${brl0(s.month)} a menos por mês: ${brl0(s.year1)} a menos no ano.` : s.month < 0 ? `Sai ${brl0(-s.month)} mais caro por mês do que hoje.` : 'Sai o mesmo que hoje.';
+    track('combo.digitou');
+  };
+}
+const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
+function wireResult(el, ch) {
+  el.querySelector('#csBack').onclick = () => go('casas');
+  el.querySelector('#csAgain').onclick = () => { const cep = ((settings().costs || {}).ceps || {})[ch.house]; if (cep) runSearch(ch, cep); else go('cep'); };
+  el.querySelector('#csCepEdit').onclick = () => go('cep');
+  el.querySelectorAll('[data-op]').forEach(a => a.addEventListener('click', () => track('combo.site')));
 }

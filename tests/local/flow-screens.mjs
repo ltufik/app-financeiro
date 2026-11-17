@@ -106,7 +106,19 @@ await page.evaluate(async () => { const st = await import('/js/state.js'), add =
   for (const m of ['2026-05', '2026-06', '2026-07']) add(m, 'conta', 'CLARO', -89.9, 'Moradia e contas'); });
 await step('custos_perguntas', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('perguntas'); }); await page.waitForSelector('#custos .cs-q'); });
 await step('custos_casas', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('casas'); }); await page.waitForSelector('#csTelNow'); });
-await page.evaluate(async () => { const st = await import('/js/state.js'); st.S.txs = st.S.txs.filter(t => !t.telShot); document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); });
+// Combo (only on screen, nothing saved): the lines answered, the mobile line informed and a search kept for this house.
+// Offers from made-up operators: the screens show the layout, not real prices.
+await page.evaluate(async () => { const st = await import('/js/state.js'), m = await import('/js/costs.js'), c = m.familyCosts(), tel = c.items.filter(x => x.group === 'telefone' && x.current);
+  const house = (st.S.hh.settings.assets || [])[0]?.name || 'Apartamento da família', lines = Object.fromEntries(tel.map((x, i) => [x.key, { house, services: i ? ['internet'] : ['internet', 'tv'] }]));
+  window.__keep = st.S.hh.settings;
+  window.__offers = ok => ({ ...window.__keep, costs: { lines, celular: { status: 'informado', brand: 'TIM', value: 89.9 }, ceps: { [house]: '01310100' }, offers: { [house]: { cep: '01310100', at: new Date().toISOString(), place: 'Bela Vista, São Paulo (SP)', tried: [{ site: 'operadora-exemplo.com.br', ok: !!ok }],
+    offers: ok ? [{ operator: 'Operadora Exemplo', plan: 'Combo família', services: ['internet', 'tv', 'celular'], mobileLines: 2, speed: 500, price: 199.9, promoMonths: 12, priceAfter: 229.9, url: 'https://example.com', local: false }]
+      : [{ operator: 'Operadora Exemplo', plan: 'Combo família', services: ['internet', 'tv', 'celular'], mobileLines: 2, speed: 500, price: 399.9, promoMonths: 0, priceAfter: 399.9, url: 'https://example.com', local: false }] } } } });
+  st.S.hh.settings = window.__offers(true); });
+await step('combo_cep', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('cep'); }); await page.waitForSelector('#csCep'); });
+await step('combo_ofertas', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('combo'); }); await page.waitForSelector('#custos .cs-offer'); });
+await step('combo_sem', async () => { await page.evaluate(async () => { const st = await import('/js/state.js'), m = await import('/js/costs.js'); st.S.hh.settings = window.__offers(false); m.openCosts('combo'); }); await page.waitForSelector('#csNoTitle'); });
+await page.evaluate(async () => { const st = await import('/js/state.js'); st.S.hh.settings = window.__keep; st.S.txs = st.S.txs.filter(t => !t.telShot); document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); });
 await step('seguros', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('seguros'); }); await page.waitForSelector('#custos'); });
 await page.evaluate(() => { document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); });
 await step('inicio_mais', async () => { await page.evaluate(() => { ['fixos', 'patrimonio', 'sonho'].forEach(k => { const d = document.querySelector('#sum_' + k); if (d) d.open = true; }); }); }, { scrollTo: '#homeMore' });

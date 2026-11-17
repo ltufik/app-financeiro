@@ -871,3 +871,20 @@ body.noscroll{overflow:hidden}
 #custos .cs-chips .chip{min-height:44px;padding:0 16px;font-size:15px;font-weight:600}
 #custos .cs-house{padding:6px 4px 0}
 #custos .cs-house .num{font-weight:700;white-space:nowrap}
+#custos .cs-combo{gap:12px}
+#custos .cs-combo strong{font-size:17px;line-height:1.35}
+#custos .cs-combo .btn{align-self:stretch;justify-content:center;min-height:48px}
+#custos .cs-eb{color:var(--deep-soft);margin:0}
+#custos .cs-why-i{display:flex;gap:12px;align-items:flex-start}
+#custos .cs-why-i svg{flex:none;color:var(--accent);margin-top:1px}
+#custos #csCep{font-size:20px;font-weight:600;letter-spacing:.04em;min-height:52px}
+#custos .cs-wait{align-items:center;text-align:center;padding:32px 18px}
+#custos .cs-spin{width:36px;height:36px;border-radius:50%;border:4px solid var(--sunk);border-top-color:var(--accent);animation:csspin 1s linear infinite}
+@keyframes csspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#custos .cs-spin{animation-duration:3s}}
+#custos .cs-offer.all{border:2px solid var(--accent)}
+#custos .cs-price{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+#custos .cs-gain{background:var(--sunk);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+#custos .cs-site{justify-content:center;min-height:48px;gap:8px}
+#custos .cs-links .cs-lt{padding:12px 16px 4px}
+#custos a.cs-row{text-decoration:none;color:var(--accent);font-weight:600;min-height:48px}

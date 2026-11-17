@@ -470,6 +470,19 @@ Seguros (insuranceSummary):
 - O ano é o que foi pago dividido pelos meses com extrato, vezes 12, mais o seguro dentro do financiamento que a família informa (MIP e DFI).
 - Aviso no Início uma vez por ano. Pergunta se já usaram e lembra da assistência que muitos seguros já incluem. Tudo em settings.insurance.` };
 
+export const DOC_COMBO = { id: 'combo_doc', title: 'Combo numa operadora (2.7)', body: `Quando a mesma casa tem internet ou TV numa operadora e celular em outra (lib/costs.js, comboChance), a tela "por casa" mostra "Pode sair mais barato" e leva às opções.
+
+1. O CEP primeiro, com o porquê: o preço e a fibra mudam de rua para rua; o CEP acha provedores do bairro; o app guarda só o CEP, ligado à casa (settings.costs.ceps), e dá para apagar.
+2. A busca é feita na hora, no servidor (api/ai.js com a busca na internet da Anthropic; a chave nunca vai para o celular): o pedido (offerPrompt) traz o CEP e o que a família paga hoje nessas contas, sem nome nem e-mail, e exige preços vistos numa página com o endereço dela. Busca longa continua em outro pedido ("pause_turn"), para caber no limite do servidor.
+3. O que volta é conferido (cleanOffers): sem página https, sem preço ou com preço fora de R$ 20 a R$ 3.000, a oferta não entra. No máximo 4.
+4. A economia é conta do app (offerSavings): a oferta substitui as contas cujos serviços ela cobre por inteiro (só internet não substitui internet e TV). Mostra o mês, o primeiro ano (com os meses de promoção) e o depois da promoção. Só aparecem as que saem mais baratas.
+5. Cada oferta tem o botão para o site, a data da consulta e o aviso: "Podem mudar: confirmem no site antes de contratar. O app não recebe nada das operadoras."
+6. Achou e deu certo: guardado por 7 dias por casa (settings.costs.offers). Falhou: não guarda, para tentar de novo.
+7. Não achou: a tela diz o motivo (a busca não terminou, os sites não deixaram consultar, nenhuma oferta mais barata, ou nenhum preço publicado), "preferimos não chutar um valor", os links das operadoras e de um comparador pelo CEP, e o campo para digitar o preço de uma oferta (typedSavings).
+
+Privacidade: a página Sobre o app diz que o CEP e as ofertas ficam guardados e o que vai para a busca.
+Próximo passo possível: parceria com operadoras (preço exato do endereço; backlog parcerias_e_servicos).` };
+
 export const DOC_DESIGN = { id: 'claude_design_doc', title: 'Claude Design: design system e mapa do app', body: `O jeito do app e as telas ficam no Claude Design, além do código:
 
 - Design system "Pra Onde Foi": https://claude.ai/artifact/7WXbMJPSgXEjiyMZZEExix. Cores dos temas claro e escuro, tipografia, espaços e cantos (tirados de public/css/app.css), 13 componentes com a regra de uso, o ícone e o guia do jeito de falar (nome, "vocês", manual de mensagens, valores e datas).

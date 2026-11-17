@@ -39,6 +39,19 @@ export async function askJSON(prompt, { tier = 'default', images = [], maxTokens
   return parseJSON(textOf(msg));
 }
 
+// A request that searches the web on the server side (operators' sites) and must come back as JSON. A long search
+// pauses (stop_reason "pause_turn"): it is continued in a new request, so each one fits the server's time limit.
+export async function searchJSON(prompt, { signal, maxUses = 5, tier = 'default' } = {}) {
+  const tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: maxUses, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } }];
+  const conv = [{ role: 'user', content: prompt }];
+  for (let turn = 0; turn < 4; turn++) {
+    const msg = await call({ tier, max_tokens: 6000, messages: conv, tools }, signal);
+    if (msg.stop_reason !== 'pause_turn') return parseJSON(textOf(msg));
+    conv.push({ role: 'assistant', content: msg.content });
+  }
+  throw new AIError('timeout');
+}
+
 // Conversation with tools that run in the page. tools: [{name, description, input_schema, execute(input)}]
 export async function chat({ system, messages, tools = [], tier = 'default', signal, onStep }) {
   const defs = tools.map(({ name, description, input_schema }) => ({ name, description, input_schema }));
@@ -70,5 +83,6 @@ export function aiErrorText(e) {
     cancelled: 'Interrompido.',
     network: 'Sem conexão. Verifique a internet.',
     bad_json: 'A resposta veio incompleta. Tente de novo.',
+    timeout: 'A busca demorou demais.',
   })[e && e.code] || 'Não deu para responder agora. Tente de novo.';
 }

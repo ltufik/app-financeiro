@@ -120,6 +120,7 @@ export function render(el) {
     <ul class="small">
       <li>Os lançamentos, as categorias, as metas e os ajustes da sua família. Só quem está na família vê. O que você marca como "Só meu" (um lançamento, uma fatura ou um extrato) só você vê; o resto da família vê apenas o total do mês.</li>
       <li>De cada nota fiscal, só os itens e valores lidos. A foto não fica guardada.</li>
+      <li>O CEP de cada casa, só se vocês pedirem as opções de combo de internet, TV e celular, e as ofertas achadas na busca (por 7 dias). Para buscar, o CEP e o que vocês pagam nessas contas vão para a busca nos sites das operadoras, sem nome nem e-mail. Dá para apagar o CEP na mesma tela.</li>
       <li>De cada pessoa, os dias em que abriu o app e quais telas e botões usou e por quanto tempo (por exemplo, "lançou por voz"), e os erros que aparecerem, para saber o que ajuda e o que melhorar. Nunca valores nem o que foi escrito.</li>
       <li>As opiniões e dúvidas que você mandar, com a tela em que estava e o tipo de celular, e as respostas às pesquisas de satisfação (opções e textos curtos, nunca valores).</li>
     </ul>

@@ -29,7 +29,8 @@ export default async function handler(req, res) {
   const model = body.tier === 'quick' ? (process.env.CLAUDE_MODEL_QUICK || 'claude-haiku-5-5') : (process.env.CLAUDE_MODEL || 'claude-sonnet-5-5');
   const payload = { model, max_tokens: Math.min(+body.max_tokens || 4000, 16000), messages: body.messages };
   if (body.system) payload.system = String(body.system);
-  if (Array.isArray(body.tools) && body.tools.length) payload.tools = body.tools;
+  // Web search (offers for a CEP) runs on Anthropic's side: a few searches per call at most.
+  if (Array.isArray(body.tools) && body.tools.length) payload.tools = body.tools.map(t => String(t?.type || '').startsWith('web_search') ? { type: t.type, name: 'web_search', max_uses: Math.min(+t.max_uses || 4, 6), ...(t.user_location ? { user_location: t.user_location } : {}) } : t);
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {

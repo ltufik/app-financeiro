@@ -164,7 +164,8 @@ export function telecomLines({ txs = [], idx = new Map(), settings = {} }) {
     const extras = [];
     const real = lines.filter(L => { const p = L.points; if (p.length > 1 || p[0].month >= (latest[p[0].w] || p[0].month)) return true; extras.push({ month: p[0].month, value: p[0].value }); return false; });
     for (const L of real) {
-      const p = L.points, a = p[0], z = p[p.length - 1], key = `${brand}@${a.month}`, cx = ctx[key] || {};
+      // Two lines that start in the same month: the second one also carries its first value, so the answers stay apart.
+      const p = L.points, a = p[0], z = p[p.length - 1], k0 = `${brand}@${a.month}`, key = out.some(o => o.key === k0) ? `${k0}~${Math.round(a.value)}` : k0, cx = ctx[key] || {};
       const ch = p.findIndex((x, i) => i && x.source !== p[i - 1].source), vals = p.map(x => x.value);
       const ms = new Set(p.map(x => x.month));
       out.push({ key, brand, points: p.map(x => ({ month: x.month, value: x.value, source: x.source })), startMonth: a.month, lastMonth: z.month, first: a.value, last: z.value,
@@ -192,8 +193,8 @@ export function telecomSummary(items = [], settings = {}) {
   const seen = r2(seenItems.reduce((a, x) => a + x.last, 0)), now = r2(cur.reduce((a, x) => a + x.last, 0));
   const lastMonth = months[months.length - 1] || null;
   const hs = new Map();
-  const many = houseList(settings).length > 1;
-  for (const x of tel) { const off = !x.current || gone(x.status), h = x.house || (many || off ? null : 'principal'), k = h || (off ? '-' : '?'); const e = hs.get(k) || { house: h, name: h ? houseName(h) : off ? 'Contas que pararam' : 'Sem casa ainda', total: 0, items: [] }; e.items.push(x); if (x.current && !gone(x.status)) e.total = r2(e.total + x.last); hs.set(k, e); }
+  const hl = houseList(settings), many = hl.length > 1;
+  for (const x of tel) { const off = !x.current || gone(x.status), h = x.house || (many || off ? null : (hl[0] || 'principal')), k = h || (off ? '-' : '?'); const e = hs.get(k) || { house: h, name: h ? houseName(h) : off ? 'Contas que pararam' : 'Sem casa ainda', total: 0, items: [] }; e.items.push(x); if (x.current && !gone(x.status)) e.total = r2(e.total + x.last); hs.set(k, e); }
   return { now, seen, then, thenMonth, lastMonth, diff: thenMonth && thenMonth < lastMonth ? r2(then - seen) : 0, count: cur.length, houses: [...hs.values()].sort((a, b) => (a.house ? 0 : 1) - (b.house ? 0 : 1) || b.total - a.total) };
 }
 
@@ -300,3 +301,84 @@ export function insuranceNotice(s, name = '', today) {
   const n = String(name || '').trim().split(/\s+/)[0], hi = n ? n + ', ' : '', R0 = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
   return { title: `${hi}vocês pagam uns ${R0(s.yearWithFinancing)} por ano em seguros`, text: `São ${s.items.length} ${s.items.length > 1 ? 'seguros' : 'seguro'} no extrato e na fatura, ${R0(s.paid)} nos últimos ${s.monthsCovered} meses. Já usaram algum? Muitos têm assistência que já está paga.`, action: 'Ver os seguros' };
 }
+
+// ---------- Combo: internet/TV in one operator and mobile in another, in the same house ----------
+export const OPERATOR_SITES = { Vivo: 'https://www.vivo.com.br/para-voce/produtos-e-servicos/combos', Claro: 'https://www.claro.com.br/multi', TIM: 'https://www.tim.com.br', Oi: 'https://www.oi.com.br' };
+export const COMPARE_SITE = { name: 'Minha Conexão (compara provedores pelo CEP)', url: 'https://www.minhaconexao.com.br' };
+export const cleanCep = v => String(v || '').replace(/\D/g, '');
+export const fmtCep = v => { const d = cleanCep(v); return d.length === 8 ? d.slice(0, 5) + '-' + d.slice(5) : d; };
+export const OFFER_DAYS = 7;
+
+/*
+  comboChance(c, settings) -> { house, name, fixed: [items with internet or TV], mobile: [items with celular], pay, brands } | null
+  The first house (by what it pays) where internet/TV and the mobile lines are with different operators. The mobile line the
+  family informed (no house) goes with the house that has internet.
+*/
+export function comboChance(c, settings = {}) {
+  if (!c?.telecom) return null;
+  const gone = s => s === 'cancelei' || s === 'trocou', has = (x, k) => (x.services || []).includes(k);
+  const manualCel = c.items.filter(x => x.manual && x.current && !gone(x.status));
+  for (const h of c.telecom.houses.filter(h => h.house)) {
+    const cur = h.items.filter(x => x.current && !gone(x.status));
+    const fixed = cur.filter(x => has(x, 'internet') || has(x, 'tv'));
+    if (!fixed.length) continue;
+    const firstFixedHouse = c.telecom.houses.find(o => o.house && o.items.some(x => x.current && !gone(x.status) && (has(x, 'internet') || has(x, 'tv'))));
+    const mobile = [...cur.filter(x => has(x, 'celular') && !fixed.includes(x)), ...(firstFixedHouse === h ? manualCel.filter(x => !x.house) : []), ...manualCel.filter(x => x.house === h.house)];
+    if (!mobile.length) continue;
+    const fb = new Set(fixed.map(x => x.name)), mb = new Set(mobile.map(x => x.name));
+    if ([...fb].some(b => mb.has(b))) continue;
+    const items = [...fixed, ...mobile];
+    return { house: h.house, name: h.name, fixed, mobile, items, pay: r2(items.reduce((a, x) => a + x.last, 0)), brands: [...new Set(items.map(x => x.name))], services: [...new Set(items.flatMap(x => x.services || []))] };
+  }
+  return null;
+}
+
+// What the search is asked (the server searches the operators' sites and local providers for this CEP).
+export function offerPrompt(chance, cep) {
+  const lines = chance.items.map(x => `- ${x.name}: ${servicesText(x.services)}, R$ ${x.last.toFixed(2).replace('.', ',')} por mês`).join('\n');
+  return `Pesquise ofertas atuais de planos para uma casa no CEP ${fmtCep(cep)} (Brasil).
+Hoje a família paga:
+${lines}
+Total: R$ ${chance.pay.toFixed(2).replace('.', ',')} por mês.
+
+Procure combos que juntem ${servicesText(chance.services)} numa só operadora (Vivo, Claro, TIM, Oi e outras que atendam esse CEP) e também provedores locais ou regionais que atendam esse CEP ou bairro.
+Regras:
+- Só preços que você viu numa página desta pesquisa, com o endereço (url) dessa página. Nunca estime nem invente.
+- Preço mensal em reais. Se o preço é promocional por alguns meses, diga quantos meses e o preço depois.
+- Se um site não abriu ou não mostrou preço, registre em "tentativas".
+- No máximo 4 ofertas.
+Responda só com JSON neste formato:
+{"local":{"bairro":"","cidade":"","uf":""},"ofertas":[{"operadora":"","plano":"","servicos":["internet","tv","celular"],"linhasCelular":0,"velocidadeMega":0,"preco":0,"mesesPromo":0,"precoDepois":0,"url":"https://...","local":false}],"tentativas":[{"site":"","ok":true,"motivo":""}]}`;
+}
+
+// The search answer, checked: only offers with a price and the page they came from; nothing invented gets through.
+export function cleanOffers(raw = {}) {
+  const num = v => { const n = typeof v === 'string' ? +v.replace(/[^\d,.]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.') : +v; return Number.isFinite(n) ? n : 0; };
+  const okUrl = u => { try { const x = new URL(String(u)); return x.protocol === 'https:' && x.hostname.includes('.'); } catch (e) { return false; } };
+  const svc = a => [...new Set((Array.isArray(a) ? a : []).map(s => String(s).toLowerCase()).map(s => s.startsWith('cel') || s.startsWith('móv') || s.startsWith('mov') ? 'celular' : s.startsWith('int') || s.includes('fibra') || s.includes('banda') ? 'internet' : s === 'tv' || s.startsWith('tv') ? 'tv' : s.startsWith('fix') || s.startsWith('tel') ? 'fixo' : '').filter(Boolean))];
+  const offers = (Array.isArray(raw.ofertas) ? raw.ofertas : []).map(o => {
+    const price = r2(num(o.preco)), months = Math.max(0, Math.min(36, Math.round(num(o.mesesPromo)))), after = r2(num(o.precoDepois));
+    return { operator: String(o.operadora || '').trim().slice(0, 40), plan: String(o.plano || '').trim().slice(0, 80), services: svc(o.servicos), mobileLines: Math.round(num(o.linhasCelular)) || 0,
+      speed: Math.round(num(o.velocidadeMega)) || 0, price, promoMonths: months && after > price ? months : 0, priceAfter: months && after > price ? after : price, url: String(o.url || ''), local: !!o.local };
+  }).filter(o => o.operator && o.price >= 20 && o.price <= 3000 && okUrl(o.url) && o.services.length).slice(0, 4);
+  const tried = (Array.isArray(raw.tentativas) ? raw.tentativas : []).map(t => ({ site: String(t.site || '').slice(0, 60), ok: !!t.ok, why: String(t.motivo || '').slice(0, 120) })).filter(t => t.site).slice(0, 8);
+  const l = raw.local || {};
+  return { place: [l.bairro, l.cidade && l.uf ? `${l.cidade} (${l.uf})` : l.cidade].filter(Boolean).map(s => String(s).slice(0, 60)).join(', '), offers, tried };
+}
+
+/*
+  offerSavings(offer, chance) -> { replaces (items the offer covers), pay (what they pay for those), month (pay - price),
+    year1 (first 12 months, with the promotional months), after (per year after the promotion) } | null when it covers nothing.
+  An offer replaces the lines whose services it has all of (internet-only does not replace internet and TV).
+*/
+export function offerSavings(offer, chance) {
+  if (!offer || !chance) return null;
+  const replaces = chance.items.filter(x => (x.services || []).length && x.services.every(s => offer.services.includes(s)));
+  if (!replaces.length) return null;
+  const pay = r2(replaces.reduce((a, x) => a + x.last, 0)), pm = Math.min(12, offer.promoMonths || 0);
+  const year1 = r2(pay * 12 - (offer.price * pm + offer.priceAfter * (12 - pm)));
+  return { replaces, pay, month: r2(pay - offer.price), year1, after: r2((pay - offer.priceAfter) * 12) };
+}
+
+// The family typed a price they found: the same account for one offer that replaces everything in the combo.
+export const typedSavings = (price, chance) => offerSavings({ services: chance?.services || [], price: +price || 0, priceAfter: +price || 0, promoMonths: 0 }, chance);

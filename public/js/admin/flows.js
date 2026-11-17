@@ -17,6 +17,9 @@ export const SCREENS = {
   custos: { title: 'Revisão de custos', where: 'Card no Início ou Início → Assinaturas e custos fixos', key: ['custos.abriu', 'custos.abriu_inicio'] },
   custos_perguntas: { title: 'Contas de casa: perguntas rápidas', where: 'Card do Início, Revisão de custos ou a missão "Conte de onde é cada conta"', key: ['custos.contexto', 'custos.trocou', 'custos.celular'] },
   custos_casas: { title: 'Telefone, internet e TV por casa', where: 'Revisão de custos → ver por casa (e no fim das perguntas)', key: 'custos.casas' },
+  combo_cep: { title: 'Combo: o CEP primeiro, com o porquê', where: 'Revisão de custos → ver por casa → Pode sair mais barato', key: 'combo.abriu' },
+  combo_ofertas: { title: 'Combo: ofertas reais, economia no ano e o site', where: 'Depois da busca pelo CEP', key: ['combo.achou', 'combo.site'] },
+  combo_sem: { title: 'Combo: a busca não achou (o motivo e onde procurar)', where: 'Depois da busca pelo CEP, quando não há preço ou nenhuma oferta é mais barata', key: ['combo.nao_achou', 'combo.digitou'] },
   seguros: { title: 'Seguros: quanto pagam e se já usaram', where: 'Aviso anual no Início ou Revisão de custos → Seguros', key: ['seguros.abriu', 'seguros.abriu_inicio'] },
   revisar: { title: 'Caixa a revisar (um por vez)', where: 'Início: linha "N para revisar" ou o aviso de domingo', key: ['revisao.abriu', 'revisao.abriu_aviso'] },
   retro_evolucao: { title: 'Retrospectiva: evolução e onde melhorar', where: 'Telas da retrospectiva, antes do nível', key: 'retro.ano' },
@@ -85,7 +88,7 @@ export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
     { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
-    { title: 'Dentro das abas', screens: ['inicio_mais', 'revisar', 'custos', 'custos_perguntas', 'custos_casas', 'seguros', 'retro_evolucao', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
+    { title: 'Dentro das abas', screens: ['inicio_mais', 'revisar', 'custos', 'custos_perguntas', 'custos_casas', 'combo_cep', 'combo_ofertas', 'combo_sem', 'seguros', 'retro_evolucao', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_gastos_ano', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
     { title: 'Lançar sem abrir o app', screens: ['menu_applepay', 'lancar_comprovante'] },
     { title: 'Opinião e dúvidas', screens: ['opiniao_confirmar', 'opiniao_enviada', 'duvidas_resposta'] },
@@ -127,6 +130,9 @@ export const FLOWS = [
     st('custos_perguntas', 'Perguntas rápidas: casa e serviço de cada conta, a que parou (cancelaram ou trocaram?) e o celular', 'custos.contexto'),
     st('custos_casas', 'Por casa e por serviço, com o total de antes e de agora', 'custos.casas'), st('custos', 'Lista por grupo, cada conta: Vou rever, Cancelei ou Manter', 'custos.cancelei'),
     st('seguros', 'Seguros: total no ano, seguro do financiamento e "já usaram?"', 'seguros.nunca_usou')] },
+  { id: 'combo', title: 'Combo numa operadora', desc: 'Internet e TV numa operadora e celular em outra: o CEP, a busca nos sites e a economia no ano; ou, se a busca falhar, onde procurar.', steps: [
+    st('custos_casas', '"Pode sair mais barato": internet e TV na Vivo, celular na TIM', 'combo.abriu'), st('combo_cep', 'O CEP primeiro, com o porquê (preço por rua, provedores do bairro, só o CEP fica guardado)', 'combo.buscou'),
+    st('combo_ofertas', 'Ofertas com preço, promoção, economia no primeiro ano e o botão para o site', 'combo.site'), st('combo_sem', 'Se não achar: o motivo, onde procurar e a conta da oferta digitada', 'combo.digitou')] },
   { id: 'fechar', title: 'Fechar o mês', desc: 'O ritual mensal que faz a família voltar.', steps: [
     st('inicio', 'Cartão "Hora de fechar o mês"', null), st('fechar', 'Confere o que falta, vê a retrospectiva e fecha')] },
   { id: 'gastos_ano', title: 'Gastos do ano: IPVA, IPTU e escola sem susto', desc: 'O app acha no histórico, a família confirma, e ele mostra o calendário, quanto separar por mês e se vale pagar à vista ou parcelar.', steps: [

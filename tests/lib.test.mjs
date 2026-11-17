@@ -1616,6 +1616,38 @@ test('contas de casa: separa as contas da operadora, entende débito para cartã
   assert.ok(!c5.questions.some(q => q.kind === 'desconhecido'));
 });
 
+test('combo: só quando internet/TV e celular estão em operadoras diferentes; ofertas só com preço e página; economia no ano', async () => {
+  const { costsReview, comboChance, cleanOffers, offerSavings, typedSavings, offerPrompt, cleanCep, fmtCep } = await import('../public/js/lib/costs.js');
+  const idx = new Map([['Moradia e contas', { grp: 'dia' }]]);
+  const txs = []; ['2026-07', '2026-08', '2026-09'].forEach(m => { txs.push({ id: 'a' + m, month: m, source: 'cartao', description: 'CONTA VIVO', amount: 220, category: 'Moradia e contas' }); txs.push({ id: 'b' + m, month: m, source: 'cartao', description: 'CONTA VIVO', amount: 100, category: 'Moradia e contas' }); });
+  const base = { assets: [{ name: 'Apartamento de São Paulo', value: 1 }, { name: 'Casa de Guaratuba', value: 1 }], costs: { lines: { 'Vivo@2026-07': { house: 'Apartamento de São Paulo', services: ['internet', 'tv'] }, 'Vivo@2026-08': { house: 'Casa de Guaratuba', services: ['internet'] } } } };
+  const c0 = costsReview({ txs, idx, settings: base, today: '2026-10-05' });
+  assert.equal(comboChance(c0, base), null, 'sem celular: nada de combo');
+  const keys = c0.items.filter(x => x.group === 'telefone').map(x => x.key), big = c0.items.find(x => x.last === 220).key, small = c0.items.find(x => x.last === 100).key;
+  const st = { ...base, costs: { lines: { [big]: { house: 'Apartamento de São Paulo', services: ['internet', 'tv'] }, [small]: { house: 'Casa de Guaratuba', services: ['internet'] } }, celular: { status: 'informado', brand: 'TIM', value: 110 } } };
+  assert.equal(keys.length, 2);
+  const c = costsReview({ txs, idx, settings: st, today: '2026-10-05' }), ch = comboChance(c, st);
+  assert.equal(ch.house, 'Apartamento de São Paulo', 'o celular informado vai com a casa que tem internet e TV');
+  assert.equal(ch.pay, 330); assert.deepEqual(ch.brands.sort(), ['TIM', 'Vivo']); assert.deepEqual(ch.services.sort(), ['celular', 'internet', 'tv']);
+  assert.equal(comboChance(costsReview({ txs, idx, settings: { ...st, costs: { ...st.costs, celular: { status: 'informado', brand: 'Vivo', value: 110 } } }, today: '2026-10-05' }), st), null, 'tudo na Vivo: nada de combo');
+  assert.match(offerPrompt(ch, '01310100'), /CEP 01310-100/); assert.match(offerPrompt(ch, '01310100'), /Nunca estime nem invente/);
+  assert.equal(cleanCep('01310-100'), '01310100'); assert.equal(fmtCep('01310100'), '01310-100');
+  const r = cleanOffers({ local: { bairro: 'Bela Vista', cidade: 'São Paulo', uf: 'SP' }, ofertas: [
+    { operadora: 'Vivo', plano: 'Vivo Total', servicos: ['Internet fibra', 'TV', 'Celular'], linhasCelular: 2, preco: 'R$ 249,90', mesesPromo: 12, precoDepois: 289.9, url: 'https://www.vivo.com.br/x' },
+    { operadora: 'Provedor do bairro', plano: '600 Mega', servicos: ['internet'], preco: 99.9, url: 'https://provedor.com.br', local: true },
+    { operadora: 'Sem página', servicos: ['internet'], preco: 80, url: '' },
+    { operadora: 'Inventada', servicos: ['internet'], preco: 5, url: 'https://x.com.br' },
+    { operadora: 'Sem http', servicos: ['internet'], preco: 90, url: 'http://inseguro.com.br' }], tentativas: [{ site: 'claro.com.br', ok: false, motivo: 'não abriu' }] });
+  assert.deepEqual(r.offers.map(o => o.operator), ['Vivo', 'Provedor do bairro'], 'sem página, preço absurdo ou sem https: fora');
+  assert.equal(r.offers[0].price, 249.9); assert.equal(r.offers[0].promoMonths, 12); assert.deepEqual(r.offers[0].services, ['internet', 'tv', 'celular']);
+  assert.equal(r.place, 'Bela Vista, São Paulo (SP)'); assert.equal(r.tried[0].ok, false);
+  const s1 = offerSavings(r.offers[0], ch);
+  assert.equal(s1.pay, 330); assert.equal(s1.month, 80.1); assert.equal(s1.year1, 961.2); assert.equal(s1.after, 481.2);
+  assert.equal(offerSavings(r.offers[1], ch), null, 'só internet não substitui internet e TV');
+  assert.equal(typedSavings(300, ch).year1, 360);
+  assert.deepEqual(cleanOffers(null ?? {}), { place: '', offers: [], tried: [] });
+});
+
 test('seguros: soma por seguradora nos últimos 12 meses, o ano estimado e o seguro dentro do financiamento', async () => {
   const { insuranceSummary, insuranceNotice, insuranceType } = await import('../public/js/lib/costs.js');
   assert.equal(insuranceType('ZS SEG RESIDENCI- JAN/26'), 'casa'); assert.equal(insuranceType('BRADESCO AUT*08DE'), 'carro'); assert.equal(insuranceType('PRUDENT*APOL0007'), 'vida');

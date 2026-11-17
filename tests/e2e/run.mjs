@@ -122,7 +122,7 @@ await page.addInitScript(fakePush);
 
 const txt2 = (p, sel) => p.textContent(sel).then(t => (t || '').trim());
 let chatCalls = 0, window_pushTests = 0, AI_DOC = null; const notifies = [];
-let failPart2 = true;
+let failPart2 = true, comboFail = false, comboCalls = 0;
 function aiMock(b) {
   const text = JSON.stringify(b.messages);
   const reply = t => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
@@ -133,6 +133,15 @@ function aiMock(b) {
     const itens = chunk.split('\n').filter(l => !/Total|Vencimento/.test(l)).map(l => /(\d{2}\/\d{2})\s+(.+?)\s+R\$\s*([\d.,]+)/.exec(l)).filter(Boolean)
       .map(m => ({ cartao: '7777', data: m[1], descricao: m[2], parcela: '', valor: +m[3].replace(/\./g, '').replace(',', '.') }));
     return reply(JSON.stringify({ tipo: 'fatura', banco: 'Banco Ficticio', vencimento: /Vencimento/.test(chunk) ? '10/12/2026' : null, valorTotalFatura: /Total desta fatura/.test(chunk) ? 18750 : null, cartoes: [], itens }));
+  }
+  // Combo offers: the first call pauses (a long search), the second answers; comboFail makes the search fail.
+  if (text.includes('Pesquise ofertas atuais')) {
+    if (comboFail) return { __status: 504 };
+    if (!b.tools?.some(t => t.type === 'web_search_20250305')) return reply('{}');
+    if (comboCalls++ % 2 === 0) return { content: [{ type: 'text', text: 'Procurando…' }], stop_reason: 'pause_turn' };
+    return reply(JSON.stringify({ local: { bairro: 'Bela Vista', cidade: 'São Paulo', uf: 'SP' }, ofertas: [
+      { operadora: 'Operadora Teste', plano: 'Combo casa', servicos: ['internet', 'tv', 'celular'], linhasCelular: 2, velocidadeMega: 500, preco: 249.9, mesesPromo: 12, precoDepois: 289.9, url: 'https://operadora.test/combo' },
+      { operadora: 'Sem página', servicos: ['internet'], preco: 50, url: '' }], tentativas: [{ site: 'outra.test', ok: false, motivo: 'não abriu' }] }));
   }
   if (text.includes('Transforme a frase')) return reply(JSON.stringify({ itens: [{ descricao: 'Mercado', valor: 230, sentido: 'saida', data: '2026-10-06', meio: 'cartao', categoria: 'Mercado' }, { descricao: 'Terapia', valor: 350, sentido: 'saida', data: '2026-10-06', meio: 'conta', categoria: 'Saúde' }] }));
   if (text.includes('documento compartilhado') && AI_DOC && AI_DOC !== 'comprovante') return reply(JSON.stringify({ tipo: AI_DOC, itens: [] }));
@@ -1010,9 +1019,39 @@ ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).in
   ok('varredura: o total de telefone e internet de hoje é o mesmo na tela por casa e na soma das casas', (await txt('#csTelNow')).replace(/\s/g, ' ') === H.now && Math.abs(H.sum - H.raw) < 0.01 && H.now === C.tel.now, JSON.stringify(H) + ' ' + C.tel.now);
   ok('contas de casa: a conta que parou fica no fim, e o card do Início sai depois das respostas', casas.includes('Contas que pararam') && casas.includes('Trocada em') && await page.evaluate(async () => { const m = await import('/js/costs.js'), l = await import('/js/lib/costs.js'); return l.costsNotice(m.familyCosts(), 'Luiz')?.kind !== 'contexto'; }), casas.slice(0, 400));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-contas-casas.png') });
+  // Combo: inform the mobile line (TIM), then the CEP, the search (paused once) and the offers; then a failed search.
+  await page.evaluate(async () => (await import('/js/costs.js')).openCosts('perguntar:celular')); await page.waitForSelector('#csCelValue');
+  await page.click('#custos [data-op="TIM"]'); await page.fill('#csCelValue', '110'); await page.click('#csCelSave'); await page.waitForSelector('#csCombo');
+  const comboCard = await txt('#custos .cs-combo');
+  ok('combo: com celular na TIM e internet e TV na Vivo, a tela por casa sugere juntar', /na Vivo, celular na TIM/.test(comboCard) && /Ver opções para (Apartamento de São Paulo|Casa de Guaratuba)/.test(comboCard), comboCard);
+  await page.click('#csCombo'); await page.waitForSelector('#csCep');
+  const cepTxt = await txt('#custos');
+  ok('combo: pede o CEP primeiro e diz por quê (preço por rua, provedores do bairro, só o CEP fica guardado)', /mudam de rua para rua/.test(cepTxt) && /provedores do bairro/.test(cepTxt) && /Guardamos só o CEP/.test(cepTxt), cepTxt.slice(0, 300));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-combo-cep.png') });
+  await page.fill('#csCep', '123'); await page.click('#csSearch');
+  ok('combo: CEP incompleto não busca', /8 números/.test(await txt('#custos .ferr')));
+  await page.fill('#csCep', '01310100'); await page.click('#csSearch'); await page.waitForSelector('#custos .cs-offer', { timeout: 15000 }).catch(() => {});
+  const O = await page.evaluate(async () => { const m = await import('/js/costs.js'), l = await import('/js/lib/costs.js'), f = await import('/js/lib/format.js'), st = await import('/js/state.js'), c = m.familyCosts(), ch = l.comboChance(c, st.settings()), cs = st.settings().costs || {};
+    const off = (cs.offers || {})[ch.house], s = off && l.offerSavings(off.offers[0], ch); return { cep: (cs.ceps || {})[ch.house], n: off?.offers.length, year1: s && f.brl0(s.year1).replace(/\s/g, ' '), after: s && f.brl0(s.after).replace(/\s/g, ' '), pay: f.brl(ch.pay).replace(/\s/g, ' ') }; });
+  const offTxt = (await txt('#custos')).replace(/\s/g, ' ');
+  ok('combo: a busca pausada continua e só a oferta com página entra; CEP e oferta guardados', comboCalls >= 2 && O.cep === '01310100' && O.n === 1 && (await page.$$('#custos .cs-offer')).length === 1, JSON.stringify(O) + ' ' + comboCalls);
+  ok('varredura: a economia da oferta na tela é a mesma da conta (primeiro ano, depois da promoção e o que pagam hoje)', offTxt.includes(`${O.year1} a menos no primeiro ano`) && offTxt.includes(`${O.after} a menos por ano`) && offTxt.includes(`${O.pay} por mês`), JSON.stringify(O) + offTxt.slice(0, 500));
+  ok('combo: cada oferta tem o site, a data da consulta e o aviso de confirmar', (await page.getAttribute('#custos .cs-site', 'href')) === 'https://operadora.test/combo' && /Preços vistos nos sites em \d{2}\/\d{2}, para o CEP 01310-100/.test(offTxt) && offTxt.includes('não recebe nada das operadoras'), offTxt.slice(-400));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-combo-ofertas.png'), fullPage: true });
+  comboFail = true; await page.click('#csAgain'); await page.waitForSelector('#csNoTitle', { timeout: 15000 }).catch(() => {});
+  const noTxt = (await txt('#custos')).replace(/\s/g, ' ');
+  ok('combo: se a busca falha, o app diz o motivo, não chuta valor e mostra onde procurar', /não conseguimos ver os preços de hoje/.test(noTxt) && /A busca não terminou/.test(noTxt) && noTxt.includes('Preferimos não chutar um valor') && (await page.$$('#custos .cs-links a')).length >= 3, noTxt.slice(0, 500));
+  await page.fill('#csTyped', '250'); await page.click('#csCalc');
+  ok('combo: a oferta digitada vira economia no ano', /R\$ 80 a menos por mês: R\$ 960 a menos no ano/.test((await txt('#csTypedOut')).replace(/\s/g, ' ')), await txt('#csTypedOut'));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-combo-sem.png'), fullPage: true });
+  comboFail = false;
+  await page.click('#csCepEdit'); await page.waitForSelector('#csCepDel'); await page.click('#csCepDel'); await page.waitForTimeout(500);
+  ok('combo: apagar o CEP apaga também as ofertas guardadas', await page.evaluate(async () => { const st = await import('/js/state.js'), cs = st.settings().costs || {}; return !Object.keys(cs.ceps || {}).length && !Object.keys(cs.offers || {}).length; }));
   await page.evaluate(async () => (await import('/js/costs.js')).openCosts('lista')); await page.waitForSelector('#custos');
   const list = (await txt('#custos')).replace(/\s/g, ' ');
-  ok('varredura: o total por mês e no ano da revisão é o mesmo do card do Início', list.includes(`${C.total} por mês`) && list.includes(`${C.year} no ano`), list.slice(0, 300));
+  const T2 = await page.evaluate(async () => { const m = await import('/js/costs.js'), f = await import('/js/lib/format.js'), c = m.familyCosts(); return { total: f.brl0(c.total).replace(/\s/g, ' '), year: f.brl0(c.year).replace(/\s/g, ' ') }; });
+  // The mobile line informed above entered the total: the same function gives the number everywhere.
+  ok('varredura: o total por mês e no ano da revisão é o mesmo do card do Início (com o celular informado)', list.includes(`${T2.total} por mês`) && list.includes(`${T2.year} no ano`) && T2.total !== C.total, list.slice(0, 300) + JSON.stringify(T2));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-lista.png') });
   const vivoKey = await page.evaluate(() => document.querySelector('#custos [data-item^="Vivo@"]')?.dataset.item);
   await page.click(`#custos [data-item="${vivoKey}"]`); await page.waitForSelector('#custos .cs-bars');
