@@ -29,7 +29,7 @@ import { SCENARIOS, PERSON, scenarioMessages, otherPushes } from './msgscenarios
 const STATUS = { agora: 'Agora', proximo: 'Próximo', ideia: 'Ideia', depois: 'Depois', feito: 'Feito', descartado: 'Descartado' };
 const EFFORT = { P: 'Pequeno', M: 'Médio', G: 'Grande' };
 const D = { backlog: null, pricing: null, canvas: null, faq: null, services: null, docs: null, news: null, tests: null };
-const TABS = ['painel', 'funil', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
+const TABS = ['painel', 'funil', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'openfinance', 'acesso'];
 let FB = null, USE = null, NAVD = null, useDays = 30;
 let token = '', tab = 'painel', view = 'quadro', filter = '';
 const money = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -152,7 +152,7 @@ function go(t) {
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#aNav [data-t]').forEach(b => b.toggleAttribute('aria-current', b.dataset.t === t));
   openGroup(NAV.find(g => g.items.some(i => i[0] === t))?.id);
-  ({ painel, funil, opinioes, pesquisas, missoes, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, mapa, bench, preco, desenho, acesso })[t]($('#aMain'));
+  ({ painel, funil, opinioes, pesquisas, missoes, mensagens, uso, navegacao, erros, duvidas, novidades, avisos, fluxos, versoes, caderno, backlog, servicos, docs, mapa, bench, preco, desenho, openfinance, acesso })[t]($('#aMain'));
   $('#aCur').textContent = NAV.flatMap(g => g.items).find(i => i[0] === t)?.[1] || '';
   drawer(false); window.scrollTo(0, 0);
 }
@@ -176,7 +176,7 @@ const IC = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const NAV = [
   { id: 'acompanhar', title: 'Acompanhar', icon: IC('<path d="M3 12h4l3-8 4 16 3-8h4"/>'), items: [['painel', 'Painel'], ['funil', 'Funil e alarmes'], ['opinioes', 'Opiniões'], ['pesquisas', 'Pesquisas'], ['missoes', 'Missões'], ['uso', 'Uso'], ['navegacao', 'Navegação'], ['erros', 'Erros'], ['duvidas', 'Dúvidas'], ['novidades', 'Novidades'], ['avisos', 'Avisos no celular']] },
   { id: 'planejar', title: 'Planejar', icon: IC('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'), items: [['backlog', 'Backlog'], ['versoes', 'Versões'], ['caderno', 'Caderno de testes'], ['fluxos', 'Fluxos'], ['mensagens', 'Mensagens'], ['servicos', 'Matriz de serviços'], ['docs', 'Documentação'], ['mapa', 'Mapa dos dados']] },
-  { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto']] },
+  { id: 'estrategia', title: 'Estratégia', icon: IC('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), items: [['bench', 'Benchmarking'], ['preco', 'Precificação'], ['desenho', 'Desenho do produto'], ['openfinance', 'Teste Open Finance']] },
   { id: 'conta', title: 'Sua conta', icon: IC('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), items: [['acesso', 'Acesso e segurança']] },
 ];
 const CHEV = IC('<path d="M9 6l6 6-6 6"/>');
@@ -402,6 +402,49 @@ async function funil(el) {
     try { const r = await (await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'email_test' }) })).json();
       out.textContent = r.sent ? `Pronto: e-mail enviado ("${r.subject}"). Olhe a caixa de entrada (e o spam, na primeira vez).` : `Não saiu: ${r.error || r.reason || 'motivo desconhecido'}.`; }
     catch (err) { out.textContent = 'Não saiu: ' + (err.message || err); }
+    e.target.disabled = false;
+  };
+}
+
+// Teste Open Finance (owner only): the connections Luiz made with MeuPluggy, read through Pluggy and shown as the app
+// would see them. Nothing is stored: neither the ids nor the data (api/_pluggy.js, lib/openfinance.js).
+async function openfinance(el) {
+  el.innerHTML = '<div class="ahead"><h1>Teste Open Finance</h1></div><p class="small muted">Carregando...</p>';
+  let ready = false; try { ready = !!(await getView('openfinance')).ready; } catch (e) { return fail(el, 'Teste Open Finance', e); }
+  const R = v => 'R$ ' + (+v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), D = d => d ? d.split('-').reverse().join('/') : '—';
+  el.innerHTML = `<div class="ahead"><h1>Teste Open Finance</h1><span class="tiny muted">só você vê · nada fica guardado</span></div>
+    <div class="panel stack"><h2>Como testar com as suas contas</h2>
+      ${ready ? '<p class="small">As chaves da Pluggy estão no Vercel.</p>' : '<p class="small"><strong>Faltam as chaves:</strong> PLUGGY_CLIENT_ID e PLUGGY_CLIENT_SECRET no Vercel (Settings → Environment Variables), e depois um Redeploy.</p>'}
+      <ol class="small" style="margin:0;padding-left:20px;display:grid;gap:6px">
+        <li>Em <strong>meu.pluggy.ai</strong>, entre e conecte os bancos (Santander, Itaú, Inter). É o consentimento oficial do Open Finance, feito no app de cada banco.</li>
+        <li>Em <strong>dashboard.pluggy.ai</strong>, deixe o conector <strong>MeuPluggy</strong> na lista, abra a aplicação e toque em <strong>Ir para Demo</strong>.</li>
+        <li>Na Demo, escolha MeuPluggy e autorize um banco por vez. Em cada conexão, nos três pontinhos, copie o <strong>Item ID</strong>.</li>
+        <li>Cole os Item IDs aqui (um por linha) e toque em Testar. Os dados vêm dos últimos 90 dias.</li>
+      </ol></div>
+    <div class="panel stack"><label class="small" for="ofIds"><strong>Item IDs</strong></label>
+      <textarea id="ofIds" rows="3" placeholder="um por linha" style="width:100%;font-family:monospace" ${ready ? '' : 'disabled'}></textarea>
+      <div class="rowbtn"><button class="btn primary" type="button" id="ofGo" ${ready ? '' : 'disabled'}>Testar</button></div>
+      <p class="small" id="ofMsg" aria-live="polite"></p></div>
+    <div id="ofOut" class="stack"></div>`;
+  const acc = a => `<div class="panel stack"><h3 style="margin:0">${esc(a.label)} <span class="tiny muted">${a.kind === 'cartao' ? 'cartão' : 'conta'}</span></h3>
+    <p class="small" style="margin:0">${a.kind === 'cartao' ? `Limite ${a.limit != null ? R(a.limit) : '—'} · disponível ${a.available != null ? R(a.available) : '—'}` : `Saldo ${R(a.balance)}`} · ${a.txCount} movimentações desde ${D(a.firstDate)}${a.pending ? ` · ${a.pending} pendentes` : ''}</p>
+    ${a.openBill ? `<p class="small" style="margin:0"><strong>Fatura aberta:</strong> ${a.openBill.n} ${a.openBill.n === 1 ? "compra" : "compras"}, ${R(a.openBill.total)}${a.openBill.closeDate ? ` · fecha ${D(a.openBill.closeDate)}` : ''}${a.openBill.dueDate ? ` · vence ${D(a.openBill.dueDate)}` : ''}${a.openBill.known ? '' : ' <span class="tiny muted">(o banco não separa as faturas: contei tudo)</span>'}</p>` : ''}
+    ${a.months.length ? `<div class="tw"><table><thead><tr><th>Mês</th><th>Saiu</th>${a.kind === 'conta' ? '<th>Entrou</th>' : ''}<th>Itens</th></tr></thead><tbody>${a.months.map(m => `<tr><td>${m.month.split('-').reverse().join('/')}</td><td>${R(m.out)}</td>${a.kind === 'conta' ? `<td>${R(m.in)}</td>` : ''}<td>${m.n}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${a.bills.length ? `<p class="tiny muted" style="margin:0">Faturas fechadas: ${a.bills.map(b => `${D(b.due)} ${R(b.total)}`).join(' · ')}</p>` : ''}
+    ${a.sample.length ? `<details><summary class="small">As 12 mais recentes</summary><div class="tw"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor no app</th><th>Categoria do banco</th></tr></thead><tbody>${a.sample.map(t => `<tr><td>${D(t.date)}</td><td>${esc(t.description)}${t.installment ? ` (${t.installment})` : ''}${t.pending ? ' · pendente' : ''}</td><td>${R(t.amount)}</td><td>${esc(t.category || '—')}</td></tr>`).join('')}</tbody></table></div></details>` : ''}</div>`;
+  el.querySelector('#ofGo').onclick = async e => {
+    const items = el.querySelector('#ofIds').value.split(/[\s,;]+/).filter(Boolean), msg = el.querySelector('#ofMsg'), out = el.querySelector('#ofOut');
+    if (!items.length) { msg.textContent = 'Cole ao menos um Item ID.'; return; }
+    e.target.disabled = true; msg.textContent = 'Buscando na Pluggy...'; out.innerHTML = '';
+    try {
+      const r = await (await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'pluggy_test', items }) })).json();
+      if (r.error) msg.textContent = r.error === 'no_items' ? 'Nenhum Item ID válido: confira se copiou o código inteiro.' : r.error === 'not_configured' ? 'Faltam as chaves da Pluggy no Vercel.' : 'Não deu: ' + r.error;
+      else {
+        msg.textContent = `Pronto: ${r.results.length} ${r.results.length === 1 ? 'conexão' : 'conexões'}, de ${D(r.from)} a ${D(r.today)}. Nada foi guardado.`;
+        out.innerHTML = r.results.map(x => x.error ? `<div class="panel"><h2>Item ${esc(x.id.slice(0, 8))}…</h2><p class="small">Não deu: ${esc(x.error)}${x.status === 404 ? ' (Item ID não encontrado nesta aplicação)' : x.status === 401 || x.status === 403 ? ' (as chaves não abrem este item)' : ''}</p></div>`
+          : `<div class="panel stack"><h2 style="margin:0">${esc(x.bank)} <span class="tiny muted">${esc(x.status)}</span></h2><ul class="small" style="margin:0;padding-left:18px">${x.findings.map(f => `<li>${esc(f)}</li>`).join('')}</ul></div>${x.accounts.map(acc).join('')}`).join('');
+      }
+    } catch (err) { msg.textContent = 'Não deu: ' + (err.message || err); }
     e.target.disabled = false;
   };
 }

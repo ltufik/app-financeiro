@@ -3,9 +3,11 @@
 // GET /api/admin?view=usage|feedback|nav  ->  usage per person/feature, testers' feedback
 // GET /api/admin?view=push -> who can receive notifications (yours first)   POST /api/admin {action:'test_push'} -> test to your devices; {action:'news_push', id} -> a note as push to everyone
 // PATCH /api/admin {feedback: id, status?, note?, reply?}  (reply: personal message to who sent it, also as a push)
-// Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS.
+// GET /api/admin?view=openfinance -> {ready}   POST {action:'pluggy_test', items:[item ids]} -> Open Finance test, nothing stored
+// Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS (and PLUGGY_CLIENT_ID/SECRET for the test).
 import { cleanUrl } from './config.js';
 import { healthData, dailyEmail } from './_email.js';
+import { pluggyTest, pluggyReady } from './_pluggy.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
 import { replyTitle } from '../public/js/lib/news.js';
@@ -61,6 +63,7 @@ export default async function handler(req, res) {
     // A failed read says which table and why (shown to the owner in the console), never just "db".
     const q = async path => { const x = await fetch(`${URL_}/rest/v1/${path}`, { headers: H }); if (!x.ok) { let m = ''; try { m = (await x.json()).message || ''; } catch (e) { /* no body */ } throw new Error(`banco ${x.status} em ${path.split('?')[0]}${m ? ' (' + m + ')' : ''}`); } return x.json(); };
     // Funnel and alarms: the same data and rules as the daily e-mail (api/_email.js, lib/funnel.js), and the e-mail's last run.
+    if (req.method === 'GET' && req.query?.view === 'openfinance') return res.status(200).json({ ready: pluggyReady() });
     if (req.method === 'GET' && req.query?.view === 'funil') {
       const d = await healthData({ supabaseUrl: URL_, serviceKey: SERVICE });
       return res.status(200).json({ ...d.h, alarms: d.alarms, lastEmail: d.lastEmail, emailReady: !!String(process.env.RESEND_API_KEY || '').trim() });
@@ -96,6 +99,11 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
       // "Mandar o e-mail agora" (Funil e alarmes): the same daily e-mail, on demand, recorded like the 9h one.
+      // Teste Open Finance: reads the connections whose ids the owner pasted, through Pluggy. Nothing is stored.
+      if (b.action === 'pluggy_test') {
+        try { return res.status(200).json(await pluggyTest({ items: Array.isArray(b.items) ? b.items : [] })); }
+        catch (e) { return res.status(200).json({ error: String(e.message || e) }); }
+      }
       if (b.action === 'email_test') {
         try { const r = await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'email' }, () => dailyEmail({ supabaseUrl: URL_, serviceKey: SERVICE, admins })); return res.status(200).json(r); }
         catch (e) { return res.status(200).json({ sent: 0, error: String(e.message || e) }); }

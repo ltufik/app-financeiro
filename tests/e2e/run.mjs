@@ -58,6 +58,8 @@ async function addRoutes(t) {
     if (u.pathname === '/api/news') return r.fulfill({ json: { items: adminStore.news?.items || null } });
     if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'push') return r.fulfill({ json: { configured: true, mine: pushTestSent ? [] : [{ kind: 'Android ou Chrome', since: '2026-10-20T10:00:00Z', prefs: {} }], people: [{ name: 'Mari', family: 'Família Souza', devices: 1, kinds: ['Android ou Chrome'], novidades: true, since: '2026-10-20T10:00:00Z', me: true }, { name: 'Beto', family: 'Família Souza', devices: 2, kinds: ['iPhone ou iPad'], novidades: false, since: '2026-10-21T10:00:00Z', me: false }], users: 4 } });
+    if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'openfinance') return r.fulfill({ json: { ready: true } });
+    if (u.pathname === '/api/admin' && r.request().method() === 'POST' && /pluggy_test/.test(r.request().postData() || '')) { const { ofSummary } = await import('../../public/js/lib/openfinance.js'); return r.fulfill({ json: { from: '2026-08-19', today: '2026-11-17', results: [{ id: 'aaaaaaaa-1111-2222-3333-444444444444', ...ofSummary({ item: { status: 'UPDATED', connector: { name: 'Santander' }, lastUpdatedAt: '2026-11-17T06:00:00Z' }, accounts: [{ account: { id: 'c1', type: 'CREDIT', subtype: 'CREDIT_CARD', name: 'Santander Free', number: '5555', creditData: { creditLimit: 10000, availableCreditLimit: 6100, balanceCloseDate: '2026-11-25', balanceDueDate: '2026-12-05' } }, txs: [{ date: '2026-11-10', description: 'Mercado Fictício', amount: 230.5, type: 'DEBIT' }, { date: '2026-11-03', description: 'Posto Fictício', amount: 180, type: 'DEBIT' }, { date: '2026-10-20', description: 'Loja Fictícia', amount: 99, type: 'DEBIT', creditCardMetadata: { billId: 'b1' } }], bills: [{ dueDate: '2026-11-05', totalAmount: 1830 }] }] }, '2026-11-17') }, { id: 'bbbbbbbb-1111-2222-3333-444444444444', error: 'Item not found', status: 404 }] } }); }
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && /email_test/.test(r.request().postData() || '')) return r.fulfill({ json: { sent: 1, alarms: 1, subject: 'Pra Onde Foi · 1 alarme · 17/11' } });
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && JSON.parse(r.request().postData()).action === 'news_push') { newsPushes.push(JSON.parse(r.request().postData()).id); return r.fulfill({ json: { pushed: 3 } }); }
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && pushTestFail) return r.fulfill({ status: pushTestFail, json: pushTestFail === 500 ? { error: 'failed', detail: 'db' } : { error: 'not_signed_in' } });
@@ -1273,6 +1275,11 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await ap.click('#fMail'); await ap.waitForFunction(() => /Pronto|Não saiu/.test(document.querySelector('#fMailOut')?.textContent || ''));
   ok('central: "Mandar o e-mail agora" manda e diz o resultado', /Pronto: e-mail enviado/.test(await ap.textContent('#fMailOut')), await ap.textContent('#fMailOut'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-funil.png'), fullPage: true });
+  await atab('openfinance'); await ap.waitForSelector('#ofGo');
+  await ap.fill('#ofIds', 'aaaaaaaa-1111-2222-3333-444444444444\nbbbbbbbb-1111-2222-3333-444444444444'); await ap.click('#ofGo');
+  await ap.waitForFunction(() => /Pronto/.test(document.querySelector('#ofMsg')?.textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  { const of = await ap.textContent('#aMain');
+    ok('central: Teste Open Finance mostra a fatura aberta do cartão, as faturas fechadas, o item que não abriu e que nada foi guardado', of.includes('Fatura aberta: 2 compras, R$ 410,50') && of.includes('vence 05/12/2026') && of.includes('Faturas fechadas: 05/11/2026 R$ 1.830,00') && of.includes('Item ID não encontrado') && of.includes('Nada foi guardado') && of.includes('Santander Free · final 5555'), of.slice(0, 700)); }
   await atab('missoes'); await ap.waitForSelector('#aMain table');
   ok('central: missões mostra o funil e cada família', (await ap.textContent('#aMain')).includes('2 famílias') && (await ap.textContent('#aMain')).includes('Mande a última fatura do cartão1 · 50%'), (await ap.textContent('#aMain')).slice(0, 300));
   await atab('mensagens'); await ap.waitForSelector('.msgcard');
@@ -1328,7 +1335,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('uso'); await ap.waitForSelector('.prow');
   ok('central: uso no celular não rola para o lado', await ap.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   // Phone, tablet standing (Galaxy Tab S6 Lite: 800 px) and tablet lying down (1334 px): every page fits the width.
-  const TABS = ['painel', 'funil', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'acesso'];
+  const TABS = ['painel', 'funil', 'opinioes', 'pesquisas', 'missoes', 'mensagens', 'uso', 'navegacao', 'erros', 'duvidas', 'novidades', 'avisos', 'fluxos', 'versoes', 'caderno', 'backlog', 'servicos', 'docs', 'mapa', 'bench', 'preco', 'desenho', 'openfinance', 'acesso'];
   // Besides the page not scrolling sideways, nothing may stick out of the screen (cut off) unless it sits in its own sideways scroll.
   const outside = () => ap.evaluate(() => { const W = innerWidth, bad = [];
     const scrolls = el => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };

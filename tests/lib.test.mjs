@@ -1728,3 +1728,25 @@ test('trilha 3.0: uma etapa por vez, cada uma libera ferramentas; quem já usava
   assert.deepEqual(u.tools.map(t => t.name), ['Gastos', 'Perguntar']); assert.equal(u.next.title, 'Mandar o extrato da conta'); assert.equal(u.total, 5);
   assert.equal(unlockScreen(all, 5).next, null);
 });
+
+test('Open Finance (teste): cartão e conta viram o formato do app, com a fatura aberta e nada além do resumo', async () => {
+  const { ofSummary, ofToTxs, ofOpenBill, ofKind, ofLabel } = await import('../public/js/lib/openfinance.js');
+  const card = { id: 'c', type: 'CREDIT', subtype: 'CREDIT_CARD', name: 'Cartão X', number: '1234 5678', creditData: { creditLimit: 5000, availableCreditLimit: 3000, balanceDueDate: '2026-12-05T00:00:00Z' } };
+  const bank = { id: 'b', type: 'BANK', subtype: 'CHECKING_ACCOUNT', name: 'Conta', balance: 1200 };
+  assert.equal(ofKind(card), 'cartao'); assert.equal(ofKind(bank), 'conta'); assert.equal(ofLabel(card), 'Cartão X · final 5678');
+  const ct = [{ date: '2026-11-10T12:00:00Z', description: 'Mercado', amount: -100, type: 'DEBIT' }, { date: '2026-11-11', description: 'Estorno', amount: 20, type: 'CREDIT' },
+    { date: '2026-10-01', description: 'Loja', amount: 50, type: 'DEBIT', creditCardMetadata: { billId: 'x', installmentNumber: 2, totalInstallments: 3 } }];
+  const t = ofToTxs(card, ct);
+  assert.deepEqual(t.map(x => x.amount), [-20, 100, 50], 'cartão: gasto positivo, estorno negativo, qualquer que seja o sinal do banco');
+  assert.equal(t[2].installment, '2/3');
+  const ob = ofOpenBill(card, ct); assert.equal(ob.n, 1); assert.equal(ob.total, 100); assert.equal(ob.dueDate, '2026-12-05'); assert.equal(ob.known, true);
+  const bt = ofToTxs(bank, [{ date: '2026-11-05', description: 'Pix mercado', amount: -80, type: 'DEBIT' }, { date: '2026-11-05', description: 'Salário', amount: 5000, type: 'CREDIT' }]);
+  assert.deepEqual(bt.map(x => x.amount).sort((a, b) => a - b), [-80, 5000], 'conta: gasto negativo, como um extrato importado');
+  const s = ofSummary({ item: { status: 'UPDATED', connector: { name: 'Santander' }, lastUpdatedAt: '2026-11-16T10:00:00Z' }, accounts: [{ account: card, txs: ct, bills: [{ dueDate: '2026-11-05', totalAmount: 900 }] }, { account: bank, txs: [{ date: '2026-11-05', amount: -80, type: 'DEBIT', status: 'PENDING' }] }] }, '2026-11-17');
+  assert.equal(s.bank, 'Santander'); assert.equal(s.stale, 1); assert.equal(s.accounts.length, 2);
+  assert.equal(s.accounts[0].limit, 5000); assert.equal(s.accounts[1].limit, null); assert.equal(s.accounts[1].pending, 1);
+  assert.ok(s.findings[0].startsWith('Fatura aberta chega: 1 compra desde 10/11/2026'), s.findings[0]);
+  assert.ok(s.findings.some(f => f.includes('pendentes')) && s.findings.some(f => f.includes('24 horas')));
+  assert.deepEqual(s.accounts[0].bills, [{ due: '2026-11-05', total: 900 }]);
+  assert.equal(ofSummary({}, '2026-11-17').findings.at(-1), 'Nenhuma conta veio nesta conexão.');
+});

@@ -591,4 +591,9 @@ export const RELEASES = [
       { id: 'email_banco', title: 'Encaminhar os e-mails do banco (Pix, fatura e extrato) para o endereço da família, entrando sozinhos', status: 'agora', origin: 'Luiz', effort: 'M', problem: 'Bancos não deixam tirar print nem baixar a fatura aberta; muita gente não sabe baixar o PDF', from: ['jornada_for_dummies'] },
       { id: 'open_finance', title: 'Open Finance (conexão oficial, só leitura): estudo de custo e teste com a conta do Luiz pelo MeuPluggy', status: 'depois', origin: 'Luiz', effort: 'G', problem: 'O único jeito automático que serve para todos os bancos, inclusive a fatura aberta; custo ainda não está claro', from: ['parcerias_e_servicos'] },
     ], backlog: ['trilha_3', 'jeito_de_falar_2'] },
+  { id: 'r3.0.1', version: 'v3.0.1', at: '2026-11-18T03:30:00Z', semNovidade: 'Teste Open Finance só na Central e título da tela Liberado quando ainda não há mês para citar: a novidade da 3.0 já conta o que mudou.',
+    semTeste: 'Teste Open Finance: só o Luiz vê, coberto pelo teste automático (leitura dos dados) e pelo e2e da Central; o teste de verdade é ele com as contas dele.',
+    addBacklog: [
+      { id: 'open_finance_teste', title: 'Teste Open Finance na Central: lê as contas do Luiz conectadas pelo MeuPluggy (fatura aberta, extrato, faturas fechadas), sem guardar nada', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Antes de decidir o custo do Open Finance, ver com dados reais se a fatura aberta e o extrato chegam bem.' },
+    ], backlog: ['open_finance_teste'] },
 ];

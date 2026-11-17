@@ -78,6 +78,9 @@ function headline(n) {
   if (n === 2 && last) { const c = calcMonth(last); return { title: c.res >= 0 ? `Em ${MES(last)} sobraram ${brl0(c.res)}` : `Em ${MES(last)} faltaram ${brl0(-c.res)}`, text: 'Agora o app junta o cartão e a conta.' }; }
   const closed = Object.keys(settings().closed || {}).sort();
   if (n === 3 && closed.length) return { title: `${MES(closed[closed.length - 1])[0].toUpperCase() + MES(closed[closed.length - 1]).slice(1)} fechado`, text: 'O mês ficou guardado do jeito que vocês conferiram.' };
+  if (n === 1) return { title: 'Primeiro mês no app', text: 'Os gastos já estão separados por categoria.' };
+  if (n === 2) return { title: 'Cartão e conta juntos', text: 'Agora o app mostra quanto sobrou no mês.' };
+  if (n === 3) return { title: 'Mês fechado', text: 'O mês ficou guardado do jeito que vocês conferiram.' };
   if (n === 4) return { title: 'Semana conferida', text: 'O que entrou na semana está certo.' };
   return { title: 'Dois meses fechados', text: 'Agora o app compara um mês com o outro.' };
 }

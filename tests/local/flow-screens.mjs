@@ -88,7 +88,7 @@ await step('comecar_banco', async () => { await page.click('.start [data-bank="S
 await page.click('#stBack'); await page.click('#stExample');
 await page.waitForTimeout(2500);
 await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
-await step('trilha', async () => { await page.click('[data-tab=resumo]'); await page.waitForSelector('.trail'); });
+await step('trilha', async () => { await page.click('[data-tab=resumo]'); await page.waitForSelector('.trail'); }, { scrollTo: '.trail' });
 await step('liberado', async () => { await page.evaluate(async () => (await import('/js/trail.js')).previewUnlock()); await page.waitForSelector('.unlock'); });
 await page.evaluate(() => { document.querySelectorAll('.unlock').forEach(x => x.remove()); document.body.style.overflow = ''; });
 // The 7-slide presentation and the walkthrough are still in menu ☰ → Ajuda.
