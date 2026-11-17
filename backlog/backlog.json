@@ -1,5 +1,109 @@
 [
  {
+  "id": "jornada_for_dummies",
+  "from": [
+   "funil_alarmes"
+  ],
+  "title": "Revisão da jornada \"for dummies\": funções que aparecem ao terminar algo, nomes fáceis, muita comunicação e jornadas ligadas (sem procurar)",
+  "effort": "G",
+  "origin": "Luiz",
+  "status": "agora",
+  "problem": "Até quem pediu a função não acha (ex.: revisão de custos a 3 toques, dentro de um cartão fechado); pode ser por isso que as pessoas não continuam"
+ },
+ {
+  "id": "funil_alarmes",
+  "from": [],
+  "title": "Funil da jornada por pessoa e alarmes, na Central e num e-mail diário às 9h",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Poucos dados e nenhum aviso de quem empaca ou some: o time só descobre olhando a Central"
+ },
+ {
+  "id": "ofertas_por_casa",
+  "from": [
+   "combo_operadora"
+  ],
+  "title": "Ofertas para qualquer casa (não só combo), com o porquê do CEP na própria tela",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Quem tem tudo numa operadora, ou só internet, nunca via o CEP nem ofertas"
+ },
+ {
+  "id": "combo_celular_duas_vezes",
+  "from": [
+   "combo_operadora"
+  ],
+  "tipo": "bug",
+  "title": "Combo contava o celular informado duas vezes (família com um imóvel só)",
+  "effort": "P",
+  "origin": "Claude",
+  "status": "feito",
+  "problem": "A economia do combo saía maior do que a real"
+ },
+ {
+  "id": "combo_casa_padrao",
+  "from": [
+   "contas_casa_contexto"
+  ],
+  "title": "Contas de casa: com um imóvel só, as contas já vão para ele (em vez de \"Onde vocês moram\")",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Família com um imóvel via \"Onde vocês moram\" e o nome do imóvel como duas casas"
+ },
+ {
+  "id": "combo_operadora",
+  "from": [
+   "contas_casa_contexto"
+  ],
+  "title": "Combo numa operadora: pedir o CEP, buscar ofertas reais (inclusive provedor do bairro), economia no ano e o site; se a busca falhar, dizer e indicar onde procurar",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Quem tem internet e TV numa operadora e celular em outra paga mais do que precisa e não sabe quanto economizaria"
+ },
+ {
+  "id": "contas_casa_contexto",
+  "from": [
+   "custos_linhas_misturadas"
+  ],
+  "title": "Contas de casa com contexto: contas separadas por operadora, perguntas (casa, serviço, parou, celular, provedor desconhecido) e a visão por casa",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Somar as cobranças da operadora no mês e avisar que subiu, sem entender que era outra casa ou a troca do débito para o cartão"
+ },
+ {
+  "id": "custos_linhas_misturadas",
+  "from": [],
+  "tipo": "bug",
+  "title": "Revisão de custos dizia que a Vivo subiu, mas era uma linha nova (outra casa) e a troca do débito para o cartão",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Somava todas as cobranças da operadora no mês e disparava um aviso sem contexto"
+ },
+ {
+  "id": "claude_design",
+  "from": [],
+  "title": "Claude Design: design system do app, mapa das telas e telas desenhadas antes de construir",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Sem ver o app inteiro e o jeito dele num lugar, cada tela nova saía de um jeito"
+ },
+ {
+  "id": "seguros_aviso",
+  "from": [],
+  "title": "Seguros: quanto pagam no ano (com o do financiamento) e se já usaram",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Nem todo mundo sabe quanto paga de seguro no total, e muita gente nunca usa o que já pagou"
+ },
+ {
   "id": "horario_revisao_domingo",
   "from": [],
   "title": "Horário da revisão de domingo escolhido por cada pessoa",
@@ -1413,7 +1517,7 @@
   "where": "Início → Mais detalhes; um aviso quando houver economia possível",
   "effort": "M",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Planos e assinaturas sobem de preço e se acumulam sem ninguém rever"
  },
  {

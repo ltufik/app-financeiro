@@ -2,7 +2,13 @@
 
 Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 
-## Próximo (5)
+## Agora (1)
+
+| Ordem | Item | id | Esforço | Origem |
+|---|---|---|---|---|
+|  | Revisão da jornada "for dummies": funções que aparecem ao terminar algo, nomes fáceis, muita comunicação e jornadas ligadas (sem procurar) | `jornada_for_dummies` | G | Luiz |
+
+## Próximo (4)
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
@@ -10,7 +16,6 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 |  | [backend] Erros dos celulares agrupados por tipo e versão | `erros_agrupados` | P | Luiz |
 |  | Cores do app (ou dos banners) pelo nível de economia | `cores_por_nivel` | P | Luiz |
 | 7 | Ver o resultado antes de criar a conta | `resultado_antes_da_conta` | G | Pesquisa de dores (nov/2026) |
-| 9 | Revisão de custos: TV, internet, celular e streaming | `revisao_de_custos_planos` | M | Luiz |
 
 ## Ideia (12)
 
@@ -46,7 +51,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 9 | Plano pago / modelo de negócio | `plano_pago_modelo_de_negocio` | M | Produto |
 | 10 | Cobrança honesta (teste sem cartão, aviso de renovação, cancelar em 1 clique) | `cobranca_honesta_teste_sem_cartao_aviso_` | P | Benchmarking |
 
-## Feito: 159 itens
+## Feito: 169 itens
 
 ## Descartado: 4 itens
 
