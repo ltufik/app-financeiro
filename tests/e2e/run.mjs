@@ -988,16 +988,16 @@ ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).in
 // Revisão de custos e seguros (real data): the Início card, the list, one item, "Cancelei" and the insurance page.
 { await page.waitForTimeout(300);
   const C = await page.evaluate(async () => { const m = await import('/js/costs.js'), f = await import('/js/lib/format.js'), c = m.familyCosts(), s = m.familyInsurance(); return { total: f.brl0(c.total).replace(/\s/g, ' '), year: f.brl0(c.year).replace(/\s/g, ' '), names: c.items.filter(x => x.current).map(x => x.name), risen: c.risen.map(x => [x.name, x.risePct]), ins: f.brl0(s.yearWithFinancing).replace(/\s/g, ' '), insItems: s.items.map(x => x.name) }; });
-  ok('revisão de custos: acha Vivo, Spotify e Amazon Prime nos dados de verdade, e a Vivo subiu', ['Vivo', 'Spotify', 'Amazon Prime'].every(n => C.names.includes(n)) && C.risen.some(([n, p]) => n === 'Vivo' && p >= 20), JSON.stringify(C));
+  ok('revisão de custos: acha Vivo, Spotify e Amazon Prime nos dados de verdade; a Vivo (duas linhas) não aparece como "subiu"', ['Vivo', 'Spotify', 'Amazon Prime'].every(n => C.names.includes(n)) && !C.risen.some(([n]) => n === 'Vivo'), JSON.stringify(C));
   const card = await txt('#costCard');
-  ok('revisão de custos: card no Início com o nome, o que subiu e o total no ano de vocês', /Luiz, a conta da Vivo subiu \d+%/.test(card) && card.replace(/\s/g, ' ').includes(C.year) && card.includes('de vocês'), card);
+  ok('revisão de custos: card no Início só com motivo (custos ou seguros), com o nome e o total no ano', !card || (/^Luiz, /.test(card) && ((card.replace(/\s/g, ' ').includes(C.year) && card.includes('de vocês')) || card.replace(/\s/g, ' ').includes(C.ins))), card);
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-card.png') });
-  await page.click('#costOpen'); await page.waitForSelector('#custos');
+  await page.evaluate(async () => (await import('/js/costs.js')).openCosts('lista')); await page.waitForSelector('#custos');
   const list = (await txt('#custos')).replace(/\s/g, ' ');
   ok('varredura: o total por mês e no ano da revisão é o mesmo do card do Início', list.includes(`${C.total} por mês`) && list.includes(`${C.year} no ano`), list.slice(0, 300));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-lista.png') });
   await page.click('#custos [data-item="Vivo"]'); await page.waitForSelector('#custos .cs-bars');
-  ok('revisão de custos: uma conta mostra as barras por mês, quanto subiu no ano e as três escolhas', /Subiu \d+%/.test(await txt('#custos')) && (await page.$$('#custos .cs-bar')).length >= 3 && !!(await page.$('#custos [data-s="cancelei"]')), await txt('#custos'));
+  ok('revisão de custos: uma conta mostra as barras por mês, o custo no ano e as três escolhas', /no ano de vocês|a mais no ano/.test(await txt('#custos')) && (await page.$$('#custos .cs-bar')).length >= 3 && !!(await page.$('#custos [data-s="cancelei"]')), await txt('#custos'));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-item.png') });
   await page.click('#custos [data-s="cancelei"]'); await page.waitForTimeout(500);
   const eco = await txt('#custos');

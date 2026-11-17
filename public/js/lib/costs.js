@@ -44,7 +44,7 @@ export function costsReview({ txs = [], idx = new Map(), months, settings = {}, 
   const where = t => `${t.source}|${t.card || ''}`;
   for (const t of txs) if (!t.manual) { const w = where(t); if (!latest[w] || t.month > latest[w]) latest[w] = t.month; const k = merchant(t.description); if (!srcOf.has(k) || t.month > srcOf.get(k).month) srcOf.set(k, { w, month: t.month }); }
   const found = findRecurring(txs, ms, { idx }).map(r => ({ ...r, brand: brandOf(r.name), current: r.lastMonth >= (latest[srcOf.get(r.name)?.w] || ms[ms.length - 1]) })).filter(r => r.brand);
-  const from = addM(today.slice(0, 7), -12), hist = new Map();
+  const from = addM(today.slice(0, 7), -12), hist = new Map(), cnt = new Map();
   for (const t of expandSplits(txs)) {
     if (t.month < from || t.installment) continue;
     const v = t.source === 'conta' ? -t.amount : +t.amount; if (!(v > 0)) continue;
@@ -52,6 +52,7 @@ export function costsReview({ txs = [], idx = new Map(), months, settings = {}, 
     const c = idx.get(t.category); if (c && !['dia', 'fora'].includes(c.grp)) continue;
     const br = brandOf(merchant(t.description)); if (!br || !found.some(f => f.brand.label === br.label)) continue;
     const m = hist.get(br.label) || new Map(); m.set(t.month, (m.get(t.month) || 0) + v); hist.set(br.label, m);
+    const n = cnt.get(br.label) || new Map(); n.set(t.month, (n.get(t.month) || 0) + 1); cnt.set(br.label, n);
   }
   // One line per brand (two cards paying Spotify are still Spotify).
   const byBrand = new Map();
@@ -59,10 +60,13 @@ export function costsReview({ txs = [], idx = new Map(), months, settings = {}, 
     const h = hist.get(f.brand.label) || new Map(), ks = [...h.keys()].sort(), firstMonth = ks[0] || f.lastMonth, first = h.get(firstMonth) || f.last;
     const cur = byBrand.get(f.brand.label);
     if (cur) { cur.last = r2(cur.last + f.last); cur.current = cur.current || f.current; cur.keys.push(f.name); continue; }
-    byBrand.set(f.brand.label, { key: f.brand.label, name: f.brand.label, group: f.brand.group, last: f.last, first: r2(first), firstMonth, lastMonth: f.lastMonth, current: f.current, keys: [f.name], history: ks.map(k => ({ month: k, value: r2(h.get(k)) })) });
+    // "Went up" only when it is clearly the same single charge every month: two lines of the same operator, a new line
+    // or a change of how it is paid (account to card) are not a price increase.
+    const counts = [...(cnt.get(f.brand.label) || new Map()).values()], oneLine = counts.length > 0 && counts.every(c => c === 1);
+    byBrand.set(f.brand.label, { oneLine, key: f.brand.label, name: f.brand.label, group: f.brand.group, last: f.last, first: r2(first), firstMonth, lastMonth: f.lastMonth, current: f.current, keys: [f.name], history: ks.map(k => ({ month: k, value: r2(h.get(k)) })) });
   }
   const items = [...byBrand.values()].map(x => {
-    const risePct = x.first > 0 && x.last > x.first * 1.05 && x.last - x.first >= 3 ? Math.round((x.last / x.first - 1) * 100) : 0;
+    const risePct = x.oneLine && x.keys.length === 1 && x.first > 0 && x.last > x.first * 1.05 && x.last - x.first >= 3 ? Math.round((x.last / x.first - 1) * 100) : 0;
     const st = saved[x.key] || null;
     return { ...x, year: r2(x.last * 12), risePct, rise: risePct ? r2(x.last - x.first) : 0, status: st?.status || null, statusAt: st?.at || null };
   }).sort((a, b) => b.last - a.last);

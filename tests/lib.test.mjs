@@ -1561,6 +1561,10 @@ test('revisão de custos: acha celular, streaming e apps, quanto subiu desde o m
   // A newer account statement does not make a card subscription look stopped.
   const c3 = costsReview({ txs: [...txs, { id: 'x', month: '2026-07', source: 'conta', description: 'PIX', amount: -10, category: 'Contas' }], idx, settings: {}, today: '2026-07-20' });
   assert.equal(c3.items.find(x => x.name === 'Spotify').current, true);
+  // Two Vivo lines (the house and a new internet) are not "Vivo went up".
+  const two = [...txs, { id: 'n1', month: '2026-05', source: 'cartao', description: 'CONTA VIVO', amount: 100, category: 'Contas' }, { id: 'n2', month: '2026-06', source: 'cartao', description: 'CONTA VIVO', amount: 100, category: 'Contas' }];
+  const c4 = costsReview({ txs: two, idx, settings: {}, today: '2026-06-20' });
+  assert.equal(c4.items.find(x => x.name === 'Vivo')?.risePct || 0, 0);
 });
 
 test('seguros: soma por seguradora nos últimos 12 meses, o ano estimado e o seguro dentro do financiamento', async () => {
