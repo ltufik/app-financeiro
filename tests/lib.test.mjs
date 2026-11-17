@@ -1750,3 +1750,22 @@ test('Open Finance (teste): cartão e conta viram o formato do app, com a fatura
   assert.deepEqual(s.accounts[0].bills, [{ due: '2026-11-05', total: 900 }]);
   assert.equal(ofSummary({}, '2026-11-17').findings.at(-1), 'Nenhuma conta veio nesta conexão.');
 });
+
+test('Open Finance (teste): transações pelo /v2/transactions, sem pageSize, seguindo o cursor do next', async () => {
+  process.env.PLUGGY_CLIENT_ID = 'id'; process.env.PLUGGY_CLIENT_SECRET = 'sec';
+  const { pluggyTest, nextCursor } = await import('../api/_pluggy.js');
+  assert.equal(nextCursor('?accountId=a&dateFrom=x&after=abc123'), 'abc123'); assert.equal(nextCursor('abc-1'), 'abc-1'); assert.equal(nextCursor(null), ''); assert.equal(nextCursor('https://evil.test/x'), '');
+  const calls = [];
+  const f = async (url) => { calls.push(url); const u = new URL(url), J = d => ({ ok: true, json: async () => d });
+    if (u.pathname === '/auth') return J({ apiKey: 'k' });
+    if (u.pathname.startsWith('/items/')) return J({ status: 'UPDATED', connector: { name: 'Santander' } });
+    if (u.pathname === '/accounts') return J({ results: [{ id: 'c1', type: 'CREDIT', subtype: 'CREDIT_CARD', name: 'Cartão' }] });
+    if (u.pathname === '/v2/transactions') return J(u.searchParams.get('after') ? { results: [{ date: '2026-11-02', description: 'B', amount: 20, type: 'DEBIT' }], next: null } : { results: [{ date: '2026-11-01', description: 'A', amount: 10, type: 'DEBIT' }], next: '?accountId=c1&after=cur2' });
+    if (u.pathname === '/bills') return J({ results: [] });
+    return { ok: false, status: 404, json: async () => ({ message: 'nope' }) }; };
+  const r = await pluggyTest({ items: ['e2f31a85-5076-4797-888a-2266559059ea'], today: '2026-11-17', f });
+  assert.equal(r.results[0].error, undefined, r.results[0].error); assert.equal(r.results[0].accounts[0].txCount, 2);
+  const tx = calls.filter(c => c.includes('/v2/transactions'));
+  assert.equal(tx.length, 2); assert.ok(tx.every(c => !c.includes('pageSize') && c.includes('dateFrom=2026-08-19') && c.includes('dateTo=2026-11-17'))); assert.ok(tx[1].includes('after=cur2'));
+  delete process.env.PLUGGY_CLIENT_ID; delete process.env.PLUGGY_CLIENT_SECRET;
+});

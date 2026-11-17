@@ -596,4 +596,8 @@ export const RELEASES = [
     addBacklog: [
       { id: 'open_finance_teste', title: 'Teste Open Finance na Central: lê as contas do Luiz conectadas pelo MeuPluggy (fatura aberta, extrato, faturas fechadas), sem guardar nada', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Antes de decidir o custo do Open Finance, ver com dados reais se a fatura aberta e o extrato chegam bem.' },
     ], backlog: ['open_finance_teste'] },
+  { id: 'r3.0.2', version: 'v3.0.2', at: '2026-11-18T04:00:00Z', semNovidade: 'Teste Open Finance (só na Central): as transações passam a vir pelo endereço novo da Pluggy (o antigo foi desativado).',
+    semTeste: 'Só a Central: coberto pelo teste automático (endereço novo, sem pageSize, segue o cursor); o teste de verdade é o Luiz com a conta dele.',
+    addBacklog: [{ id: 'open_finance_v2', title: 'Teste Open Finance: transações pelo /v2/transactions da Pluggy (o antigo respondia "deprecated")', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O teste com a conta do Luiz parou em "This endpoint is deprecated".' }],
+    backlog: ['open_finance_v2'] },
 ];

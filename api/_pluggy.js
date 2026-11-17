@@ -13,6 +13,12 @@ async function j(f, url, opts) {
   return d;
 }
 
+export const nextCursor = next => {
+  const n = String(next || '').trim(); if (!n) return '';
+  if (n.startsWith('?') || n.includes('after=')) return new URLSearchParams(n.slice(n.indexOf('?') + 1)).get('after') || '';
+  return /^[\w-]+$/.test(n) ? n : '';
+};
+
 export async function pluggyTest({ items = [], days = 90, today = new Date().toISOString().slice(0, 10), f = fetch } = {}) {
   if (!pluggyReady()) return { error: 'not_configured' };
   const ids = [...new Set(items.map(s => String(s || '').trim()).filter(s => /^[0-9a-f-]{20,60}$/i.test(s)))].slice(0, 6);
@@ -28,9 +34,14 @@ export async function pluggyTest({ items = [], days = 90, today = new Date().toI
       const full = [];
       for (const account of accounts) {
         const txs = [];
-        for (let page = 1; page <= 4; page++) {
-          const d = await get(`/transactions?accountId=${encodeURIComponent(account.id)}&from=${from}&to=${today}&pageSize=500&page=${page}`);
-          txs.push(...(d.results || [])); if (page >= (+d.totalPages || 1)) break;
+        // GET /v2/transactions (the old /transactions answers "deprecated"): dates as dateFrom/dateTo, no pageSize,
+        // and the next page by the cursor in `next` (a query string like "?...&after=<cursor>" or the cursor itself).
+        const base = `/v2/transactions?accountId=${encodeURIComponent(account.id)}&dateFrom=${from}&dateTo=${today}`;
+        let after = '';
+        for (let page = 1; page <= 10; page++) {
+          const d = await get(base + (after ? '&after=' + encodeURIComponent(after) : ''));
+          txs.push(...(d.results || d.data || d.transactions || []));
+          after = nextCursor(d.next); if (!after) break;
         }
         let bills = [];
         if (account.type === 'CREDIT') bills = (await get('/bills?accountId=' + encodeURIComponent(account.id)).catch(() => ({}))).results || [];
