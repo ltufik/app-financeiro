@@ -5,7 +5,7 @@
 // PATCH /api/admin {feedback: id, status?, note?, reply?}  (reply: personal message to who sent it, also as a push)
 // Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAILS.
 import { cleanUrl } from './config.js';
-import { healthData } from './_email.js';
+import { healthData, dailyEmail } from './_email.js';
 import { sendPush } from './_webpush.js';
 import { vapidFromEnv } from './push-cron.js';
 import { replyTitle } from '../public/js/lib/news.js';
@@ -95,6 +95,11 @@ export default async function handler(req, res) {
     }
     if (req.method === 'POST') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+      // "Mandar o e-mail agora" (Funil e alarmes): the same daily e-mail, on demand, recorded like the 9h one.
+      if (b.action === 'email_test') {
+        try { const r = await withRecorder({ supabaseUrl: URL_, serviceKey: SERVICE, job: 'email' }, () => dailyEmail({ supabaseUrl: URL_, serviceKey: SERVICE, admins })); return res.status(200).json(r); }
+        catch (e) { return res.status(200).json({ sent: 0, error: String(e.message || e) }); }
+      }
       const vapid = vapidFromEnv();
       if (!vapid.publicKey || !vapid.privateKey) return res.status(503).json({ error: 'not_configured' });
       // A note published in the console also goes as a push to everyone with "Novidades" on. Once per note.

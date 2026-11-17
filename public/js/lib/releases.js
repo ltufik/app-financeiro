@@ -578,4 +578,7 @@ export const RELEASES = [
       { id: 'funil_alarmes', title: 'Funil da jornada por pessoa e alarmes, na Central e num e-mail diário às 9h', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Poucos dados e nenhum aviso de quem empaca ou some: o time só descobre olhando a Central', from: [] },
       { id: 'jornada_for_dummies', title: 'Revisão da jornada "for dummies": funções que aparecem ao terminar algo, nomes fáceis, muita comunicação e jornadas ligadas (sem procurar)', status: 'agora', origin: 'Luiz', effort: 'G', problem: 'Até quem pediu a função não acha (ex.: revisão de custos a 3 toques, dentro de um cartão fechado); pode ser por isso que as pessoas não continuam', from: ['funil_alarmes'] },
     ], backlog: ['funil_alarmes'] },
+  { id: 'r2.9.1', version: 'v2.9.1', at: '2026-11-17T13:00:00Z', updateDocs: [DOC_FUNIL], semNovidade: 'Botão de testar o e-mail diário na Central e MAIL_TO: só o Luiz vê.',
+    semTeste: 'Só a Central: coberto pelo e2e (botão manda o e-mail e mostra o resultado).',
+    addBacklog: [{ id: 'email_teste', title: 'Mandar o e-mail diário na hora pela Central (testar a chave do Resend) e escolher quem recebe (MAIL_TO)', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Sem como testar o e-mail, só dava para saber no dia seguinte às 9h', from: ['funil_alarmes'] }], backlog: ['email_teste'] },
 ];

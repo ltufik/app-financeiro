@@ -392,11 +392,18 @@ async function funil(el) {
     : `O último envio falhou (${new Date(le.at).toLocaleString('pt-BR')}): ${esc(ls.error || ls.value || '')}.`;
   const row = p => { const st = stageOf(p), seen = daysSince(p.last_seen, t); return `<tr><td>${esc(personName(p))}</td><td>${esc(p.family || '—')}</td><td>${daysSince(p.signed_up, t)} dias</td><td>${st ? esc(st.label.replace(/^(Criaram|Entraram|Mandaram|Têm|Fecharam|Voltaram|Usaram)/, m => ({ Criaram: 'Criar', Entraram: 'Entrar', Mandaram: 'Mandar', Têm: 'Ter', Fecharam: 'Fechar', Voltaram: 'Voltar', Usaram: 'Usar' })[m])) : 'Fez tudo'}</td><td>${seen == null ? 'nunca' : seen === 0 ? 'hoje' : seen + ' dias'}</td><td>${+p.days_7 || 0}</td></tr>`; };
   el.innerHTML = `<div class="ahead"><h1>Funil e alarmes</h1><span class="tiny muted">${ppl.length} pessoas · abriram ontem: ${+d.opened_yesterday || 0}</span></div>
-    <p class="small">${mail}</p>
+    <div class="rowbtn" style="align-items:center;gap:12px;flex-wrap:wrap"><p class="small" style="margin:0;flex:1 1 280px">${mail}</p><button class="btn" type="button" id="fMail">Mandar o e-mail agora</button></div><p class="small" id="fMailOut" aria-live="polite"></p>
     <div class="panel stack"><h2>Alarmes de hoje</h2>${(d.alarms || []).length ? d.alarms.map(a => `<div class="alarm ${a.level}"><strong>${esc(a.title)}</strong><span class="small">${esc(a.text)}</span></div>`).join('') : '<p class="small">Nenhum alarme hoje.</p>'}</div>
     <div class="panel stack"><h2>O funil da jornada</h2><p class="tiny muted">Cada etapa conta quem passou por ela e por todas as anteriores. Entre parênteses, quantos passaram da etapa anterior.</p>
       ${f.map((x, i) => `<div class="tiny"><div style="display:flex;justify-content:space-between;gap:8px"><span>${i + 1}. ${esc(x.label)}</span><strong>${x.n} · ${x.pct}%${i ? ` (${x.conv}%)` : ''}</strong></div><div style="height:6px;border-radius:3px;background:var(--line)"><div style="height:6px;border-radius:3px;background:var(--accent);width:${x.pct}%"></div></div></div>`).join('')}</div>
     <div class="panel"><h2>Por pessoa</h2><div class="tw"><table><thead><tr><th>Pessoa</th><th>Família</th><th>Desde</th><th>Próximo passo</th><th>Último uso</th><th>Dias na semana</th></tr></thead><tbody>${ppl.map(row).join('') || '<tr><td colspan="6">Ninguém ainda.</td></tr>'}</tbody></table></div></div>`;
+  el.querySelector('#fMail').onclick = async e => {
+    const out = el.querySelector('#fMailOut'); e.target.disabled = true; out.textContent = 'Mandando...';
+    try { const r = await (await call('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'email_test' }) })).json();
+      out.textContent = r.sent ? `Pronto: e-mail enviado ("${r.subject}"). Olhe a caixa de entrada (e o spam, na primeira vez).` : `Não saiu: ${r.error || r.reason || 'motivo desconhecido'}.`; }
+    catch (err) { out.textContent = 'Não saiu: ' + (err.message || err); }
+    e.target.disabled = false;
+  };
 }
 
 // Missões: how many families did each mission (the funnel of the start) and where each family is.

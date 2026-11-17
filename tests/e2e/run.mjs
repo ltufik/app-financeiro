@@ -58,6 +58,7 @@ async function addRoutes(t) {
     if (u.pathname === '/api/news') return r.fulfill({ json: { items: adminStore.news?.items || null } });
     if (u.pathname === '/api/faq') return r.fulfill({ json: { items: adminStore.faq?.items || null } });
     if (u.pathname === '/api/admin' && u.searchParams.get('view') === 'push') return r.fulfill({ json: { configured: true, mine: pushTestSent ? [] : [{ kind: 'Android ou Chrome', since: '2026-10-20T10:00:00Z', prefs: {} }], people: [{ name: 'Mari', family: 'Família Souza', devices: 1, kinds: ['Android ou Chrome'], novidades: true, since: '2026-10-20T10:00:00Z', me: true }, { name: 'Beto', family: 'Família Souza', devices: 2, kinds: ['iPhone ou iPad'], novidades: false, since: '2026-10-21T10:00:00Z', me: false }], users: 4 } });
+    if (u.pathname === '/api/admin' && r.request().method() === 'POST' && /email_test/.test(r.request().postData() || '')) return r.fulfill({ json: { sent: 1, alarms: 1, subject: 'Pra Onde Foi · 1 alarme · 17/11' } });
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && JSON.parse(r.request().postData()).action === 'news_push') { newsPushes.push(JSON.parse(r.request().postData()).id); return r.fulfill({ json: { pushed: 3 } }); }
     if (u.pathname === '/api/admin' && r.request().method() === 'POST' && pushTestFail) return r.fulfill({ status: pushTestFail, json: pushTestFail === 500 ? { error: 'failed', detail: 'db' } : { error: 'not_signed_in' } });
     if (u.pathname === '/api/admin' && r.request().method() === 'POST') { pushTestSent++; return r.fulfill({ json: { results: [{ kind: 'Android ou Chrome', ok: true, gone: false }, { kind: 'iPhone ou iPad', ok: false, gone: true }] } }); }
@@ -1246,6 +1247,8 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   await atab('funil'); await ap.waitForSelector('#aMain table');
   const fx = (await ap.textContent('#aMain')).replace(/\s+/g, ' ');
   ok('central: funil e alarmes mostra o funil, o alarme da pessoa nova parada, o próximo passo de cada um e o aviso da chave do e-mail', fx.includes('Mandaram o 1º extrato ou fatura1 · 50%') && fx.includes('1 pessoa nova parada') && fx.includes('Ana (5 dias)') && fx.includes('Mandar o 1º extrato ou fatura') && fx.includes('falta a chave RESEND_API_KEY'), fx.slice(0, 600));
+  await ap.click('#fMail'); await ap.waitForFunction(() => /Pronto|Não saiu/.test(document.querySelector('#fMailOut')?.textContent || ''));
+  ok('central: "Mandar o e-mail agora" manda e diz o resultado', /Pronto: e-mail enviado/.test(await ap.textContent('#fMailOut')), await ap.textContent('#fMailOut'));
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-funil.png'), fullPage: true });
   await atab('missoes'); await ap.waitForSelector('#aMain table');
   ok('central: missões mostra o funil e cada família', (await ap.textContent('#aMain')).includes('2 famílias') && (await ap.textContent('#aMain')).includes('Mande a última fatura do cartão1 · 50%'), (await ap.textContent('#aMain')).slice(0, 300));

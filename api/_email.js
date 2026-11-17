@@ -1,6 +1,6 @@
 // The daily e-mail to the owner (ADMIN_EMAILS): the journey funnel and the alarms (lib/funnel.js), after the 9h robots.
 // Sent with Resend (RESEND_API_KEY; MAIL_FROM optional, default onboarding@resend.dev, which only delivers to the
-// Resend account's own e-mail). Without the key nothing is sent and the run says why (Central → Funil e alarmes).
+// Resend account's own e-mail; MAIL_TO picks who gets it). Without the key nothing is sent and the run says why (Central → Funil e alarmes).
 import { healthAlarms, healthEmail } from '../public/js/lib/funnel.js';
 import { pushHealth } from '../public/js/lib/pushhealth.js';
 import { linkFor } from '../public/js/lib/links.js';
@@ -24,6 +24,9 @@ export async function dailyEmail({ supabaseUrl, serviceKey, admins = [], fetchIm
   const mail = healthEmail(h, alarms, { centralUrl: base ? base + linkFor('central', { sec: 'funil' }) : '' });
   const key = String(env.RESEND_API_KEY || '').trim();
   if (!key) return { alarms: alarms.length, sent: 0, reason: 'sem RESEND_API_KEY no Vercel' };
+  // MAIL_TO (optional) overrides ADMIN_EMAILS: without a domain of its own, Resend only delivers to its account's e-mail.
+  const to = String(env.MAIL_TO || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (to.length) admins = to;
   if (!admins.length) return { alarms: alarms.length, sent: 0, reason: 'sem ADMIN_EMAILS' };
   const r = await fetchImpl('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
     body: JSON.stringify({ from: String(env.MAIL_FROM || 'Pra Onde Foi <onboarding@resend.dev>'), to: admins, subject: mail.subject, html: mail.html, text: mail.text }) });
