@@ -567,4 +567,7 @@ export const RELEASES = [
     'Se não der para ver os preços, o app diz o motivo, mostra onde procurar e faz a conta da oferta que vocês digitarem. O CEP fica guardado só para as próximas buscas e dá para apagar na mesma tela.'] },
     addBacklog: [{ id: 'combo_casa_padrao', title: 'Contas de casa: com um imóvel só, as contas já vão para ele (em vez de "Onde vocês moram")', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Família com um imóvel via "Onde vocês moram" e o nome do imóvel como duas casas', from: ['contas_casa_contexto'] }],
     backlog: ['combo_operadora', 'combo_casa_padrao'] },
+  { id: 'r2.7.1', version: 'v2.7.1', at: '2026-11-17T06:00:00Z', news: { id: 'n20261117e', title: 'Combo: conta certa com um imóvel só', items: ['Para quem tem um imóvel só, o celular informado entrava duas vezes no que vocês pagam hoje, e a economia do combo saía maior do que é. Agora entra uma vez.'] },
+    addBacklog: [{ id: 'combo_celular_duas_vezes', tipo: 'bug', title: 'Combo contava o celular informado duas vezes (família com um imóvel só)', status: 'feito', origin: 'Claude', effort: 'P', problem: 'A economia do combo saía maior do que a real', from: ['combo_operadora'] }], backlog: ['combo_celular_duas_vezes'],
+    semTeste: 'Coberto pelo teste automático do combo (um imóvel só) e pelo caso combo_ofertas do caderno.' },
 ];

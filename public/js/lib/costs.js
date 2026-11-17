@@ -323,7 +323,8 @@ export function comboChance(c, settings = {}) {
     const fixed = cur.filter(x => has(x, 'internet') || has(x, 'tv'));
     if (!fixed.length) continue;
     const firstFixedHouse = c.telecom.houses.find(o => o.house && o.items.some(x => x.current && !gone(x.status) && (has(x, 'internet') || has(x, 'tv'))));
-    const mobile = [...cur.filter(x => has(x, 'celular') && !fixed.includes(x)), ...(firstFixedHouse === h ? manualCel.filter(x => !x.house) : []), ...manualCel.filter(x => x.house === h.house)];
+    // The informed mobile line can already be in this house's list (one house only): count it once.
+    const mobile = [...new Set([...cur.filter(x => has(x, 'celular') && !fixed.includes(x)), ...(firstFixedHouse === h ? manualCel.filter(x => !x.house) : []), ...manualCel.filter(x => x.house === h.house)])];
     if (!mobile.length) continue;
     const fb = new Set(fixed.map(x => x.name)), mb = new Set(mobile.map(x => x.name));
     if ([...fb].some(b => mb.has(b))) continue;

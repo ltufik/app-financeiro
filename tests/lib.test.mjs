@@ -1646,6 +1646,10 @@ test('combo: só quando internet/TV e celular estão em operadoras diferentes; o
   assert.equal(offerSavings(r.offers[1], ch), null, 'só internet não substitui internet e TV');
   assert.equal(typedSavings(300, ch).year1, 360);
   assert.deepEqual(cleanOffers(null ?? {}), { place: '', offers: [], tried: [] });
+  // One house only: the informed mobile line is in the house's list and is counted once.
+  const one = { assets: [{ name: 'Apartamento da família', value: 1 }], costs: { lines: { [big]: { house: 'Apartamento da família', services: ['internet', 'tv'] }, [small]: { house: 'Apartamento da família', services: ['internet'] } }, celular: { status: 'informado', brand: 'TIM', value: 90 } } };
+  const ch1 = comboChance(costsReview({ txs, idx, settings: one, today: '2026-10-05' }), one);
+  assert.equal(ch1.items.filter(x => x.manual).length, 1); assert.equal(ch1.pay, 410);
 });
 
 test('seguros: soma por seguradora nos últimos 12 meses, o ano estimado e o seguro dentro do financiamento', async () => {
