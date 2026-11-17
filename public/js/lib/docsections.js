@@ -459,3 +459,16 @@ Seguros (insuranceSummary):
 - Categoria Seguros nos últimos 12 meses, por seguradora (tipo adivinhado pelo nome; a família troca).
 - O ano é o que foi pago dividido pelos meses com extrato, vezes 12, mais o seguro dentro do financiamento que a família informa (MIP e DFI).
 - Aviso no Início uma vez por ano. Pergunta se já usaram e lembra da assistência que muitos seguros já incluem. Tudo em settings.insurance.` };
+
+export const DOC_DESIGN = { id: 'claude_design_doc', title: 'Claude Design: design system e mapa do app', body: `O jeito do app e as telas ficam no Claude Design, além do código:
+
+- Design system "Pra Onde Foi": https://claude.ai/artifact/7WXbMJPSgXEjiyMZZEExix. Cores dos temas claro e escuro, tipografia, espaços e cantos (tirados de public/css/app.css), 13 componentes com a regra de uso, o ícone e o guia do jeito de falar (nome, "vocês", manual de mensagens, valores e datas).
+- Mapa do app: https://claude.ai/artifact/GtU8qjLB5j4ByC32p5x8EF. As telas reais por seção e as jornadas passo a passo, com a família fictícia dos testes (as mesmas fotos de Fluxos).
+- Telas desenhadas antes de construir: "Caixa a revisar" (https://claude.ai/artifact/3hx8pzQC5YNGn7LsTuG8pz) e "Revisão de custos" (https://claude.ai/artifact/34BnjaPYtJi6z2pGXiZ5bm).
+
+Como usar em cada entrega:
+1. Tela nova: desenhar no Claude Design com o design system; o Luiz aprova (ou escolhe entre versões) antes de construir.
+2. Depois de publicar: subir a foto nova do robô das telas para o mapa do app.
+3. Mudou cor, fonte ou componente no app: atualizar o design system.
+
+Os links são privados do Luiz; para mostrar a alguém, compartilhar pelo menu Compartilhar de cada um.` };

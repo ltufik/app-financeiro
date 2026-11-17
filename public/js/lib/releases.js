@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -553,4 +553,5 @@ export const RELEASES = [
     'Celular, internet, TV, streaming e apps que voltam todo mês num lugar só: quanto custam no ano, quanto subiram e o que fazer com cada um. Ao cancelar, o app mostra quanto vocês economizam no ano.',
     'Seguros: quanto vocês pagam no ano, com o seguro que vem dentro do financiamento, e se já usaram. Abra pelo card do Início ou em Assinaturas e custos fixos.',
   ] } },
+  { id: 'r2.5.1', version: 'v2.5.1', at: '2026-11-17T02:00:00Z', semNovidade: 'Só a Central: documentação do Claude Design e o estudo dos bugs em dia.', semTeste: 'Só documentação na Central.', addDocs: [DOC_DESIGN], updateDocs: [BUG_STUDY], addBacklog: [{ id: 'claude_design', title: 'Claude Design: design system do app, mapa das telas e telas desenhadas antes de construir', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Sem ver o app inteiro e o jeito dele num lugar, cada tela nova saía de um jeito', from: [] }], backlog: ['claude_design'] },
 ];

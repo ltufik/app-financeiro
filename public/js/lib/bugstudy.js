@@ -18,6 +18,10 @@ export const BUG_STUDY = {
 | Dois pop-ups seguidos depois do desbloqueio | v64 | Teste automático | Ordem errada (a mesma ação disparada duas vezes) |
 | Central: "sem internet" com o login vencido | v67 | Luiz | Mensagem igual para erros diferentes |
 | Nenhum push saía (servidor sem permissão no banco) | v68 | Luiz | Erro escondido em silêncio + teste que não usava o papel do servidor |
+| Central espremida no tablet (Benchmarking, Matriz de serviços) | v2.3.4 | Luiz | Tela testada só no celular e no computador |
+| A mesma amortização contada duas vezes (digitada e pelo comprovante) | v2.3.5 | Luiz | Duas entradas para o mesmo fato, sem conferir se já existia |
+| Bem ligado mostrava outro saldo do financiamento (R$ 220 mil × R$ 350 mil) | v2.3.6 | Luiz | Uma tela refazia a conta em vez de usar a função do número |
+| Testes do GitHub pararam (máquina nova do GitHub) | v2.3.7 | Robô | Ferramenta externa sem versão fixa |
 ## O que os bugs têm em comum
 - **Quem achou:** quase todos foram achados pelo Luiz ou por quem testa, não pelos testes. Os testes cobriam o caminho feliz com dados de mentira e o navegador do computador.
 - **Erro escondido:** o pior bug (nenhum push saía) ficou semanas sem ninguém ver porque as rotinas trocavam o erro por "lista vazia".
@@ -33,6 +37,11 @@ export const BUG_STUDY = {
 - Bug corrigido é fechado na versão da correção: quem avisou recebe o recado pedindo para tentar de novo.
 - Teste automático no Safari do iPhone a cada publicação, e simulação que cobra as mesmas regras do banco real.
 - Todo aviso no celular diz para onde leva.
+- Mapa dos dados (Central → Planejar): cada número tem uma função só e a lista das telas onde aparece; o teste "varredura" confere que todas as telas mostram o mesmo valor (financiamento, patrimônio, guardado no ano, sobra, previsão, caixa a revisar, revisão de custos).
+- Mesmo fato informado de novo (amortização com o mesmo valor em até 10 dias) vira um só.
+- A Central é conferida no celular, em dois tablets em pé e deitados, e nada pode ficar cortado.
+- As máquinas dos robôs têm versão fixa (Ubuntu 24.04).
+- Tela nova é desenhada antes no Claude Design, com o design system do app, e aprovada pelo Luiz.
 ## Próximos passos propostos
 - **Saúde do servidor na Central:** uma checagem que roda depois de cada publicação e mostra no Painel se o banco, as notificações e a leitura inteligente estão funcionando de verdade (item "saude_do_servidor" no backlog).
 - **Erros do servidor na Central:** quando uma rotina automática falhar (avisos do dia, recados, novidades), registrar em Erros em vez de calar (item "erros_do_servidor_na_central").
