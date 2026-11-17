@@ -2,6 +2,7 @@
 // in different moments of the month, so the texts can be reviewed in one place. Uses the same functions the app and
 // the robots use (lib/insights.js, lib/monthend.js, lib/pushtexts.js), so what shows here is what people get.
 import { sundayReview, reviewLine } from '../lib/review.js';
+import { costsNotice, insuranceNotice } from '../lib/costs.js';
 import { insights } from '../lib/insights.js';
 import { forecastText, sundayAsk } from '../lib/monthend.js';
 import { weekly, reminderMessage, message as familyNotice } from '../lib/pushtexts.js';
@@ -54,6 +55,10 @@ export function otherPushes() {
   const w = weekly([{ source: 'cartao', date: '2026-11-14', amount: 420, category: 'Mercado' }, { source: 'cartao', date: '2026-11-13', amount: 160, category: 'Delivery' }, { source: 'cartao', date: '2026-11-01', amount: 1200, category: 'Mercado' }], idx, '2026-11-15', PERSON);
   const ft = forecastText(FC, PERSON), sa = sundayAsk(FC, { name: PERSON, sent: {}, checkins: [], today: '2026-11-15' });
   const r1 = reminderMessage(PERSON), r2 = reminderMessage(PERSON, { empty: true });
+  const cItem = { key: 'Vivo', name: 'Vivo', group: 'telefone', last: 320, first: 245, firstMonth: '2026-01', risePct: 31, rise: 75, year: 3840, current: true };
+  const cBase = { items: [cItem], total: 580, year: 6960, count: 7, risen: [cItem], stopped: [], due: [] };
+  const cn1 = costsNotice(cBase, PERSON), cn2 = costsNotice({ ...cBase, risen: [], stopped: [{ ...cItem, name: 'Gamma App', last: 106.54 }] }, PERSON), cn3 = costsNotice({ ...cBase, due: [cItem] }, PERSON);
+  const insN = insuranceNotice({ items: [{}, {}, {}], year: 18167, yearWithFinancing: 18167, paid: 13625, monthsCovered: 9 }, PERSON, '2026-11-15');
   const rq = { total: 8, counts: { categoria: 5, repetido: 2, saque: 1 } }, rv1 = sundayReview({ ...rq, name: PERSON, today: '2026-11-15' }), rv2 = sundayReview({ total: 0, name: PERSON, today: '2026-11-15' });
   const fam = ['joined', 'imported', 'closed'].map(type => ({ type, m: familyNotice({ type, name: PARTNER.split(' ')[0], to: PERSON.split(' ')[0], family: 'Família Souza', source: 'cartao', month: '2026-10' }) }));
   const conq = [['missao', 'missao:fechar'], ['desafio', 'desafio:categoria']].map(([w, key]) => ({ w, m: familyNotice({ type: 'conquista', key, name: PARTNER.split(' ')[0], to: PERSON.split(' ')[0] }) }));
@@ -61,6 +66,10 @@ export function otherPushes() {
     { channel: 'push', where: 'Domingo, resumo da semana', id: 'semanal', title: w.title, text: w.text, url: w.url },
     { channel: 'push', where: 'Domingo no horário escolhido (9h), revisão com itens', id: 'domingo', title: rv1?.msg.title, text: rv1?.msg.body, url: linkFor('tela', { tab: 'resumo', sec: 'revisar' }) },
     { channel: 'push', where: 'Domingo no horário escolhido (9h), tudo revisado e sem a fatura aberta', id: 'domingo_fatura', title: rv2?.msg.title, text: rv2?.msg.body, url: linkFor('tela', { tab: 'resumo', sec: 'revisar' }) },
+    { channel: 'inicio', where: 'Início, revisão de custos: uma conta subiu', id: 'custos_subiu', title: cn1.title, text: cn1.text, action: { label: cn1.action } },
+    { channel: 'inicio', where: 'Início, revisão de custos: uma assinatura parou de cobrar', id: 'custos_parou', title: cn2.title, text: cn2.text, action: { label: cn2.action } },
+    { channel: 'inicio', where: 'Início, revisão de custos: 7 dias depois de "Vou rever"', id: 'custos_rever', title: cn3.title, text: cn3.text, action: { label: cn3.action } },
+    { channel: 'inicio', where: 'Início, aviso dos seguros (uma vez por ano)', id: 'seguros', title: insN.title, text: insN.text, action: { label: insN.action } },
     { channel: 'inicio', where: 'Início, caixa a revisar', id: 'revisar', title: `${rq.total} para revisar`, text: reviewLine(rq.counts, rq.total, PERSON), action: { label: 'Revisar' } },
     { channel: 'inicio', where: 'Início, Previsão do mês', id: 'previsao', title: ft.title, text: `${ft.head} ${ft.day}`, detail: ft.counted, action: { label: 'Atualizar a previsão' } },
     { channel: 'push', where: '21h, quem não lançou nada hoje', id: 'lembrete', title: r1.title, text: r1.body, url: r1.url },

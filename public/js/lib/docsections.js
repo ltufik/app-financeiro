@@ -448,3 +448,14 @@ Onde aparece:
 - Ao zerar: "Tudo em dia", a fatura aberta (se não foi informada nos últimos 2 dias) e a sequência de semanas. Zerar grava settings.reviews e conta para a sequência.
 - Aviso de domingo (api/_daily.js, runSundayReview): no horário que cada pessoa escolhe em Notificações (prefs.domingoHora, 8h a 21h, 9h por padrão), uma vez por semana. Com itens: "Luiz, 5 minutos para fechar a semana". Sem itens e sem a fatura: pede a fatura. Tudo em dia: vai o resumo da semana. Tocar abre a revisão. O Vercel chama de hora em hora aos domingos (vercel.json, &h=). Substituiu o aviso da previsão das 19h; o resumo da semana não sai mais às 9h para quem tem a revisão ligada.
 - O aviso não conta os lançamentos "só meu".` };
+
+export const DOC_CUSTOS = { id: 'custos_doc', title: 'Revisão de custos e seguros', body: `Revisão de custos (lib/costs.js, costsReview; tela em costs.js):
+- Entra o que findRecurring acha (a mesma cobrança em 3 dos últimos 4 meses) e que é de celular, internet, TV, streaming ou apps (tabela de marcas em BRANDS; condomínio, financiamento e seguros ficam fora).
+- Uma linha por marca. "Subiu" compara o último mês com o mês mais antigo dos últimos 12 meses, pela marca (o banco muda o texto ao longo do ano).
+- Cada conta: Vou rever (em 7 dias volta no card do Início), Cancelei (sai do total e vira economia: valor × 12; confirmada quando a cobrança some) ou Manter assim. Tudo em settings.costs.items.
+- Card no Início só quando algo subiu, parou de cobrar ou um "Vou rever" venceu.
+
+Seguros (insuranceSummary):
+- Categoria Seguros nos últimos 12 meses, por seguradora (tipo adivinhado pelo nome; a família troca).
+- O ano é o que foi pago dividido pelos meses com extrato, vezes 12, mais o seguro dentro do financiamento que a família informa (MIP e DFI).
+- Aviso no Início uma vez por ano. Pergunta se já usaram e lembra da assistência que muitos seguros já incluem. Tudo em settings.insurance.` };

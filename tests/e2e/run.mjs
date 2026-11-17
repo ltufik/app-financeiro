@@ -985,6 +985,37 @@ ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).in
     ok('caixa a revisar: em zero, a linha some do Início', await page.evaluate(() => document.getElementById('rvLine')?.hidden === true)); }
   else ok('caixa a revisar: dá para zerar a fila', false, 'sobrou ' + snap);
   await page.evaluate(async () => { const st = await import('/js/state.js'), k = window.__rvKeep, by = new Map(k.txs.map(x => [x.id, x])); st.S.txs.forEach(t => { const o = by.get(t.id); if (o) { t.pending = o.pending; t.category = o.category; } }); st.S.hh.settings = k.settings; st.reindex(); st.S.render(); });
+// Revisão de custos e seguros (real data): the Início card, the list, one item, "Cancelei" and the insurance page.
+{ await page.waitForTimeout(300);
+  const C = await page.evaluate(async () => { const m = await import('/js/costs.js'), f = await import('/js/lib/format.js'), c = m.familyCosts(), s = m.familyInsurance(); return { total: f.brl0(c.total).replace(/\s/g, ' '), year: f.brl0(c.year).replace(/\s/g, ' '), names: c.items.filter(x => x.current).map(x => x.name), risen: c.risen.map(x => [x.name, x.risePct]), ins: f.brl0(s.yearWithFinancing).replace(/\s/g, ' '), insItems: s.items.map(x => x.name) }; });
+  ok('revisão de custos: acha Vivo, Spotify e Amazon Prime nos dados de verdade, e a Vivo subiu', ['Vivo', 'Spotify', 'Amazon Prime'].every(n => C.names.includes(n)) && C.risen.some(([n, p]) => n === 'Vivo' && p >= 20), JSON.stringify(C));
+  const card = await txt('#costCard');
+  ok('revisão de custos: card no Início com o nome, o que subiu e o total no ano de vocês', /Luiz, a conta da Vivo subiu \d+%/.test(card) && card.replace(/\s/g, ' ').includes(C.year) && card.includes('de vocês'), card);
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-card.png') });
+  await page.click('#costOpen'); await page.waitForSelector('#custos');
+  const list = (await txt('#custos')).replace(/\s/g, ' ');
+  ok('varredura: o total por mês e no ano da revisão é o mesmo do card do Início', list.includes(`${C.total} por mês`) && list.includes(`${C.year} no ano`), list.slice(0, 300));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-lista.png') });
+  await page.click('#custos [data-item="Vivo"]'); await page.waitForSelector('#custos .cs-bars');
+  ok('revisão de custos: uma conta mostra as barras por mês, quanto subiu no ano e as três escolhas', /Subiu \d+%/.test(await txt('#custos')) && (await page.$$('#custos .cs-bar')).length >= 3 && !!(await page.$('#custos [data-s="cancelei"]')), await txt('#custos'));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-item.png') });
+  await page.click('#custos [data-s="cancelei"]'); await page.waitForTimeout(500);
+  const eco = await txt('#custos');
+  ok('revisão de custos: Cancelei mostra a economia no ano e tira a conta do total', /a menos no ano/.test(eco) && eco.includes('Vivo') && await page.evaluate(async () => { const m = await import('/js/costs.js'); return !m.familyCosts().groups.some(g => g.items.some(x => x.name === 'Vivo')); }), eco.slice(0, 300));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-economia.png') });
+  await page.click('#csBack'); await page.waitForTimeout(200);
+  await page.click('#csIns'); await page.waitForSelector('#custos .cs-use');
+  const ins = (await txt('#custos')).replace(/\s/g, ' ');
+  ok('seguros: total no ano igual ao da revisão, por seguradora, e a pergunta se já usaram', ins.includes(C.ins) && C.insItems.slice(0, 2).every(n => ins.includes(n)) && ins.includes('Vocês já usaram'), ins.slice(0, 300));
+  if (shots) await page.screenshot({ path: path.join(shots, '03c-seguros.png') });
+  const gua = await page.$('#custos [data-fin]');
+  if (gua) { await gua.fill('85'); await page.click('#csFinSave'); await page.waitForTimeout(400); }
+  ok('seguros: o seguro dentro do financiamento soma 12 vezes no ano', !!gua && await page.evaluate(async () => { const m = await import('/js/costs.js'), s = m.familyInsurance(); return s.inFinancing === 85 && s.yearWithFinancing === s.year + 1020; }));
+  await page.click('#custos [data-used="nunca"]'); await page.waitForTimeout(400);
+  ok('seguros: "Nunca usamos" fica salvo e lembra de rever antes de renovar', (await txt('#custos')).includes('revejam as apólices antes de renovar'));
+  // Back to how it was, for the tests after this.
+  await page.evaluate(async () => { const st = await import('/js/state.js'), db = await import('/js/db.js'); const cur = st.settings(), next = { ...cur }; delete next.costs; delete next.insurance; await db.saveSettings(st.S.hh.id, next); st.S.hh.settings = next; document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); st.S.render(); });
+}
 // Year retrospective, from "Mais detalhes".
 await page.evaluate(() => { document.querySelector('#sum_nivel').open = true; }); await page.click('#sum_nivel [data-retro]');
 { await page.evaluate(() => { const c = document.querySelector('#calc_nivel'); if (c) c.open = true; });

@@ -27,6 +27,7 @@ import { familyDups, familyFunding } from '../dupfix.js';
 import { renderSurvey } from '../survey.js';
 import { calcBox } from '../explainui.js';
 import { renderReviewLine, openReview } from '../review.js';
+import { renderCostCard, openCosts } from '../costs.js';
 import { levelBreakdown, dreamBreakdown } from '../lib/explain.js';
 import { renderChallengeHome, activeChallenge, challengeSuggestions } from '../challenges.js';
 import { missions } from '../steps.js';
@@ -84,6 +85,7 @@ export function render(el) {
   <div id="rvLine" hidden></div>
   <div id="misStrip" hidden></div>
   <div id="chHome" hidden></div>
+  <div id="costCard" hidden></div>
   <div class="panel stack surv-card" id="survBox" hidden></div>
   <section class="todo" id="todo">
     <div class="todo-head"><p class="eyebrow" id="todoEyebrow">Seu próximo passo</p></div>
@@ -151,6 +153,7 @@ export function render(el) {
   if (S.openReview) { S.openReview = false; openReview('aviso'); }
   renderStrip(el.querySelector('#misStrip'));
   renderChallengeHome(el.querySelector('#chHome'));
+  renderCostCard(el.querySelector('#costCard'));
   if (!yr) renderSurvey(el.querySelector('#survBox'));
   renderInsights(el.querySelector('#insights'));
   if (!yr) renderForecast(el.querySelector('#fcBox'));
@@ -395,8 +398,10 @@ function renderSubs(box) {
   if (!subs.length) { box.innerHTML = '<h3>Assinaturas e custos fixos</h3><p class="small muted">Aparecem aqui quando a mesma cobrança vier em pelo menos 3 dos últimos 4 meses.</p>'; return; }
   const tot = subs.filter(x => x.current).reduce((a, x) => a + x.last, 0);
   box.innerHTML = `<h3>Assinaturas e custos fixos</h3>
+    <div><button type="button" class="btn primary" id="subsReview">Abrir a revisão de custos</button></div>
     <p class="small muted">${subs.length} encontradas · ${brl0(tot)} por mês no último mês. Revise de vez em quando: é dinheiro que sai sem você perceber.</p>
     <ul class="list small">${subs.map(x => `<li><span>${esc(x.name)}<br><span class="tiny muted">${x.months} dos últimos 4 meses${x.current ? '' : ' · não veio no último mês'}</span>${x.rise ? `<br><span class="tiny" style="color:var(--coral)">Subiu ${brl(x.rise)} (era ${brl(x.prev)})</span>` : ''}</span><span class="amt">${brl(x.last)}</span></li>`).join('')}</ul>`;
+  box.querySelector('#subsReview').onclick = () => { track('custos.abriu_fixos'); openCosts('lista'); };
 }
 
 // Settle-up between the people of the family for the month on screen.

@@ -819,28 +819,48 @@ details.sum .sum-b>.panel,details.sum .sum-b .grid2>.panel{margin:0}
 .rv-line .rv-t .small{color:var(--deep-soft)}
 .rv-line svg{color:var(--deep-soft);flex:none}
 body.noscroll{overflow:hidden}
-#caixa{position:fixed;inset:0;z-index:90;background:var(--paper);color:var(--ink);overflow-y:auto;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 0 calc(env(safe-area-inset-bottom,0px) + 16px)}
-#caixa .rv-head{display:flex;align-items:center;gap:12px;padding:4px 16px 10px;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
-#caixa .rv-head h2{flex:1;margin:0}
-#caixa .rv-x{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
-#caixa .rv-bar{height:8px;border-radius:999px;background:var(--sunk);margin:0 16px;max-width:608px;align-self:center;width:calc(100% - 32px);overflow:hidden}
-#caixa .rv-bar span{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s ease}
-#caixa .rv-main{flex:1;display:flex;flex-direction:column;gap:14px;padding:18px 16px 0;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
-#caixa .rv-tag{align-self:flex-start;background:var(--accent-soft);color:var(--ink);font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px}
-#caixa .rv-tag.warn{background:var(--warn-soft)}
-#caixa .rv-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
-#caixa .rv-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-#caixa .rv-row strong{font-size:17px;overflow-wrap:anywhere}
-#caixa .rv-v{font-size:21px;font-weight:700;white-space:nowrap}
-#caixa .rv-sug{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
-#caixa .rv-cat{font-family:var(--display);font-size:23px;font-weight:700}
-#caixa .rv-acts{display:flex;flex-direction:column;gap:10px;margin-top:auto}
-#caixa .rv-acts .btn{min-height:52px;width:100%;justify-content:center;font-size:17px}
-#caixa .rv-acts .linkbtn{min-height:44px;align-self:center}
-#caixa .rv-foot{text-align:center}
-#caixa .rv-host h3{margin-top:0}
-#caixa .rv-done{background:var(--deep);color:var(--deep-ink);border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
-#caixa .rv-done h3{font-size:26px;margin:0}
-#caixa .rv-done .small{color:var(--deep-soft)}
-#caixa .rv-ok{width:62px;height:62px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
-#caixa .rv-run{gap:4px}
+:is(#caixa,#custos){position:fixed;inset:0;z-index:90;background:var(--paper);color:var(--ink);overflow-y:auto;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 0 calc(env(safe-area-inset-bottom,0px) + 16px)}
+:is(#caixa,#custos) .rv-head{display:flex;align-items:center;gap:12px;padding:4px 16px 10px;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
+:is(#caixa,#custos) .rv-head h2{flex:1;margin:0}
+:is(#caixa,#custos) .rv-x{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+:is(#caixa,#custos) .rv-bar{height:8px;border-radius:999px;background:var(--sunk);margin:0 16px;max-width:608px;align-self:center;width:calc(100% - 32px);overflow:hidden}
+:is(#caixa,#custos) .rv-bar span{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s ease}
+:is(#caixa,#custos) .rv-main{flex:1;display:flex;flex-direction:column;gap:14px;padding:18px 16px 0;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
+:is(#caixa,#custos) .rv-tag{align-self:flex-start;background:var(--accent-soft);color:var(--ink);font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px}
+:is(#caixa,#custos) .rv-tag.warn{background:var(--warn-soft)}
+:is(#caixa,#custos) .rv-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+:is(#caixa,#custos) .rv-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+:is(#caixa,#custos) .rv-row strong{font-size:17px;overflow-wrap:anywhere}
+:is(#caixa,#custos) .rv-v{font-size:21px;font-weight:700;white-space:nowrap}
+:is(#caixa,#custos) .rv-sug{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+:is(#caixa,#custos) .rv-cat{font-family:var(--display);font-size:23px;font-weight:700}
+:is(#caixa,#custos) .rv-acts{display:flex;flex-direction:column;gap:10px;margin-top:auto}
+:is(#caixa,#custos) .rv-acts .btn{min-height:52px;width:100%;justify-content:center;font-size:17px}
+:is(#caixa,#custos) .rv-acts .linkbtn{min-height:44px;align-self:center}
+:is(#caixa,#custos) .rv-foot{text-align:center}
+:is(#caixa,#custos) .rv-host h3{margin-top:0}
+:is(#caixa,#custos) .rv-done{background:var(--deep);color:var(--deep-ink);border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+:is(#caixa,#custos) .rv-done h3{font-size:26px;margin:0}
+:is(#caixa,#custos) .rv-done .small{color:var(--deep-soft)}
+:is(#caixa,#custos) .rv-ok{width:62px;height:62px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+:is(#caixa,#custos) .rv-run{gap:4px}
+
+/* Revisão de custos (inside the same full-screen sheet as the review box) */
+#custos .cs-hero{align-items:flex-start;text-align:left}
+#custos .cs-big{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.08}
+#custos .cs-list{padding:4px 0;gap:0}
+#custos .cs-row{appearance:none;font:inherit;color:inherit;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%}
+#custos .cs-row:last-child{border-bottom:0}
+#custos button.cs-row{cursor:pointer;min-height:56px}
+#custos .cs-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+#custos .cs-row>strong{white-space:nowrap;flex:none}
+#custos .cs-val{display:flex;flex-direction:column;align-items:flex-end;gap:4px;white-space:nowrap}
+#custos .cs-save{appearance:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+#custos .cs-stop{flex-direction:column;align-items:stretch}
+#custos .cs-bars{display:flex;align-items:flex-end;gap:6px;height:126px;border-bottom:1px solid var(--line)}
+#custos .cs-bar{flex:1;background:var(--bar);border-radius:4px 4px 0 0;min-width:6px}
+#custos .cs-bar.now{background:var(--accent)}
+#custos .cs-months{display:flex;gap:6px}#custos .cs-months span{flex:1;text-align:center}
+#custos .cs-type select{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:var(--card);color:var(--ink);margin-top:4px;min-height:32px}
+#custos .cs-use{background:var(--warn-soft);border-color:transparent}
+#custos .rowbtn .btn{flex:1}

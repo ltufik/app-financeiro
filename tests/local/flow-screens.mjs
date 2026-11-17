@@ -98,6 +98,9 @@ await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '202
 await step('inicio', () => page.waitForSelector('#todo'));
 await step('revisar', async () => { await page.evaluate(async () => { const m = await import('/js/review.js'); m.openReview(); }); await page.waitForSelector('#caixa'); });
 await page.evaluate(() => { document.getElementById('caixa')?.remove(); document.body.classList.remove('noscroll'); });
+await step('custos', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('lista'); }); await page.waitForSelector('#custos'); });
+await step('seguros', async () => { await page.evaluate(async () => { const m = await import('/js/costs.js'); m.openCosts('seguros'); }); await page.waitForSelector('#custos'); });
+await page.evaluate(() => { document.getElementById('custos')?.remove(); document.body.classList.remove('noscroll'); });
 await step('inicio_mais', async () => { await page.evaluate(() => { ['fixos', 'patrimonio', 'sonho'].forEach(k => { const d = document.querySelector('#sum_' + k); if (d) d.open = true; }); }); }, { scrollTo: '#homeMore' });
 await step('retro_evolucao', async () => { await page.evaluate(() => { document.querySelector('#sum_nivel').open = true; }); await page.click('#sum_nivel [data-retro]'); await page.waitForSelector('#wrapped'); for (let k = 0; k < 12 && !/evolução no ano/i.test(await page.textContent('#wrapped .w-slide')); k++) { await page.click('#wrapped .w-next'); await page.waitForTimeout(150); } await page.waitForTimeout(600); });
 await step('retro_historias', async () => { for (let k = 0; k < 12 && !/nível (de vocês|até agora)/i.test(await page.textContent('#wrapped .w-slide')); k++) { await page.click('#wrapped .w-next'); await page.waitForTimeout(150); } await page.waitForTimeout(600); });

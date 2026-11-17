@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -546,5 +546,11 @@ export const RELEASES = [
     backlog: ['caixa_a_revisar_que_chega_a_zero', 'horario_revisao_domingo'], news: { id: 'n20261116a', title: 'Para revisar: tudo num lugar só', items: [
     'No topo do Início, a linha "para revisar" junta o que espera vocês: categorias, repetidos, saques e pagamentos de financiamento. Toque e resolva um por vez até chegar a zero.',
     'Aos domingos, um aviso de 5 minutos abre a revisão e pergunta a fatura aberta. Escolha o horário em Menu ☰ → Notificações (9h se não escolher).',
+  ] } },
+  { id: 'r2.5.0', version: 'v2.5.0', at: '2026-11-17T03:00:00Z', addDocs: [DOC_CUSTOS], updateDocs: [DOC_MAPA], addBacklog: [
+    { id: 'seguros_aviso', title: 'Seguros: quanto pagam no ano (com o do financiamento) e se já usaram', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Nem todo mundo sabe quanto paga de seguro no total, e muita gente nunca usa o que já pagou', from: [] }],
+    backlog: ['revisao_de_custos_planos', 'seguros_aviso'], news: { id: 'n20261117a', title: 'Revisão de custos e seguros', items: [
+    'Celular, internet, TV, streaming e apps que voltam todo mês num lugar só: quanto custam no ano, quanto subiram e o que fazer com cada um. Ao cancelar, o app mostra quanto vocês economizam no ano.',
+    'Seguros: quanto vocês pagam no ano, com o seguro que vem dentro do financiamento, e se já usaram. Abra pelo card do Início ou em Assinaturas e custos fixos.',
   ] } },
 ];

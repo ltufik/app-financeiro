@@ -37,6 +37,8 @@ export const DATA = [
   { key: 'missionsDone', store: 'settings', what: 'Missões e selos já comemorados', fill: 'Automático ao cumprir', affects: ['missões', 'avisos à família'] },
   { key: 'challenge', store: 'settings', what: 'Desafio do mês aceito', fill: 'Início → Desafios → Aceitar', affects: ['desafio do mês'] },
   { key: 'challenges', store: 'settings', what: 'Histórico dos desafios', fill: 'Automático ao fim do mês', affects: ['desafio do mês', 'selos'] },
+  { key: 'costs', store: 'settings', what: 'Revisão de custos: o que a família decidiu de cada conta ou assinatura (manter, vou rever, cancelei), com a data e o valor', fill: 'Revisão de custos (card do Início ou Assinaturas e custos fixos)', affects: ['custos_mes', 'economia de custos', 'card do Início'] },
+  { key: 'insurance', store: 'settings', what: 'Seguros: o seguro dentro de cada financiamento (R$ por mês), o tipo de cada seguro, se já usaram e quando viram o aviso', fill: 'Revisão de custos → Seguros (e o aviso anual do Início)', affects: ['seguros_ano', 'aviso dos seguros'] },
   { key: 'reviews', store: 'settings', what: 'Revisões que zeraram a caixa a revisar (data, quantos itens, quem)', fill: 'Automático ao zerar a caixa a revisar', affects: ['sequência de semanas', 'missões'] },
   { key: 'dupSkip', store: 'settings', what: 'Pares que a família disse que não são repetidos', fill: 'Extrato → Repetidos → "Não é repetido"', affects: ['repetidos'] },
   { key: 'fundSkip', store: 'settings', what: 'Entradas que a família disse que não pagaram amortização', fill: 'Pergunta "Esse dinheiro pagou a amortização?"', affects: ['sobra_mes'] },
@@ -69,6 +71,10 @@ export const NUMBERS = [
   { id: 'orcamento', what: 'Orçamento por categoria no mês', fn: 'budgetStatus', file: 'lib/budget.js', inputs: ['budgets', 'transactions', 'categories'], shows: ['Início: avisos de orçamento', 'Avisos no celular'], rule: 'Gasto da categoria no mês contra o limite e o ritmo do mês.' },
   { id: 'caixa_revisar', what: 'Quantos itens a família tem para revisar', fn: 'reviewQueue', file: 'lib/review.js', inputs: ['transactions', 'categories', 'debts', 'debtSkip', 'dupSkip', 'cashSkip', 'fundSkip'],
     shows: ['Início: linha "N para revisar"', 'Tela de revisão: "x de N"', 'Aviso de domingo no celular'], rule: 'Categorias sem certeza dos últimos 3 meses + repetidos + saques sem destino + pagamentos que podem abater financiamento + entradas que pagaram amortização. "Ver depois" tira só da tela aberta. O aviso não conta os lançamentos "só meu".' },
+  { id: 'custos_mes', what: 'Contas e assinaturas que voltam todo mês (celular, internet, TV, streaming, apps)', fn: 'costsReview', file: 'lib/costs.js', inputs: ['transactions', 'categories', 'costs'],
+    shows: ['Início: card da revisão de custos', 'Revisão de custos: total por mês e no ano, cada conta, quanto subiu', 'Revisão de custos: economia do que cancelaram'], rule: 'As cobranças que voltam em 3 dos últimos 4 meses (findRecurring) que são de celular, internet, TV, streaming ou apps; quanto subiu = último mês contra o mês mais antigo dos últimos 12; o que foi cancelado sai do total e vira economia (valor × 12).' },
+  { id: 'seguros_ano', what: 'Quanto a família paga em seguros no ano', fn: 'insuranceSummary', file: 'lib/costs.js', inputs: ['transactions', 'categories', 'insurance', 'debts'],
+    shows: ['Início: aviso anual dos seguros', 'Revisão de custos: card Seguros e a tela Seguros'], rule: 'Categoria Seguros nos últimos 12 meses, por seguradora; o ano = o que foi pago ÷ meses com extrato × 12, mais o seguro dentro do financiamento (informado) × 12.' },
   { id: 'limite_cartao', what: 'Fatura contra o limite combinado', fn: 'forecast', file: 'lib/monthend.js', inputs: ['transactions', 'goals', 'cardCloseDay', 'recurring'], shows: ['Início: Previsão (cartão)', 'Avisos no celular'], rule: 'Fatura do mês e a aberta contra o limite da fatura das Metas.' },
 ];
 

@@ -1531,3 +1531,50 @@ test('caixa a revisar: junta categorias, repetidos, saques, financiamento e entr
   assert.match(sundayReview({ total: 0, today: '2026-11-15', name: 'Paty' }).msg.title, /^Paty, a semana já está revisada/);
   assert.equal(sundayReview({ total: 0, checkedIn: true, today: '2026-11-15' }), null, 'tudo em dia: sem aviso');
 });
+
+test('revisão de custos: acha celular, streaming e apps, quanto subiu desde o mês mais antigo e o que foi cancelado', async () => {
+  const { costsReview, costsNotice, brandOf } = await import('../public/js/lib/costs.js');
+  const idx = new Map([['Assinaturas', { grp: 'dia' }], ['Contas', { grp: 'dia' }]]);
+  const months = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'];
+  const txs = [];
+  months.forEach((m, i) => {
+    txs.push({ id: 'v' + i, month: m, source: 'cartao', description: i < 3 ? 'VIVO FIXO' : 'CONTA VIVO', amount: i < 3 ? 245 : 320, category: 'Contas' });
+    txs.push({ id: 's' + i, month: m, source: 'cartao', description: 'DM SPOTIFY', amount: 40.9, category: 'Assinaturas' });
+    if (i < 5) txs.push({ id: 'g' + i, month: m, source: 'cartao', description: 'GAMMA APP', amount: 106.54, category: 'Assinaturas' });
+    txs.push({ id: 'c' + i, month: m, source: 'conta', description: 'CONDOMINIO', amount: -2000, category: 'Contas' });
+  });
+  assert.equal(brandOf('DL GOOGLE LINKED').label, 'LinkedIn');
+  assert.equal(brandOf('CONDOMINIO'), null, 'o que não é assinatura fica fora');
+  const c = costsReview({ txs, idx, settings: {}, today: '2026-06-20' });
+  assert.deepEqual(c.items.map(x => x.name), ['Vivo', 'Gamma App', 'Spotify']);
+  const v = c.items[0];
+  assert.equal(v.first, 245); assert.equal(v.firstMonth, '2026-01'); assert.equal(v.risePct, 31);
+  assert.equal(c.total, 360.9); assert.equal(c.count, 2, 'Gamma parou de cobrar: fora do total');
+  assert.equal(c.stopped[0].name, 'Gamma App');
+  const n = costsNotice(c, 'Luiz Tufik');
+  assert.equal(n.title, 'Luiz, a conta da Vivo subiu 31%');
+  assert.match(n.text, /Era R\$ 245 em janeiro e veio R\$ 320/);
+  const c2 = costsReview({ txs, idx, settings: { costs: { items: { 'Gamma App': { status: 'cancelei', at: '2026-06-01', value: 106.54 }, Vivo: { status: 'rever', at: '2026-06-01' } } } }, today: '2026-06-20' });
+  assert.equal(c2.savings.year, 1278.48); assert.equal(c2.savings.items[0].confirmed, true, 'não veio mais: confirmado');
+  assert.equal(c2.due[0].name, 'Vivo', '"Vou rever" de mais de 7 dias volta no Início');
+  assert.match(costsNotice(c2, 'Luiz').title, /vocês iam rever a Vivo/);
+  // A newer account statement does not make a card subscription look stopped.
+  const c3 = costsReview({ txs: [...txs, { id: 'x', month: '2026-07', source: 'conta', description: 'PIX', amount: -10, category: 'Contas' }], idx, settings: {}, today: '2026-07-20' });
+  assert.equal(c3.items.find(x => x.name === 'Spotify').current, true);
+});
+
+test('seguros: soma por seguradora nos últimos 12 meses, o ano estimado e o seguro dentro do financiamento', async () => {
+  const { insuranceSummary, insuranceNotice, insuranceType } = await import('../public/js/lib/costs.js');
+  assert.equal(insuranceType('ZS SEG RESIDENCI- JAN/26'), 'casa'); assert.equal(insuranceType('BRADESCO AUT*08DE'), 'carro'); assert.equal(insuranceType('PRUDENT*APOL0007'), 'vida');
+  const txs = [];
+  ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'].forEach((m, i) => {
+    txs.push({ id: 'p' + i, month: m, source: 'cartao', description: 'PRUDENT*APOL000732489', amount: 500, category: 'Seguros' });
+    txs.push({ id: 'z' + i, month: m, source: 'cartao', description: 'ZS SEG RESIDENCI', amount: 119.14, category: 'Seguros' });
+    txs.push({ id: 'm' + i, month: m, source: 'cartao', description: 'MERCADO', amount: 800, category: 'Mercado' });
+  });
+  const s = insuranceSummary({ txs, settings: { insurance: { financing: { gua: 85 } } }, today: '2026-06-20', debts: [{ id: 'gua' }] });
+  assert.deepEqual(s.items.map(x => [x.name, x.type]), [['Prudential', 'vida'], ['ZS Seguros', 'casa']]);
+  assert.equal(s.paid, 3714.84); assert.equal(s.monthsCovered, 6); assert.equal(s.year, 7430); assert.equal(s.yearWithFinancing, 7430 + 1020);
+  assert.match(insuranceNotice(s, 'Luiz', '2026-06-20').title, /^Luiz, vocês pagam uns R\$ 8\.450 por ano em seguros$/);
+  assert.equal(insuranceNotice({ ...s, seenAt: '2026-03-01' }, 'Luiz', '2026-06-20'), null, 'uma vez por ano');
+});
