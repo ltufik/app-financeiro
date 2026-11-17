@@ -28,7 +28,7 @@ await page.fill('#aName', 'Ana Souza'); await page.fill('#aEmail', 'ana@exemplo.
 await page.waitForSelector('#obName'); await page.fill('#obName', 'Ana'); await page.click('#obNext');
 await page.click('[data-s="1"]'); await page.waitForSelector('#obFam'); await page.fill('#obFam', 'Família Souza'); await page.click('#obCreate');
 await page.waitForSelector('#obDone'); await page.click('#obDone');
-await page.waitForSelector('.tour'); await page.click('#tourSkip');
+await page.waitForSelector('.start, .tour'); if (await page.$('.start')) { await page.click('#stPdf'); await page.click('.start [data-bank="Nubank"]'); await page.click('#stGo'); } else await page.click('#tourSkip');
 await page.waitForTimeout(800); if (await page.$('.coach')) await page.click('#coachNever');
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open'); if (!(await page.isVisible('#drawer [data-sec="backup"]'))) await page.click('#drawer .mgroup[data-g="dados"] .mgh'); await page.click('#drawer [data-sec="backup"]');
 await page.setInputFiles('#dImport', arg('demo')); await page.click('.cfm [data-y]');
