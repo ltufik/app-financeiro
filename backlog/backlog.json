@@ -1,5 +1,23 @@
 [
  {
+  "id": "horario_revisao_domingo",
+  "from": [],
+  "title": "Horário da revisão de domingo escolhido por cada pessoa",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Cada família tem o seu jeito de domingo"
+ },
+ {
+  "id": "varredura_numeros",
+  "from": [],
+  "title": "Varredura: patrimônio, guardado no ano, sobra e previsão iguais em todas as telas",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Um número calculado diferente numa tela só aparecia quando alguém via a divergência"
+ },
+ {
   "id": "mapa_dados",
   "from": [],
   "title": "Mapa dos dados na Central e varredura nos testes",
@@ -191,7 +209,7 @@
   "where": "Início; Notificações",
   "effort": "G",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Informar não basta: o app precisa desafiar a família a agir para chegar nas metas, e hoje quase todos param antes da primeira fatura"
  },
  {
@@ -2056,7 +2074,7 @@
   "where": "",
   "effort": "M",
   "origin": "Benchmarking: Copilot",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Não se sabe o que falta conferir"
  },
  {

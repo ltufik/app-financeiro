@@ -2,17 +2,15 @@
 
 Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 
-## Próximo (7)
+## Próximo (5)
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
-|  | Missões e desafios para chegar nas metas (gamificação) | `missoes_e_desafios` | G | Luiz |
 |  | [seguranca] Cópia semanal do banco fora do Supabase, com teste de restauração | `backup_semanal` | M | Luiz |
 |  | [backend] Erros dos celulares agrupados por tipo e versão | `erros_agrupados` | P | Luiz |
 |  | Cores do app (ou dos banners) pelo nível de economia | `cores_por_nivel` | P | Luiz |
 | 7 | Ver o resultado antes de criar a conta | `resultado_antes_da_conta` | G | Pesquisa de dores (nov/2026) |
 | 9 | Revisão de custos: TV, internet, celular e streaming | `revisao_de_custos_planos` | M | Luiz |
-| 5 | Caixa "a revisar" que chega a zero, com a revisão de domingo | `caixa_a_revisar_que_chega_a_zero` | M | Benchmarking: Copilot |
 
 ## Ideia (12)
 
@@ -48,7 +46,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 9 | Plano pago / modelo de negócio | `plano_pago_modelo_de_negocio` | M | Produto |
 | 10 | Cobrança honesta (teste sem cartão, aviso de renovação, cancelar em 1 clique) | `cobranca_honesta_teste_sem_cartao_aviso_` | P | Benchmarking |
 
-## Feito: 155 itens
+## Feito: 159 itens
 
 ## Descartado: 4 itens
 
