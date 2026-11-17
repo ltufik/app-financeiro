@@ -19,6 +19,7 @@ import { byCategory } from '../lib/calc.js';
 import { brl, brl0, pct, esc, mLong, mShort } from '../lib/format.js';
 import { meter, pill } from '../ui.js';
 import { renderSteps, renderStrip } from '../steps.js';
+import { renderTrail, toolOpen, SECTION_TOOL } from '../trail.js';
 import { demoSummary, DEMO_FAMILY, DEMO_MONTH } from '../lib/demo.js';
 import { track } from '../usage.js';
 import { renderForecast, familyForecast } from '../forecast.js';
@@ -36,7 +37,8 @@ import { missionProgress } from '../lib/missions.js';
 let goalPreset = 0;
 // Início sections: a clear one-line description; the person opens for the detail (remembered per section).
 const SEC_OPEN = id => { try { return localStorage.getItem('fin.home.' + id) === '1'; } catch (e) { return false; } };
-const sec = (id, title, line, body) => `<details class="sum" id="sum_${id}" data-sec="${id}"${SEC_OPEN(id) ? ' open' : ''}><summary><span class="sum-t">${title}</span><span class="sum-l">${line}</span></summary><div class="sum-b stack">${body}</div></details>`;
+// 3.0: a section whose tool the trail has not opened yet stays hidden (the code that fills it still finds it).
+const sec = (id, title, line, body) => `<details class="sum" id="sum_${id}" data-sec="${id}"${SEC_OPEN(id) ? ' open' : ''}${SECTION_TOOL[id] && !toolOpen(SECTION_TOOL[id]) ? ' hidden' : ''}><summary><span class="sum-t">${title}</span><span class="sum-l">${line}</span></summary><div class="sum-b stack">${body}</div></details>`;
 const first = () => (S.user?.user_metadata?.display_name || '').split(' ')[0] || 'você';
 
 // While the family has no data: a fictional month, with the same math as the real summary.
@@ -63,7 +65,7 @@ export function render(el) {
     el.querySelector('#demoPdf').onclick = () => { track('exemplo.fatura'); S.go('lancar'); import('./lancar.js').then(m => m.openMode('pdf', true)); };
     el.querySelector('#demoFalar').onclick = () => { track('exemplo.falar'); S.go('lancar'); import('./lancar.js').then(m => m.openMode('falar', true)); };
     renderInsights(el.querySelector('#insights'));
-    renderSteps(el.querySelector('#stepsBox'));
+    if (!renderTrail(el.querySelector('#stepsBox'))) renderSteps(el.querySelector('#stepsBox'));
     renderSurvey(el.querySelector('#survBox'));
     return;
   }
@@ -148,7 +150,7 @@ export function render(el) {
   renderPendingPayments(el.querySelector('#debtPayBox'), { onDone: () => S.render() });
   el.querySelector('#plansMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.parcelas'); });
   el.querySelector('#feesMore')?.addEventListener('toggle', e => { if (e.target.open) track('inicio.tarifas_lista'); });
-  renderSteps(el.querySelector('#stepsBox'));
+  if (!renderTrail(el.querySelector('#stepsBox'))) renderSteps(el.querySelector('#stepsBox'));
   renderReviewLine(el.querySelector('#rvLine'));
   if (S.openReview) { S.openReview = false; openReview('aviso'); }
   renderStrip(el.querySelector('#misStrip'));
@@ -189,7 +191,7 @@ export const retroKey = y => `fin.retro.${S.hh?.id || ''}.${y}`;
 // how much comes and how much to set aside per month (warn when the first one is next month).
 // Banners follow the message manual: the person's name, "vocês", the family's number and a button to the place.
 const me1 = () => String(S.members.find(m => m.user_id === S.user?.id)?.display_name || '').trim().split(/\s+/)[0];
-const hiB = t => (me1() ? `${me1()}, ${t}` : t[0].toUpperCase() + t.slice(1));
+const hiB = t => t[0].toUpperCase() + t.slice(1);
 function annualNotice() {
   let P; try { P = annualPlan(); } catch (e) { return []; }
   const go = { label: 'Ver os gastos do ano', go: ['ajustes', null, 'gastos_ano'] };
@@ -262,12 +264,13 @@ function arrangeTodo() {
   const rank = a => a.classList.contains('bad') ? 0 : a.classList.contains('warn') ? 1 : 2;
   const fresh = arts.filter(a => a.classList.contains('fresh')), rest = arts.filter(a => !a.classList.contains('fresh')).sort((a, b) => rank(a) - rank(b));
   const blocks = ['debtPayBox', 'closeCard'].map(id => document.getElementById(id)).filter(vis), steps = document.getElementById('stepsBox');
-  const units = [...fresh, ...blocks, ...rest, ...(vis(steps) ? [steps] : [])];
+  const trail = vis(steps) && steps.classList.contains('tr-box');
+  const units = [...(trail ? [steps] : []), ...fresh, ...blocks, ...rest, ...(vis(steps) && !trail ? [steps] : [])];
   [...arts, ...blocks, steps].forEach(e => e && e.classList.remove('later'));
   units.forEach((u, i) => { u.style.order = String(i + 1); if (i && !todoOpen) u.classList.add('later'); });
   if (ins) ins.style.order = String(arts.length ? Math.min(...arts.map(a => +a.style.order || 99)) : 99);
   const n = units.length, first = units[0];
-  t.querySelector('#todoEyebrow').textContent = n ? (first.classList.contains('fresh') ? 'Novidade desde a sua última visita' : 'Seu próximo passo') : ATTN ? 'Vale ficar de olho' : 'Tudo em dia';
+  t.querySelector('#todoEyebrow').textContent = n ? first.classList.contains('tr-box') ? 'Seu próximo passo' : (first.classList.contains('fresh') ? 'Novidade desde a sua última visita' : 'Seu próximo passo') : ATTN ? 'Vale ficar de olho' : 'Tudo em dia';
   const more = t.querySelector('#todoMore');
   more.hidden = n < 2; more.textContent = todoOpen ? 'Mostrar só o próximo passo' : `Depois disso: mais ${n - 1} ${n - 1 > 1 ? 'itens' : 'item'}`;
   more.onclick = () => { todoOpen = !todoOpen; track('inicio.todo_mais'); arrangeTodo(); };

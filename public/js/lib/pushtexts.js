@@ -10,17 +10,18 @@ const R = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
 export function weekly(txs, idx, today, name = '') {
   const spent = (from, to) => { const by = {}; for (const t of expandSplits(txs)) { if (!t.date) continue; const d = days(today, t.date); if (d < from || d >= to) continue; const c = idx.get(t.category); if (c && c.grp !== 'dia') continue; const v = t.source === 'conta' ? -t.amount : +t.amount; if (v > 0) by[t.category || 'A classificar'] = (by[t.category || 'A classificar'] || 0) + v; } return by; };
   const by = spent(0, 7), total = Object.values(by).reduce((a, b) => a + b, 0), top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 2);
-  const prev = Object.values(spent(7, 35)).reduce((a, b) => a + b, 0) / 4, N = String(name || '').trim().split(/\s+/)[0], hey = t => (N ? `${N}, ${t}` : t[0].toUpperCase() + t.slice(1));
-  if (!total) return { id: 'semanal', title: hey('nenhum gasto de vocês lançado na semana'), text: `Saíram R$ 0 em despesas lançadas nos últimos 7 dias${prev ? `; numa semana normal de vocês são ${R(prev)}` : ''}. Lance os do pix e do dinheiro: falando, leva 5 segundos.`, url: '/?tab=lancar' };
-  const diff = total - prev, cmp = prev >= 1 ? (Math.abs(diff) < prev * 0.1 ? ', perto do normal de vocês' : `, ${R(diff)} ${diff > 0 ? 'a mais' : 'a menos'} que uma semana normal de vocês`) : '';
-  return { id: 'semanal', title: hey(`a semana de vocês custou ${R(total)}`), text: `Foram ${R(total)} em despesas nos últimos 7 dias${cmp}. Mais pesaram: ${top.map(e => `${e[0]} ${R(e[1])}`).join(', ')}.`, url: '/?tab=resumo' };
+  const prev = Object.values(spent(7, 35)).reduce((a, b) => a + b, 0) / 4, hey = t => t[0].toUpperCase() + t.slice(1);
+  if (!total) return { id: 'semanal', title: hey('nenhum gasto lançado na semana'), text: `${prev ? `Numa semana normal são ${R(prev)}. ` : ''}Lancem os do pix e do dinheiro falando: leva 5 segundos.`, url: '/?tab=lancar' };
+  const diff = total - prev, near = prev >= 1 && Math.abs(diff) < prev * 0.1;
+  const title = prev >= 1 ? (near ? `Semana: ${R(total)}, perto do normal` : `Semana: ${R(diff)} ${diff > 0 ? 'acima' : 'abaixo'} do normal`) : `Semana: ${R(total)} em gastos`;
+  return { id: 'semanal', title, text: `Foram ${R(total)} em 7 dias.${top[0] ? ` ${top[0][0]} foi o que mais pesou: ${R(top[0][1])}.` : ''}`, url: '/?tab=resumo' };
 }
 
 // Evening reminder (21h in Brazil): only for people who launched nothing today, once a day.
 // Families with no data at all get the first step (send the statement) instead of the voice reminder.
 export const reminderMessage = (name, { empty = false } = {}) => empty
-  ? { title: `${name ? name.split(' ')[0] + ', o' : 'O'} app de vocês ainda está vazio`, body: 'Mande a última fatura do cartão, em PDF, foto ou print. Em 2 minutos você vê para onde foi o dinheiro.', url: '/?acao=pdf', tag: 'lembrete' }
-  : ({ title: `${name ? name.split(' ')[0] + ', g' : 'G'}astou algo hoje no pix ou em dinheiro?`, body: 'Toque e fale em 5 segundos. O app lança para você.', url: '/?acao=voz', tag: 'lembrete' });
+  ? { title: 'Para onde foi o dinheiro deste mês?', body: 'Mande a última fatura do cartão (PDF, foto ou print): em 2 minutos você vê.', url: '/?acao=pdf', tag: 'lembrete' }
+  : ({ title: 'Teve pix ou dinheiro hoje?', body: 'Toque e fale em 5 segundos: o app lança para você.', url: '/?acao=voz', tag: 'lembrete' });
 
 // Real-time family notices (api/notify.js): tells the OTHER members when someone joins, imports or closes a month.
 const MES_N = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -28,7 +29,7 @@ const mName = k => /^\d{4}-\d{2}$/.test(k || '') ? MES_N[+k.slice(5) - 1] : 'mê
 
 const MISSION_TITLES = Object.fromEntries(missionList({}).filter(m => m.starter).map(m => [m.key, m.title]));
 export function message({ type, name, to = '', family, source, month, key }) {
-  const hey = t => (to ? `${to}, ${t}` : t[0].toUpperCase() + t.slice(1));
+  const hey = t => t[0].toUpperCase() + t.slice(1);
   if (type === 'joined') return { title: hey(`${name} entrou na família`), body: `Agora vocês veem os mesmos números da ${family}. Combinem as metas juntos em Metas.`, url: '/?tab=resumo', tag: 'familia-joined' };
   if (type === 'imported') return { title: hey(`${name} mandou ${source === 'cartao' ? 'a fatura' : 'o extrato'} de ${mName(month)}`), body: 'A sobra de vocês no mês já está atualizada. Toque para ver para onde foi o dinheiro.', url: '/?tab=resumo', tag: 'familia-imported' };
   if (type === 'conquista') {

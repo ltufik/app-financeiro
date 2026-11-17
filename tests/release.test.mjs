@@ -57,7 +57,7 @@ test('Central: tudo o que o app registra tem nome legível', () => {
   walk(path.join(ROOT, 'js'));
   const lits = new Set(files.flatMap(f => [...fs.readFileSync(f, 'utf8').matchAll(/track\('([a-z_]+(?:\.[a-z_]+)?)'\)/g)].map(m => m[1])));
   const dyn = ['lancar.falar', 'lancar.nota', 'lancar.pdf', 'lancar.mao', 'atalho.voz', 'atalho.nota', 'atalho.pdf', 'atalho.compartilhar', 'opiniao.erro', 'opiniao.ideia', 'opiniao.critica',
-    ...['inicio', 'lancar', 'graficos', 'perguntar', 'extrato', 'menu', 'fechar'].map(t => 'aba.' + t), ...['fatura', 'extrato', 'conferir', 'metas', 'avisos', 'fechar', 'sonho', 'convite', 'falar', 'fixas', 'invest', 'dividas', 'instalar', 'contas_casa', 'celular'].map(k => 'missao.' + k)];
+    ...['inicio', 'lancar', 'graficos', 'perguntar', 'extrato', 'menu', 'fechar'].map(t => 'aba.' + t), ...['fatura', 'extrato', 'conferir', 'metas', 'avisos', 'fechar', 'sonho', 'convite', 'falar', 'fixas', 'invest', 'dividas', 'instalar', 'contas_casa', 'celular'].map(k => 'missao.' + k), ...[1, 2, 3, 4, 5].map(n => 'trilha.liberou_' + n), ...['pdf', 'fechar', 'revisar'].map(g => 'trilha.passo_' + g), ...['gastos', 'perguntar', 'sobra', 'previsao', 'fechar', 'metas', 'contas_casa', 'semana', 'contas_ano', 'divisao', 'patrimonio', 'retro'].map(t => 'trilha.ferramenta_' + t), 'dica.gastos', 'dica.lancar'];
   for (const k of [...lits, ...dyn]) assert.ok(FEATURE_LABELS[k], `falta FEATURE_LABELS['${k}'] em public/js/admin/content.js`);
 });
 

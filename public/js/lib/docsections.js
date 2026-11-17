@@ -470,6 +470,22 @@ Seguros (insuranceSummary):
 - O ano é o que foi pago dividido pelos meses com extrato, vezes 12, mais o seguro dentro do financiamento que a família informa (MIP e DFI).
 - Aviso no Início uma vez por ano. Pergunta se já usaram e lembra da assistência que muitos seguros já incluem. Tudo em settings.insurance.` };
 
+export const DOC_TRILHA = { id: 'trilha_3', title: 'Trilha e jeito de falar 2.0 (3.0)', body: `A virada "for dummies" (diagnóstico e telas no Claude Design: "Jornada nova: diagnóstico e proposta").
+
+Primeiro acesso: quem chega sem dados vê uma tela só (Começar) em vez da apresentação de 7 telas e do passeio de 9 balões: "Mandar a primeira fatura" (escolhe o banco e vê onde pegar o PDF, com a dica do computador: Imprimir → Salvar como PDF), "Ainda não tenho: lançar um gasto falando" ou "Ver primeiro um mês de exemplo". A apresentação e o passeio continuam em menu ☰ → Ajuda.
+
+A trilha (lib/trail.js, trail.js): 5 etapas, uma por vez, no topo do Início ("Agora · etapa N de 5", quanto tempo leva e o que libera).
+1. Mandar a primeira fatura ou extrato → libera Gastos e Perguntar.
+2. Mandar o outro (conta ou cartão) → Quanto sobrou, Como deve fechar o mês, Fechar o mês.
+3. Conferir os marcados e fechar o mês → Metas e sonho, Contas da casa, Conferir a semana.
+4. Conferir a semana → Contas do ano, Divisão do casal.
+5. Fechar o segundo mês → O que vocês têm e devem, Retrospectiva.
+Uma etapa só conta quando as anteriores estão feitas. Cada etapa feita mostra uma vez (para a família) a tela "Liberado": o que abriu, o que faz e a próxima etapa (settings.trail.seen). Enquanto a ferramenta não abre, a seção dela no Início fica escondida (não apagada).
+Ninguém perde nada: famílias de antes de 17/11/2026, ou com 3 meses ou mais de histórico, entram com tudo aberto e sem trilha (isLegacy).
+Dica da primeira vez: uma frase, uma vez por pessoa, em Gastos e em Lançar.
+
+Jeito de falar 2.0 (lib/msgcheck.js, Central → Mensagens): título até 8 palavras; texto com até 2 frases (160 letras; push 140); o nome de quem lê não abre o aviso (pessoal é o número, a categoria, a casa, a meta ou quem da família fez); "vocês" no máximo uma vez; botão com verbo; sempre um próximo passo; estimativa arredondada. O teste de todas as mensagens do app cobra essas regras.` };
+
 export const DOC_FUNIL = { id: 'funil_alarmes', title: 'Funil e alarmes (2.9)', body: `Central → Acompanhar → Funil e alarmes, e o mesmo conteúdo num e-mail diário para o Luiz às 9h.
 
 O funil (lib/funnel.js, com os dados de product_health no banco: só datas e contagens, nunca valores da família):

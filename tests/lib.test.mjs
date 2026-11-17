@@ -677,7 +677,7 @@ test('insights: quanto dá para gastar por dia no cartão e conta fixa acima do 
   const pd = a.find(x => x.id === 'perday');
   assert.ok(pd); assert.equal(pd.title, 'Dá para gastar R$ 200 por dia no cartão'); assert.match(pd.text, /Sobram R\$ 2\.000 para os 10 dias/);
   const bu = a.find(x => x.id === 'bill_up');
-  assert.ok(bu); assert.equal(bu.title, 'Moradia veio acima da média'); assert.match(bu.text, /Moradia: R\$ 1\.050 em outubro, R\$ 350 \(50%\) acima da média/);
+  assert.ok(bu); assert.equal(bu.title, 'Moradia veio acima da média'); assert.match(bu.text, /Moradia R\$ 350 acima \(50%\) da média de vocês em outubro/);
   // After the closing day, the days run to next month's closing; above the limit, no per-day message.
   assert.match(insights({ ...base, today: '2026-11-26' }).find(x => x.id === 'perday').text, /28 dias/);
   assert.ok(!insights({ ...base, today: '2026-11-14', nextFatura: { month: '2026-11', total: 5200 } }).some(x => x.id === 'perday'));
@@ -1349,12 +1349,13 @@ test('insights: o mês que está acontecendo nunca "fechou" (no vermelho ou não
 
 import { checkMessage } from '../public/js/lib/msgcheck.js';
 test('manual de mensagens: acha mês errado, falta de nome, de número, de ação e frase genérica', () => {
-  const bad = checkMessage({ channel: 'inicio', id: 'red', title: 'Novembro fechou no vermelho', text: 'Saiu muito. Vale olhar onde dá para cortar.' }, { today: '2026-11-09', name: 'Luiz Elias' });
+  // Jeito de falar 2.0: the reader's name does not open the notice; "vocês" once; short (8 words, 2 sentences).
+  const bad = checkMessage({ channel: 'inicio', id: 'red', title: 'Luiz, novembro fechou no vermelho e vocês precisam olhar isso agora', text: 'Saiu muito de vocês. Vale olhar onde dá para cortar. E logo.' }, { today: '2026-11-09', name: 'Luiz Elias' });
   const rules = bad.map(p => p.rule);
-  for (const r of ['momento', 'nome', 'pessoa', 'numero', 'comparacao', 'acao', 'vago']) assert.ok(rules.includes(r), r);
-  const good = checkMessage({ channel: 'inicio', id: 'red', title: 'Luiz, outubro fechou no vermelho', text: 'Os gastos de vocês passaram R$ 1.200 da renda, R$ 900 acima da média de vocês. Escola e Moradia puxaram.', action: { label: 'Ver o que subiu' } }, { today: '2026-11-09', name: 'Luiz Elias' });
+  for (const r of ['momento', 'nome', 'pessoa', 'numero', 'comparacao', 'acao', 'vago', 'tamanho']) assert.ok(rules.includes(r), r);
+  const good = checkMessage({ channel: 'inicio', id: 'red', title: 'Outubro fechou no vermelho', text: 'Os gastos passaram R$ 1.200 da renda, R$ 900 acima da média de vocês. Escola e Moradia puxaram.', action: { label: 'Ver o que subiu' } }, { today: '2026-11-09', name: 'Luiz Elias' });
   assert.deepEqual(good, []);
-  assert.deepEqual(checkMessage({ channel: 'push', id: 'lembrete', title: 'Luiz, gastou algo hoje no pix?', text: 'Toque e fale em 5 segundos.', url: '/?acao=voz' }, { today: '2026-11-09', name: 'Luiz' }), []);
+  assert.deepEqual(checkMessage({ channel: 'push', id: 'lembrete', title: 'Teve pix ou dinheiro hoje?', text: 'Toque e fale em 5 segundos.', url: '/?acao=voz' }, { today: '2026-11-09', name: 'Luiz' }), []);
 });
 test('central → mensagens: todos os cenários geram mensagens com título e texto', async () => {
   const m = await import('../public/js/admin/msgscenarios.js');
@@ -1400,7 +1401,7 @@ test('o financiamento aparece no aviso do mês abaixo da meta, com o número', a
   const M = { '2026-09': { res: 3000, renda: 10000, out: 7000, tx: 0.3 }, '2026-10': { res: 1200, renda: 10000, out: 8800, tx: 0.12, fin: 2200, tx2: 0.34 } };
   const a = insights({ months: Object.keys(M), today: '2026-11-09', name: 'Luiz Elias', calc: k => M[k], cats: () => ({}), fixed: () => 0, has: () => true, manualCount: () => 0, pending: () => 0, goals: { savings: 0.2 } });
   const b = a.find(x => x.id === 'below');
-  assert.equal(b.title, 'Luiz, vocês guardaram 12% em outubro');
+  assert.equal(b.title, 'Vocês guardaram 12% em outubro');
   assert.match(b.text, /faltaram R\$ 800\. Sem contar o financiamento \(R\$ 2\.200\), seriam 34%: ele também é patrimônio/);
 });
 
@@ -1435,7 +1436,7 @@ test('desafios: sugeridos pelos números da família, com progresso e resultado 
   const f = { today: '2026-11-10', cats, fixed: ['Escola'], pending: 4, cash: 0, checkins: [], forecast: { res: 1800, meta: 2800, perDay: 120 }, subsUp: [] };
   const s = suggestChallenges(f);
   assert.equal(s.length, 2); assert.equal(s[0].kind, 'categoria'); assert.equal(s[0].category, 'Delivery'); assert.equal(s[0].target, 650);
-  assert.match(s[0].why, /R\$ 1\.400, R\$ 775 acima da média de vocês/); assert.equal(s[1].kind, 'meta');
+  assert.match(s[0].why, /R\$ 1\.400, R\$ 775 acima da média/); assert.equal(s[1].kind, 'meta');
   const ch = { ...s[0], status: 'ativo' };
   assert.equal(challengeProgress(ch, f).status, 'ativo'); assert.match(challengeProgress(ch, f).text, /R\$ 380 até agora de R\$ 650/);
   assert.equal(challengeProgress(ch, { ...f, today: '2026-12-02' }).status, 'aguardando');
@@ -1525,10 +1526,10 @@ test('caixa a revisar: junta categorias, repetidos, saques, financiamento e entr
   assert.equal(reviewMinutes(4), 1); assert.equal(reviewMinutes(30), 10);
   assert.equal(sundayHour({}), 9); assert.equal(sundayHour({ domingoHora: 19 }), 19); assert.equal(sundayHour({ domingoHora: 23 }), 9, 'nunca à noite');
   const p = sundayReview({ total: 4, counts: q.counts, name: 'Luiz Tufik', today: '2026-11-15' });
-  assert.match(p.msg.title, /^Luiz, 5 minutos para fechar a semana$/);
-  assert.match(p.msg.body, /4 lançamentos para revisar \(2 categorias, 1 repetido e 1 saque\) e a fatura aberta de vocês/);
+  assert.match(p.msg.title, /^5 minutos para fechar a semana$/);
+  assert.match(p.msg.body, /4 lançamentos para revisar \(2 categorias, 1 repetido e 1 saque\) e a fatura aberta\. Conta para a sequência de semanas\.$/);
   assert.equal(sundayReview({ total: 4, counts: q.counts, today: '2026-11-15', sent: { domingo: '2026-11-15' } }), null, 'uma vez por semana');
-  assert.match(sundayReview({ total: 0, today: '2026-11-15', name: 'Paty' }).msg.title, /^Paty, a semana já está revisada/);
+  assert.match(sundayReview({ total: 0, today: '2026-11-15', name: 'Paty' }).msg.title, /^A semana já está revisada/);
   assert.equal(sundayReview({ total: 0, checkedIn: true, today: '2026-11-15' }), null, 'tudo em dia: sem aviso');
 });
 
@@ -1552,12 +1553,12 @@ test('revisão de custos: acha celular, streaming e apps, quanto subiu desde o m
   assert.equal(c.total, 360.9); assert.equal(c.count, 2, 'Gamma parou de cobrar: fora do total');
   assert.equal(c.stopped[0].name, 'Gamma App');
   const n = costsNotice(c, 'Luiz Tufik');
-  assert.equal(n.title, 'Luiz, a conta da Vivo subiu 31%');
+  assert.equal(n.title, 'A conta da Vivo subiu 31%');
   assert.match(n.text, /Era R\$ 245 em janeiro e veio R\$ 320/);
   const c2 = costsReview({ txs, idx, settings: { costs: { items: { 'Gamma App': { status: 'cancelei', at: '2026-06-01', value: 106.54 }, Vivo: { status: 'rever', at: '2026-06-01' } } } }, today: '2026-06-20' });
   assert.equal(c2.savings.year, 1278.48); assert.equal(c2.savings.items[0].confirmed, true, 'não veio mais: confirmado');
   assert.equal(c2.due[0].name, 'Vivo', '"Vou rever" de mais de 7 dias volta no Início');
-  assert.match(costsNotice(c2, 'Luiz').title, /vocês iam rever a Vivo/);
+  assert.match(costsNotice(c2, 'Luiz').title, /^Vocês iam rever a Vivo/);
   // A newer account statement does not make a card subscription look stopped.
   const c3 = costsReview({ txs: [...txs, { id: 'x', month: '2026-07', source: 'conta', description: 'PIX', amount: -10, category: 'Contas' }], idx, settings: {}, today: '2026-07-20' });
   assert.equal(c3.items.find(x => x.name === 'Spotify').current, true);
@@ -1595,7 +1596,7 @@ test('contas de casa: separa as contas da operadora, entende débito para cartã
   assert.deepEqual(c.questions.map(q => q.kind + ':' + q.key), ['linha:Vivo@2026-08', 'linha:Vivo@2026-01', 'parou:Claro@2026-01']);
   assert.equal(c.questions[0].second, true); assert.equal(c.questions[2].swapTo, 'Vivo'); assert.equal(c.questions[2].min, 137.86);
   const n = costsNotice(c, 'Luiz Tufik');
-  assert.equal(n.title, 'Luiz, vocês pagam R$ 225 a menos por mês do que em janeiro'); assert.equal(n.kind, 'contexto'); assert.match(n.text, /Três perguntas/);
+  assert.equal(n.title, 'Telefone e internet: R$ 225 a menos por mês'); assert.equal(n.text, 'R$ 545 em janeiro, R$ 320 agora. Três perguntas rápidas deixam a conta certa.'); assert.equal(n.kind, 'contexto'); assert.match(n.text, /Três perguntas/);
   // Answered: houses and services, Claro swapped. Then the mobile question shows up (no mobile line), soft (no card).
   const ans = { ...settings, costs: { lines: { 'Vivo@2026-08': { house: 'Casa de Guaratuba', services: ['internet'] }, 'Vivo@2026-01': { house: 'Apartamento de São Paulo', services: ['internet', 'tv'] } }, items: { 'Claro@2026-01': { status: 'trocou', at: '2026-10-05' } } } };
   const c2 = costsReview({ txs, idx, settings: ans, today: '2026-10-05' });
@@ -1670,7 +1671,7 @@ test('seguros: soma por seguradora nos últimos 12 meses, o ano estimado e o seg
   const s = insuranceSummary({ txs, settings: { insurance: { financing: { gua: 85 } } }, today: '2026-06-20', debts: [{ id: 'gua' }] });
   assert.deepEqual(s.items.map(x => [x.name, x.type]), [['Prudential', 'vida'], ['ZS Seguros', 'casa']]);
   assert.equal(s.paid, 3714.84); assert.equal(s.monthsCovered, 6); assert.equal(s.year, 7430); assert.equal(s.yearWithFinancing, 7430 + 1020);
-  assert.match(insuranceNotice(s, 'Luiz', '2026-06-20').title, /^Luiz, vocês pagam uns R\$ 8\.450 por ano em seguros$/);
+  assert.match(insuranceNotice(s, 'Luiz', '2026-06-20').title, /^Vocês pagam uns R\$ 8\.450 por ano em seguros$/);
   assert.equal(insuranceNotice({ ...s, seenAt: '2026-03-01' }, 'Luiz', '2026-06-20'), null, 'uma vez por ano');
 });
 
@@ -1701,4 +1702,29 @@ test('funil e alarmes: etapas em sequência, onde cada um parou, alarmes do e-ma
   // Someone that used the app and stopped 7 to 30 days ago.
   const g = healthAlarms({ people: [{ ...people[2], last_seen: '2026-11-05' }], opened_yesterday: 1, today });
   assert.match(g.find(x => x.id === 'sumiram').text, /Alguém da Família Lima \(12 dias\)/);
+});
+
+test('trilha 3.0: uma etapa por vez, cada uma libera ferramentas; quem já usava entra com tudo aberto', async () => {
+  const { trailState, newlyDone, unlockScreen, isLegacy, TOOLS, TRAIL } = await import('../public/js/lib/trail.js');
+  assert.equal(TRAIL.length, 5);
+  const s0 = trailState({});
+  assert.equal(s0.current.n, 1); assert.equal(s0.current.title, 'Mandar a primeira fatura ou extrato'); assert.equal(s0.open.size, 0, 'nada aberto antes da primeira fatura');
+  const s1 = trailState({ hasCard: true });
+  assert.equal(s1.current.n, 2); assert.equal(s1.current.title, 'Mandar o extrato da conta', 'com o cartão, pede a conta');
+  assert.equal(trailState({ hasConta: true }).current.title, 'Mandar a fatura do cartão');
+  assert.ok(s1.open.has('gastos') && s1.open.has('perguntar') && !s1.open.has('sobra'));
+  // A later step only counts when every step before it is done.
+  const skip = trailState({ hasCard: true, reviews: 3 });
+  assert.equal(skip.steps[3].done, false); assert.equal(skip.current.n, 2);
+  const all = trailState({ hasCard: true, hasConta: true, closedCount: 2, reviews: 1 });
+  assert.equal(all.finished, true); assert.equal(all.current, null); assert.equal(all.open.size, Object.keys(TOOLS).length);
+  // Legacy: before 3.0 or 3 months of history.
+  assert.equal(isLegacy('2026-09-01T10:00:00Z', 0), true); assert.equal(isLegacy('2026-11-20T10:00:00Z', 1), false); assert.equal(isLegacy('2026-11-17T10:00:00Z', 0), false); assert.equal(isLegacy(null, 3), true);
+  const leg = trailState({}, { legacy: true });
+  assert.equal(leg.finished, true); assert.equal(leg.open.size, Object.keys(TOOLS).length); assert.deepEqual(newlyDone(leg, {}, true), [], 'quem já usava não vê "Liberado"');
+  // Celebrated once per step.
+  assert.deepEqual(newlyDone(s1, {}), [1]); assert.deepEqual(newlyDone(s1, { 1: '2026-11-18' }), []);
+  const u = unlockScreen(s1, 1);
+  assert.deepEqual(u.tools.map(t => t.name), ['Gastos', 'Perguntar']); assert.equal(u.next.title, 'Mandar o extrato da conta'); assert.equal(u.total, 5);
+  assert.equal(unlockScreen(all, 5).next, null);
 });

@@ -30,8 +30,8 @@ const RANK = { bad: 0, warn: 1, good: 2, info: 3 };
 */
 export function insights(ctx) {
   const out = [], { today, months } = ctx;
-  // Every notice carries the person's first name; about the family's money it talks about "vocês" (Central → Mensagens).
-  const N = String(ctx.name || '').trim().split(/\s+/)[0], Up = t => t[0].toUpperCase() + t.slice(1), hi = t => (N ? `${N}, ${t}` : Up(t));
+  // 3.0 (jeito de falar 2.0): personal without the reader's name; the family's own numbers make it personal (Central → Mensagens).
+  const Up = t => t[0].toUpperCase() + t.slice(1), hi = t => Up(t);
   const cur = today.slice(0, 7), day = +today.slice(8, 10), prev = addM(cur, -1);
   const lastDay = new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate();
 
@@ -77,7 +77,7 @@ export function insights(ctx) {
     text: 'Subiu nas contas de vocês: ' + ups.slice(0, 3).map(x => `${x.name}, de ${R2(x.prev)} para ${R2(x.last)}`).join('; ') + '. Se o aumento não foi combinado, dá para reclamar ou cancelar.', action: { label: 'Ver assinaturas', go: ['resumo', '#subsBox'] } });
 
   // A finished month waiting to be closed.
-  if (ctx.toClose) { const n = mName(ctx.toClose); out.push({ id: 'close', tone: 'info', title: hi(`hora de fechar ${n}`), text: `${Up(n)} terminou. Fechando, vocês veem o que falta e a retrospectiva do mês. Leva poucos minutos.`, action: { label: 'Fechar o mês', go: ['fechar'] } }); }
+  if (ctx.toClose) { const n = mName(ctx.toClose); out.push({ id: 'close', tone: 'info', title: hi(`hora de fechar ${n}`), text: `${Up(n)} terminou: fechando, vocês veem o que faltou e a retrospectiva. Uns 5 minutos.`, action: { label: 'Fechar o mês', go: ['fechar'] } }); }
 
   // The month to talk about: the latest FINISHED one (before this month) with the account statement, else the latest
   // finished with data. The month going on is never "fechou": the forecast (Previsão do mês) speaks for it.
@@ -90,10 +90,10 @@ export function insights(ctx) {
   if (!ongoing && c.renda > 0 && c.res < 0) {
     const top = Object.entries(ctx.cats(m)).sort((a, b) => b[1] - a[1]).slice(0, 2).map(e => e[0]).join(' e ');
     const base = before.length ? avg(before.map(k => ctx.calc(k).out)) : 0, more = c.out - base;
-    out.push({ id: 'red', tone: 'bad', title: hi(`${name} fechou no vermelho`), text: `Os gastos de vocês passaram ${R(c.res)} da renda${base > 0 && more > 0 ? `, ${R(more)} acima da média de vocês` : ''}. Os maiores foram ${top}.`, action: { label: 'Ver o que subiu', go: ['graficos'] } });
+    out.push({ id: 'red', tone: 'bad', title: hi(`${name} fechou no vermelho`), text: `Os gastos passaram ${R(c.res)} da renda${base > 0 && more > 0 ? `, ${R(more)} acima da média de vocês` : ''}. Os maiores foram ${top}.`, action: { label: 'Ver o que subiu', go: ['graficos'] } });
   } else if (!ongoing && c.renda > 0 && ctx.goals.savings && c.tx >= ctx.goals.savings) {
     const eta = ctx.goals.patrimonio && ctx.etaYears ? ctx.etaYears(c.res) : null;
-    out.push({ id: 'saved', tone: 'good', title: hi(`vocês guardaram ${P(c.tx)} em ${name}`), text: `A meta de vocês era ${P(ctx.goals.savings)}: passaram ${R(c.res - ctx.goals.savings * c.renda)} dela.` + (eta != null ? ` Guardando ${R(c.res)} por mês, o sonho de ${R(ctx.goals.patrimonio)} investidos chega em ${eta <= 1 ? 'cerca de 1 ano' : 'cerca de ' + Math.round(eta) + ' anos'}.` : ' Nesse ritmo, o sonho de vocês chega mais rápido.'), action: { label: 'Ver as metas', go: ['ajustes', null, 'metas'] } });
+    out.push({ id: 'saved', tone: 'good', title: hi(`vocês guardaram ${P(c.tx)} em ${name}`), text: `A meta era ${P(ctx.goals.savings)}: passaram ${R(c.res - ctx.goals.savings * c.renda)} dela.` + (eta != null ? ` Guardando ${R(c.res)} por mês, o sonho de ${R(ctx.goals.patrimonio)} investidos chega em ${eta <= 1 ? 'cerca de 1 ano' : 'cerca de ' + Math.round(eta) + ' anos'}.` : ' Nesse ritmo, o sonho de vocês chega mais rápido.'), action: { label: 'Ver as metas', go: ['ajustes', null, 'metas'] } });
   } else if (!ongoing && c.renda > 0 && ctx.goals.savings && c.tx < ctx.goals.savings) {
     const gap = ctx.goals.savings * c.renda - c.res;
     // The financing also builds wealth: when it is what kept the month under the goal, say so (with the number).
@@ -107,9 +107,9 @@ export function insights(ctx) {
     if (base > 0 && c.out > base * 1.1 && c.out - base > 200) {
       const cm = ctx.cats(m), cb = {}; before.forEach(k => { const x = ctx.cats(k); for (const n in x) cb[n] = (cb[n] || 0) + x[n] / before.length; });
       const ups = Object.keys(cm).map(n => [n, cm[n] - (cb[n] || 0)]).filter(e => e[1] > 100).sort((a, b) => b[1] - a[1]).slice(0, 2);
-      out.push({ id: 'high', tone: 'warn', title: hi(`os gastos de vocês subiram em ${name}`), text: `Ficaram ${P(c.out / base - 1)} acima da média de vocês (${R(c.out - base)} a mais).` + (ups.length ? ` Mais subiram: ${ups.map(e => `${e[0]} (+${R(e[1])})`).join(' e ')}.` : ''), action: { label: 'Ver o que subiu', go: ['graficos'] } });
+      out.push({ id: 'high', tone: 'warn', title: hi(`os gastos subiram ${P(c.out / base - 1)} em ${name}`), text: `Foram ${R(c.out - base)} acima da média de vocês.` + (ups.length ? ` Mais subiram: ${ups.map(e => `${e[0]} (+${R(e[1])})`).join(' e ')}.` : ''), action: { label: 'Ver o que subiu', go: ['graficos'] } });
     } else if (base > 0 && c.out < base * 0.92 && base - c.out > 200) {
-      out.push({ id: 'low', tone: 'good', title: hi(`vocês gastaram menos em ${name}`), text: `Foram ${R(base - c.out)} abaixo da média de vocês. Mandem essa diferença para a meta antes que ela se misture com o mês.`, action: { label: 'Ver as metas', go: ['ajustes', null, 'metas'] } });
+      out.push({ id: 'low', tone: 'good', title: hi(`${R(base - c.out)} abaixo do normal em ${name}`), text: `Vocês gastaram menos que a média. Mandem a diferença para a meta antes que ela se misture com o mês.`, action: { label: 'Ver as metas', go: ['ajustes', null, 'metas'] } });
     }
   }
 
@@ -131,7 +131,7 @@ export function insights(ctx) {
   // 4d. Withdrawals not explained yet: cash disappears from the control unless the person says what it paid for.
   // A challenge for the month (when there is none going on): from the family's own numbers (lib/challenges.js).
   const cs = ctx.challengeSuggest;
-  if (cs) out.push({ id: 'desafio', tone: 'info', title: hi('um desafio para vocês este mês'), text: `${cs.title}. ${cs.why}`, action: { label: 'Ver o desafio', go: ['ajustes', null, 'conquistas'] } });
+  if (cs) out.push({ id: 'desafio', tone: 'info', title: hi('um desafio para este mês'), text: `${cs.title}. ${cs.why}`, action: { label: 'Ver o desafio', go: ['ajustes', null, 'conquistas'] } });
   const fund = ctx.funding || [];
   if (fund.length) { const f = fund[0]; out.push({ id: 'entrada_amortizacao', tone: 'warn', title: hi(`os ${R(f.income.amount)} foram para o financiamento?`), text: `Entraram ${R(f.income.amount)} na conta de vocês e saiu o mesmo para a amortização. Se o dinheiro entrou só para isso, ele não é sobra do mês: confirme com um toque.`, action: { label: 'Confirmar', go: ['extrato', '#fundBox'] } }); }
   const dups = ctx.dups || 0;
@@ -153,7 +153,7 @@ export function insights(ctx) {
     }
     bills.sort((a, b) => (b[1] - b[2]) - (a[1] - a[2]));
     if (bills.length) out.push({ id: 'bill_up', tone: 'warn', title: hi(bills.length > 1 ? `${bills.length} contas fixas vieram acima da média` : `${bills[0][0]} veio acima da média`),
-      text: bills.slice(0, 2).map(([n, v, b]) => `${n}: ${R(v)} em ${name}, ${R(v - b)} (${P(v / b - 1)}) acima da média de vocês`).join('; ') + '. Pode ser consumo, reajuste ou cobrança errada: abram a conta no extrato.', action: { label: 'Ver no extrato', go: ['extrato'] } });
+      text: bills.slice(0, 2).map(([n, v, b]) => `${n} ${R(v - b)} acima (${P(v / b - 1)})`).join('; ') + ` da média de vocês em ${name}. Pode ser consumo, reajuste ou cobrança errada.`, action: { label: 'Ver no extrato', go: ['extrato'] } });
   }
 
   // 5. Fixed costs eating the income

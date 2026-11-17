@@ -54,10 +54,11 @@ export const sundayHour = prefs => { const h = +(prefs || {}).domingoHora; retur
   The Sunday push: the queue and the open card bill. Once a week per device. Nothing waiting and the bill already
   checked: no push.
 */
-export function sundayReview({ total = 0, counts = {}, name = '', checkedIn = false, sent = {}, today }) {
+export const sundayReview = a => { const r = sundayReview0(a); return r?.msg?.title ? { ...r, msg: { ...r.msg, title: r.msg.title[0].toUpperCase() + r.msg.title.slice(1) } } : r; };
+function sundayReview0({ total = 0, counts = {}, name = '', checkedIn = false, sent = {}, today }) {
   if (sent.domingo && Math.round((Date.parse(today) - Date.parse(sent.domingo)) / 864e5) < 6) return null;
-  const n = String(name || '').trim().split(/\s+/)[0], hi = n ? n + ', ' : '';
-  if (total > 0) return { msg: { title: `${hi}${reviewMinutes(total) <= 5 ? '5 minutos' : reviewMinutes(total) + ' minutos'} para fechar a semana`, body: `${total} ${total > 1 ? 'lançamentos' : 'lançamento'} para revisar (${reviewSummary(counts)})${checkedIn ? ' de vocês' : ' e a fatura aberta de vocês para conferir'}. Revisar tudo conta para a sequência de semanas.`.slice(0, 220), tag: 'domingo' } };
+  const hi = '';
+  if (total > 0) return { msg: { title: `${hi}${reviewMinutes(total) <= 5 ? '5 minutos' : reviewMinutes(total) + ' minutos'} para fechar a semana`, body: `${total} ${total > 1 ? 'lançamentos' : 'lançamento'} para revisar (${reviewSummary(counts)})${checkedIn ? '' : ' e a fatura aberta'}. Conta para a sequência de semanas.`.slice(0, 220), tag: 'domingo' } };
   if (!checkedIn) return { msg: { title: `${hi}a semana já está revisada`, body: `Só falta a fatura aberta de vocês: com ela, a previsão do mês fica exata.`.slice(0, 220), tag: 'domingo' } };
   return null;
 }

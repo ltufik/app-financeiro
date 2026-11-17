@@ -132,8 +132,8 @@ export function forecastText(f, name = '') {
   const head = f.status === 'ok' ? `No ritmo de agora, ${m} fecha com sobra de ${R(f.res)}${f.meta ? `, acima da meta de ${R(f.meta)}` : ''}.`
     : f.status === 'risco' ? `${M} pode fechar abaixo da meta: a previsão é sobrar ${R(f.res)}, e a meta é ${R(f.meta)}.`
     : `${M} pode fechar no vermelho: a previsão é faltar ${R(-f.res)}.`;
-  const day = f.perDay > 0 ? `Para bater a meta, as compras novas (cartão e pix) cabem em até ${R(f.perDay)} por dia até o fim do mês. O normal de vocês é ${R(f.usual)} por dia.`
-    : f.perDayZero > 0 ? `Para bater a meta faltariam ${R(f.meta - f.res)}. Para pelo menos não fechar no vermelho, as compras novas (cartão e pix) cabem em até ${R(f.perDayZero)} por dia. O normal de vocês é ${R(f.usual)} por dia.`
+  const day = f.perDay > 0 ? `Para bater a meta, cabem ${R(f.perDay)} por dia em compras novas (o normal de vocês é ${R(f.usual)}).`
+    : f.perDayZero > 0 ? `Para não fechar no vermelho, cabem ${R(f.perDayZero)} por dia em compras novas (o normal de vocês é ${R(f.usual)}).`
     : `Para não fechar no vermelho, segure as compras novas até o fim do mês: faltam ${R(-f.res)}.`;
   // On screen the title already says it: the line under it only carries the numbers.
   const short = f.status === 'ok' ? head : f.status === 'risco' ? `A previsão é sobrar ${R(f.res)}, e a meta é ${R(f.meta)}.` : `A previsão é faltar ${R(-f.res)}.`;
@@ -145,7 +145,7 @@ export function forecastText(f, name = '') {
   const plan = [inc ? `${R(inc)} que ainda devem entrar (${names(cm.income)})` : '', fix ? `${R(fix)} de contas fixas e financiamentos que ainda vão sair (${names(cm.fixed)})` : '']
     .filter(Boolean).join(' e ');
   const counted = plan ? `Já conta com ${plan}${cm.through ? `, pelo extrato até ${cm.through.slice(8, 10)}/${cm.through.slice(5, 7)}` : ''}.` : '';
-  return { next, counted, line: head, head: short, title: (N ? `${N}, ${m}` : M) + (f.status === 'ok' ? ' está no caminho da meta' : f.status === 'risco' ? ' pode fechar abaixo da meta' : ' pode fechar no vermelho'), day };
+  return { next, counted, line: head, head: short, title: M + (f.status === 'ok' ? ' está no caminho da meta' : f.status === 'risco' ? ' pode fechar abaixo da meta' : ' pode fechar no vermelho'), day };
 }
 
 // Sunday 19h push: whether to ask this device, and the message. Asks at most once a week; after two asks in a row

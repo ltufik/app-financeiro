@@ -81,8 +81,8 @@ export function renderSteps(box) {
   const list = missions(), p = missionProgress(list), ok = m => m.done || m.skipped;
   celebrate(list);
   // Starter missions done: the big card leaves; the strip under the greeting (renderStrip) keeps them in sight.
-  if (p.starterComplete) { box.hidden = true; box.innerHTML = ''; return; }
-  box.hidden = false; box.classList.remove('regua-mini');
+  if (p.starterComplete) { box.hidden = true; box.innerHTML = ''; box.classList.remove('tr-box'); return; }
+  box.hidden = false; box.classList.remove('regua-mini', 'tr-box');
   const m = p.next, st = list.filter(x => x.starter);
   box.innerHTML = `<div class="mis"><p class="eyebrow">Missões de começo · ${p.starterDone} de ${p.starterTotal}</p>
     <div class="mis-dots" role="img" aria-label="${p.starterDone} de ${p.starterTotal} missões cumpridas">${st.map(x => DOT(ok(x))).join('')}</div>

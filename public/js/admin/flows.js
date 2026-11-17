@@ -8,8 +8,12 @@ export const SCREENS = {
   nome: { title: 'Como quer ser chamado', where: 'Depois do cadastro' },
   biometria: { title: 'Proteger com a digital', where: 'Depois do nome, no celular com digital ou rosto', key: 'seguranca.biometria' },
   familia: { title: 'Criar a família', where: 'Depois do nome (ou entra por convite)' },
-  apresentacao: { title: 'Apresentação', where: 'Primeiro acesso; menu ☰ → Ajuda' },
-  tour: { title: 'Tour guiado', where: 'Depois da apresentação; menu ☰ → Ajuda' },
+  comecar: { title: 'Começar (3.0)', where: 'Primeiro acesso, quando a família ainda não tem dados', key: ['comecar.fatura', 'comecar.falar', 'comecar.exemplo'] },
+  comecar_banco: { title: 'De qual banco é o cartão?', where: 'Começar → Mandar a primeira fatura', key: ['comecar.banco', 'comecar.escolher_pdf'] },
+  trilha: { title: 'Trilha: o próximo passo no Início', where: 'Início, enquanto a trilha de 5 etapas não acaba', key: ['trilha.passo_pdf', 'trilha.passo_fechar', 'trilha.passo_revisar'] },
+  liberado: { title: 'Liberado: etapa feita', where: 'Uma vez por etapa da trilha', key: ['trilha.liberou_1', 'trilha.liberou_2', 'trilha.liberou_3'] },
+  apresentacao: { title: 'Apresentação', where: 'Menu ☰ → Ajuda (no primeiro acesso, só para famílias de antes da 3.0)' },
+  tour: { title: 'Tour guiado', where: 'Menu ☰ → Ajuda' },
   alpha: { title: 'Aviso do teste alpha', where: 'Uma vez, depois do tour', key: null },
   inicio_exemplo: { title: 'Mês de exemplo', where: 'Início, enquanto a família não tem dados', key: null },
   inicio: { title: 'Início', where: 'Aba Início', key: 'aba.inicio' },
@@ -86,7 +90,7 @@ export const SCREENS = {
 const st = (s, action, key) => key === undefined ? { s, action } : { s, action, key };
 export const FLOWS = [
   { id: 'geral', title: 'Visão geral', desc: 'Todas as telas, agrupadas por onde ficam.', map: [
-    { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'apresentacao', 'tour', 'alpha'] },
+    { title: 'Entrada', screens: ['boas_vindas', 'cadastro', 'nome', 'biometria', 'familia', 'comecar', 'comecar_banco', 'trilha', 'liberado', 'apresentacao', 'tour', 'alpha'] },
     { title: 'Abas', screens: ['inicio_exemplo', 'inicio', 'lancar', 'graficos', 'perguntar', 'extrato'] },
     { title: 'Dentro das abas', screens: ['inicio_mais', 'revisar', 'custos', 'custos_perguntas', 'custos_casas', 'combo_cep', 'combo_ofertas', 'combo_sem', 'seguros', 'retro_evolucao', 'retro_historias', 'retro_ano', 'fechar', 'lancar_falar', 'lancar_salvo', 'lancar_nota', 'lancar_pdf', 'lendo', 'lancar_revisao', 'varios_arquivos', 'planilha', 'categoria', 'anotacao', 'extrato_categoria', 'juntar_categorias', 'perguntar_resposta'] },
     { title: 'Menu ☰', screens: ['menu', 'menu_familia', 'menu_divisao', 'menu_metas', 'menu_gastos_ano', 'menu_patrimonio', 'menu_categorias', 'menu_avisos', 'menu_applepay', 'menu_contexto', 'menu_duvidas', 'menu_opiniao', 'menu_ajuda', 'menu_backup', 'menu_sobre', 'menu_conta'] },
@@ -99,8 +103,10 @@ export const FLOWS = [
   ] },
   { id: 'primeiro', title: 'Primeiro acesso', desc: 'Do link até ver o Início pela primeira vez.', steps: [
     st('boas_vindas', 'Toca em Criar conta grátis'), st('cadastro', 'Nome, e-mail, senha e concordância'), st('nome', 'Diz como quer ser chamado'), st('biometria', 'Liga a digital ou o rosto (ou "Agora não")'),
-    st('familia', 'Cria a família (ou entra pelo convite)'), st('apresentacao', '7 slides, pode pular'), st('tour', 'Balões nos botões de verdade'),
-    st('alpha', 'Aviso do teste e do balão de opinião'), st('inicio_exemplo', 'Vê um mês de exemplo e toca em Enviar a última fatura', ['exemplo.fatura', 'exemplo.falar']), st('inicio', 'A régua mostra o próximo passo')] },
+    st('familia', 'Cria a família (ou entra pelo convite)'), st('comecar', 'Uma tela: Mandar a primeira fatura, lançar falando ou ver o exemplo', 'comecar.fatura'), st('comecar_banco', 'Escolhe o banco e vê onde pegar o PDF (ou Imprimir → Salvar como PDF no computador)', 'comecar.escolher_pdf'),
+    st('alpha', 'Aviso do teste e do balão de opinião'), st('trilha', 'No Início, a trilha: o próximo passo, quanto tempo leva e o que libera', 'trilha.passo_pdf'), st('liberado', 'Terminou a etapa: Liberado, o que abriu e a próxima', 'trilha.liberou_1')] },
+  { id: 'trilha', title: 'A trilha de 5 etapas', desc: 'Uma coisa por vez: cada etapa feita libera ferramentas, com a tela de Liberado e a próxima etapa.', steps: [
+    st('trilha', 'Etapa 1: mandar a primeira fatura ou extrato (libera Gastos e Perguntar)', 'trilha.passo_pdf'), st('liberado', 'Liberado: o que abriu e a próxima etapa', 'trilha.liberou_1'), st('trilha', 'Etapa 2: o outro (conta ou cartão), libera Quanto sobrou e Como deve fechar', 'trilha.liberou_2'), st('fechar', 'Etapa 3: conferir os marcados e fechar o mês (libera Metas e Contas da casa)', 'trilha.liberou_3'), st('revisar', 'Etapa 4: conferir a semana (libera Contas do ano e Divisão do casal)', 'trilha.liberou_4'), st('fechar', 'Etapa 5: o segundo mês fechado (libera Patrimônio e Retrospectiva)', 'trilha.liberou_5')] },
   { id: 'fatura', title: 'Importar fatura ou extrato', desc: 'O caminho que faz o app ter valor: o primeiro mês importado.', steps: [
     st('inicio_exemplo', 'Mês de exemplo: "Enviar a última fatura"', 'exemplo.fatura'), st('inicio', 'Régua: "Envie a última fatura"'), st('lancar', 'Abre Lançar'), st('lancar_pdf', 'Escolhe o PDF, a foto ou o print (e a senha, se tiver); o app vê pelo conteúdo o que é'), st('lendo', 'Enquanto lê: o símbolo do app se montando, o passo e o percentual', null),
     st('lancar_revisao', 'Confere a soma e as categorias, toca em Salvar'), st('varios_arquivos', 'Com várias faturas e o extrato: um por vez ("1 de 3"), o próximo começa sozinho e no fim vem o resumo', 'lancar.varios'), st('categoria', 'Troca uma categoria: busca ("estacionamento") ou toca numa sugestão', null), st('inicio', 'Sobra do mês atualizada', null)] },

@@ -65,8 +65,8 @@ test('avisos do dia: escolhe um por aparelho, respeita preferências e não repe
   assert.equal(pick(withBill, week, { prefs: { dados: false } }, today, 3).id, 'red');
   assert.deepEqual(brToday(Date.parse('2026-11-16T02:00:00Z')), { iso: '2026-11-15', dow: 0 });
   const w = weekly([{ source: 'cartao', date: '2026-11-14', amount: 120, category: 'Mercado' }, { source: 'conta', date: '2026-11-13', amount: -80, category: 'Lazer' }, { source: 'conta', date: '2026-11-01', amount: -999, category: 'Lazer' }], catIndex([{ name: 'Mercado', grp: 'dia' }, { name: 'Lazer', grp: 'dia' }]), today);
-  assert.match(w.text, /R\$ 200 em despesas nos últimos 7 dias, R\$ 50 a menos que uma semana normal de vocês\. Mais pesaram: Mercado R\$ 120, Lazer R\$ 80/);
-  assert.equal(weekly([], new Map(), '2026-11-15', 'Mari Souza').title, 'Mari, nenhum gasto de vocês lançado na semana');
+  assert.equal(w.title, 'Semana: R$ 50 abaixo do normal'); assert.equal(w.text, 'Foram R$ 200 em 7 dias. Mercado foi o que mais pesou: R$ 120.');
+  assert.equal(weekly([], new Map(), '2026-11-15', 'Mari Souza').title, 'Nenhum gasto lançado na semana');
 });
 
 test('rotina diária: lê o banco, manda o aviso certo, marca o envio e remove aparelho que saiu', async () => {
@@ -109,8 +109,8 @@ test('avisos da família: textos de entrou, importou e fechou', async () => {
   assert.equal(message({ type: 'imported', name: 'Luana', source: 'cartao', month: '2026-10' }).title, 'Luana mandou a fatura de outubro');
   assert.equal(message({ type: 'imported', name: 'Luiz', source: 'conta', month: '2026-09' }).title, 'Luiz mandou o extrato de setembro');
   assert.equal(message({ type: 'closed', name: 'Luiz', month: '2026-09' }).url, '/?tab=fechar');
-  assert.equal(message({ type: 'imported', name: 'Luana', to: 'Luiz', source: 'cartao', month: '2026-10' }).title, 'Luiz, Luana mandou a fatura de outubro');
-  assert.equal(message({ type: 'conquista', key: 'missao:fechar', name: 'Luana', to: 'Luiz' }).title, 'Luiz, Luana cumpriu uma missão');
+  assert.equal(message({ type: 'imported', name: 'Luana', to: 'Luiz', source: 'cartao', month: '2026-10' }).title, 'Luana mandou a fatura de outubro', 'o nome de quem agiu, não o de quem lê');
+  assert.equal(message({ type: 'conquista', key: 'missao:fechar', name: 'Luana', to: 'Luiz' }).title, 'Luana cumpriu uma missão');
   assert.match(message({ type: 'conquista', key: 'missao:fechar', name: 'Luana' }).body, /^Feche o primeiro mês: feito!/);
   assert.equal(message({ type: 'conquista', key: 'missao:<script>', name: 'Luana' }), null);
   assert.equal(message({ type: 'x' }), null);
@@ -136,10 +136,10 @@ test('lembrete das 21h: só para quem não lançou nada hoje, uma vez por dia', 
   const out = await runReminder({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'sb_secret_x', vapid: { publicKey, privateKey, subject: 'https://paraondefoi.app.br' }, fetchImpl, now: Date.parse('2026-10-31T00:05:00Z') });
   assert.deepEqual(out, { sent: 1, skipped: 1, removed: 0, errors: 0 });
   assert.deepEqual(sent, ['/a']); assert.equal(patched[0].last_sent.lembrete, '2026-10-30');
-  assert.equal(reminderMessage('Mari Souza').title, 'Mari, gastou algo hoje no pix ou em dinheiro?');
-  assert.equal(reminderMessage('').title, 'Gastou algo hoje no pix ou em dinheiro?');
+  assert.equal(reminderMessage('Mari Souza').title, 'Teve pix ou dinheiro hoje?');
+  assert.equal(reminderMessage('').title, 'Teve pix ou dinheiro hoje?');
   const e = reminderMessage('Mari Souza', { empty: true });
-  assert.equal(e.title, 'Mari, o app de vocês ainda está vazio'); assert.equal(e.url, '/?acao=pdf'); assert.match(e.body, /última fatura/);
+  assert.equal(e.title, 'Para onde foi o dinheiro deste mês?'); assert.equal(e.url, '/?acao=pdf'); assert.match(e.body, /última fatura/);
 });
 
 import { applyReleases, rest as rest2, newsPush } from '../api/_loop.js';

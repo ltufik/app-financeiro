@@ -27,7 +27,7 @@ export function suggestChallenges(f = {}, history = []) {
       return { c, avg, last, up: last - avg };
     }).filter(x => x.avg > 0 && x.last > x.avg * 1.2 && x.up >= 150).sort((a, b) => b.up - a.up);
     if (cands[0]) { const x = cands[0], target = Math.max(50, Math.round(x.avg / 50) * 50);
-      out.push({ kind: 'categoria', key: 'categoria:' + x.c, category: x.c, target, month: cur, end, title: `${x.c} abaixo de ${R(target)} em ${mes}`, why: `Em ${mName(prev)} foram ${R(x.last)}, ${R(x.up)} acima da média de vocês.` }); }
+      out.push({ kind: 'categoria', key: 'categoria:' + x.c, category: x.c, target, month: cur, end, title: `${x.c} abaixo de ${R(target)} em ${mes}`, why: `Em ${mName(prev)} foram ${R(x.last)}, ${R(x.up)} acima da média.` }); }
   }
   // 2. Hit the month's goal (when the forecast says it is at risk).
   const fc = f.forecast;

@@ -1,4 +1,5 @@
 import { askRule } from '../learnask.js';
+import { firstTip } from '../trail.js';
 import { renderDups, deleteManual, renderFunding } from '../dupfix.js';
 import { privateButton } from '../private.js';
 import { S, txsOf, latestClosed, monthKeys, settings, isMine } from '../state.js';
@@ -12,6 +13,8 @@ import { shortTag } from '../lib/statements.js';
 let src = 'cartao', pendOnly = false, q = '', cat = '';
 
 export function render(el) {
+  // 3.0: one tip, the first time on this screen.
+  setTimeout(() => { if (S.txs.some(t => !t.virtual)) firstTip('gastos', el.querySelector('.panel'), 'Categoria errada? Toque nela e troque.', 'O app aprende: da próxima vez, os parecidos já vêm certos.'); }, 0);
   if (!el.dataset.built) {
     el.dataset.built = '1';
     el.innerHTML = `<div class="panel stack dup" id="fundBox" hidden></div><div class="panel stack dup" id="dupBox" hidden></div><div class="panel"><h2>Lançamentos do mês</h2>

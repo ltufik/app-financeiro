@@ -81,7 +81,18 @@ await step('biometria', () => page.waitForSelector('#obBioYes', { timeout: 8000 
 await page.click('#obBioNo').catch(() => {});
 await step('familia', async () => { await page.click('[data-s="1"]'); await page.waitForSelector('#obFam'); await page.fill('#obFam', 'Família Souza'); });
 await page.click('#obCreate'); await page.waitForSelector('#obDone'); await page.click('#obDone');
-await step('apresentacao', () => page.waitForSelector('.tour'));
+// 3.0: someone new gets one screen and goes straight to the first statement.
+await step('comecar', () => page.waitForSelector('.start #stPdf'));
+await page.click('#stPdf');
+await step('comecar_banco', async () => { await page.click('.start [data-bank="Santander"]'); await page.waitForSelector('#stHow:not([hidden])'); });
+await page.click('#stBack'); await page.click('#stExample');
+await page.waitForTimeout(2500);
+await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
+await step('trilha', async () => { await page.click('[data-tab=resumo]'); await page.waitForSelector('.trail'); });
+await step('liberado', async () => { await page.evaluate(async () => (await import('/js/trail.js')).previewUnlock()); await page.waitForSelector('.unlock'); });
+await page.evaluate(() => { document.querySelectorAll('.unlock').forEach(x => x.remove()); document.body.style.overflow = ''; });
+// The 7-slide presentation and the walkthrough are still in menu ☰ → Ajuda.
+await step('apresentacao', async () => { await page.evaluate(async () => (await import('/js/state.js')).S.showTour()); await page.waitForSelector('.tour'); });
 await page.click('#tourSkip');
 await step('tour', () => page.waitForSelector('.coach', { timeout: 4000 }));
 if (await page.$('.coach')) await page.click('#coachNever');

@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_FUNIL, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_FUNIL, DOC_TRILHA, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -581,4 +581,14 @@ export const RELEASES = [
   { id: 'r2.9.1', version: 'v2.9.1', at: '2026-11-17T13:00:00Z', updateDocs: [DOC_FUNIL], semNovidade: 'Botão de testar o e-mail diário na Central e MAIL_TO: só o Luiz vê.',
     semTeste: 'Só a Central: coberto pelo e2e (botão manda o e-mail e mostra o resultado).',
     addBacklog: [{ id: 'email_teste', title: 'Mandar o e-mail diário na hora pela Central (testar a chave do Resend) e escolher quem recebe (MAIL_TO)', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'Sem como testar o e-mail, só dava para saber no dia seguinte às 9h', from: ['funil_alarmes'] }], backlog: ['email_teste'] },
+  { id: 'r3.0.0', version: 'v3.0.0', at: '2026-11-18T03:00:00Z', addDocs: [DOC_TRILHA], news: { id: 'n20261118a', title: 'Mais simples, uma coisa por vez', items: [
+    'Quem começa agora vê uma tela só e já manda a primeira fatura, com o passo a passo do banco. A apresentação longa e os balões ficaram no menu, em Ajuda.',
+    'No Início, a trilha mostra o próximo passo e quanto tempo leva. Cada etapa feita libera uma ferramenta nova. Quem já usava continua com tudo aberto.',
+    'Os avisos ficaram mais curtos e diretos.'] },
+    addBacklog: [
+      { id: 'trilha_3', title: 'Trilha de 5 etapas que libera ferramentas, tela Começar (no lugar de 7 telas + 9 balões), Liberado, dica da primeira vez', status: 'feito', origin: 'Luiz', effort: 'G', problem: 'Dezoito telas de explicação antes de fazer algo; funções escondidas; o jogo no menu sem liberar nada', from: ['jornada_for_dummies'] },
+      { id: 'jeito_de_falar_2', title: 'Jeito de falar 2.0: avisos curtos e pessoais sem o nome de quem lê, "vocês" uma vez, até 2 frases; o teste cobra', status: 'feito', origin: 'Luiz', effort: 'M', problem: 'Mensagens longas e repetitivas (nome e "vocês" em tudo)', from: ['jornada_for_dummies'] },
+      { id: 'email_banco', title: 'Encaminhar os e-mails do banco (Pix, fatura e extrato) para o endereço da família, entrando sozinhos', status: 'agora', origin: 'Luiz', effort: 'M', problem: 'Bancos não deixam tirar print nem baixar a fatura aberta; muita gente não sabe baixar o PDF', from: ['jornada_for_dummies'] },
+      { id: 'open_finance', title: 'Open Finance (conexão oficial, só leitura): estudo de custo e teste com a conta do Luiz pelo MeuPluggy', status: 'depois', origin: 'Luiz', effort: 'G', problem: 'O único jeito automático que serve para todos os bancos, inclusive a fatura aberta; custo ainda não está claro', from: ['parcerias_e_servicos'] },
+    ], backlog: ['trilha_3', 'jeito_de_falar_2'] },
 ];

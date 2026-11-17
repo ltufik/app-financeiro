@@ -1,4 +1,5 @@
 import { S, reindex, closeDay, txsOf, pendingManual, latestCard, latestClosed, monthKeys, settings } from '../state.js';
+import { firstTip } from '../trail.js';
 import { debtForTx, looksLikeDebtPayment } from '../lib/debt.js';
 import { applyAmortization, AMORT_CAT } from '../debtpay.js';
 // After saving: if the home has news because of it (a warning, a good one), say so.
@@ -32,6 +33,8 @@ let R = null;          // PDF review state
 const PDF = { bytes: null, name: '' };
 
 export function render(el) {
+  // 3.0: one tip, the first time on this screen.
+  setTimeout(() => { if (true) firstTip('lancar', el.querySelector('.panel'), 'Comece pela fatura ou pelo extrato', 'O mês inteiro de uma vez. Para um gasto do dia, use "Falar ou escrever".'); }, 0);
   if (!el.dataset.built) build(el);
   renderManual(); renderImports(); renderCash($('#cashBox'));
   const nm = pendingManual().length, ni = S.imports.length;

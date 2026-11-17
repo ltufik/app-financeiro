@@ -12,6 +12,7 @@ import * as ajustes from './views/ajustes.js';
 import * as graficos from './views/graficos.js';
 import * as fechar from './views/fechar.js';
 import { openTour } from './tour.js';
+import { showStart, legacyFamily } from './trail.js';
 import { initMenu, closeMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
 import { checkAdmin, touchActivity } from './metrics.js';
@@ -181,8 +182,8 @@ S.startCoach = (force = false, after) => startCoach({
   onEnd: () => { if (after) after(); else afterIntro(); },
 });
 S.showTour = () => openTour(S.txs.length
-    ? { finalTitle: 'Tudo pronto', finalText: 'Os primeiros passos ficam no Resumo. Você pode rever esta apresentação no menu ☰, em Ajuda.', finalLabel: 'Ver meu resumo', onClose: () => { markTour(); S.startCoach(); } }
-    : { finalTitle: 'Primeiro passo: a fatura do cartão', finalText: 'Baixe o PDF da última fatura no app do banco e envie aqui. Em poucos segundos você vê para onde foi o dinheiro.', finalLabel: 'Enviar minha fatura', onClose: done => { markTour(); S.startCoach(false, () => { if (done) showMessages().then(() => S.go('lancar', '#drop')); else afterIntro(); }); } });
+    ? { finalTitle: 'Tudo pronto', finalText: 'Os primeiros passos ficam no Resumo. Você pode rever esta apresentação no menu ☰, em Ajuda.', finalLabel: 'Ver meu resumo', onClose: () => { markTour(); S.startCoach(true); } }
+    : { finalTitle: 'Primeiro passo: a fatura do cartão', finalText: 'Baixe o PDF da última fatura no app do banco e envie aqui. Em poucos segundos você vê para onde foi o dinheiro.', finalLabel: 'Enviar minha fatura', onClose: done => { markTour(); S.startCoach(true, () => { if (done) showMessages().then(() => S.go('lancar', '#drop')); else afterIntro(); }); } });
 S.render = () => {
   reindex(); renderMonthSel();
   const v = VIEWS[S.tab]; v.render($('#v-' + S.tab));
@@ -222,6 +223,7 @@ function renderMonthSel() {
 { const l = parseLink(location.href); if (l) { try { sessionStorage.setItem('fin.link', JSON.stringify(l)); } catch (e) { /* storage blocked */ } history.replaceState(null, '', location.pathname); } }
 // ?acao=voz|nota|pdf|compartilhar (icon shortcuts, the evening reminder, Android share): kept until the app opens.
 { const a = new URLSearchParams(location.search).get('acao'); if (/^(voz|nota|pdf|compartilhar)$/.test(a || '')) { try { sessionStorage.setItem('fin.acao', a); } catch (e) { /* storage blocked */ } history.replaceState(null, '', location.pathname); } }
+S.runAcao = a => runAcao(a);
 function runAcao(a) {
   track('atalho.' + a);
   S.go('lancar');
@@ -262,7 +264,12 @@ async function doStart() {
   // Shortcut on the icon, the evening reminder or something shared with the app: go straight there.
   const acao = (() => { try { const a = sessionStorage.getItem('fin.acao'); sessionStorage.removeItem('fin.acao'); return a; } catch (e) { return null; } })();
   if (acao && tourDone()) { runAcao(acao); S.justSignedIn = false; refreshBell(); return; }
-  if (!tourDone()) S.showTour();
+  // 3.0: someone new with nothing yet gets one screen and goes straight to the first statement (no 7 slides, no 9 balloons).
+  if (!tourDone() && !S.txs.length && !legacyFamily()) {
+    const done = () => { markTour(); saveFlag({ coach_done: true }); };
+    showStart({ name: displayName().split(' ')[0], onPdf: () => { done(); runAcao('pdf'); }, onVoice: () => { done(); runAcao('voz'); }, onExample: () => { done(); setTimeout(afterIntro, 250); } });
+  }
+  else if (!tourDone()) S.showTour();
   else if (shouldCoach(S.user)) setTimeout(() => S.startCoach(), 700);
   else { setTimeout(afterIntro, 250); }
   if (tourDone() && S.justSignedIn) toast(`Que bom ter você de volta, ${displayName().split(" ")[0]}!`);

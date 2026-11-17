@@ -227,36 +227,51 @@ await shot('01d-convite');
 await page.click('#obDone');
 await page.waitForSelector('#app:not([hidden])');
 ok('família criada e app aberto', (await txt('#brand')) === 'Família Elias');
+// 3.0: someone new gets one screen (Começar) and goes straight to the first statement: no 7 slides, no 9 balloons.
+await page.waitForSelector('.start');
+ok('Começar: uma tela só, com a primeira fatura, o falar e o exemplo', (await txt('.start')).includes('em 2 minutos vocês já veem para onde foi o dinheiro') && await page.isVisible('#stPdf') && await page.isVisible('#stVoice') && await page.isVisible('#stExample') && !(await page.$('.tour')) && !(await page.$('.coach')), await txt('.start'));
+await shot('01e-comecar');
+await page.click('#stPdf');
+ok('Começar: pergunta o banco do cartão', (await page.$$('.start [data-bank]')).length === 9);
+await page.click('.start [data-bank="Santander"]');
+const how = await txt('#stHow');
+ok('Começar: os passos citam o banco escolhido e a dica do computador (Salvar como PDF)', how.includes('No app do Santander') && how.includes('Salvar como PDF'), how);
+await page.waitForFunction(() => window.__db.households[0].settings.bank === 'Santander', null, { timeout: 5000 }).catch(() => {});
+ok('Começar: o banco fica guardado para os avisos', await page.evaluate(() => window.__db.households[0].settings.bank === 'Santander'));
+await shot('01f-banco');
+await page.click('#stGo'); await page.waitForTimeout(500);
+ok('depois do Começar, vai para a fatura (sem passeio de balões)', await page.isVisible('#v-lancar #drop') && !(await page.$('.coach')) && !(await page.$('.start')));
+// The presentation and the walkthrough are still there, in menu ☰ → Ajuda.
+await page.evaluate(async () => (await import('/js/state.js')).S.showTour());
 await page.waitForSelector('.tour');
-ok('apresentação aparece ao entrar no app com foto', (await txt('.tour')).includes('O dinheiro da família') && await page.isVisible('.tour-slide .photo img'));
-await shot('01e-tour');
+ok('apresentação continua no menu, com foto', (await txt('.tour')).includes('O dinheiro da família') && await page.isVisible('.tour-slide .photo img'));
 const nSlides = await page.$$eval('.tour-slide', s => s.length);
 for (let k = 0; k < nSlides - 1; k++) await page.click('#tourNext');
 ok('último passo leva à primeira fatura', (await txt('#tourNext')) === 'Enviar minha fatura');
 ok('último slide também pode ser fechado', (await txt('#tourSkip')) === 'Fechar' && await page.isVisible('#tourSkip'));
 await page.click('#tourNext');
-// guided walkthrough over the real screen
 await page.waitForSelector('.coach');
 await page.waitForFunction(() => document.querySelector('.coach-spot')?.getBoundingClientRect().width > 0);
-ok('tour guiado aparece depois da apresentação', (await txt('.coach-tip')).includes('Quanto sobrou') && await page.isVisible('.coach-spot'));
-await shot('01f-coach');
+ok('tour guiado continua disponível depois da apresentação', (await txt('.coach-tip')).includes('Quanto sobrou') && await page.isVisible('.coach-spot'));
 await page.click('#coachNext');
 ok('tour guiado aponta o seletor de mês', (await txt('#coachT')) === 'Escolha o mês');
 await page.click('#coachNext'); await page.click('#coachNext');
 ok('tour guiado mostra a aba Gráficos', (await txt('#coachT')) === 'Gráficos');
 await page.click('#coachSkip');
 ok('pular fecha o tour guiado', !(await page.$('.coach')));
-ok('depois do tour, vai para a fatura', await page.isVisible('#v-lancar #drop'));
+await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
 await page.click('[data-tab=resumo]');
 ok('resumo cumprimenta pelo nome', (await txt('#v-resumo')).includes('Boas-vindas, Luiz!'));
-ok('início vazio mostra a primeira missão de começo (0 de 6)', (await txt('#stepsBox')).includes('Missões de começo · 0 de 6') && (await txt('#stepsBox')).includes('Mande a última fatura do cartão'), await txt('#stepsBox'));
+const tr = await txt('#stepsBox');
+ok('início vazio mostra a trilha: etapa 1 de 5, o tempo e o que libera', /Agora · etapa 1 de 5/i.test(tr) && tr.includes('Mandar a primeira fatura ou extrato') && tr.includes('2 minutos') && tr.includes('Libera: Gastos e Perguntar') && (await page.$$('#stepsBox .tr-dot')).length === 5, tr);
 ok('início vazio mostra um mês de exemplo, marcado como fictício, com o caminho para os números de verdade', (await txt('#demoCard')).includes('Família Exemplo (fictícia)') && (await txt('#demoCard')).includes('Agora com os números de vocês') && await page.isVisible('#demoPdf'));
 if (shots) await page.screenshot({ path: path.join(shots, '02a-exemplo.png'), fullPage: true });
 await page.click('#demoPdf'); await page.waitForTimeout(400);
 ok('do exemplo, "Enviar a última fatura" abre o envio', (await page.getAttribute('.tab[data-tab="lancar"]', 'aria-selected')) === 'true' && await page.isVisible('#v-lancar #drop'));
 await page.click('[data-tab=resumo]');
-ok('a missão diz o que destrava, com 6 pontinhos de progresso', (await txt('#stepsBox')).includes('Destrava: para onde foi o dinheiro do cartão') && (await page.$$('#stepsBox .mis-dot')).length === 6);
-await page.click('#stepsBox [data-all]'); await page.waitForSelector('#conqBox .steps');
+await page.click('#stepsBox #trGo'); await page.waitForTimeout(400);
+ok('o botão da trilha leva direto ao envio da fatura', (await page.getAttribute('.tab[data-tab="lancar"]', 'aria-selected')) === 'true' && await page.isVisible('#v-lancar #drop'));
+await page.evaluate(async () => (await import('/js/state.js')).S.go('ajustes', null, 'conquistas')); await page.waitForSelector('#conqBox .steps');
 { const nLi = (await page.$$('#conqBox .steps > li:not([hidden])')).length, nSel = (await page.$$('#conqBox .selo')).length, ct = await txt('#conqBox');
   ok('Conquistas mostra as 6 missões de começo, as extras e os selos', nLi === 13 && nSel === 10 && /Selos\s*\d de 10/.test(ct), `${nLi} missões, ${nSel} selos; ${(ct.match(/Selos[^A-Z]*/) || [''])[0]}`); }
 await page.click('#conqBox [data-skip]'); await page.waitForFunction(() => window.__db.households[0].settings.skips?.avisos === true, null, { timeout: 5000 }).catch(() => {});
@@ -266,6 +281,7 @@ await page.click('#conqBox [data-k="0"]');
 ok('missão leva ao envio do PDF', await page.isVisible('#v-lancar #drop'));
 await page.click('[data-tab=resumo]');
 await shot('02-vazio');
+ok('3.0: família nova ainda não vê "Quanto sobrou" no Início (abre na etapa 2)', await page.evaluate(() => { const d = document.getElementById('sum_sobra'); return !d || d.hidden; }));
 
 const backup = arg('backup');
 // side menu
@@ -335,6 +351,13 @@ async function sheetTests(tag) {
 }
 
 await sheetTests(SMOKE ? 'safari: ' : '');
+await page.click('[data-tab=resumo]');
+await page.waitForSelector('.unlock', { timeout: 6000 }).catch(() => {});
+{ const ul = await page.$('.unlock') ? await txt('.unlock') : '';
+  ok((SMOKE ? 'safari: ' : '') + '3.0: com o primeiro extrato e a primeira fatura, aparece a etapa feita, o que foi liberado e a próxima', /Etapa \d de 5 feita/.test(ul) && ul.includes('Liberado') && ul.includes('Próxima etapa'), ul.slice(0, 300));
+  await shot('02c-liberado');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  ok((SMOKE ? 'safari: ' : '') + '3.0: depois da etapa 2, "Quanto sobrou" aparece no Início', !(await page.$('.unlock')) && await page.evaluate(() => { const d = document.getElementById('sum_sobra'); return !!d && !d.hidden; })); }
 if (SMOKE) { // The rest needs real family data: in the smoke run, check the main ways to add entries and stop.
   await page.click('[data-tab=lancar]'); await page.click('.ltile[data-mode="falar"]');
   await page.fill('#qText', 'gastei 230 no mercado hoje no cartão e 350 de terapia por pix'); await page.click('#qGo');
@@ -933,7 +956,7 @@ ok('previsão: a fatura aberta do mês seguinte vira a previsão dessa fatura', 
 ok('Início: quanto o banco cobrou nos últimos 12 meses', (await txt('#feesBox')).includes('Anuidade R$ 1.500') && (await txt('#feesBox')).includes('IOF R$ 68'), await txt('#feesBox'));
 ok('Início: parcelas já comprometidas dos próximos meses', (await txt('#plans')).includes('Parcelas já comprometidas') && (await page.$$('#plans .pbars li')).length >= 3);
 // Gastos do ano: found in the history (the April Detran payment is the IPVA), confirmed, on the calendar.
-ok('Início: avisa os gastos que voltam todo ano (com o nome)', /Luiz, achamos \d+ gastos que voltam todo ano/.test(await txt('#insights')) || (await page.evaluate(() => { document.querySelector('#todoMore')?.click(); return true; }) && /Luiz, achamos \d+ gastos que voltam todo ano/.test(await txt('#insights'))));
+ok('Início: avisa os gastos que voltam todo ano (sem abrir com o nome)', /Achamos \d+ gastos que voltam todo ano/.test(await txt('#insights')) || (await page.evaluate(() => { document.querySelector('#todoMore')?.click(); return true; }) && /Achamos \d+ gastos que voltam todo ano/.test(await txt('#insights'))));
 // The car's state decides the IPVA: Patrimônio asks it (the Civic is registered in ES, 2%, 15% at once in April).
 ok('patrimônio salva tipo e estado de cada bem', await page.evaluate(() => { const a = window.__db.households[0].settings.assets; const c = a.find(x => /Civic/.test(x.name)), s = a.find(x => /Scooter/.test(x.name)), g = a.find(x => /Guaratuba/.test(x.name)); return c.tipo === 'carro' && c.uf === 'ES' && s.tipo === 'moto' && g.tipo === 'imovel'; }));
 await sec('gastos_ano');
@@ -951,7 +974,7 @@ await page.click('[data-tab=resumo]'); await page.waitForTimeout(200);
 await page.evaluate(() => localStorage.setItem('fin.feed.' + window.__db.households[0].id, '{}'));
 await page.click('[data-tab=extrato]'); await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início dinâmico: aviso novo no topo, marcado', !!(await page.$('#insights .insight.fresh:first-child .newtag')) && await page.evaluate(() => document.querySelector('#insights').compareDocumentPosition(document.querySelector('.hero')) & 4));
-ok('retrospectiva do ano até o último mês aparece no topo do Início até ser aberta', (await txt('#insights')).includes('Luiz, a retrospectiva de 2026 até setembro está pronta'));
+ok('retrospectiva do ano até o último mês aparece no topo do Início até ser aberta', (await txt('#insights')).includes('A retrospectiva de 2026 até setembro está pronta'));
 await page.evaluate(() => document.querySelector('#insights [data-go*="retro"]').click()); await page.waitForSelector('#wrapped', { timeout: 5000 }).catch(() => {});
 ok('retrospectiva abre como histórias em tela cheia, com foto', !!(await page.$('#wrapped .w-photo')) && await page.isVisible('#wrapped') && (await txt('#wrapped')).includes('A primeira retrospectiva de vocês') && (await page.$$('#wrapped .w-bars span')).length >= 7);
 if (shots) await page.screenshot({ path: path.join(shots, '03f-historias-1.png') });
@@ -1004,7 +1027,7 @@ ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).in
   const C = await page.evaluate(async () => { const m = await import('/js/costs.js'), f = await import('/js/lib/format.js'), c = m.familyCosts(), s = m.familyInsurance(); return { total: f.brl0(c.total).replace(/\s/g, ' '), year: f.brl0(c.year).replace(/\s/g, ' '), names: c.items.filter(x => x.current).map(x => x.name), tel: { now: f.brl0(c.telecom.now).replace(/\s/g, ' '), diff: f.brl0(c.telecom.diff).replace(/\s/g, ' '), q: c.questions.length, hard: c.questions.some(q => !q.soft) }, risen: c.risen.map(x => [x.name, x.risePct]), ins: f.brl0(s.yearWithFinancing).replace(/\s/g, ' '), insItems: s.items.map(x => x.name) }; });
   ok('revisão de custos: acha Vivo, Spotify e Amazon Prime nos dados de verdade; a Vivo (duas linhas) não aparece como "subiu"', ['Vivo', 'Spotify', 'Amazon Prime'].every(n => C.names.includes(n)) && !C.risen.some(([n]) => n === 'Vivo'), JSON.stringify(C));
   const card = await txt('#costCard');
-  ok('contas de casa: com perguntas abertas, o card compara o grupo (vocês pagam R$ x a menos), com o nome', C.tel.hard && /^Luiz, vocês pagam /.test(card) && card.replace(/\s/g, ' ').includes(C.tel.diff + ' a menos por mês'), card + JSON.stringify(C.tel));
+  ok('contas de casa: com perguntas abertas, o card compara o grupo (telefone e internet: R$ x a menos por mês)', C.tel.hard && card.replace(/\s/g, ' ').includes('Telefone e internet: ' + C.tel.diff + ' a menos por mês'), card + JSON.stringify(C.tel));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-custos-card.png') });
   // The questions, one per screen, until the view by house.
   if (await page.$('#costOpen')) { await page.click('#costOpen'); await page.waitForSelector('#custos .cs-q'); }
@@ -1254,7 +1277,7 @@ ok('métricas: link para a Central do produto', (await page.getAttribute('#admin
   ok('central: missões mostra o funil e cada família', (await ap.textContent('#aMain')).includes('2 famílias') && (await ap.textContent('#aMain')).includes('Mande a última fatura do cartão1 · 50%'), (await ap.textContent('#aMain')).slice(0, 300));
   await atab('mensagens'); await ap.waitForSelector('.msgcard');
   const mx = await ap.textContent('#aMain');
-  ok('central: mensagens mostra os avisos e pushes da família fictícia, todos dentro do manual', (await ap.$$('.msgcard')).length >= 20 && mx.includes('0 fora do manual') && mx.includes('Ana, outubro fechou no vermelho') && (await ap.$$('.msg-bad')).length === 0, mx.slice(0, 200));
+  ok('central: mensagens mostra os avisos e pushes da família fictícia, todos dentro do manual', (await ap.$$('.msgcard')).length >= 20 && mx.includes('0 fora do manual') && mx.includes('Outubro fechou no vermelho') && (await ap.$$('.msg-bad')).length === 0, mx.slice(0, 200));
   await ap.click('[data-r="nome"]'); ok('central: mensagens filtra por regra (nenhuma sem nome)', (await ap.$$('.msgcard')).length === 0);
   if (shots) await ap.screenshot({ path: path.join(shots, 'admin-8-mensagens.png'), fullPage: true });
   await atab('docs'); await ap.waitForSelector('.docsec');
@@ -1657,10 +1680,7 @@ await page.fill('#rPass2', 'nova-senha-1'); await page.click('#resetForm button[
 await page.waitForSelector('#app:not([hidden])', { timeout: 5000 });
 ok('senha nova salva e entra no app', (await txt('#brand')) === 'Família Elias');
 await page.waitForSelector('.coach', { timeout: 3000 }).catch(() => {});
-ok('tour guiado aparece de novo nos primeiros acessos', !!(await page.$('.coach')));
-if (await page.$('.coach')) { await page.click('#coachNever'); await page.waitForTimeout(150); }
-ok('marcar "Não mostrar mais" fecha o tour na hora', !(await page.$('.coach')));
-ok('"Não mostrar mais" fica guardado', await page.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('fin.coach.done.') && localStorage[k] === '1')));
+ok('3.0: quem começou pela tela Começar não recebe o passeio de balões sozinho a cada acesso', !(await page.$('.coach')));
 await sec('familia');
 await shot('08-ajustes');
 ok('sem rolagem horizontal', await page.evaluate(() => document.documentElement.scrollWidth <= 400));

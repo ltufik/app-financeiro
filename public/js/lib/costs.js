@@ -232,20 +232,21 @@ export function contextQuestions({ c, all = [], txs = [], settings = {} }) {
 
 // The Início card: only when something is worth a look (a price went up, a charge stopped, a "Vou rever" is due).
 // name: first name of whoever is looking. Returns {title, text, action} or null.
-export function costsNotice(c, name = '') {
+export const costsNotice = (c, name = '') => capT(costsNotice0(c, name));
+function costsNotice0(c, name = '') {
   if (!c || !c.items.length) return null;
-  const n = String(name || '').trim().split(/\s+/)[0], hi = n ? n + ', ' : '';
+  const hi = '';
   const R0 = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
   const sum = c.count ? `Juntas, as ${c.count} contas e assinaturas de vocês custam ${R0(c.total)} por mês, ${R0(c.year)} no ano.` : '';
   if (c.questions?.some(x => !x.soft)) {
     const t = c.telecom || {}, q = c.questions.length, mo = t.thenMonth ? MONTHS[+t.thenMonth.slice(5, 7) - 1] : '';
     const ask = `${q === 1 ? 'Uma pergunta rápida deixa' : (q < 5 ? ['', '', 'Duas', 'Três', 'Quatro'][q] : q) + ' perguntas rápidas deixam'} a conta certa.`;
-    if (t.diff >= 30) return { kind: 'contexto', good: true, title: `${hi}vocês pagam ${R0(t.diff)} a menos por mês do que em ${mo}`, text: `Em telefone, internet e TV: ${R0(t.then)} em ${mo}, ${R0(t.seen)} agora, uns ${R0(t.diff * 12)} a menos no ano de vocês. ${ask}`, action: 'Responder (1 minuto)' };
-    return { kind: 'contexto', title: `${hi}${q === 1 ? 'uma pergunta' : q + ' perguntas'} sobre as contas de casa`, text: `Para o app não confundir conta nova (outra casa, outro celular) com conta que subiu. ${ask}`, action: 'Responder (1 minuto)' };
+    if (t.diff >= 30) return { kind: 'contexto', good: true, title: `Telefone e internet: ${R0(t.diff)} a menos por mês`, text: `${R0(t.then)} em ${mo}, ${R0(t.seen)} agora. ${ask}`, action: 'Responder (1 minuto)' };
+    return { kind: 'contexto', title: `${q === 1 ? 'Uma pergunta' : q + ' perguntas'} sobre as contas da casa`, text: `Para não confundir conta nova (outra casa, outro celular) com conta que subiu. ${ask}`, action: 'Responder (1 minuto)' };
   }
-  if (c.due.length) { const d = c.due[0]; return { title: `${hi}vocês iam rever ${d.name === 'Internet' ? 'a internet' : (d.group === 'telefone' ? 'a ' : 'o ') + d.name}`, text: `Faz uma semana. ${d.name} veio ${R0(d.last)} no último mês, ${R0(d.year)} no ano. Conseguiram baixar?`, action: 'Ver a revisão de custos' }; }
+  if (c.due.length) { const d = c.due[0]; return { title: `${hi}vocês iam rever ${d.name === 'Internet' ? 'a internet' : (d.group === 'telefone' ? 'a ' : 'o ') + d.name}`, text: `Faz uma semana: ${d.name} veio ${R0(d.last)} no último mês, ${R0(d.year)} no ano. Conseguiram baixar?`, action: 'Ver a revisão de custos' }; }
   if (c.risen.length) { const u = c.risen[0], mo = MONTHS[+u.firstMonth.slice(5, 7) - 1]; return { title: `${hi}${u.name === 'Internet' ? 'a internet' : 'a conta ' + (u.group === 'telefone' ? 'da ' : 'do ') + u.name} subiu ${u.risePct}%`, text: `Era ${R0(u.first)} em ${mo} e veio ${R0(u.last)} no último mês: ${R0(u.rise * 12)} a mais no ano. ${sum}`, action: 'Rever as assinaturas' }; }
-  if (c.stopped.length) { const s = c.stopped[0]; return { title: `${hi}${s.name} não veio no último mês`, text: `Se vocês cancelaram, são ${R0(s.last * 12)} a menos no ano. ${sum}`.trim(), action: 'Rever as assinaturas' }; }
+  if (c.stopped.length) { const s = c.stopped[0]; return { title: `${hi}${s.name} não veio no último mês`, text: `Se cancelaram, são ${R0(s.last * 12)} a menos no ano. ${sum}`.trim(), action: 'Rever as assinaturas' }; }
   return null;
 }
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -295,11 +296,12 @@ export function insuranceSummary({ txs = [], settings = {}, today, debts = [] })
 }
 
 // The yearly insurance notice on Início: once a year (seenAt), when there is insurance in the statements.
-export function insuranceNotice(s, name = '', today) {
+export const insuranceNotice = (s, name = '', today) => capT(insuranceNotice0(s, name, today));
+function insuranceNotice0(s, name = '', today) {
   if (!s || !s.items.length || s.year < 300) return null;
   if (s.seenAt && Date.parse(today) - Date.parse(s.seenAt) < 330 * 864e5) return null;
-  const n = String(name || '').trim().split(/\s+/)[0], hi = n ? n + ', ' : '', R0 = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
-  return { title: `${hi}vocês pagam uns ${R0(s.yearWithFinancing)} por ano em seguros`, text: `São ${s.items.length} ${s.items.length > 1 ? 'seguros' : 'seguro'} no extrato e na fatura, ${R0(s.paid)} nos últimos ${s.monthsCovered} meses. Já usaram algum? Muitos têm assistência que já está paga.`, action: 'Ver os seguros' };
+  const hi = '', R0 = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+  return { title: `${hi}vocês pagam uns ${R0(s.yearWithFinancing)} por ano em seguros`, text: `São ${s.items.length} ${s.items.length > 1 ? 'seguros' : 'seguro'} no extrato e na fatura, ${R0(s.paid)} nos últimos ${s.monthsCovered} meses: já usaram algum? Muitos têm assistência já paga.`, action: 'Ver os seguros' };
 }
 
 // ---------- Combo: internet/TV in one operator and mobile in another, in the same house ----------
@@ -384,3 +386,6 @@ export function offerSavings(offer, chance) {
 
 // The family typed a price they found: the same account for one offer that replaces everything in the combo.
 export const typedSavings = (price, chance) => offerSavings({ services: chance?.services || [], price: +price || 0, priceAfter: +price || 0, promoMonths: 0 }, chance);
+
+// 3.0: the reader's name no longer opens a notice; the title starts with a capital letter.
+function capT(m) { return m && m.title ? { ...m, title: m.title[0].toUpperCase() + m.title.slice(1) } : m; }
