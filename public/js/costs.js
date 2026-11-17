@@ -8,7 +8,7 @@ import { toast, invalid, clearInvalid } from './ui.js';
 import { esc, brl, brl0, todayISO, mLong } from './lib/format.js';
 import { checkNumber } from './lib/validate.js';
 import { costsReview, costsNotice, insuranceSummary, insuranceNotice, INSURANCE_TYPES, SERVICES, houseList, houseName, servicesText,
-  comboChance, offerPrompt, cleanOffers, offerSavings, typedSavings, OPERATOR_SITES, COMPARE_SITE, cleanCep, fmtCep, OFFER_DAYS } from './lib/costs.js';
+  comboChance, houseChance, offerPrompt, cleanOffers, offerSavings, typedSavings, OPERATOR_SITES, COMPARE_SITE, cleanCep, fmtCep, OFFER_DAYS } from './lib/costs.js';
 import { searchJSON, aiErrorText } from './ai.js';
 
 export const familyCosts = () => costsReview({ txs: S.txs, idx: S.catIdx, settings: settings(), today: todayISO() });
@@ -56,6 +56,7 @@ function draw() {
   if (view === 'perguntas' || view.startsWith('perguntar:')) return drawQuestion(el, view.startsWith('perguntar:') ? view.slice(10) : null);
   if (view === 'casas') return drawHouses(el);
   if (view === 'combo' || view === 'cep') return drawCombo(el);
+  offerHouse = view === 'casas' || view === 'lista' ? null : offerHouse;
   drawList(el);
 }
 
@@ -270,7 +271,7 @@ function drawQuestion(el, only) {
 }
 
 function drawHouses(el) {
-  const c = familyCosts(), t = c.telecom, name = firstName(), mo = t.thenMonth ? MES(t.thenMonth) : '', ch = comboChance(c, settings());
+  const c = familyCosts(), t = c.telecom, name = firstName(), mo = t.thenMonth ? MES(t.thenMonth) : '', ch = comboChance(c);
   const cmp = t.diff >= 30 ? `${brl0(t.diff)} a menos por mês do que em ${mo} (${brl0(t.then)}): uns ${brl0(t.diff * 12)} a menos no ano.`
     : t.diff <= -30 ? `${brl0(-t.diff)} a mais por mês do que em ${mo} (${brl0(t.then)}).` : t.thenMonth && t.thenMonth < t.lastMonth ? `Quase igual a ${mo} (${brl0(t.then)}).` : '';
   const gone = x => ['cancelei', 'trocou'].includes(x.status) || !x.current;
@@ -280,26 +281,28 @@ function drawHouses(el) {
   el.innerHTML = `${head('Telefone, internet e TV')}<main class="rv-main">
     <section class="rv-done cs-hero"><span class="small">${name ? esc(name) + ', p' : 'P'}or mês, hoje</span><span class="num cs-big" id="csTelNow">${brl0(t.now)}</span>${cmp ? `<span class="small" id="csTelCmp">${cmp}</span>` : ''}</section>
     ${c.questions.length ? `<button type="button" class="rv-card cs-save" id="csAsk"><strong>${c.questions.length === 1 ? 'Falta uma pergunta' : `Faltam ${c.questions.length} perguntas`}</strong><span class="small muted">Para separar as contas por casa e por serviço.</span></button>` : ''}
-    ${t.houses.map(h => `<div class="rv-row cs-house"><strong>${esc(h.name)}</strong><span class="num">${brl0(h.total)}</span></div><div class="rv-card cs-list">${h.items.map(row).join('')}</div>`).join('')}
+    ${t.houses.map(h => { const hc = h.house && houseChance(c, h.house); return `<div class="rv-row cs-house"><strong>${esc(h.name)}</strong><span class="num">${brl0(h.total)}</span></div><div class="rv-card cs-list">${h.items.map(row).join('')}</div>
+      ${hc ? `<div class="cs-offers-cta"><span class="small muted">Com o CEP desta casa, o app procura ${esc(servicesText(hc.services))} mais barato${hc.services.length > 1 ? 's' : ''} que chegue${hc.services.length > 1 ? 'm' : ''} nessa rua, inclusive provedores do bairro.</span><button type="button" class="linkbtn" data-offers="${esc(h.house)}">Ver ofertas para esta casa</button></div>` : ''}`; }).join('')}
     ${!t.houses.length ? '<p class="small muted">Nenhuma conta de celular, internet ou TV nos últimos meses.</p>' : ''}
     ${ch ? `<section class="rv-done cs-hero cs-combo"><span class="eyebrow cs-eb">Pode sair mais barato</span><strong>${esc(cap(servicesText([...new Set(ch.fixed.flatMap(x => x.services).filter(k => k !== 'celular'))])))} na ${esc([...new Set(ch.fixed.map(x => x.name))].join(' e '))}, celular na ${esc([...new Set(ch.mobile.map(x => x.name))].join(' e '))}. Juntar tudo numa operadora costuma ter desconto.</strong><button type="button" class="btn" id="csCombo">Ver opções para ${esc(ch.name)}</button></section>` : ''}
     <p class="tiny muted">Duas contas da mesma operadora são separadas pelo valor; mudar do débito para o cartão continua sendo a mesma conta. Toque numa conta para mudar a casa ou o serviço.</p>
   </main>`;
   el.querySelector('#csBack').onclick = () => go('lista');
   el.querySelector('#csAsk')?.addEventListener('click', () => go('perguntas'));
-  el.querySelector('#csCombo')?.addEventListener('click', () => { track('combo.abriu'); go('combo'); });
+  el.querySelector('#csCombo')?.addEventListener('click', () => { track('combo.abriu'); offerHouse = ch.house; go('combo'); });
+  el.querySelectorAll('[data-offers]').forEach(b => b.onclick = () => { track('ofertas.abriu'); offerHouse = b.dataset.offers; go('combo'); });
   el.querySelectorAll('[data-item]').forEach(b => b.onclick = () => go('item:' + b.dataset.item));
   track('custos.casas');
 }
 
 // ---------- Combo: the CEP first (and why), a search on the operators' sites, real offers or an honest "we could not" ----------
-let searching = null, lastResult = null;
+let searching = null, lastResult = null, offerHouse = null;
 const fresh = at => at && Date.now() - Date.parse(at) < OFFER_DAYS * 864e5;
 const ddmm = iso => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`; };
 const EXT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>';
 
 function drawCombo(el) {
-  const c = familyCosts(), ch = comboChance(c, settings()); if (!ch) return go('casas');
+  const c = familyCosts(), ch = offerHouse ? houseChance(c, offerHouse) : comboChance(c); if (!ch) return go('casas');
   const cs = settings().costs || {}, cep = (cs.ceps || {})[ch.house] || '', cache = (cs.offers || {})[ch.house];
   if (searching) return drawSearching(el, ch, cep);
   const res = lastResult && lastResult.house === ch.house && lastResult.cep === cep ? lastResult : (cache && cache.cep === cep && fresh(cache.at) ? cache : null);
@@ -312,7 +315,8 @@ function drawCep(el, ch, cep) {
   const HOME = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M10 21v-6h4v6"/></svg>';
   const LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   el.innerHTML = `${head('Opções para ' + ch.name)}<main class="rv-main">
-    <h3 class="cs-q">Primeiro, o CEP da casa</h3>
+    <h3 class="cs-q">Primeiro, o CEP de ${esc(ch.name)}</h3>
+    <p class="small">Para procurar ${ch.combo ? 'um combo' : 'planos mais baratos'} que chegue${ch.combo ? '' : 'm'} de verdade nessa casa, o app precisa do CEP. Sem ele, mostraria preços de outra cidade ou ofertas que não atendem a rua de vocês.</p>
     <section class="rv-card cs-why"><strong>Por que precisamos dele</strong>
       <div class="cs-why-i">${PIN}<span class="small">O preço e a fibra mudam de rua para rua. Sem o CEP, o app mostraria ofertas que talvez nem cheguem aí.</span></div>
       <div class="cs-why-i">${HOME}<span class="small">Com ele dá para achar também provedores do bairro, que muitas vezes custam menos que as grandes.</span></div>

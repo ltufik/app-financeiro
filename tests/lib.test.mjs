@@ -1623,11 +1623,17 @@ test('combo: só quando internet/TV e celular estão em operadoras diferentes; o
   const base = { assets: [{ name: 'Apartamento de São Paulo', value: 1 }, { name: 'Casa de Guaratuba', value: 1 }], costs: { lines: { 'Vivo@2026-07': { house: 'Apartamento de São Paulo', services: ['internet', 'tv'] }, 'Vivo@2026-08': { house: 'Casa de Guaratuba', services: ['internet'] } } } };
   const c0 = costsReview({ txs, idx, settings: base, today: '2026-10-05' });
   assert.equal(comboChance(c0, base), null, 'sem celular: nada de combo');
+  const { houseChance } = await import('../public/js/lib/costs.js');
+  const solo = { ...base, costs: { lines: Object.fromEntries(c0.items.filter(x => x.group === 'telefone').map(x => [x.key, { house: x.last === 220 ? 'Apartamento de São Paulo' : 'Casa de Guaratuba', services: ['internet'] }])) } };
+  const hs = houseChance(costsReview({ txs, idx, settings: solo, today: '2026-10-05' }), 'Casa de Guaratuba');
+  assert.equal(hs.combo, false, 'sem combo, cada casa ainda pode buscar ofertas'); assert.equal(hs.pay, 100); assert.deepEqual(hs.services, ['internet']);
+  assert.match(offerPrompt(hs, '83280000'), /planos mais baratos com os mesmos serviços \(internet\)/);
   const keys = c0.items.filter(x => x.group === 'telefone').map(x => x.key), big = c0.items.find(x => x.last === 220).key, small = c0.items.find(x => x.last === 100).key;
   const st = { ...base, costs: { lines: { [big]: { house: 'Apartamento de São Paulo', services: ['internet', 'tv'] }, [small]: { house: 'Casa de Guaratuba', services: ['internet'] } }, celular: { status: 'informado', brand: 'TIM', value: 110 } } };
   assert.equal(keys.length, 2);
   const c = costsReview({ txs, idx, settings: st, today: '2026-10-05' }), ch = comboChance(c, st);
   assert.equal(ch.house, 'Apartamento de São Paulo', 'o celular informado vai com a casa que tem internet e TV');
+  assert.equal(ch.combo, true); assert.match(offerPrompt(ch, '01310100'), /Procure combos que juntem/);
   assert.equal(ch.pay, 330); assert.deepEqual(ch.brands.sort(), ['TIM', 'Vivo']); assert.deepEqual(ch.services.sort(), ['celular', 'internet', 'tv']);
   assert.equal(comboChance(costsReview({ txs, idx, settings: { ...st, costs: { ...st.costs, celular: { status: 'informado', brand: 'Vivo', value: 110 } } }, today: '2026-10-05' }), st), null, 'tudo na Vivo: nada de combo');
   assert.match(offerPrompt(ch, '01310100'), /CEP 01310-100/); assert.match(offerPrompt(ch, '01310100'), /Nunca estime nem invente/);

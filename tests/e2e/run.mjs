@@ -1019,6 +1019,12 @@ ok('depois de aberta, a retrospectiva sai do topo', !(await txt('#insights')).in
   ok('varredura: o total de telefone e internet de hoje é o mesmo na tela por casa e na soma das casas', (await txt('#csTelNow')).replace(/\s/g, ' ') === H.now && Math.abs(H.sum - H.raw) < 0.01 && H.now === C.tel.now, JSON.stringify(H) + ' ' + C.tel.now);
   ok('contas de casa: a conta que parou fica no fim, e o card do Início sai depois das respostas', casas.includes('Contas que pararam') && casas.includes('Trocada em') && await page.evaluate(async () => { const m = await import('/js/costs.js'), l = await import('/js/lib/costs.js'); return l.costsNotice(m.familyCosts(), 'Luiz')?.kind !== 'contexto'; }), casas.slice(0, 400));
   if (shots) await page.screenshot({ path: path.join(shots, '03c-contas-casas.png') });
+  // Any house: "Ver ofertas para esta casa" says why the CEP, before asking it.
+  const cta = (await txt('#custos .cs-offers-cta')).replace(/\s/g, ' ');
+  await page.click('#custos [data-offers]'); await page.waitForSelector('#csCep');
+  const why = (await txt('#custos')).replace(/\s/g, ' ');
+  ok('ofertas por casa: embaixo da casa e no topo da tela, o app diz por que precisa do CEP', /Com o CEP desta casa, o app procura .* inclusive provedores do bairro/.test(cta) && /o app precisa do CEP\. Sem ele, mostraria preços de outra cidade/.test(why), cta + ' | ' + why.slice(0, 300));
+  await page.click('#csBack'); await page.waitForSelector('#csTelNow');
   // Combo: inform the mobile line (TIM), then the CEP, the search (paused once) and the offers; then a failed search.
   await page.evaluate(async () => (await import('/js/costs.js')).openCosts('perguntar:celular')); await page.waitForSelector('#csCelValue');
   await page.click('#custos [data-op="TIM"]'); await page.fill('#csCelValue', '110'); await page.click('#csCelSave'); await page.waitForSelector('#csCombo');

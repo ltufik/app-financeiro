@@ -17,7 +17,7 @@ export const SCREENS = {
   custos: { title: 'Revisão de custos', where: 'Card no Início ou Início → Assinaturas e custos fixos', key: ['custos.abriu', 'custos.abriu_inicio'] },
   custos_perguntas: { title: 'Contas de casa: perguntas rápidas', where: 'Card do Início, Revisão de custos ou a missão "Conte de onde é cada conta"', key: ['custos.contexto', 'custos.trocou', 'custos.celular'] },
   custos_casas: { title: 'Telefone, internet e TV por casa', where: 'Revisão de custos → ver por casa (e no fim das perguntas)', key: 'custos.casas' },
-  combo_cep: { title: 'Combo: o CEP primeiro, com o porquê', where: 'Revisão de custos → ver por casa → Pode sair mais barato', key: 'combo.abriu' },
+  combo_cep: { title: 'Ofertas: o CEP primeiro, com o porquê', where: 'Revisão de custos → ver por casa → Pode sair mais barato ou Ver ofertas para esta casa', key: ['combo.abriu', 'ofertas.abriu'] },
   combo_ofertas: { title: 'Combo: ofertas reais, economia no ano e o site', where: 'Depois da busca pelo CEP', key: ['combo.achou', 'combo.site'] },
   combo_sem: { title: 'Combo: a busca não achou (o motivo e onde procurar)', where: 'Depois da busca pelo CEP, quando não há preço ou nenhuma oferta é mais barata', key: ['combo.nao_achou', 'combo.digitou'] },
   seguros: { title: 'Seguros: quanto pagam e se já usaram', where: 'Aviso anual no Início ou Revisão de custos → Seguros', key: ['seguros.abriu', 'seguros.abriu_inicio'] },

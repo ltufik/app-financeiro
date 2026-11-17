@@ -310,27 +310,28 @@ export const fmtCep = v => { const d = cleanCep(v); return d.length === 8 ? d.sl
 export const OFFER_DAYS = 7;
 
 /*
-  comboChance(c, settings) -> { house, name, fixed: [items with internet or TV], mobile: [items with celular], pay, brands } | null
-  The first house (by what it pays) where internet/TV and the mobile lines are with different operators. The mobile line the
-  family informed (no house) goes with the house that has internet.
+  houseChance(c, house) -> { house, name, items (current lines of the house), fixed, mobile, pay, brands, services, combo } | null
+  What one house pays for phone, internet and TV, to look for cheaper offers. combo: internet/TV in one operator and the
+  mobile lines in another. The mobile line the family informed (no house) goes with the first house that has internet.
+  comboChance(c) -> the first house with combo, or null.
 */
-export function comboChance(c, settings = {}) {
-  if (!c?.telecom) return null;
-  const gone = s => s === 'cancelei' || s === 'trocou', has = (x, k) => (x.services || []).includes(k);
-  const manualCel = c.items.filter(x => x.manual && x.current && !gone(x.status));
-  for (const h of c.telecom.houses.filter(h => h.house)) {
-    const cur = h.items.filter(x => x.current && !gone(x.status));
-    const fixed = cur.filter(x => has(x, 'internet') || has(x, 'tv'));
-    if (!fixed.length) continue;
-    const firstFixedHouse = c.telecom.houses.find(o => o.house && o.items.some(x => x.current && !gone(x.status) && (has(x, 'internet') || has(x, 'tv'))));
-    // The informed mobile line can already be in this house's list (one house only): count it once.
-    const mobile = [...new Set([...cur.filter(x => has(x, 'celular') && !fixed.includes(x)), ...(firstFixedHouse === h ? manualCel.filter(x => !x.house) : []), ...manualCel.filter(x => x.house === h.house)])];
-    if (!mobile.length) continue;
-    const fb = new Set(fixed.map(x => x.name)), mb = new Set(mobile.map(x => x.name));
-    if ([...fb].some(b => mb.has(b))) continue;
-    const items = [...fixed, ...mobile];
-    return { house: h.house, name: h.name, fixed, mobile, items, pay: r2(items.reduce((a, x) => a + x.last, 0)), brands: [...new Set(items.map(x => x.name))], services: [...new Set(items.flatMap(x => x.services || []))] };
-  }
+export function houseChance(c, house) {
+  if (!c?.telecom || !house) return null;
+  const gone = s => s === 'cancelei' || s === 'trocou', has = (x, k) => (x.services || []).includes(k), on = x => x.current && !gone(x.status);
+  const h = c.telecom.houses.find(o => o.house === house); if (!h) return null;
+  const manualCel = c.items.filter(x => x.manual && on(x)), cur = h.items.filter(on);
+  const fixed = cur.filter(x => has(x, 'internet') || has(x, 'tv'));
+  const firstFixedHouse = c.telecom.houses.find(o => o.house && o.items.some(x => on(x) && (has(x, 'internet') || has(x, 'tv'))));
+  // The informed mobile line can already be in this house's list (one house only): count it once.
+  const mobile = [...new Set([...cur.filter(x => has(x, 'celular') && !fixed.includes(x)), ...(firstFixedHouse === h ? manualCel.filter(x => !x.house) : []), ...manualCel.filter(x => x.house === h.house)])];
+  const items = [...new Set([...cur, ...mobile])].filter(x => (x.services || []).length);
+  if (!items.length) return null;
+  const fb = new Set(fixed.map(x => x.name)), mb = new Set(mobile.map(x => x.name));
+  return { house: h.house, name: h.name, fixed, mobile, items, pay: r2(items.reduce((a, x) => a + x.last, 0)), brands: [...new Set(items.map(x => x.name))],
+    services: [...new Set(items.flatMap(x => x.services || []))], combo: fixed.length > 0 && mobile.length > 0 && ![...fb].some(b => mb.has(b)) };
+}
+export function comboChance(c) {
+  for (const h of (c?.telecom?.houses || []).filter(h => h.house)) { const ch = houseChance(c, h.house); if (ch?.combo) return ch; }
   return null;
 }
 
@@ -342,7 +343,7 @@ Hoje a família paga:
 ${lines}
 Total: R$ ${chance.pay.toFixed(2).replace('.', ',')} por mês.
 
-Procure combos que juntem ${servicesText(chance.services)} numa só operadora (Vivo, Claro, TIM, Oi e outras que atendam esse CEP) e também provedores locais ou regionais que atendam esse CEP ou bairro.
+${chance.combo ? `Procure combos que juntem ${servicesText(chance.services)} numa só operadora (Vivo, Claro, TIM, Oi e outras que atendam esse CEP) e também provedores locais ou regionais que atendam esse CEP ou bairro.` : `Procure planos mais baratos com os mesmos serviços (${servicesText(chance.services)}): de outras operadoras que atendam esse CEP (Vivo, Claro, TIM, Oi e outras), da mesma operadora e de provedores locais ou regionais desse CEP ou bairro. Combos também valem, se tiverem esses serviços.`}
 Regras:
 - Só preços que você viu numa página desta pesquisa, com o endereço (url) dessa página. Nunca estime nem invente.
 - Preço mensal em reais. Se o preço é promocional por alguns meses, diga quantos meses e o preço depois.
