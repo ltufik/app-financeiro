@@ -1,5 +1,77 @@
 [
  {
+  "id": "open_finance_v2",
+  "tipo": "bug",
+  "title": "Teste Open Finance: transações pelo /v2/transactions da Pluggy (o antigo respondia \"deprecated\")",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "O teste com a conta do Luiz parou em \"This endpoint is deprecated\"."
+ },
+ {
+  "id": "open_finance_teste",
+  "title": "Teste Open Finance na Central: lê as contas do Luiz conectadas pelo MeuPluggy (fatura aberta, extrato, faturas fechadas), sem guardar nada",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Antes de decidir o custo do Open Finance, ver com dados reais se a fatura aberta e o extrato chegam bem."
+ },
+ {
+  "id": "open_finance",
+  "from": [
+   "parcerias_e_servicos"
+  ],
+  "title": "Open Finance (conexão oficial, só leitura): estudo de custo e teste com a conta do Luiz pelo MeuPluggy",
+  "effort": "G",
+  "origin": "Luiz",
+  "status": "depois",
+  "problem": "O único jeito automático que serve para todos os bancos, inclusive a fatura aberta; custo ainda não está claro"
+ },
+ {
+  "id": "email_banco",
+  "from": [
+   "jornada_for_dummies"
+  ],
+  "title": "Encaminhar os e-mails do banco (Pix, fatura e extrato) para o endereço da família, entrando sozinhos",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "agora",
+  "problem": "Bancos não deixam tirar print nem baixar a fatura aberta; muita gente não sabe baixar o PDF"
+ },
+ {
+  "id": "jeito_de_falar_2",
+  "from": [
+   "jornada_for_dummies"
+  ],
+  "title": "Jeito de falar 2.0: avisos curtos e pessoais sem o nome de quem lê, \"vocês\" uma vez, até 2 frases; o teste cobra",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Mensagens longas e repetitivas (nome e \"vocês\" em tudo)"
+ },
+ {
+  "id": "trilha_3",
+  "from": [
+   "jornada_for_dummies"
+  ],
+  "title": "Trilha de 5 etapas que libera ferramentas, tela Começar (no lugar de 7 telas + 9 balões), Liberado, dica da primeira vez",
+  "effort": "G",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Dezoito telas de explicação antes de fazer algo; funções escondidas; o jogo no menu sem liberar nada"
+ },
+ {
+  "id": "email_teste",
+  "from": [
+   "funil_alarmes"
+  ],
+  "title": "Mandar o e-mail diário na hora pela Central (testar a chave do Resend) e escolher quem recebe (MAIL_TO)",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Sem como testar o e-mail, só dava para saber no dia seguinte às 9h"
+ },
+ {
   "id": "jornada_for_dummies",
   "from": [
    "funil_alarmes"

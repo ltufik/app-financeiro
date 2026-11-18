@@ -2,10 +2,11 @@
 
 Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 
-## Agora (1)
+## Agora (2)
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
+|  | Encaminhar os e-mails do banco (Pix, fatura e extrato) para o endereço da família, entrando sozinhos | `email_banco` | M | Luiz |
 |  | Revisão da jornada "for dummies": funções que aparecem ao terminar algo, nomes fáceis, muita comunicação e jornadas ligadas (sem procurar) | `jornada_for_dummies` | G | Luiz |
 
 ## Próximo (4)
@@ -34,10 +35,11 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 |  | Projeto ou viagem com orçamento próprio | `projeto_ou_viagem_com_orcamento_proprio` | M | Benchmarking: Money Lover, Noh |
 |  | Desafio de meta (52 semanas, mês sem delivery) | `desafio_de_meta_52_semanas_mes_sem_deliv` | P | Benchmarking: Mobills |
 
-## Depois (12)
+## Depois (13)
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
+|  | Open Finance (conexão oficial, só leitura): estudo de custo e teste com a conta do Luiz pelo MeuPluggy | `open_finance` | G | Luiz |
 |  | [backend] E-mail próprio do app para login e avisos | `email_proprio` | M | Luiz |
 | 8 | Versão web, com menos funções (o app continua mobile first) | `versao_web_mais_simples` | M | Luiz |
 | 11 | Serviços e parcerias com base nos dados (cross-sell) | `parcerias_e_servicos` | G | Luiz |
@@ -51,7 +53,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 9 | Plano pago / modelo de negócio | `plano_pago_modelo_de_negocio` | M | Produto |
 | 10 | Cobrança honesta (teste sem cartão, aviso de renovação, cancelar em 1 clique) | `cobranca_honesta_teste_sem_cartao_aviso_` | P | Benchmarking |
 
-## Feito: 169 itens
+## Feito: 174 itens
 
 ## Descartado: 4 itens
 
