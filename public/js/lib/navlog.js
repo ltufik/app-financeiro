@@ -20,7 +20,9 @@ export function tapLabel(target) {
 }
 
 // Error text without e-mails, money values, address queries or long numbers (account, card, phone), at most 400 characters.
-const NOISE = /^(Script error\.?|ResizeObserver loop|Load failed|cancel)/i;
+// Network drops are noise too (Safari: "TypeError: Load failed", Chrome: "TypeError: Failed to fetch"): the screen already says
+// "Sem conexão" when it matters, and the Central would fill with phones that lost signal.
+const NOISE = /^(Script error\.?|ResizeObserver loop|(TypeError:\s*)?(Load failed|Failed to fetch|NetworkError when attempting to fetch resource\.?)$|cancel)/i;
 export function cleanError(m) {
   const s = String(m || '').replace(/\s+/g, ' ').trim();
   if (!s || NOISE.test(s)) return '';

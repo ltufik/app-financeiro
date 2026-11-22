@@ -600,4 +600,8 @@ export const RELEASES = [
     semTeste: 'Só a Central: coberto pelo teste automático (endereço novo, sem pageSize, segue o cursor); o teste de verdade é o Luiz com a conta dele.',
     addBacklog: [{ id: 'open_finance_v2', title: 'Teste Open Finance: transações pelo /v2/transactions da Pluggy (o antigo respondia "deprecated")', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O teste com a conta do Luiz parou em "This endpoint is deprecated".' }],
     backlog: ['open_finance_v2'] },
+  { id: 'r3.0.3', version: 'v3.0.3', at: '2026-11-22T23:30:00Z', semNovidade: 'Só a Central: queda de internet no iPhone ("TypeError: Load failed") deixa de aparecer como erro.',
+    semTeste: 'Só a Central, coberto pelo teste automático da limpeza de erros.',
+    addBacklog: [{ id: 'erro_load_failed', title: 'Central → Erros: "TypeError: Load failed" (internet que caiu no iPhone) não conta como erro', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A queda de conexão da Paty no Início apareceu como erro novo; o filtro só pegava "Load failed" sem o "TypeError:" na frente.' }],
+    backlog: ['erro_load_failed'] },
 ];

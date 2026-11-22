@@ -382,6 +382,10 @@ test('navegação: célula do toque, nome do botão e erro sem dados pessoais', 
   assert.equal(tapLabel({ closest: () => fakeEl }), 'Falar ou escrever', 'bloco com título e exemplo: só o título');
   assert.equal(cleanError('Falhou para ana@x.com no cartão 5502 0912 3456 7788'), 'Falhou para <e-mail> no cartão #');
   assert.equal(cleanError('Script error.'), '');
+  assert.equal(cleanError('TypeError: Load failed'), '', 'queda de internet no iPhone não vira erro na Central');
+  assert.equal(cleanError('TypeError: Failed to fetch'), '');
+  assert.equal(cleanError('Load failed'), '');
+  assert.equal(cleanError('TypeError: Load failed to parse x'), 'TypeError: Load failed to parse x', 'só a queda pura de conexão');
   assert.equal(cleanError('x'.repeat(500)).length, 400);
 });
 
