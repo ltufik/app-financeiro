@@ -99,6 +99,7 @@ export function render(el) {
     <div id="todoAttn" hidden></div>
     <p class="small todo-done" id="todoDone" hidden>Tudo em dia por aqui. O próximo passo é no domingo: informar a fatura aberta para a previsão ficar certa.</p>
   </section>
+  ${toolOpen('perguntar') ? `<form class="panel askbox" id="askHome" aria-label="Pergunte ao app"><input id="askHomeQ" type="text" enterkeyhint="send" autocomplete="off" placeholder="Pergunte: quanto foi de delivery?" aria-label="Pergunte ao app"><button class="btn" type="submit">Perguntar</button></form>` : ''}
   ${yr ? '' : fcCard()}
   <div id="retroCard"></div>
   ${lvl}
@@ -136,12 +137,14 @@ export function render(el) {
   ${fees ? sec('banco', 'Quanto o banco cobrou', `<span class="small"><strong>${brl0(feesOf(S.txs.filter(t => t.month > addM(todayISO().slice(0, 7), -12))).total)}</strong> em 12 meses de juros, IOF, anuidade e tarifas${feesLast ? ` · ${brl0(feesLast.total)} em ${mShort(feesLast.month)}` : ''}</span>`, fees) : ''}
   <div id="infoBox"></div>
   <div id="homeMore" class="secs">
-  ${sec('fixos', 'Assinaturas e custos fixos', `<span class="small">${subsAll.length ? `<strong>${subsAll.length}</strong> que voltam todo mês · <strong>${brl0(subsAll.filter(x => x.current).reduce((a, x) => a + x.last, 0))}</strong> no último mês${(u => u ? ` · ${esc(u.name)} subiu` : '')(subsAll.find(x => x.current && x.rise > 0))}` : 'Aparecem quando a mesma conta vier 3 meses seguidos'}</span>`, '<div class="panel" id="subsBox"></div>')}
+  ${sec('fixos', 'Contas da casa', `<span class="small">${subsAll.length ? `<strong>${subsAll.length}</strong> que voltam todo mês · <strong>${brl0(subsAll.filter(x => x.current).reduce((a, x) => a + x.last, 0))}</strong> no último mês${(u => u ? ` · ${esc(u.name)} subiu` : '')(subsAll.find(x => x.current && x.rise > 0))}` : 'Aparecem quando a mesma conta vier 3 meses seguidos'}</span>`, '<div class="panel" id="subsBox"></div>')}
   ${sec('patrimonio', 'Patrimônio', `<span class="small">${P0.rows.length ? `<strong>${brl0(P0.total)}</strong> em imóveis, veículos e investimentos, já sem o que falta pagar` : 'Ainda não cadastrado: informe em Menu → Patrimônio'}</span>`,
-    `<div class="panel">${P0.rows.length ? `<ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em Patrimônio e dívidas.</p>'}</div>`)}
+    `<div class="panel">${P0.rows.length ? `<ul class="list small">${P0.rows.map(r => `<li><span>${esc(r.name)}<br><span class="tiny muted">${esc(r.note)}</span></span><span class="amt">${brl0(r.value)}</span></li>`).join('')}</ul>` : '<p class="small muted">Cadastre investimentos, imóveis e veículos no menu ☰, em O que vocês têm e devem.</p>'}</div>`)}
   ${sec('sonho', 'O sonho de vocês', `<span class="small">${dreamLine(G, pr)}</span>`, '<div class="panel" id="goalBox"></div>')}
   ${S.members.length > 1 && !yr ? sec('divisao', 'Quem pagou o quê', `<span class="small">${esc(settleLine(list[0]))}</span>`, '<div class="panel" id="settleBox" hidden></div>') : '<div class="panel" id="settleBox" hidden></div>'}
   </div>`;
+  const ask = el.querySelector('#askHome');
+  if (ask) ask.onsubmit = e => { e.preventDefault(); const q = el.querySelector('#askHomeQ').value.trim(); track('inicio.perguntar'); S.go('perguntar'); if (!q) return; setTimeout(() => { const t = document.getElementById('askText'), go = document.getElementById('askGo'); if (t && go) { t.value = q; go.click(); } }, 80); };
   renderSubs(el.querySelector('#subsBox'));
   if (!yr) renderSettle(el.querySelector('#settleBox'), list[0]);
   const cm = el.querySelector('#catMore');
@@ -329,7 +332,7 @@ function fcCard() {
   if (!f) return '<div class="panel" id="fcBox" hidden></div>';
   const line = `${f.res < 0 ? `Previsão: faltar ${brl0(-f.res)}` : `Previsão: sobrar ${brl0(f.res)}`}${f.meta ? ` (meta ${brl0(f.meta)})` : ''}${f.perDay > 0 ? ` · cabem ${brl0(f.perDay)} por dia` : ''}`;
   const open = S.openForecast || new Date(todayISO() + 'T12:00:00Z').getUTCDay() === 0;
-  return sec('previsao', `Previsão de ${mLong(f.month).split(' ')[0]}`, `<span class="small">${line}</span>`, '<div class="panel" id="fcBox" hidden></div>').replace('<details class="sum"', open ? '<details open class="sum"' : '<details class="sum"');
+  return sec('previsao', `Como deve fechar ${mLong(f.month).split(' ')[0]}`, `<span class="small">${line}</span>`, '<div class="panel" id="fcBox" hidden></div>').replace('<details class="sum"', open ? '<details open class="sum"' : '<details class="sum"');
 }
 function dreamLine(G, pr) {
   if (!G.patrimonio) return 'Ainda não definido: diga em Metas quanto querem ter investido';

@@ -109,17 +109,19 @@
   <section class="view" data-view="lancar" id="v-lancar" hidden></section>
   <section class="view" data-view="graficos" id="v-graficos" hidden></section>
   <section class="view" data-view="perguntar" id="v-perguntar" hidden></section>
+  <div class="seg gseg" id="gastosSeg" role="tablist" aria-label="Ver os gastos como" hidden><button type="button" role="tab" data-g="extrato">Lista</button><button type="button" role="tab" data-g="graficos">Gráfico</button></div>
   <section class="view" data-view="extrato" id="v-extrato" hidden></section>
+  <section class="view" data-view="ferramentas" id="v-ferramentas" hidden></section>
   <section class="view" data-view="ajustes" id="v-ajustes" hidden></section>
   <section class="view" data-view="fechar" id="v-fechar" hidden></section>
 </main>
 
 <nav class="tabs" aria-label="Seções"><div class="in" role="tablist">
   <button class="tab" role="tab" data-tab="resumo" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Início</button>
-  <button class="tab" role="tab" data-tab="lancar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
-  <button class="tab" role="tab" data-tab="graficos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Gráficos</button>
-  <button class="tab" role="tab" data-tab="perguntar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Perguntar</button>
-  <button class="tab" role="tab" data-tab="extrato" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Extrato</button>
+  <button class="tab" role="tab" data-tab="extrato" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Gastos</button>
+  <button class="tab tab-add" role="tab" data-tab="lancar" aria-selected="false"><span class="tab-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></span>Adicionar</button>
+  <button class="tab" role="tab" data-tab="ferramentas" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Ferramentas</button>
+  <button class="tab" type="button" id="tabMais" aria-label="Mais: menu com família, metas, ajustes e ajuda" aria-controls="drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Mais</button>
 </div></nav>
 </div>
 <div class="toast" id="toast" hidden></div>

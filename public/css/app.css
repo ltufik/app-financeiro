@@ -931,3 +931,26 @@ body.noscroll{overflow:hidden}
 .tip1{background:var(--deep);color:var(--deep-ink);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;margin:8px 0;box-shadow:0 10px 30px rgba(14,42,63,.2)}
 .tip1 span{font-size:14px;opacity:.9}
 .tip1 .btn{align-self:flex-end;background:var(--deep-soft);color:var(--deep);border:0;font-weight:700;min-height:44px}
+
+/* 3.1: tab bar Início · Gastos · + Adicionar · Ferramentas · Mais, and the Lista | Gráfico switch of Gastos */
+.tab-add{position:relative}
+.tab-add .tab-plus{width:40px;height:40px;margin-top:-16px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(14,42,63,.18)}
+.tab-add .tab-plus svg{width:22px;height:22px}
+.tab-add[aria-selected="true"]{color:var(--accent)}
+#tabMais[aria-expanded="true"]{color:var(--accent)}
+.gseg{display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:340px;margin:0 auto 12px;padding:4px;border-radius:999px;background:var(--sunk);border:1px solid var(--line)}
+.gseg button{appearance:none;border:0;background:transparent;min-height:40px;border-radius:999px;font:inherit;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer}
+.gseg button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(14,42,63,.12)}
+.tools{display:grid;gap:8px}
+.tool{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:14px;border:1px solid var(--line);background:var(--card);text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
+.tool .tool-ic{width:32px;height:32px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:var(--accent-soft);color:var(--accent)}
+.tool .tool-t{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
+.tool .tool-t strong{font-size:15px}
+.tool .tool-t span{font-size:13px;color:var(--muted)}
+.tool .tool-tag{flex:none;font-size:12px;font-weight:700;color:var(--accent)}
+.tool.locked{border-style:dashed;background:transparent}
+.tool.locked .tool-ic{background:var(--sunk);color:var(--muted)}
+.tool.locked .tool-tag{color:var(--muted)}
+.askbox{display:flex;gap:8px;align-items:center}
+.askbox input{flex:1;min-width:0;min-height:44px}
+.tab.on{color:var(--accent)}

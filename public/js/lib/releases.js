@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_FUNIL, DOC_TRILHA, DOC_COPIA, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_FUNIL, DOC_TRILHA, DOC_COPIA, DOC_ABAS31, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -616,4 +616,13 @@ export const RELEASES = [
     semNovidade: 'Só por trás: a cópia semanal do banco roda no GitHub; quem usa não vê nada diferente (a página Sobre o app conta que ela existe).',
     semTeste: 'Não tem tela: a própria cópia testa a restauração toda semana, tabela por tabela.',
     backlog: ['backup_semanal'] },
+  { id: 'r3.1.0', version: 'v3.1.0', at: '2026-11-23T21:00:00Z', addDocs: [DOC_ABAS31],
+    news: { id: 'n20261123c', title: 'Abas novas, tudo à vista', items: [
+      'Embaixo: Início, Gastos, + Adicionar, Ferramentas e Mais. Gastos junta a lista e o gráfico.',
+      'Em Ferramentas está tudo o que o app faz, com nomes do dia a dia: Contas da casa, Contas do ano, Divisão do casal e outras.',
+      'No Início, é só escrever a pergunta: "quanto foi de delivery?".'] },
+    addBacklog: [
+      { id: 'jornada_3_1', title: 'Jornada 3.1: abas Início · Gastos · + Adicionar · Ferramentas · Mais, página Ferramentas, nomes do dia a dia e a pergunta no Início', status: 'feito', origin: 'Luiz', effort: 'G', problem: 'Funções escondidas e nomes de banco ou de contador (Lançar, Extrato, Patrimônio, Previsão).', from: ['jornada_for_dummies'] },
+      { id: 'mes_em_gastos', title: 'Seletor de mês dentro de Gastos (e o Início sempre no mês atual)', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Parte da proposta da jornada que ficou para depois: o Início também usa o mês do topo.', from: ['jornada_for_dummies'] },
+    ], backlog: ['jornada_3_1'] },
 ];

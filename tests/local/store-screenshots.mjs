@@ -38,6 +38,6 @@ const out = arg('out'), snap = async n => { await page.evaluate(() => { window.s
 await page.evaluate(() => document.querySelectorAll('[class*=isheet]').forEach(x => x.remove()));
 await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09'); await snap('inicio');
 await page.click('[data-tab=lancar]'); await snap('lancar');
-await page.click('[data-tab=graficos]'); await snap('graficos');
+await page.click('[data-tab=extrato]'); await page.click('#gastosSeg [data-g=graficos]'); await snap('graficos');
 await browser.close();
 console.log('ok');

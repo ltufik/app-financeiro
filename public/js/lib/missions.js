@@ -59,7 +59,7 @@ export function badges(f = {}) {
     { id: 'mes_fechado', title: 'Mês fechado', how: 'Fechar um mês com a retrospectiva.', earned: (+f.closedCount || 0) > 0 },
     { id: 'meta_batida', title: 'Meta batida', how: 'Guardar a meta de vocês num mês.', earned: !!f.goal && fin.some(m => m.tx >= f.goal) },
     { id: 'tres_no_azul', title: '3 meses no azul', how: 'Três meses seguidos com sobra.', earned: best >= 3, progress: best >= 3 ? null : `${streak} de 3` },
-    { id: 'app_ensinado', title: 'App bem ensinado', how: 'Ensinar 10 categorias ao app (no Extrato ou na revisão).', earned: (+f.taught || 0) >= 10, progress: (+f.taught || 0) >= 10 ? null : `${Math.min(10, +f.taught || 0)} de 10` },
+    { id: 'app_ensinado', title: 'App bem ensinado', how: 'Ensinar 10 categorias ao app (em Gastos ou na revisão).', earned: (+f.taught || 0) >= 10, progress: (+f.taught || 0) >= 10 ? null : `${Math.min(10, +f.taught || 0)} de 10` },
     { id: 'em_familia', title: 'Em família', how: 'Ter mais alguém da família no app.', earned: (+f.members || 0) > 1 },
     { id: 'previsao_em_dia', title: 'Previsão em dia', how: 'Informar a fatura aberta em 4 domingos.', earned: (+f.sundays || 0) >= 4, progress: (+f.sundays || 0) >= 4 ? null : `${+f.sundays || 0} de 4` },
     { id: 'desafio_cumprido', title: 'Desafio cumprido', how: 'Cumprir um desafio do mês.', earned: (+f.challenges || 0) > 0 },

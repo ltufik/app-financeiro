@@ -64,12 +64,12 @@ function build(el) {
   el.innerHTML = `
   <div class="panel stack cash" id="cashBox" hidden></div>
   <div class="panel stack">
-    <h2>O que você quer lançar?</h2>
+    <h2>O que você quer adicionar?</h2>
     <div class="ltiles" role="group" aria-label="Como lançar"><button type="button" class="ltile" data-mode="falar" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><strong>Falar ou escrever</strong><span class="tiny muted">"Gastei 45 na padaria no pix"</span></span></button><button type="button" class="ltile" data-mode="nota" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><strong>Foto da nota</strong><span class="tiny muted">Separa cada item por categoria</span></span></button><button type="button" class="ltile" data-mode="pdf" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></span><span><strong>Fatura ou extrato</strong><span class="tiny muted">PDF, foto ou planilha</span><span class="lmany">Vários de uma vez</span></span></button><button type="button" class="ltile" data-mode="mao" aria-pressed="false"><span class="lti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span><strong>Preencher à mão</strong><span class="tiny muted">Data, valor e categoria</span></span></button></div>
   </div>
   <div class="panel stack qbar" id="qBar" hidden aria-live="polite"></div>
   <div class="panel" data-panel="falar" hidden>
-    <h2>Lançar um gasto ou entrada</h2>
+    <h2>Adicionar um gasto ou entrada</h2>
     <p class="muted small">Fale ou escreva do jeito que diria. Pode ser mais de um na mesma frase.</p>
     <div class="inwrap" style="margin-top:10px"><textarea id="qText" placeholder="Ex.: gastei 230 no mercado hoje no cartão e 350 de terapia por pix"></textarea><button id="qMic"></button></div>
     <p class="tiny muted" style="margin-top:6px">${speechSupported ? 'Toque no microfone, fale e toque de novo para parar.' : 'Para falar, use o microfone do teclado do celular.'}</p>
@@ -417,7 +417,7 @@ function renderQ() {
       for (let i = 0; i < Q.length; i++) if (Q[i].debtId && saved[i]) {
         const d = (settings().debts || []).find(x => x.id === Q[i].debtId);
         try { const s = await applyAmortization(Q[i].debtId, { value: Q[i].amount, date: Q[i].date, txId: saved[i].id, note: Q[i].description }); toast(`O saldo do ${d?.name || 'financiamento'} agora é ${brl(s)}.`); }
-        catch (e) { toast('O lançamento foi salvo, mas não consegui abater do financiamento. Faça em Patrimônio e dívidas.'); }
+        catch (e) { toast('O lançamento foi salvo, mas não consegui abater do financiamento. Faça em O que vocês têm e devem.'); }
       }
       toast(rows.length > 1 ? 'Lançamentos salvos' : 'Lançamento salvo'); box.hidden = true; Q = null; $('#qText').value = ''; $('#qStatus').textContent = ''; S.render(); docDone('salvo', rows.length > 1 ? rows.length + ' lançamentos' : 'Lançamento');
     } catch (e) { toast('Não foi possível salvar. ' + db.errorText(e)); $('#qSave').disabled = false; }
@@ -698,7 +698,7 @@ function renderReview() {
     const n = shown.length, nPend = shown.filter(r => r.pending).length;
     const what = source === 'cartao' ? 'a fatura' : 'o extrato';
     const text = [exist ? `<strong>${mLong(R.month)} já tem ${what} salvo${thisDoc ? ` (${esc(thisDoc)})` : ''}.</strong> Ele será substituído por estes ${n} lançamentos.` : part ? `Juntar ${n} ${n === 1 ? 'lançamento novo' : 'lançamentos novos'} ao que já está em ${mLong(R.month)}? Nada é apagado.` : cmp.mode === 'alongside' ? `Salvar ${n} lançamentos em ${mLong(R.month)}, junto com ${esc(otherDocs || docsText(source, ['']))}?` : `Salvar ${n} lançamentos em ${mLong(R.month)}?`,
-      info.ok === false ? 'Atenção: a soma não bateu com o total do documento.' : '', nPend ? `${nPend} ainda estão "a classificar" e podem ser ajustados depois no Extrato.` : ''].filter(Boolean).join(' ');
+      info.ok === false ? 'Atenção: a soma não bateu com o total do documento.' : '', nPend ? `${nPend} ainda estão "a classificar" e podem ser ajustados depois em Gastos.` : ''].filter(Boolean).join(' ');
     if (!await confirmInline(e.target, { text, yes: exist ? 'Sim, substituir' : 'Sim, salvar', danger: exist })) return;
     saveReview(pend);
   };

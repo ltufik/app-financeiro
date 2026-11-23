@@ -37,7 +37,7 @@ function card(c, saved) {
 export function render(el) {
   const list = charts();
   if (!monthKeys().length) {
-    el.innerHTML = `<div class="panel stack"><h2>Gráficos</h2><p class="small muted">Os gráficos aparecem quando houver lançamentos. Comece mandando uma fatura ou extrato em Lançar.</p><div><button class="btn primary" type="button" id="chGoLancar">Ir para Lançar</button></div></div>`;
+    el.innerHTML = `<div class="panel stack"><h2>Gráficos</h2><p class="small muted">Os gráficos aparecem quando houver lançamentos. Comece mandando uma fatura ou extrato em Adicionar.</p><div><button class="btn primary" type="button" id="chGoLancar">Ir para Lançar</button></div></div>`;
     $('#chGoLancar').onclick = () => S.go('lancar', '#drop');
     return;
   }

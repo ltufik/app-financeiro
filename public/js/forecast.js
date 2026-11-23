@@ -35,7 +35,7 @@ export function renderForecast(box) {
   const basis = f.basis === 'fatura' ? `Com a fatura de ${mLong(f.month)} já no app.` : f.basis === 'checkin' ? `Com a fatura aberta de ${brl0(f.checkin.value)} informada em ${brD(f.checkin.date)}.` : `Estimada pelo jeito de gastar de vocês nos últimos ${f.hist.length} meses. Fica mais certa com a fatura aberta.`;
   const tone = f.status === 'ok' ? 'good' : f.status === 'risco' ? 'warn' : 'bad';
   box.className = `panel fc fc-${tone}`;
-  box.innerHTML = `<p class="eyebrow">Previsão do mês · atualize com um número</p><h3>${esc(t.title)}</h3>
+  box.innerHTML = `<p class="eyebrow">Como deve fechar o mês · atualize com um número</p><h3>${esc(t.title)}</h3>
     <p class="small">${esc(t.head)}</p><p class="small"><strong>${esc(t.day)}</strong></p>
     <p class="tiny muted">${esc(basis)}${t.counted ? ' ' + esc(t.counted) : ''}</p>
     ${t.next ? `<p class="small">${esc(t.next)}</p>` : ''}

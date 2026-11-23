@@ -62,7 +62,7 @@ function draw() {
 
 function drawList(el) {
   const c = familyCosts(), s = familyInsurance(), status = x => x.status === 'rever' ? '<span class="rv-tag warn">A rever</span>' : x.risePct ? `<span class="rv-tag warn">Subiu ${x.risePct}%</span>` : x.status === 'manter' ? '<span class="rv-tag">Mantido</span>' : '';
-  el.innerHTML = `${head('Revisão de custos')}<main class="rv-main">
+  el.innerHTML = `${head('Contas da casa')}<main class="rv-main">
     <section class="rv-done cs-hero"><span class="small">Contas e assinaturas que voltam todo mês</span><span class="num cs-big">${brl0(c.total)} por mês</span>
       <span class="small">${brl0(c.year)} no ano${c.risen.length ? ` · ${c.risen.length} ${c.risen.length > 1 ? 'subiram' : 'subiu'}` : ''}${c.stopped.length ? ` · ${c.stopped.length} ${c.stopped.length > 1 ? 'pararam' : 'parou'} de cobrar` : ''}</span></section>
     ${c.savings.year ? `<button type="button" class="rv-card cs-save" id="csSavings"><strong>Com o que cancelaram: ${brl0(c.savings.year)} a menos no ano</strong><span class="small muted">Ver o que foi cancelado e o que está a rever</span></button>` : ''}
@@ -128,7 +128,7 @@ function drawItem(el, key) {
 function drawSavings(el) {
   const c = familyCosts(), name = firstName(), sv = c.savings, rev = c.items.filter(x => x.status === 'rever');
   const remind = d => { const t = new Date(Date.parse(d + 'T12:00:00Z') + 7 * 864e5); return `${String(t.getUTCDate()).padStart(2, '0')}/${String(t.getUTCMonth() + 1).padStart(2, '0')}`; };
-  el.innerHTML = `${head('Revisão de custos')}<main class="rv-main">
+  el.innerHTML = `${head('Contas da casa')}<main class="rv-main">
     <section class="rv-done"><span class="rv-ok">${CHECK}</span><span class="small">${name ? esc(name) + ', c' : 'C'}om o que vocês cancelaram</span><h3 class="num">${brl0(sv.year)} a menos no ano</h3><p class="small">${brl0(sv.year / 12)} por mês que agora sobram</p></section>
     <div class="rv-card cs-list">${sv.items.map(x => `<div class="cs-row"><span class="cs-name"><span>${esc(x.name)}</span><span class="tiny muted">Cancelado · ${x.confirmed ? 'não veio mais' : 'o app confere na próxima conta'}</span></span><strong>${brl0(x.perYear)}/ano</strong></div>`).join('')}
       ${rev.map(x => `<div class="cs-row"><span class="cs-name"><span>${esc(x.name)}</span><span class="tiny muted">Vocês vão rever · o app pergunta em ${remind(x.statusAt)}</span></span><span class="rv-tag warn">A rever</span></div>`).join('')}</div>
@@ -234,7 +234,7 @@ function drawQuestion(el, only) {
       <div class="rv-acts"><button type="button" class="btn primary" id="csCelSave">Salvar</button><button type="button" class="linkbtn" id="csCelNo">Não temos ou a empresa paga</button></div>`;
   }
   el.innerHTML = `${head(only ? 'Contas de casa' : 'Perguntas rápidas', true, count)}<main class="rv-main">${body}
-    <p class="tiny muted rv-foot">Dá para mudar depois: Revisão de custos → ver por casa → a conta → Mudar.</p></main>`;
+    <p class="tiny muted rv-foot">Dá para mudar depois: Contas da casa → ver por casa → a conta → Mudar.</p></main>`;
   el.querySelector('#csBack').onclick = back;
   wireChips(el, 'house', false); wireChips(el, 'svc', true); wireChips(el, 'op', false);
   const after = () => { if (only) return go(only === 'celular' ? 'casas' : 'item:' + only); asked++; draw(); };

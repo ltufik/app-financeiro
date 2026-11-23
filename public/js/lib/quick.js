@@ -71,7 +71,7 @@ Categorias: ${categories.map(c => `${c.name} [${c.grp}]`).join(' | ')}`;
 // The answer the shortcut shows on the iPhone for each kind that is not a single receipt.
 export function docMessage(tipo) {
   const k = aiKind(tipo);
-  if (k === 'nota') return 'Isto é uma nota fiscal. Para separar cada item na sua categoria, abra o app e envie em Lançar → Foto da nota.';
-  if (k === 'fatura' || k === 'extrato' || k === 'investimentos') return `Isto é ${k === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[k]}. Abra o app e envie em Lançar → Fatura ou extrato, para conferir tudo antes de salvar.`;
+  if (k === 'nota') return 'Isto é uma nota fiscal. Para separar cada item na sua categoria, abra o app e envie em Adicionar → Foto da nota.';
+  if (k === 'fatura' || k === 'extrato' || k === 'investimentos') return `Isto é ${k === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[k]}. Abra o app e envie em Adicionar → Fatura ou extrato, para conferir tudo antes de salvar.`;
   return 'Não achei um comprovante com valor nesse arquivo. Confira se é o comprovante certo ou lance pelo app.';
 }

@@ -548,3 +548,17 @@ Restaurar (num desastre):
 2. Descriptografe: gpg -d copia-AAAA-MM-DD.dump.gpg > copia.dump (pede a senha).
 3. Num projeto Supabase novo: rode o supabase/schema.sql; depois pg_restore --data-only --schema=public --no-owner --no-privileges -d "<URI do Session pooler>" copia.dump. Os logins (auth) voltam com pg_restore --data-only --schema=auth (os usuários não precisam se cadastrar de novo).
 4. Troque SUPABASE_URL e as chaves no Vercel e faça Redeploy.` };
+
+export const DOC_ABAS31 = { id: 'abas_3_1', title: 'Abas e nomes novos (3.1)', body: `A segunda parte da jornada "for dummies" (desenho aprovado no Claude Design: "Jornada nova: diagnóstico e proposta", telas 4, 5 e 8).
+
+Abas: Início · Gastos · + Adicionar · Ferramentas · Mais.
+- Gastos junta a Lista (o antigo Extrato) e o Gráfico (o antigo Gráficos), com o botão Lista | Gráfico no topo (#gastosSeg). A aba continua marcada nos dois.
+- + Adicionar é o antigo Lançar, no meio, em destaque.
+- Ferramentas (views/ferramentas.js): as 12 ferramentas da trilha (lib/trail.js TOOLS), com o nome do dia a dia e uma linha. As trancadas têm borda tracejada e "Etapa N"; ao tocar, dizem o que fazer e levam à etapa. Perguntar abre por aqui (a aba Ferramentas fica marcada).
+- Mais abre o menu (o ☰ do topo continua).
+- No Início, a caixa "Pergunte ao app" (quando Perguntar já está liberado) abre Perguntar já respondendo.
+
+Nomes: Lançar → Adicionar; Extrato → Gastos (Lista); Gráficos → Gastos (Gráfico); Previsão → Como deve fechar; Gastos do ano → Contas do ano; Patrimônio e dívidas → O que vocês têm e devem; Quem paga o quê → Divisão do casal; Assinaturas e custos fixos / Revisão de custos → Contas da casa; Missões e conquistas → Selos e desafios; O que o assistente sabe → O que o app sabe de vocês.
+Os ids internos (abas resumo, extrato, graficos, lancar, perguntar; seções do menu) não mudaram: links, avisos e o que o app registra continuam valendo.
+
+Fica para depois: o seletor de mês dentro de Gastos (hoje continua no topo, porque o Início também usa) e o fim de cada jornada levando à próxima (3.2).` };

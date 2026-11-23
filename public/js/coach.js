@@ -7,12 +7,11 @@ export const COACH_STEPS = [
   { sel: '#sum_sobra, .hero', tab: 'resumo', title: 'Quanto sobrou', text: 'A sobra do mês numa linha: o que entrou menos o que saiu, sem contar os extras. Toque para abrir receitas, despesas e categorias; o mesmo vale para cartão, nível do ano e banco.' },
   { sel: '#todo', tab: 'resumo', title: 'Seu próximo passo', text: 'O app mostra uma coisa por vez: o que é novo desde a última visita ou o que precisa de vocês agora. Os outros ficam em "Depois disso".' },
   { sel: '#monthSel', title: 'Escolha o mês', text: 'Troque o mês aqui. No fim da lista dá para ver o ano inteiro.' },
-  { sel: '.tab[data-tab="lancar"]', title: 'Lançar', text: 'Mande a fatura, o extrato ou a foto de uma nota fiscal. Ou fale um gasto no microfone.' },
-  { sel: '.tab[data-tab="graficos"]', title: 'Gráficos', text: 'Monte gráficos do seu jeito: pizza, linha ou barra, com o período e as categorias que quiser.' },
-  { sel: '.tab[data-tab="perguntar"]', title: 'Perguntar', text: 'Pergunte em português: "quanto gastei com mercado?", "quando chego na meta?".' },
-  { sel: '.tab[data-tab="extrato"]', title: 'Extrato', text: 'Todos os lançamentos. Toque na categoria para corrigir: o app aprende para as próximas vezes.' },
+  { sel: '.tab[data-tab="lancar"]', title: 'Adicionar', text: 'Mande a fatura, o extrato ou a foto de uma nota fiscal. Ou fale um gasto no microfone.' },
+  { sel: '.tab[data-tab="extrato"]', title: 'Gastos', text: 'Cada gasto do mês. Toque na categoria para corrigir: o app aprende. Em Gráfico, monte os gráficos do seu jeito.' },
+  { sel: '.tab[data-tab="ferramentas"]', title: 'Ferramentas', text: 'Tudo o que o app faz num lugar: Perguntar, Fechar o mês, Contas da casa, Metas e as outras.' },
   { sel: '#fbBtn', title: 'Sua opinião', text: 'Viu um erro, algo confuso ou teve uma ideia? Toque aqui, fale e envie. O app está em teste e é a sua opinião que guia as mudanças.' },
-  { sel: '#menuBtn', title: 'Menu', text: 'Família e convites, metas, patrimônio, categorias, backup e a sua conta ficam aqui.' },
+  { sel: '#tabMais', title: 'Mais', text: 'Família e convites, metas, categorias, avisos, backup e a sua conta ficam aqui.' },
 ];
 
 const key = (uid, k) => `fin.coach.${k}.${uid}`;

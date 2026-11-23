@@ -52,7 +52,7 @@ export function render(el) {
   </div>
 
   <div class="panel stack" data-sec="divisao">
-    <h2>Quem paga o quê</h2>
+    <h2>Divisão do casal</h2>
     <p class="small muted">Ligue cada cartão e a conta a uma pessoa. O Início e o fechamento do mês mostram quanto cada um pagou e quem deve passar quanto para quem. Lançamentos feitos à mão contam para quem lançou.</p>
     <div id="splitBox" class="stack"></div>
   </div>
@@ -85,7 +85,7 @@ export function render(el) {
   <div class="panel stack" data-sec="conquistas"><div id="conqBox" class="stack"></div></div>
   <div class="panel stack" data-sec="gastos_ano"><div id="anBox" class="stack"></div></div>
   <div class="panel stack" data-sec="patrimonio">
-    <h2>Patrimônio</h2>
+    <h2>O que vocês têm e devem</h2>
     <div class="grid3">${num('iTotal', 'Investimentos (R$)', st.invest?.total || '')}<label class="f">Data<input type="date" id="iDate" value="${esc(st.invest?.date || '')}"></label></div>
     <p class="tiny muted">O extrato de investimentos em PDF atualiza este valor sozinho. Entre um extrato e outro, o Início mostra o valor de hoje estimado pelo rendimento das Metas; o extrato novo traz o valor real.</p>
     ${Object.entries(LISTS).map(([k, d]) => `<h3 style="margin-top:6px">${d.title}</h3><p class="tiny muted">${d.hint}</p><div class="tw edtable"><table><thead><tr>${d.cols.map(c => `<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody data-list="${k}"></tbody></table></div><div><button class="chip" type="button" data-add="${k}">Adicionar</button></div>`).join('')}
@@ -376,7 +376,7 @@ export function render(el) {
       <ul class="tiny muted">${d.now.history.map(h => `<li>${h.kind === 'inicio' ? `${isoToBr(h.date)}: saldo informado ${brl(h.value)}` : h.kind === 'amortizacao' ? `${isoToBr(h.date)}: amortização −${brl(h.value)}${h.note ? ' (' + esc(h.note) + ')' : ''}${repeatedAmortizations(d.now.history).has(h.at) ? ' <span class="tag bad">parece repetida: é a mesma de cima? Se for, toque em Desfazer nesta</span>' : ''}${h.at ? ` <button class="linkbtn tiny" type="button" data-undo="${esc(d.id)}" data-at="${esc(h.at)}" data-v="${h.value}">Desfazer</button>` : ''}` : `${esc(h.note)}: −${brl(h.value)}`}</li>`).join('')}</ul>
       ${calcBox(debtBreakdown(d, d.now), { id: 'financiamento', foot: 'A parte de cada parcela que abate o saldo é estimada pela taxa e pelo tipo de parcela. Com o extrato do financiamento, digite o saldo real acima.' })}
       <details class="help"><summary>Registrar uma amortização</summary><div class="grid3">${num('am' + d.id, 'Valor (R$)', '')}<label class="f">Data<input type="date" id="amd${esc(d.id)}" value="${todayISO()}"></label></div><button class="btn" type="button" data-amort="${esc(d.id)}">Abater do saldo</button></details></div>`).join('')}
-      <p class="tiny muted">Com o comprovante, é mais fácil: mande em Lançar e diga que é amortização. Quando chegar o extrato do financiamento, digite o saldo dele acima e salve.</p>` : '';
+      <p class="tiny muted">Com o comprovante, é mais fácil: mande em Adicionar e diga que é amortização. Quando chegar o extrato do financiamento, digite o saldo dele acima e salve.</p>` : '';
     box.querySelectorAll('[data-amort]').forEach(b => b.onclick = async () => {
       const id = b.dataset.amort, v = +String($('#am' + id).value).replace(',', '.'), dt = $('#amd' + id).value;
       const e = checkNumber(v, { min: 1, max: 1e9, label: 'Valor' }); if (e) return invalid($('#am' + id), e);
@@ -388,7 +388,7 @@ export function render(el) {
     box.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => {
       const d = ds.find(x => x.id === b.dataset.undo);
       if (!await confirmInline(b, { title: 'Desfazer esta amortização?', text: `${brl(+b.dataset.v)} voltam para o saldo do ${esc(d.name)} e o lançamento volta para a categoria de antes (conta de novo na sobra do mês). O app não pergunta mais sobre esse pagamento.`, yes: 'Sim, desfazer' })) return;
-      try { const r = await undoAmortization(d.id, b.dataset.at); toast(`Desfeito. O saldo do ${d.name} agora é ${brl(r.saldo)}.${r.hadTx && !r.back ? ' Confira a categoria do lançamento no Extrato.' : ''}`); S.render(); } catch (err) { toast('Não foi possível desfazer agora. ' + db.errorText(err)); }
+      try { const r = await undoAmortization(d.id, b.dataset.at); toast(`Desfeito. O saldo do ${d.name} agora é ${brl(r.saldo)}.${r.hadTx && !r.back ? ' Confira a categoria do lançamento em Gastos.' : ''}`); S.render(); } catch (err) { toast('Não foi possível desfazer agora. ' + db.errorText(err)); }
     });
     renderPendingPayments($('#pDebtPay'), { onDone: () => S.render() });
   }

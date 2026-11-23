@@ -8,15 +8,15 @@ import { APP_VERSION, track } from './usage.js';
 const I = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 export const SECTIONS = [
   { key: 'familia', title: 'Família e convites', desc: 'Nome da família, quem participa, convidar', group: 'fam', icon: I('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/>') },
-  { key: 'divisao', title: 'Quem paga o quê', desc: 'Cartões e conta de cada pessoa, e o acerto do mês', group: 'fam', icon: I('<path d="M7 7h13M7 7l3-3M7 7l3 3M17 17H4M17 17l-3-3M17 17l-3 3"/>') },
-  { key: 'conquistas', title: 'Missões e conquistas', desc: 'O que falta fazer no app e os selos de vocês', group: 'fam', icon: I('<path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z"/>') },
+  { key: 'divisao', title: 'Divisão do casal', desc: 'Quem paga o quê: cartões e conta de cada pessoa, e o acerto do mês', group: 'fam', icon: I('<path d="M7 7h13M7 7l3-3M7 7l3 3M17 17H4M17 17l-3-3M17 17l-3 3"/>') },
+  { key: 'conquistas', title: 'Selos e desafios', desc: 'A trilha, os selos de vocês e o desafio do mês', group: 'fam', icon: I('<path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z"/>') },
   { key: 'metas', title: 'Metas', desc: 'Limite do cartão, quanto guardar e o sonho de vocês', group: 'fam', icon: I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>') },
-  { key: 'gastos_ano', title: 'Gastos do ano', desc: 'IPVA, IPTU, escola: quanto separar e como pagar', group: 'fam', icon: I('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/>') },
-  { key: 'patrimonio', title: 'Patrimônio e dívidas', desc: 'Investimentos, bens, dívidas e dinheiro a receber', group: 'fam', icon: I('<path d="M3 10l9-6 9 6M5 10v9h14v-9M10 19v-5h4v5"/>') },
+  { key: 'gastos_ano', title: 'Contas do ano', desc: 'IPVA, IPTU, escola: quanto separar e como pagar', group: 'fam', icon: I('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/>') },
+  { key: 'patrimonio', title: 'O que vocês têm e devem', desc: 'Investimentos, bens, financiamentos e dinheiro a receber', group: 'fam', icon: I('<path d="M3 10l9-6 9 6M5 10v9h14v-9M10 19v-5h4v5"/>') },
   { key: 'categorias', title: 'Categorias', desc: 'Criar categorias e decidir como contam', group: 'app', icon: I('<path d="M4 6h16M4 12h10M4 18h7"/>') },
   { key: 'avisos', title: 'Notificações', desc: 'Avisos no celular: fatura, gastos, resumo', group: 'app', icon: I('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>') },
   { key: 'applepay', title: 'Atalhos do iPhone', desc: 'Apple Pay e Siri: lançar sem abrir o app', group: 'app', icon: I('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2M9.5 9.5a3.5 3.5 0 0 1 5 0M8 7a6 6 0 0 1 8 0"/>') },
-  { key: 'contexto', title: 'O que o assistente sabe', desc: 'Fatos da família para respostas melhores', group: 'app', icon: I('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>') },
+  { key: 'contexto', title: 'O que o app sabe de vocês', desc: 'Fatos da família para respostas melhores', group: 'app', icon: I('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>') },
   { key: 'ajuda', title: 'Ajuda', desc: 'Apresentação, tour guiado, instalar, aparência', group: 'ajuda', icon: I('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/>') },
   { key: 'duvidas', title: 'Dúvidas', desc: 'Perguntas frequentes e pergunte o que quiser', group: 'ajuda', icon: I('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.8 9.6a2.3 2.3 0 1 1 3.2 2.1c-.6.3-1 .8-1 1.4M12 15.8h.01"/>') },
   { key: 'opiniao', title: 'Dar opinião', desc: 'Conte um erro, uma ideia ou uma crítica', group: 'ajuda', icon: I('<path d="M4 4h16v12H8l-4 4z"/><path d="M8 9h8M8 12h5"/>') },
@@ -59,7 +59,7 @@ export function openMenu() {
   lastFocus = document.activeElement;
   dr.hidden = bg.hidden = false; document.body.style.overflow = 'hidden';
   requestAnimationFrame(() => { dr.classList.add('open'); bg.classList.add('open'); });
-  $('#menuBtn').setAttribute('aria-expanded', 'true');
+  $('#menuBtn').setAttribute('aria-expanded', 'true'); $('#tabMais')?.setAttribute('aria-expanded', 'true');
   $('#drawerX').onclick = () => closeMenu();
   if ($('#updNow')) $('#updNow').onclick = () => { track('app.atualizar'); location.reload(); };
   dr.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => { S.sec = b.dataset.sec; closeMenu(false); S.go('ajustes'); });
@@ -75,7 +75,7 @@ export function closeMenu(restore = true) {
   const dr = $('#drawer'), bg = $('#drawerBg');
   if (dr.hidden) return;
   dr.classList.remove('open'); bg.classList.remove('open'); document.body.style.overflow = '';
-  $('#menuBtn').setAttribute('aria-expanded', 'false');
+  $('#menuBtn').setAttribute('aria-expanded', 'false'); $('#tabMais')?.setAttribute('aria-expanded', 'false');
   setTimeout(() => { dr.hidden = bg.hidden = true; }, 220);
   if (restore && lastFocus) lastFocus.focus?.();
 }

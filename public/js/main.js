@@ -11,9 +11,10 @@ import * as extrato from './views/extrato.js';
 import * as ajustes from './views/ajustes.js';
 import * as graficos from './views/graficos.js';
 import * as fechar from './views/fechar.js';
+import * as ferramentas from './views/ferramentas.js';
 import { openTour } from './tour.js';
 import { showStart, legacyFamily } from './trail.js';
-import { initMenu, closeMenu } from './menu.js';
+import { initMenu, closeMenu, openMenu } from './menu.js';
 import { startCoach, shouldCoach } from './coach.js';
 import { checkAdmin, touchActivity } from './metrics.js';
 import { initPrivacy } from './privacy.js';
@@ -27,7 +28,10 @@ import { offerPush, refreshPushState } from './push.js';
 import { parseLink } from './lib/links.js';
 import { initLock, freshSignIn, signOutSafely, showBye, offerBio, setAfterUnlock } from './lock.js';
 
-const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar };
+const VIEWS = { resumo, lancar, graficos, perguntar, extrato, ajustes, fechar, ferramentas };
+// 3.1: the bar has Início · Gastos · + Adicionar · Ferramentas · Mais. Gastos is the list and the chart (Lista | Gráfico);
+// Perguntar opens from Ferramentas and from the box on Início, so it lights Ferramentas.
+const BAR = { graficos: 'extrato', perguntar: 'ferramentas' };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
 
@@ -194,11 +198,16 @@ function setTab(t) {
   if (t === 'ajustes' && S.sec) track('menu.' + S.sec);
   S.tab = t; lsSet('fin.tab', t);
   navTo(screenOf()); // after S.tab changes: the screen being opened, not the one being left
-  $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  $$('.tab[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === (BAR[t] || t)));
   $$('.view').forEach(v => v.hidden = v.dataset.view !== t);
+  $('#tabMais').classList.toggle('on', t === 'ajustes');
+  const seg = $('#gastosSeg'); seg.hidden = !(t === 'extrato' || t === 'graficos');
+  seg.querySelectorAll('[data-g]').forEach(b => b.setAttribute('aria-selected', b.dataset.g === t));
   window.scrollTo(0, 0); S.render();
 }
-$$('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+$$('.tab[data-tab]').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+$$('#gastosSeg [data-g]').forEach(b => b.onclick = () => { track('gastos.' + (b.dataset.g === 'graficos' ? 'grafico' : 'lista')); setTab(b.dataset.g); });
+$('#tabMais').onclick = () => { track('aba.mais'); openMenu(); };
 initMenu();
 $('#bellBtn').onclick = () => { track('sininho'); openBell(); };
 $('#fbBtn').hidden = !TEST_PHASE; $('#fbBtn').onclick = () => S.go('ajustes', null, 'opiniao');

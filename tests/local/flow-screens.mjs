@@ -168,8 +168,9 @@ if (arg('pdf')) await step('varios_arquivos', async () => {
   await page.setInputFiles('#pdfIn', [arg('pdf'), path.join(HERE, '../fixtures/comprovante-ficticio.pdf')]); await page.waitForSelector('#rvSave', { timeout: 30000 });
 }, { scrollTo: '#qBar' });
 if (arg('pdf')) { await page.click('#quSkip').catch(() => {}); await page.waitForSelector('#quClose', { timeout: 30000 }).catch(() => page.click('#quSkip').catch(() => {})); await page.click('#quClose').catch(() => {}); }
-await step('graficos', async () => { await page.click('[data-tab=graficos]'); await page.waitForTimeout(500); });
-await step('perguntar', async () => { await page.click('[data-tab=perguntar]'); await page.waitForTimeout(300); });
+await step('graficos', async () => { await page.click('[data-tab=extrato]'); await page.click('#gastosSeg [data-g=graficos]'); await page.waitForTimeout(500); });
+await step('ferramentas', async () => { await page.click('[data-tab=ferramentas]'); await page.waitForSelector('.tools'); });
+await step('perguntar', async () => { await page.click('[data-tool=perguntar]'); await page.waitForTimeout(300); });
 await step('perguntar_resposta', async () => { await page.fill('#askText', 'quanto gastamos com mercado em setembro?'); await page.click('#askGo'); await page.waitForFunction(() => /R\$ 1\.284/.test(document.querySelector('#v-perguntar')?.textContent || ''), null, { timeout: 8000 }); });
 await step('extrato', async () => { await page.click('[data-tab=extrato]'); await page.waitForTimeout(400); });
 await step('anotacao', async () => { await page.click('#lRows li:not([data-split]) .notechip'); await page.waitForSelector('.nt-in'); await page.fill('.nt-in', 'cabeleireiro Lily'); });

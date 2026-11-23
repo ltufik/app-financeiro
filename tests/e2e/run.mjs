@@ -258,7 +258,7 @@ ok('tour guiado continua disponível depois da apresentação', (await txt('.coa
 await page.click('#coachNext');
 ok('tour guiado aponta o seletor de mês', (await txt('#coachT')) === 'Escolha o mês');
 await page.click('#coachNext'); await page.click('#coachNext');
-ok('tour guiado mostra a aba Gráficos', (await txt('#coachT')) === 'Gráficos');
+ok('tour guiado mostra a aba Gastos', (await txt('#coachT')) === 'Gastos');
 await page.click('#coachSkip');
 ok('pular fecha o tour guiado', !(await page.$('.coach')));
 await page.evaluate(() => document.querySelectorAll('.isheet, .isheet-bg, .cfm-wrap').forEach(x => x.remove()));
@@ -288,7 +288,7 @@ ok('3.0: família nova ainda não vê "Quanto sobrou" no Início (abre na etapa 
 const backup = arg('backup');
 // side menu
 await page.click('#menuBtn'); await page.waitForSelector('#drawer.open');
-ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 17 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('Patrimônio e dívidas'));
+ok('menu lateral abre com as seções organizadas (com Métricas para o dono do produto)', (await page.$$('#drawer [data-sec]')).length === 17 && (await txt('#drawer')).includes('Família e convites') && (await txt('#drawer')).includes('O que vocês têm e devem'));
 ok('menu em 4 grupos, só o primeiro aberto', (await page.$$('#drawer .mgroup')).length === 4 && (await page.$$('#drawer .drawer-list:not([hidden])')).length === 1 && await page.isVisible('#drawer [data-sec="metas"]') && !(await page.isVisible('#drawer [data-sec="backup"]')));
 { const v = (fs.readFileSync(path.join(ROOT, 'js/usage.js'), 'utf8').match(/APP_VERSION = '([^']+)'/) || [])[1];
   ok('fim do menu mostra a versão do app', !!v && (await txt('#appVer')).includes('versão ' + v) && !(await page.$('#updNow'))); }
@@ -437,7 +437,7 @@ if (backup) {
   ok('Início: a previsão fechada diz o principal numa linha', /Previsão: (sobrar|faltar) R\$/.test(await txt('#sum_previsao summary')), await txt('#sum_previsao summary'));
   { const sumV = ((await txt('#sum_previsao summary')).match(/Previsão: (?:sobrar|faltar) (R\$ [\d.]+)/) || [])[1], rowV = await page.evaluate(() => { const tr = [...document.querySelectorAll('#calc_previsao tr')].find(r => /Sobra prevista/.test(r.textContent)); return tr?.querySelector('td.num')?.textContent.replace('− ', '').trim(); });
     ok('varredura: a previsão na linha do Início é a mesma "Sobra prevista" do Ver a conta', !!sumV && sumV === rowV, sumV + ' vs ' + rowV); }
-  ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
+  ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Como deve fechar o mês') && /por dia/.test(await txt('#fcBox')) && (await txt('#fcBox')).includes('Estimada pelo jeito de gastar'), await txt('#fcBox'));
   await page.click('#fcSave');
   ok('previsão: fatura aberta vazia é recusada com aviso', await page.isVisible('#fcBox .invalid, #fcBox [aria-invalid="true"]'));
   await page.fill('#fcAmount', '30000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]');
@@ -598,7 +598,7 @@ ok('nota salva no lançamento, sem duplicar', rtx && rtx.splits.length === 3 && 
 ok('categoria nova criada pela nota', await page.evaluate(() => window.__db.categories.some(c => c.name === 'Suplementos' && c.grp === 'dia')));
 
 // custom charts
-await page.click('[data-tab=graficos]');
+await page.click('[data-tab=extrato]'); await page.click('#gastosSeg [data-g=graficos]');
 ok('gráficos mostram sugestões', (await page.$$('#v-graficos .chcard svg')).length >= 1 && (await txt('#v-graficos')).includes('Salvar este'));
 await page.click('#chNew');
 await page.click('#chSave');
@@ -716,10 +716,31 @@ if (outra) {
   ok('vários arquivos: fechar o resumo limpa a fila', !(await page.isVisible('#qBar')));
 }
 
-await page.click('[data-tab=perguntar]');
+// 3.1: the bar and the new places.
+ok('3.1: abas Início · Gastos · Adicionar · Ferramentas · Mais', (await page.$$eval('.tabs .tab', b => b.map(x => x.textContent.trim()).join('|'))) === 'Início|Gastos|Adicionar|Ferramentas|Mais');
+await page.click('[data-tab=extrato]');
+ok('3.1: Gastos abre na Lista, com o botão Gráfico', await page.isVisible('#gastosSeg') && (await page.getAttribute('#gastosSeg [data-g=extrato]', 'aria-selected')) === 'true');
+await page.click('#gastosSeg [data-g=graficos]');
+ok('3.1: Gráfico fica dentro de Gastos (a aba Gastos continua marcada)', (await page.getAttribute('.tab[data-tab="extrato"]', 'aria-selected')) === 'true' && await page.isVisible('#v-graficos'));
+await page.click('[data-tab=ferramentas]'); await page.waitForSelector('.tools');
+{ const tl = await page.$$eval('.tool strong', b => b.map(x => x.textContent));
+  ok('3.1: Ferramentas mostra as 12, com os nomes novos, todas abertas para quem já usava', tl.length === 12 && ['Contas da casa', 'Contas do ano', 'Divisão do casal', 'O que vocês têm e devem', 'Como deve fechar o mês'].every(n => tl.includes(n)) && !(await page.$('.tool.locked')), tl.join(', ')); }
+await shot('09a-ferramentas');
+await page.click('#tabMais'); await page.waitForSelector('#drawer:not([hidden])');
+ok('3.1: Mais abre o menu, com os nomes novos', (await txt('#drawer')).includes('Família e metas') && (await page.getAttribute('#tabMais', 'aria-expanded')) === 'true');
+await page.click('#drawerX'); await page.waitForTimeout(300);
+await page.click('[data-tab=resumo]');
+ok('3.1: Início tem a caixa Pergunte ao app', await page.isVisible('#askHome'));
+{ const c0 = chatCalls; await page.fill('#askHomeQ', 'onde gastei mais em setembro?'); await page.click('#askHome button[type=submit]');
+  for (let i = 0; i < 80 && chatCalls < c0 + 2; i++) await page.waitForTimeout(100);
+  await page.waitForFunction(() => document.querySelector('#chat')?.textContent.includes('maior gasto'), null, { timeout: 8000 }).catch(() => {}); }
+ok('3.1: a pergunta do Início abre Perguntar já respondendo, com a aba Ferramentas marcada', (await txt('#chat')).includes('Mercado') && (await page.getAttribute('.tab[data-tab="ferramentas"]', 'aria-selected')) === 'true');
+const chatBefore = chatCalls;
+await page.click('[data-tab=ferramentas]'); await page.click('[data-tool=perguntar]');
 await page.fill('#askText', 'onde gastei mais em setembro?'); await page.click('#askGo');
+for (let i = 0; i < 100 && chatCalls < chatBefore + 2; i++) await page.waitForTimeout(100);
 await page.waitForFunction(() => document.querySelector('#chat')?.textContent.includes('maior gasto'));
-ok('assistente usa ferramenta e responde', chatCalls === 2 && (await txt('#chat')).includes('Mercado'));
+ok('assistente usa ferramenta e responde', chatCalls - chatBefore === 2 && (await txt('#chat')).includes('Mercado'));
 ok('resposta com tabela renderizada', await page.isVisible('#chat table'));
 await page.click('[data-save]'); await page.waitForFunction(() => document.querySelector('#studyList')?.textContent.includes('onde gastei'));
 ok('estudo salvo', true);
@@ -958,7 +979,7 @@ await page.click('#pDebtNow .dnow:has-text("Guaratuba") details.help summary'); 
 await page.click('[data-tab=resumo]'); await page.waitForTimeout(300);
 ok('Início: a casa mostra o que falta depois da amortização', (await txt('#v-resumo')).includes('faltam R$ 350.000'), (await txt('#v-resumo')).match(/Casa de Guaratuba[^\n]*\n?[^\n]*/)?.[0]);
 await page.evaluate(() => { const d = document.querySelector('#sum_previsao'); if (d) d.open = true; });
-ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Previsão do mês') && /por dia/.test(await txt('#fcBox')), await txt('#fcBox'));
+ok('Início: previsão do mês com quanto cabe por dia', await page.isVisible('#fcBox') && (await txt('#fcBox')).includes('Como deve fechar o mês') && /por dia/.test(await txt('#fcBox')), await txt('#fcBox'));
 ok('previsão: com a fatura do mês no app, conta a fatura e pede a aberta do mês seguinte', (await txt('#fcBox')).includes('já no app') && /Quanto está a fatura aberta de (dezembro|janeiro) hoje\?/.test(await txt('#fcMore')), await txt('#fcBox'));
 await page.fill('#fcAmount', '5000'); await page.click('#fcSave'); await page.waitForSelector('.cfm [data-y]'); await page.click('.cfm [data-y]'); await page.waitForTimeout(400);
 ok('previsão: a fatura aberta do mês seguinte vira a previsão dessa fatura', /Fatura de (dezembro|janeiro): com R\$ 5\.000 até/.test(await txt('#fcBox')), await txt('#fcBox'));

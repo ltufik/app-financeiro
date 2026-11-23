@@ -25,7 +25,7 @@ export const SURVEYS = {
   nps: { title: 'Como está sendo usar o Pra Onde Foi?', intro: 'Você já usa o app há um tempo. Sua opinião decide o que vem a seguir. Leva 1 minuto.',
     questions: [
       { id: 'nota', type: 'scale', q: 'De 0 a 10, quanto você indicaria o app a um amigo?' },
-      { id: 'ajudou', type: 'many', q: 'O que mais ajuda vocês?', options: [['para_onde', 'Ver para onde foi o dinheiro'], ['previsao', 'A previsão do mês'], ['avisos', 'Os avisos no celular'], ['metas', 'Metas e nível do ano'], ['gastos_ano', 'Gastos do ano (IPVA, IPTU...)'], ['perguntar', 'Perguntar ao assistente'], ['familia', 'Ver junto com a família']] },
+      { id: 'ajudou', type: 'many', q: 'O que mais ajuda vocês?', options: [['para_onde', 'Ver para onde foi o dinheiro'], ['previsao', 'A previsão do mês'], ['avisos', 'Os avisos no celular'], ['metas', 'Metas e nível do ano'], ['gastos_ano', 'Contas do ano (IPVA, IPTU...)'], ['perguntar', 'Perguntar ao assistente'], ['familia', 'Ver junto com a família']] },
       { id: 'falta', type: 'text', q: 'O que falta ou atrapalha? (opcional)', optional: true },
     ] },
   familia: { title: 'Como é usar em família?', intro: 'Você entrou pelo convite da família. Queremos saber se o app ajuda vocês a conversar sobre dinheiro. Leva 1 minuto.',
