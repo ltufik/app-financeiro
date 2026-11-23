@@ -111,10 +111,18 @@ export function parseExtratoSantander(lines) {
 const BANKS = [['Nubank', /nu ?pagamentos|nubank/i], ['Itaú', /ita[uú] ?unibanco|banco ita[uú]|itaucard|\bita[uú]\b/i], ['Bradesco', /bradesco/i], ['Santander', /santander/i],
   ['Banco do Brasil', /banco do brasil|\bbb\b.*ourocard|ourocard/i], ['Caixa', /caixa econ[oô]mica/i], ['Inter', /banco inter\b|\binter&co/i], ['C6 Bank', /\bc6 ?bank|banco c6/i],
   ['XP', /\bxp investimentos|banco xp/i], ['BTG Pactual', /btg ?pactual/i], ['Sicredi', /sicredi/i], ['Sicoob', /sicoob/i], ['PicPay', /picpay/i], ['Mercado Pago', /mercado ?pago/i], ['Neon', /\bneon\b/i], ['Original', /banco original/i], ['Porto Bank', /porto ?(bank|seguro cart)/i]];
+// Which bank issued the document: the first bank named OUTSIDE the movement lines (header, footer, agency).
+// A movement line (with a value, or a Pix/TED/transfer) names the OTHER side's bank: "PIX RECEBIDO ... BCO BRADESCO"
+// in a Santander statement must not make it a Bradesco statement. When only movement lines name a bank: null
+// (unknown is better than wrong; the review screen lets the person pick it).
+const MOVE = /\d,\d{2}\b|\b(pix|ted|doc|transf|transfer[eê]ncia|pagamento|boleto|dep[oó]sito|recebid[oa]|enviad[oa])\b/i;
+export const BANK_NAMES = BANKS.map(b => b[0]);
 export function detectBank(text) {
-  const head = String(text || '').slice(0, 6000);
-  for (const [name, re] of BANKS) if (re.test(head)) return name;
-  for (const [name, re] of BANKS) if (re.test(text)) return name;
+  const lines = String(text || '').split('\n');
+  for (const line of lines) {
+    if (MOVE.test(line)) continue;
+    for (const [name, re] of BANKS) if (re.test(line)) return name;
+  }
   return null;
 }
 

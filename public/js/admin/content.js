@@ -7,7 +7,7 @@ import { NEW_DOCS, DOC_SONHO, DOC_SEGURANCA, DOC_DORES, DOC_PATRIMONIO, DOC_PARC
 export const FEATURE_LABELS = {
   'aba.inicio': 'Abriu o Início', 'aba.lancar': 'Abriu Lançar', 'aba.graficos': 'Abriu Gráficos', 'aba.perguntar': 'Abriu Perguntar', 'aba.extrato': 'Abriu Extrato', 'aba.menu': 'Abriu o menu', 'aba.fechar': 'Abriu Fechar o mês',
   'lancar.falar': 'Lançar: falar ou escrever', 'lancar.nota': 'Lançar: foto da nota', 'lancar.pdf': 'Lançar: fatura ou extrato', 'lancar.mao': 'Lançar: à mão',
-  'lancar.salvar': 'Salvou lançamento falado ou escrito', 'lancar.pdf_ok': 'Importou fatura ou extrato', 'lancar.nota_ok': 'Salvou nota fiscal',
+  'lancar.salvar': 'Salvou lançamento falado ou escrito', 'lancar.pdf_ok': 'Importou fatura ou extrato', 'lancar.banco_trocado': 'Trocou o banco que o app leu na fatura ou extrato', 'lancar.nota_ok': 'Salvou nota fiscal',
   'perguntar.enviar': 'Pergunta ao assistente', 'fechar.mes': 'Fechou um mês', 'graficos.salvar': 'Salvou gráfico', privacidade: 'Modo privacidade',
   'opiniao.erro': 'Mandou erro', 'opiniao.ideia': 'Mandou ideia', 'opiniao.critica': 'Mandou crítica', 'duvida.ler': 'Leu uma dúvida', 'duvida.perguntar': 'Perguntou nas Dúvidas',
   'menu.familia': 'Menu: Família', 'menu.divisao': 'Menu: Quem paga o quê', 'menu.metas': 'Menu: Metas', 'menu.patrimonio': 'Menu: Patrimônio', 'menu.categorias': 'Menu: Categorias',

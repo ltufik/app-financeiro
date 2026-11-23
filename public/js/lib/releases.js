@@ -604,4 +604,8 @@ export const RELEASES = [
     semTeste: 'Só a Central, coberto pelo teste automático da limpeza de erros.',
     addBacklog: [{ id: 'erro_load_failed', title: 'Central → Erros: "TypeError: Load failed" (internet que caiu no iPhone) não conta como erro', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'A queda de conexão da Paty no Início apareceu como erro novo; o filtro só pegava "Load failed" sem o "TypeError:" na frente.' }],
     backlog: ['erro_load_failed'] },
+  { id: 'r3.0.4', version: 'v3.0.4', at: '2026-11-23T15:30:00Z',
+    news: { id: 'n20261123a', title: 'O banco certo no extrato', items: ['Um extrato com pix de outros bancos não é mais confundido com eles.', 'Se o banco vier errado, dá para trocar na conferência, antes de salvar.'] },
+    addBacklog: [{ id: 'banco_errado_extrato', title: 'Extrato parcial do Santander lido como Bradesco, sem opção de corrigir', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O app pegava o primeiro banco citado em qualquer linha, inclusive no pix de outra pessoa. Agora vale o banco do cabeçalho e a conferência tem o campo "Banco da conta" para trocar.' }],
+    backlog: ['banco_errado_extrato'] },
 ];

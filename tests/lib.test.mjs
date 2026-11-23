@@ -106,6 +106,10 @@ test('outros bancos: banco detectado e conferência por total da fatura ou por t
   assert.equal(detectBank('Nu Pagamentos S.A. - Fatura de outubro'), 'Nubank');
   assert.equal(detectBank('Banco Itaú Unibanco S.A.'), 'Itaú');
   assert.equal(detectBank('qualquer coisa'), null);
+  // 3.0.4: a Santander statement with Pix from other banks is still Santander; only movement lines naming a bank -> null.
+  assert.equal(detectBank('Extrato de conta corrente\n20/11 PIX RECEBIDO JOAO BCO BRADESCO S.A. 150,00\n21/11 TED ITAU UNIBANCO 80,00\nBanco Santander (Brasil) S.A. - Ouvidoria'), 'Santander');
+  assert.equal(detectBank('Conta corrente\n20/11 PIX ENVIADO MARIA BRADESCO 150,00'), null);
+  assert.equal(detectBank('Santander\nAgência 1234 Conta 01-000000-0\n20/11 PIX RECEBIDO BRADESCO 10,00'), 'Santander');
   const items = [{ card: '', amount: 100 }, { card: '', amount: 50.5 }, { card: '', amount: -20 }];
   assert.equal(checkFatura(items, [], 130.5).ok, true);
   assert.equal(checkFatura(items, [], 150.5).ok, false);

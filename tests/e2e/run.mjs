@@ -641,6 +641,10 @@ if (fatura && backup) {
   ok('fatura lida com totais conferidos', log.includes('Totais por cartão conferem'), log);
   ok('revisão sem pendências (regras + parcelas)', (await txt('#review')).includes('0 a classificar'), (await txt('#review .pill')));
   await shot('05-revisao');
+  ok('3.0.4: a conferência mostra o banco lido (Santander) e deixa trocar', await page.$eval('#rvBank', e => e.value) === 'Santander' && (await txt('#review')).includes('Leu errado? Troque aqui.'));
+  await page.selectOption('#rvBank', 'Bradesco');
+  ok('3.0.4: trocar o banco fica na tela até salvar', await page.$eval('#rvBank', e => e.value) === 'Bradesco');
+  await page.selectOption('#rvBank', 'Santander');
   await page.click('#rvSave');
   await page.waitForSelector('.cfm [data-y]');
   ok('substituir mês já salvo pede confirmação', (await txt('.cfm')).includes('já tem a fatura salvo') || (await txt('.cfm')).includes('já tem a fatura'), await txt('.cfm'));
