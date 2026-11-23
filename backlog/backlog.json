@@ -1,5 +1,14 @@
 [
  {
+  "id": "erro_load_failed",
+  "tipo": "bug",
+  "title": "Central → Erros: \"TypeError: Load failed\" (internet que caiu no iPhone) não conta como erro",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "A queda de conexão da Paty no Início apareceu como erro novo; o filtro só pegava \"Load failed\" sem o \"TypeError:\" na frente."
+ },
+ {
   "id": "open_finance_v2",
   "tipo": "bug",
   "title": "Teste Open Finance: transações pelo /v2/transactions da Pluggy (o antigo respondia \"deprecated\")",
