@@ -1,5 +1,25 @@
 [
  {
+  "id": "leitura_corrige_aprende",
+  "cost": false,
+  "from": [],
+  "notes": "Princípio do Luiz: inteligência de leitura + sempre poder corrigir + quando corrige, aprende. Guardar por família a 'marca' do documento (cabeçalho, agência/conta, final do cartão, layout) e o que a pessoa escolheu; na próxima, já vem certo e diz 'aprendi com a sua correção'. Varrer todos os campos lidos da conferência (tipo, banco, cartão, mês, valores) para garantir que dá para corrigir cada um. Categoria já aprende (regras).",
+  "title": "Leitura que sempre deixa corrigir e aprende com a correção (banco, tipo do documento, cartão, mês, conta)",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "agora",
+  "problem": "O extrato parcial do Santander veio como Bradesco. A 3.0.4 corrigiu a leitura e pôs o campo para trocar o banco, mas a troca não fica guardada: um documento parecido pode errar de novo."
+ },
+ {
+  "id": "banco_errado_extrato",
+  "tipo": "bug",
+  "title": "Extrato parcial do Santander lido como Bradesco, sem opção de corrigir",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "O app pegava o primeiro banco citado em qualquer linha, inclusive no pix de outra pessoa. Agora vale o banco do cabeçalho e a conferência tem o campo \"Banco da conta\" para trocar."
+ },
+ {
   "id": "erro_load_failed",
   "tipo": "bug",
   "title": "Central → Erros: \"TypeError: Load failed\" (internet que caiu no iPhone) não conta como erro",

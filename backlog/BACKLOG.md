@@ -2,10 +2,11 @@
 
 Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 
-## Agora (2)
+## Agora (3)
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
+|  | Leitura que sempre deixa corrigir e aprende com a correção (banco, tipo do documento, cartão, mês, conta) | `leitura_corrige_aprende` | M | Luiz |
 |  | Encaminhar os e-mails do banco (Pix, fatura e extrato) para o endereço da família, entrando sozinhos | `email_banco` | M | Luiz |
 |  | Revisão da jornada "for dummies": funções que aparecem ao terminar algo, nomes fáceis, muita comunicação e jornadas ligadas (sem procurar) | `jornada_for_dummies` | G | Luiz |
 
@@ -53,7 +54,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 9 | Plano pago / modelo de negócio | `plano_pago_modelo_de_negocio` | M | Produto |
 | 10 | Cobrança honesta (teste sem cartão, aviso de renovação, cancelar em 1 clique) | `cobranca_honesta_teste_sem_cartao_aviso_` | P | Benchmarking |
 
-## Feito: 175 itens
+## Feito: 176 itens
 
 ## Descartado: 4 itens
 
