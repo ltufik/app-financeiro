@@ -12,6 +12,7 @@ import * as db from '../db.js';
 import { askJSON, aiErrorText } from '../ai.js';
 import { attachMic, speechSupported } from '../speech.js';
 import { classify } from '../lib/categorize.js';
+import { docMarks, recall, learn } from '../lib/doclearn.js';
 import { lineify, detect, parseFaturaSantander, parseExtratoSantander, faturaMonth, checkFatura, checkExtrato, detectBank, BANK_NAMES, MONEY } from '../lib/parse.js';
 import { brl, esc, mLong, addM, todayISO, isoToBr, cycleMonth, norm, round2, thisMonth } from '../lib/format.js';
 import { $, toast, catPicker, confirmInline, invalid, clearInvalid, busy } from '../ui.js';
@@ -331,7 +332,7 @@ async function routeFile(file, from) {
 async function statementFromImage(file, kind) {
   openMode('pdf', false);
   $('#pdfLog').innerHTML = ''; $('#review').hidden = true; $('#pwBox').hidden = true;
-  PDF.bytes = null; PDF.name = file.name || 'imagem'; PDF.bank = null; PDF.pageTexts = null;
+  PDF.bytes = null; PDF.name = file.name || 'imagem'; PDF.bank = null; PDF.pageTexts = null; PDF.text = ''; PDF.marks = [];
   plog(`É ${kind === 'fatura' ? 'uma' : 'um'} ${KIND_LABEL[kind]}. Lendo a imagem...`);
   let blob;
   try { blob = await shrink(file, 2400); } catch (e) { plog('Não consegui abrir a imagem. Se for do iPhone (HEIC), tire um print e envie o print.', 'var(--bad)'); return; }
@@ -471,7 +472,7 @@ async function openPdf(password) {
   }
   const lines1 = pages.flatMap(p => lineify(p.items, p.w, 1)), text = lines1.join('\n'), type = detect(text);
   PDF.pageTexts = pages.map(p => lineify(p.items, p.w, 1).join('\n'));
-  PDF.bank = detectBank(text);
+  PDF.bank = detectBank(text); PDF.text = text;
   // What the text says it is decides the path, whatever button was used.
   const cls = classifyText(text, { pages: doc.numPages });
   if (cls.kind === 'comprovante' && canHop()) { plog('É um comprovante: vira um lançamento para você conferir.'); return readProof({ text }); }
@@ -622,6 +623,10 @@ ${chunk.map((r, k) => `${k}. ${r.description} | ${r.amount}`).join('\n')}`, { ti
 }
 
 async function reviewRows(source, rows, month, info) {
+  // What the family taught (a bank they corrected for this account, card or layout) wins over the reading.
+  PDF.marks = docMarks(PDF.text || '', { cards: source === 'cartao' ? [...rows.map(r => r.card), ...(info.checks || []).map(c => c.card)] : [] });
+  const got = recall(settings().readlearn, PDF.marks);
+  if (got && got.bank !== (info.bank || PDF.bank)) { info.bank = got.bank; info.learned = got.how; track('lancar.lembrou_banco'); }
   if (!month) month = addM((source === 'cartao' ? latestCard() : latestClosed()) || addM(thisMonth(), -1), 1);
   const prevCard = source === 'cartao' ? txsOf(addM(month, -1)).filter(t => t.source === 'cartao') : null;
   rows.forEach(r => { r.source = source; const k = classify(r, S.prepared, prevCard); if (k) { r.category = k.category; r.how = k.how; r.pending = false; } });
@@ -658,7 +663,7 @@ function renderReview() {
   const bankNow = info.bank || PDF.bank || '', bankOpts = [...new Set([...(bankNow ? [bankNow] : []), ...BANK_NAMES, 'Outro'])];
   box.innerHTML = `<h3>${esc(head)}</h3><p class="small muted">${esc(sub)}</p>
   <label class="f" style="margin-top:10px;max-width:260px">${source === 'cartao' ? 'Banco do cartão' : 'Banco da conta'}<select id="rvBank"><option value=""${bankNow ? '' : ' selected'}>Não sei / escolher</option>${bankOpts.map(b => `<option${b === bankNow ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>
-    <span class="tiny muted">${bankNow ? 'Leu errado? Troque aqui.' : 'Não achei o banco no documento: escolha para não misturar com outra conta.'}</span></label>
+    <span class="tiny muted">${info.learned ? 'Aprendi com a sua correção. Se mudou, troque aqui.' : bankNow ? 'Leu errado? Troque aqui.' : 'Não achei o banco no documento: escolha para não misturar com outra conta.'}</span></label>
   <label class="f" style="margin-top:10px;max-width:260px">Salvar no mês<select id="rvMonth">${months.map(k => `<option value="${k}"${k === R.month ? ' selected' : ''}>${mLong(k)}</option>`).join('')}</select></label>
   ${info.ok === false ? `<p class="banner no" style="margin-top:10px">A soma não bateu com o total do documento. Confira os valores com a fatura ou o extrato antes de salvar; se faltar algum lançamento, você pode lançar à mão depois.</p>` : ''}
   ${exist ? `<p class="banner at" style="margin-top:10px">${source === 'cartao' ? 'Esta fatura' : 'Este extrato'}${thisDoc ? ` (${esc(thisDoc)})` : ''} já foi ${source === 'cartao' ? 'enviada' : 'enviado'} para ${mLong(R.month)}. Salvar troca ${source === 'cartao' ? 'a anterior' : 'o anterior'} por ${source === 'cartao' ? 'esta' : 'este'}${otherDocs ? `; ${esc(otherDocs)} continua como está` : ''}.</p>` : ''}
@@ -686,7 +691,7 @@ function renderReview() {
     $('#rvPend').querySelectorAll('input').forEach(inp => inp.onchange = () => { pend[+inp.dataset.i]._match = inp.checked; });
   }
   $('#rvPriv')?.addEventListener('change', e => { R.priv = e.target.checked; });
-  $('#rvBank').onchange = e => { const was = info.bank || PDF.bank || ''; info.bank = e.target.value || null; PDF.bank = info.bank; track('lancar.banco_trocado', { de: was || 'nenhum', para: info.bank || 'nenhum' }); renderReview(); };
+  $('#rvBank').onchange = e => { const was = info.bank || PDF.bank || ''; info.bank = e.target.value || null; PDF.bank = info.bank; info.learned = null; R.bankFixed = true; track('lancar.banco_trocado', { de: was || 'nenhum', para: info.bank || 'nenhum' }); renderReview(); };
   $('#rvMonth').onchange = e => { R.month = e.target.value; R.mm = null; S.txs.forEach(t => { delete t._match; }); renderReview(); };
   $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; docDone('descartado'); };
   $('#rvSave').onclick = async e => {
@@ -710,6 +715,8 @@ async function saveReview(pend) {
     const label = (source === 'cartao' ? 'Fatura de ' : 'Extrato de ') + mLong(month) + (R.cmp?.mode === 'complement' ? ' (parte)' : '');
     track('lancar.pdf_ok'); homeNews(); await db.replaceStatement(S.hh.id, source, month, payload, { cards: R.cmp?.cards || [], unknown: !!R.cmp?.unknown }, pend.filter(e => e._match).map(e => e.id), label, PDF.name, { total: info.total ?? null, venc: info.venc || null, saldoIni: info.saldoIni ?? null, saldoFim: info.saldoFim ?? null, viaClaude: !!info.viaClaude, bank: info.bank || PDF.bank || null, totalsOk: info.ok ?? true });
     if (S.members.length > 1) await rememberCards(source, rvCards(), !!priv);
+    // The bank the person corrected is learned for this document's account, cards and layout (only hashes are kept).
+    if (R.bankFixed && info.bank && PDF.marks?.length) { try { const st = settings(), next = { ...st, readlearn: learn(st.readlearn, PDF.marks, info.bank) }; await db.saveSettings(S.hh.id, next); S.hh.settings = next; track('lancar.aprendeu_banco'); } catch (e) { /* learning is best effort */ } }
     if (priv) track('lancar.privado'); else notifyFamily('imported', { source, month });
     for (const r of rows.filter(r => r.learn)) { try { await db.learnRule(S.hh.id, source, norm(r.description), r.category); S.rules.push({ source, kind: 'exact', pattern: norm(r.description), category: r.category }); } catch (e) { /* learning is best effort */ } }
     await S.reload();

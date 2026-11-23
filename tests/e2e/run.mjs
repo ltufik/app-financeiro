@@ -654,6 +654,9 @@ if (fatura && backup) {
   await page.waitForTimeout(200);
   ok('importar avisa o resto da família', notifies.some(n => n.type === 'imported' && n.source === 'cartao' && n.month === '2026-09'));
   ok('fatura salva no mês certo', lr.p_month === '2026-09' && lr.n === 217, JSON.stringify(lr));
+  await page.waitForFunction(() => (window.__db.households[0].settings.readlearn || []).length > 0, null, { timeout: 5000 }).catch(() => {});
+  { const rl = await page.evaluate(() => window.__db.households[0].settings.readlearn || []);
+    ok('3.0.5: banco trocado na conferência fica aprendido, só com marcas curtas (sem os finais dos cartões)', rl[0]?.bank === 'Santander' && rl[0].marks.some(m => m.startsWith('c:')) && !JSON.stringify(rl).includes('4388'), JSON.stringify(rl).slice(0, 300)); }
   ok('a mesma fatura reenviada troca só ela (as linhas antigas sem cartão)', lr.unknown === true && !(lr.cards || []).includes('8514'), JSON.stringify(lr));
   await page.click('[data-tab=resumo]'); await page.selectOption('#monthSel', '2026-09');
   // Same statement re-imported: only the Allpark parking (R$ 70, reclassified by hand in the original data) may differ.

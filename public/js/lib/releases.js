@@ -608,4 +608,8 @@ export const RELEASES = [
     news: { id: 'n20261123a', title: 'O banco certo no extrato', items: ['Um extrato com pix de outros bancos não é mais confundido com eles.', 'Se o banco vier errado, dá para trocar na conferência, antes de salvar.'] },
     addBacklog: [{ id: 'banco_errado_extrato', title: 'Extrato parcial do Santander lido como Bradesco, sem opção de corrigir', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'O app pegava o primeiro banco citado em qualquer linha, inclusive no pix de outra pessoa. Agora vale o banco do cabeçalho e a conferência tem o campo "Banco da conta" para trocar.' }],
     backlog: ['banco_errado_extrato'] },
+  { id: 'r3.0.5', version: 'v3.0.5', at: '2026-11-23T17:30:00Z',
+    news: { id: 'n20261123b', title: 'Corrigiu? O app aprende', items: ['Se você troca o banco de uma fatura ou extrato na conferência, o app lembra: da próxima vez, o mesmo cartão ou a mesma conta já vem certo.'] },
+    addBacklog: [{ id: 'leitura_aprende_banco', title: 'Leitura aprende o banco corrigido (pela conta, pelo cartão ou pelo cabeçalho; só marcas curtas, sem os números)', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A 3.0.4 deixou trocar o banco, mas a troca não ficava guardada.', from: ['leitura_corrige_aprende'] }],
+    backlog: ['leitura_aprende_banco'] },
 ];

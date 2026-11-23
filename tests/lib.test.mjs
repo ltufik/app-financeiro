@@ -1777,3 +1777,24 @@ test('Open Finance (teste): transações pelo /v2/transactions, sem pageSize, se
   assert.equal(tx.length, 2); assert.ok(tx.every(c => !c.includes('pageSize') && c.includes('dateFrom=2026-08-19') && c.includes('dateTo=2026-11-17'))); assert.ok(tx[1].includes('after=cur2'));
   delete process.env.PLUGGY_CLIENT_ID; delete process.env.PLUGGY_CLIENT_SECRET;
 });
+
+test('Leitura que aprende: marcas do documento (só hash), lembra o banco corrigido e a correção mais nova vale', async () => {
+  const { docMarks, recall, learn, hashMark } = await import('../public/js/lib/doclearn.js');
+  const ext = 'Extrato de Conta Corrente\nAgência: 1234 Conta Corrente: 01-012345-6\nPeríodo 01/11/2026 a 20/11/2026\n20/11 PIX RECEBIDO BCO BRADESCO 150,00\n21/11 COMPRA CARTAO 30,00';
+  const m = docMarks(ext);
+  assert.ok(m[0].startsWith('a:') && m.some(x => x.startsWith('h:')), JSON.stringify(m));
+  assert.ok(!m.join(' ').includes('1234') && !m.join(' ').includes('012345'), 'nunca o número da conta');
+  assert.deepEqual(docMarks(ext.replace('20/11/2026', '30/11/2026').replace('150,00', '9,99')), m, 'outro período da mesma conta: as mesmas marcas');
+  assert.equal(recall([], m), null);
+  let L = learn([], m, 'Santander', '2026-11-23');
+  assert.deepEqual(recall(L, m), { bank: 'Santander', how: 'conta' });
+  const card = docMarks('Fatura\nResumo', { cards: ['4388', '0947'] });
+  assert.equal(card.filter(x => x.startsWith('c:')).length, 2);
+  L = learn(L, card, 'Nubank', '2026-11-24');
+  assert.equal(recall(L, docMarks('outro layout', { cards: ['4388'] })).bank, 'Nubank', 'mesmo cartão, mesmo banco');
+  L = learn(L, m, 'Itaú', '2026-11-25');
+  assert.equal(recall(L, m).bank, 'Itaú', 'a correção mais nova vale');
+  assert.equal(L.filter(e => e.bank === 'Santander').length, 0, 'a marca antiga sai');
+  assert.equal(hashMark('x'), hashMark('x')); assert.notEqual(hashMark('x'), hashMark('y'));
+  assert.deepEqual(learn(L, [], 'X'), L);
+});
