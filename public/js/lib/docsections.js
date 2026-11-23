@@ -528,3 +528,23 @@ Como usar em cada entrega:
 3. Mudou cor, fonte ou componente no app: atualizar o design system.
 
 Os links são privados do Luiz; para mostrar a alguém, compartilhar pelo menu Compartilhar de cada um.` };
+
+export const DOC_COPIA = { id: 'copia_semanal', title: 'Cópia semanal do banco e como restaurar (3.0.6)', body: `O Supabase grátis não guarda cópias que a gente consiga baixar. Por isso, todo domingo às 3h37 (horário de Brasília), o GitHub faz uma cópia (.github/workflows/copia.yml).
+
+O que o robô faz:
+1. Copia os dados (esquemas public e auth) pelo Session pooler do Supabase.
+2. Testa a cópia: cria um banco vazio, roda o supabase/schema.sql e carrega a cópia. Cada tabela tem de voltar com as mesmas linhas, e famílias e lançamentos não podem estar vazios (scripts/copia-restaura.sh). O resumo mostra só os nomes das tabelas e as contagens.
+3. Criptografa com a senha do BACKUP_PASSPHRASE (AES256) e guarda como artefato privado por 90 dias. Nada vai para o repositório.
+Se algo falhar, o GitHub manda e-mail para o Luiz.
+
+Segredos (GitHub → Settings → Secrets and variables → Actions):
+- SUPABASE_DB_URL: Supabase → Connect → Session pooler (a URI com a senha do banco).
+- BACKUP_PASSPHRASE: uma senha longa só sua. Guarde num gerenciador de senhas: sem ela, a cópia não abre.
+
+Rodar na hora: GitHub → Actions → Cópia semanal do banco → Run workflow.
+
+Restaurar (num desastre):
+1. Baixe o artefato copia-AAAA-MM-DD da última execução verde.
+2. Descriptografe: gpg -d copia-AAAA-MM-DD.dump.gpg > copia.dump (pede a senha).
+3. Num projeto Supabase novo: rode o supabase/schema.sql; depois pg_restore --data-only --schema=public --no-owner --no-privileges -d "<URI do Session pooler>" copia.dump. Os logins (auth) voltam com pg_restore --data-only --schema=auth (os usuários não precisam se cadastrar de novo).
+4. Troque SUPABASE_URL e as chaves no Vercel e faça Redeploy.` };

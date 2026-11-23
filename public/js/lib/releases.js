@@ -4,7 +4,7 @@
 // The server applies each entry once, at the first app opening after the deploy.
 // tests/release.test.mjs blocks a release without its entry (Definição de pronto, see CLAUDE.md).
 import { BUG_STUDY } from './bugstudy.js';
-import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_FUNIL, DOC_TRILHA, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
+import { NEW_DOCS, DOC_MAPA, DOC_REVISAO, DOC_CUSTOS, DOC_COMBO, DOC_FUNIL, DOC_TRILHA, DOC_COPIA, DOC_DESIGN, DOC_AVISOS, DOC_SONHO, DOC_SEGURANCA, DOC_LANCAR, DOC_TESTES, DOC_DORES, DOC_PATRIMONIO, DOC_PARCELAS, DOC_TARIFAS, DOC_RETRO_INICIO, DOC_HISTORIAS, DOC_GASTOS_ANO, DOC_PREVISAO, DOC_INICIO, DOC_ENTREGAS, DOC_SAUDE, DOC_CSP, DOC_LIMITES, DOC_ROBO_BACKLOG, DOC_SAQUES, DOC_REGRAS, DOC_REPETIDOS, DOC_PESQUISA, DOC_PRIVADO, DOC_MENSAGENS, DOC_MISSOES, DOC_VER_CONTA, DOC_INICIO_CARDS } from './docsections.js';
 
 export const RELEASES = [
   { id: 'r27', version: 'v26', at: '2026-10-30T15:00:00Z', backlog: [], news: { id: 'n20261030', title: 'Sua opinião agora tem lugar no app', items: [
@@ -612,4 +612,8 @@ export const RELEASES = [
     news: { id: 'n20261123b', title: 'Corrigiu? O app aprende', items: ['Se você troca o banco de uma fatura ou extrato na conferência, o app lembra: da próxima vez, o mesmo cartão ou a mesma conta já vem certo.'] },
     addBacklog: [{ id: 'leitura_aprende_banco', title: 'Leitura aprende o banco corrigido (pela conta, pelo cartão ou pelo cabeçalho; só marcas curtas, sem os números)', status: 'feito', origin: 'Luiz', effort: 'P', problem: 'A 3.0.4 deixou trocar o banco, mas a troca não ficava guardada.', from: ['leitura_corrige_aprende'] }],
     backlog: ['leitura_aprende_banco'] },
+  { id: 'r3.0.6', version: 'v3.0.6', at: '2026-11-23T18:30:00Z', addDocs: [DOC_COPIA],
+    semNovidade: 'Só por trás: a cópia semanal do banco roda no GitHub; quem usa não vê nada diferente (a página Sobre o app conta que ela existe).',
+    semTeste: 'Não tem tela: a própria cópia testa a restauração toda semana, tabela por tabela.',
+    backlog: ['backup_semanal'] },
 ];
