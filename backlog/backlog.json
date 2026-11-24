@@ -1,5 +1,38 @@
 [
  {
+  "id": "mes_em_gastos",
+  "from": [
+   "jornada_for_dummies"
+  ],
+  "title": "Seletor de mês dentro de Gastos (e o Início sempre no mês atual)",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "proximo",
+  "problem": "Parte da proposta da jornada que ficou para depois: o Início também usa o mês do topo."
+ },
+ {
+  "id": "jornada_3_1",
+  "from": [
+   "jornada_for_dummies"
+  ],
+  "title": "Jornada 3.1: abas Início · Gastos · + Adicionar · Ferramentas · Mais, página Ferramentas, nomes do dia a dia e a pergunta no Início",
+  "effort": "G",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Funções escondidas e nomes de banco ou de contador (Lançar, Extrato, Patrimônio, Previsão)."
+ },
+ {
+  "id": "leitura_aprende_banco",
+  "from": [
+   "leitura_corrige_aprende"
+  ],
+  "title": "Leitura aprende o banco corrigido (pela conta, pelo cartão ou pelo cabeçalho; só marcas curtas, sem os números)",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "A 3.0.4 deixou trocar o banco, mas a troca não ficava guardada."
+ },
+ {
   "id": "leitura_corrige_aprende",
   "cost": false,
   "from": [],
@@ -543,7 +576,7 @@
   "where": "Banco",
   "effort": "M",
   "origin": "Luiz",
-  "status": "proximo",
+  "status": "feito",
   "problem": "Se o Supabase perder os dados, não há cópia nossa"
  },
  {

@@ -14,7 +14,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 
 | Ordem | Item | id | Esforço | Origem |
 |---|---|---|---|---|
-|  | [seguranca] Cópia semanal do banco fora do Supabase, com teste de restauração | `backup_semanal` | M | Luiz |
+|  | Seletor de mês dentro de Gastos (e o Início sempre no mês atual) | `mes_em_gastos` | M | Luiz |
 |  | [backend] Erros dos celulares agrupados por tipo e versão | `erros_agrupados` | P | Luiz |
 |  | Cores do app (ou dos banners) pelo nível de economia | `cores_por_nivel` | P | Luiz |
 | 7 | Ver o resultado antes de criar a conta | `resultado_antes_da_conta` | G | Pesquisa de dores (nov/2026) |
@@ -54,7 +54,7 @@ Não edite aqui: mude na Central ou peça ao Claude (arquivos em backlog/ops/).
 | 9 | Plano pago / modelo de negócio | `plano_pago_modelo_de_negocio` | M | Produto |
 | 10 | Cobrança honesta (teste sem cartão, aviso de renovação, cancelar em 1 clique) | `cobranca_honesta_teste_sem_cartao_aviso_` | P | Benchmarking |
 
-## Feito: 176 itens
+## Feito: 179 itens
 
 ## Descartado: 4 itens
 
