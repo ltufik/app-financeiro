@@ -1,5 +1,23 @@
 [
  {
+  "id": "subiu_sem_historico",
+  "tipo": "bug",
+  "title": "\"Subiu\" para conta nova (LinkedIn sem histórico)",
+  "effort": "P",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "Conta nova ou com o 1º mês promocional aparecia como aumento. Agora só com 3 meses de histórico antes da última cobrança."
+ },
+ {
+  "id": "extrato_duplica_banco",
+  "tipo": "bug",
+  "title": "Extrato atualizado do Santander lido como Bradesco duplicava a conta e voltava a pedir para abater o financiamento",
+  "effort": "M",
+  "origin": "Luiz",
+  "status": "feito",
+  "problem": "O banco vinha da 2ª linha do pix (entre os lançamentos); com o banco errado, o extrato virava outra conta e tudo entrava de novo, inclusive a amortização já abatida."
+ },
+ {
   "id": "mes_em_gastos",
   "from": [
    "jornada_for_dummies"
