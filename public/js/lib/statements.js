@@ -32,13 +32,26 @@ const SAME_SHARE = 0.8;
 // existing: the month's imported rows of that source (not the ones typed by hand).
 // Returns { mode: 'new' | 'replace' | 'alongside' | 'complement', cards: keys to replace, unknown: replace rows with no key,
 //           others: keys of other documents kept, overlap: share of the new rows already there,
-//           fresh: indexes of the new rows to save (complement), dup: how many were already there }.
+//           fresh: indexes of the new rows to save (complement), dup: how many were already there,
+//           rekey: the account/card already in the month that this document really is, when its own key was read wrong }.
 export function compareStatement({ keys = [], rows = [], existing = [] }) {
   const all = rows.map((_, i) => i);
   if (!existing.length) return { mode: 'new', cards: [], unknown: false, others: [], overlap: 0, fresh: all, dup: 0 };
   const known = new Set(existing.filter(t => t.card).map(t => String(t.card))), noKey = existing.filter(t => !t.card);
   const sameKeys = keys.filter(k => known.has(k)), others = [...known].filter(k => !keys.includes(k));
   const judge = pool => { const m = matchRows(rows, pool), ovNew = rows.length ? m.hit / rows.length : 0, ovOld = pool.length ? m.hit / pool.length : 0; return { ...m, ovNew, same: ovNew >= SAME_SHARE && ovOld >= SAME_SHARE }; };
+  // The rows are another account's or card's (an updated statement read with the wrong bank): it is that one, even
+  // when the wrong one is in the month too (sent wrong before). rekey says which, so the screen fixes the bank.
+  if (keys.length) {
+    const own = sameKeys.length ? judge(existing.filter(t => t.card && sameKeys.includes(String(t.card)))).ovNew : 0;
+    let best = null;
+    for (const k of known) { if (keys.includes(k)) continue; const j = judge(existing.filter(t => String(t.card) === k)); if (j.hit >= 3 && j.ovNew >= 0.5 && j.ovNew > own + 0.2 && (!best || j.ovNew > best.j.ovNew)) best = { k, j }; }
+    if (best) {
+      const { k, j } = best, rest = others.filter(x => x !== k);
+      return j.same ? { mode: 'replace', cards: [k], unknown: false, others: rest, overlap: j.ovNew, fresh: all, dup: 0, rekey: k }
+        : { mode: 'complement', cards: [], unknown: false, others: rest, overlap: j.ovNew, fresh: j.fresh, dup: j.hit, keys: [k], rekey: k };
+    }
+  }
   // The document names its card or account and that one is already in the month.
   if (sameKeys.length) {
     const j = judge(existing.filter(t => t.card && sameKeys.includes(String(t.card))));

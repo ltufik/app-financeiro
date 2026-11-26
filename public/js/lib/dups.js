@@ -27,7 +27,8 @@ const shift = (iso, n) => new Date(Date.parse(iso + 'T12:00:00Z') + n * 864e5).t
   Repeated entries already saved (a typed entry and the bank's, any month, same source, same amount, dates up to 5
   days apart), and financing payoffs whose typed entry was replaced by the statement's (the link points to an entry
   that no longer exists). skip: pairs the person said are not repeated ("manualId|bankId").
-  -> { pairs: [{ manual, bank }], orphans: [{ debt, entry, bank }] }
+  Also the same statement saved under two accounts (pairs with copy: true, see below).
+  -> { pairs: [{ manual, bank, copy? }], orphans: [{ debt, entry, bank }] }
 */
 export function findDups(txs = [], debts = [], skip = []) {
   const no = new Set(skip || []), used = new Set(), pairs = [];
@@ -37,6 +38,19 @@ export function findDups(txs = [], debts = [], skip = []) {
     const c = bank.filter(b => !used.has(b.id) && b.source === m.source && same(b.amount, m.amount) && !no.has(`${m.id}|${b.id}`) && !linked.has(b.id)
       && (m.date && b.date ? near(m.date, b.date) : b.month === m.month)).sort((x, y) => dayDiff(x.date || m.date, m.date) - dayDiff(y.date || m.date, m.date))[0];
     if (c) { used.add(c.id); pairs.push({ manual: m, bank: c }); }
+  }
+  // The same statement saved under two accounts (an updated statement read with the wrong bank): the same entry
+  // (day, value, description) in two accounts of the month. The account with more entries that month is the right
+  // one; the other's entry is the copy (pair.copy = true; "manual" is the copy, "bank" the one that stays).
+  const rowsOf = new Map(), sig = t => [t.month, t.date || '', (+t.amount).toFixed(2), norm(t.description)].join('|');
+  const imp = bank.filter(t => t.source === 'conta' && String(t.card || '').startsWith('@') && !used.has(t.id));
+  for (const t of imp) rowsOf.set(t.month + t.card, (rowsOf.get(t.month + t.card) || 0) + 1);
+  const groups = new Map(); for (const t of imp) { const k = sig(t); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+  for (const g of groups.values()) {
+    const cards = [...new Set(g.map(t => t.card))]; if (cards.length < 2) continue;
+    const keepCard = cards.sort((a, b) => (rowsOf.get(g[0].month + b) || 0) - (rowsOf.get(g[0].month + a) || 0) || a.localeCompare(b))[0];
+    const keepers = g.filter(t => t.card === keepCard), copies = g.filter(t => t.card !== keepCard);
+    copies.forEach((c, i) => { const k = keepers[i % keepers.length]; if (!k || used.has(c.id) || no.has(`${c.id}|${k.id}`)) return; used.add(c.id); pairs.push({ manual: c, bank: k, copy: true }); });
   }
   const orphans = [];
   for (const d of debts) for (const e of d.log || []) {

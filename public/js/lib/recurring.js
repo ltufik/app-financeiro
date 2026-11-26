@@ -27,7 +27,8 @@ export function findRecurring(txs, months, { idx } = {}) {
     if (prevMax > prevMin * 1.2 || mx > 3000) continue;
     const lastMonth = ks[ks.length - 1], last = vals[vals.length - 1], prev = vals[vals.length - 2];
     if (last > prev * 2.5 || last < prev * 0.4) continue;
-    const rise = last - prev >= 1 && last > prev * 1.03 ? Math.round((last - prev) * 100) / 100 : 0;
+    // "Subiu" needs history to compare: 3 months with a charge before the last one (a new subscription is new, not a rise).
+    const rise = prevVals.length >= 3 && last - prev >= 1 && last > prev * 1.03 ? Math.round((last - prev) * 100) / 100 : 0;
     out.push({ name, months: ks.length, lastMonth, last: Math.round(last * 100) / 100, prev: Math.round(prev * 100) / 100, rise, avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 100) / 100, current: lastMonth === months[months.length - 1] });
   }
   return out.sort((a, b) => b.last - a.last);

@@ -644,6 +644,14 @@ function renderReview() {
   const keys = docKeys(source, rows, { bank: info.bank || PDF.bank, checks: info.checks });
   if (source === 'conta' && keys[0]) rows.forEach(r => { r.card = keys[0]; });
   const cmp = R.cmp = compareStatement({ keys, rows, existing: txsOf(R.month).filter(t => t.source === source && !t.manual) });
+  // The rows say it is an account already in the month (an updated statement read with the wrong bank): use that bank,
+  // tell it on screen and learn it for the next time.
+  if (cmp.rekey && source === 'conta' && cmp.rekey.startsWith('@') && cmp.rekey !== keys[0] && !info.rekeyed) {
+    const plain = b => String(b || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '');
+    const name = BANK_NAMES.find(b => '@' + plain(b) === cmp.rekey) || cmp.rekey.charAt(1).toUpperCase() + cmp.rekey.slice(2);
+    info.rekeyed = { from: info.bank || PDF.bank || '', to: name }; info.bank = name; PDF.bank = name; info.learned = null; R.bankFixed = true;
+    track('lancar.conta_pelos_lancamentos'); return renderReview();
+  }
   const exist = cmp.mode === 'replace';
   // Another part of a document already in the month (a statement split in two files): only what is new is shown and saved.
   const part = cmp.mode === 'complement', shown = R.save = part ? rows.filter((_, i) => cmp.fresh.includes(i)) : rows;
@@ -663,7 +671,7 @@ function renderReview() {
   const bankNow = info.bank || PDF.bank || '', bankOpts = [...new Set([...(bankNow ? [bankNow] : []), ...BANK_NAMES, 'Outro'])];
   box.innerHTML = `<h3>${esc(head)}</h3><p class="small muted">${esc(sub)}</p>
   <label class="f" style="margin-top:10px;max-width:260px">${source === 'cartao' ? 'Banco do cartão' : 'Banco da conta'}<select id="rvBank"><option value=""${bankNow ? '' : ' selected'}>Não sei / escolher</option>${bankOpts.map(b => `<option${b === bankNow ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>
-    <span class="tiny muted">${info.learned ? 'Aprendi com a sua correção. Se mudou, troque aqui.' : bankNow ? 'Leu errado? Troque aqui.' : 'Não achei o banco no documento: escolha para não misturar com outra conta.'}</span></label>
+    <span class="tiny muted">${info.rekeyed && !info.rekeyed.manual ? `Os lançamentos são os da conta ${esc(info.rekeyed.to)} já salva no mês${info.rekeyed.from ? ` (o documento parecia ${esc(info.rekeyed.from)})` : ''}. Se não for, troque aqui.` : info.learned ? 'Aprendi com a sua correção. Se mudou, troque aqui.' : bankNow ? 'Leu errado? Troque aqui.' : 'Não achei o banco no documento: escolha para não misturar com outra conta.'}</span></label>
   <label class="f" style="margin-top:10px;max-width:260px">Salvar no mês<select id="rvMonth">${months.map(k => `<option value="${k}"${k === R.month ? ' selected' : ''}>${mLong(k)}</option>`).join('')}</select></label>
   ${info.ok === false ? `<p class="banner no" style="margin-top:10px">A soma não bateu com o total do documento. Confira os valores com a fatura ou o extrato antes de salvar; se faltar algum lançamento, você pode lançar à mão depois.</p>` : ''}
   ${exist ? `<p class="banner at" style="margin-top:10px">${source === 'cartao' ? 'Esta fatura' : 'Este extrato'}${thisDoc ? ` (${esc(thisDoc)})` : ''} já foi ${source === 'cartao' ? 'enviada' : 'enviado'} para ${mLong(R.month)}. Salvar troca ${source === 'cartao' ? 'a anterior' : 'o anterior'} por ${source === 'cartao' ? 'esta' : 'este'}${otherDocs ? `; ${esc(otherDocs)} continua como está` : ''}.</p>` : ''}
@@ -691,7 +699,7 @@ function renderReview() {
     $('#rvPend').querySelectorAll('input').forEach(inp => inp.onchange = () => { pend[+inp.dataset.i]._match = inp.checked; });
   }
   $('#rvPriv')?.addEventListener('change', e => { R.priv = e.target.checked; });
-  $('#rvBank').onchange = e => { const was = info.bank || PDF.bank || ''; info.bank = e.target.value || null; PDF.bank = info.bank; info.learned = null; R.bankFixed = true; track('lancar.banco_trocado', { de: was || 'nenhum', para: info.bank || 'nenhum' }); renderReview(); };
+  $('#rvBank').onchange = e => { const was = info.bank || PDF.bank || ''; info.bank = e.target.value || null; PDF.bank = info.bank; info.learned = null; info.rekeyed = info.rekeyed ? { ...info.rekeyed, manual: true } : null; R.bankFixed = true; track('lancar.banco_trocado', { de: was || 'nenhum', para: info.bank || 'nenhum' }); renderReview(); };
   $('#rvMonth').onchange = e => { R.month = e.target.value; R.mm = null; S.txs.forEach(t => { delete t._match; }); renderReview(); };
   $('#rvCancel').onclick = async e => { if (!await confirmInline(e.target, { text: 'Descartar a leitura deste PDF? Nada será salvo.', yes: 'Sim, descartar', danger: true })) return; box.hidden = true; $('#pdfLog').innerHTML = ''; R = null; docDone('descartado'); };
   $('#rvSave').onclick = async e => {

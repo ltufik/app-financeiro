@@ -16,14 +16,16 @@ export function hashMark(s) {
 
 /*
   docMarks(text, { cards }) -> ['a:<hash>' agency+account, 'c:<hash>' per card final, 'h:<hash>' header] (strongest first).
-  Header: the first 4 lines with letters, no values and no movement words, digits removed (dates and pages change).
+  Header: up to 4 lines with letters before the first movement (a Pix's second line, between movements, changes every
+  month), digits removed (dates and pages change).
 */
 export function docMarks(text, { cards = [] } = {}) {
   const t = strip(text), out = [];
   const ag = t.match(/ag(?:encia)?\.?\s*[:n.o]*\s*(\d{3,5})/), cc = t.match(/\bc(?:onta|\/c|c)\.?\s*(?:corrente)?\s*[:n.o]*\s*([\d.\-]{5,15}\d)/);
   if (ag && cc) out.push('a:' + hashMark(ag[1] + '/' + cc[1].replace(/\D/g, '')));
   for (const c of [...new Set((cards || []).map(c => String(c || '').replace(/\D/g, '').slice(-4)).filter(c => c.length === 4))].sort()) out.push('c:' + hashMark('card' + c));
-  const head = t.split('\n').filter(l => /[a-z]{3}/.test(l) && !MOVE.test(l)).slice(0, 4).map(l => l.replace(/[\d\W_]+/g, ' ').trim()).filter(Boolean);
+  const ls = t.split('\n'), fm = ls.findIndex(l => MOVE.test(l));
+  const head = (fm < 0 ? ls : ls.slice(0, fm)).filter(l => /[a-z]{3}/.test(l)).slice(0, 4).map(l => l.replace(/[\d\W_]+/g, ' ').trim()).filter(Boolean);
   if (head.length >= 2) out.push('h:' + hashMark(head.join('|')));
   return out;
 }

@@ -91,7 +91,9 @@ export const looksLikeDebtPayment = tx => PAY.test(plain(`${tx?.description || '
 // not yet linked (log txId) nor dismissed.
 export function pendingAmortizations(txs = [], debts = [], dismissed = []) {
   const linked = new Set(debts.flatMap(d => (d.log || []).map(e => e.txId).filter(Boolean))), skip = new Set(dismissed || []);
-  return txs.filter(t => t.source === 'conta' && +t.amount < 0 && !linked.has(t.id) && !skip.has(t.id) && looksLikeDebtPayment(t))
+  // The same payment already abated through another entry (the statement sent twice, or read as another bank): never ask again.
+  const done = t => debts.some(d => { const e = sameAmortization(d.log, t.amount, t.date); return e && e.txId && e.txId !== t.id; });
+  return txs.filter(t => t.source === 'conta' && +t.amount < 0 && !linked.has(t.id) && !skip.has(t.id) && looksLikeDebtPayment(t) && !done(t))
     .map(t => ({ tx: t, debt: debtForTx(t, debts) }))
     // Not sure which financing (two of them, the text names neither): still ask, and the person picks.
     .filter(x => Math.abs(+x.tx.amount) > Math.max(1000, 1.5 * (x.debt ? +x.debt.parcela || 0 : Math.max(0, ...debts.map(d => +d.parcela || 0)))));

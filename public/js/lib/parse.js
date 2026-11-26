@@ -118,11 +118,12 @@ const BANKS = [['Nubank', /nu ?pagamentos|nubank/i], ['Itaú', /ita[uú] ?uniban
 const MOVE = /\d,\d{2}\b|\b(pix|ted|doc|transf|transfer[eê]ncia|pagamento|boleto|dep[oó]sito|recebid[oa]|enviad[oa])\b/i;
 export const BANK_NAMES = BANKS.map(b => b[0]);
 export function detectBank(text) {
-  const lines = String(text || '').split('\n');
-  for (const line of lines) {
-    if (MOVE.test(line)) continue;
-    for (const [name, re] of BANKS) if (re.test(line)) return name;
-  }
+  // Only the header (before the first movement) and the footer (after the last one): a Pix often takes two lines,
+  // and the second ("JOAO SILVA BCO BRADESCO", no value) sits between movements.
+  const lines = String(text || '').split('\n'), mv = lines.map(l => MOVE.test(l));
+  const first = mv.indexOf(true), last = mv.lastIndexOf(true);
+  const outside = first < 0 ? lines : [...lines.slice(0, first), ...lines.slice(last + 1)];
+  for (const line of outside) for (const [name, re] of BANKS) if (re.test(line)) return name;
   return null;
 }
 

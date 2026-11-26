@@ -32,7 +32,8 @@ export const brandOf = name => { const p = plain(name); for (const [re, label, g
   costsReview({ txs, idx, months, settings, today }) -> {
     items: [{ key, name, group, last, year, first, firstMonth, risePct, rise, current, status }], groups: [{id,label,items}],
     total (per month, current ones), year, risen: [...], stopped: [...], savings: { year, items }, due: [...] }
-  first/firstMonth: the oldest month in the last 12 with a charge from the same merchant; risePct: last/first - 1 (from 5%).
+  first/firstMonth: the oldest month in the last 12 with a charge from the same merchant; risePct: last/base - 1 (from 5%), only with
+  3 months or more of history before the last charge (base: middle value of the first 3); a new bill never "rose".
   status from settings.costs.items[key]: 'manter' | 'rever' | 'cancelei'. due: "Vou rever" 7 days ago or more.
 */
 export function costsReview({ txs = [], idx = new Map(), months, settings = {}, today }) {
@@ -79,8 +80,14 @@ export function costsReview({ txs = [], idx = new Map(), months, settings = {}, 
     byBrand.set('manual:celular', { oneLine: false, key: 'manual:celular', name: cs.celular.brand || 'Celular', title: `${cs.celular.brand || 'Celular'} · celular`, group: 'telefone', line: true, manual: true, last: v, first: v, firstMonth: lastData, lastMonth: lastData,
       startMonth: lastData, current: true, keys: [], history: [], house: cs.celular.house || null, services: ['celular'], payChange: null, extras: [] });
   }
-  const items = [...byBrand.values()].map(x => {
-    const risePct = !x.manual && x.oneLine && x.keys.length <= 1 && x.first > 0 && x.last > x.first * 1.05 && x.last - x.first >= 3 ? Math.round((x.last / x.first - 1) * 100) : 0;
+  const items = [...byBrand.values()].map(x0 => { let x = x0;
+    // "Subiu" only for a bill with history to compare: 3 months or more with a charge before the last one. The base is the
+    // middle value of the first 3 (a trial, a pro-rata first month or a one-off discount does not make it "rise").
+    // A new subscription (LinkedIn that started last month) never "rose": it is new.
+    const before = (x.history || []).filter(p => p.month < x.lastMonth && p.value > 0), first3 = before.slice(0, 3).map(p => p.value).sort((a, b) => a - b);
+    const base = first3.length === 3 ? first3[1] : 0;
+    const risePct = !x.manual && x.oneLine && x.keys.length <= 1 && base > 0 && x.last > base * 1.05 && x.last - base >= 3 ? Math.round((x.last / base - 1) * 100) : 0;
+    if (risePct) { x = { ...x, first: r2(base), firstMonth: before[0].month }; }
     // A line decision is kept by its own key; the old one (by brand) still counts while the brand has a single line.
     const st = saved[x.key] || (x.brandKey && saved[x.brandKey]) || null;
     // "Pagamos de outro jeito": the bill left the statements but is still a cost.

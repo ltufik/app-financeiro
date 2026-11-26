@@ -110,6 +110,8 @@ test('outros bancos: banco detectado e conferência por total da fatura ou por t
   assert.equal(detectBank('Extrato de conta corrente\n20/11 PIX RECEBIDO JOAO BCO BRADESCO S.A. 150,00\n21/11 TED ITAU UNIBANCO 80,00\nBanco Santander (Brasil) S.A. - Ouvidoria'), 'Santander');
   assert.equal(detectBank('Conta corrente\n20/11 PIX ENVIADO MARIA BRADESCO 150,00'), null);
   assert.equal(detectBank('Santander\nAgência 1234 Conta 01-000000-0\n20/11 PIX RECEBIDO BRADESCO 10,00'), 'Santander');
+  assert.equal(detectBank('Extrato\n20/11 PIX RECEBIDO 150,00\nJOAO SILVA BCO BRADESCO SA\n21/11 COMPRA 30,00\nSAC Santander 0800'), 'Santander', 'a 2ª linha do pix (sem valor) não conta');
+  assert.equal(detectBank('Extrato\n20/11 PIX RECEBIDO 150,00\nJOAO SILVA BCO BRADESCO SA\n21/11 COMPRA 30,00'), null);
   const items = [{ card: '', amount: 100 }, { card: '', amount: 50.5 }, { card: '', amount: -20 }];
   assert.equal(checkFatura(items, [], 130.5).ok, true);
   assert.equal(checkFatura(items, [], 150.5).ok, false);
@@ -1558,6 +1560,15 @@ test('revisão de custos: acha celular, streaming e apps, quanto subiu desde o m
   assert.deepEqual(c.items.map(x => x.name), ['Vivo', 'Gamma App', 'Spotify']);
   const v = c.items[0];
   assert.equal(v.first, 245); assert.equal(v.firstMonth, '2026-01'); assert.equal(v.risePct, 31);
+  { // 3.1.1: a subscription with little history never "rose" (LinkedIn that started 2 months ago, first month pro-rata).
+    const t2 = [{ id: 'l1', month: '2026-04', source: 'cartao', description: 'DL GOOGLE LINKED', amount: 12, category: 'Assinaturas' },
+      { id: 'l2', month: '2026-05', source: 'cartao', description: 'DL GOOGLE LINKED', amount: 59.99, category: 'Assinaturas' },
+      { id: 'l3', month: '2026-06', source: 'cartao', description: 'DL GOOGLE LINKED', amount: 59.99, category: 'Assinaturas' }];
+    const c2 = costsReview({ txs: t2, idx, settings: {}, today: '2026-06-20' });
+    assert.ok(!c2.items[0]?.risePct, 'conta nova, sem histórico para comparar'); assert.equal(c2.risen.length, 0);
+    const t3 = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'].map((m, i) => ({ id: 'p' + i, month: m, source: 'cartao', description: 'DL GOOGLE LINKED', amount: i === 0 ? 5 : i < 5 ? 59.99 : 89.99, category: 'Assinaturas' }));
+    const l3 = costsReview({ txs: t3, idx, settings: {}, today: '2026-06-20' }).items[0];
+    assert.equal(l3.risePct, 50, 'com histórico, compara com o valor de sempre (o 1º mês promocional não conta)'); assert.equal(l3.first, 59.99); }
   assert.equal(c.total, 360.9); assert.equal(c.count, 2, 'Gamma parou de cobrar: fora do total');
   assert.equal(c.stopped[0].name, 'Gamma App');
   const n = costsNotice(c, 'Luiz Tufik');
@@ -1797,4 +1808,49 @@ test('Leitura que aprende: marcas do documento (só hash), lembra o banco corrig
   assert.equal(L.filter(e => e.bank === 'Santander').length, 0, 'a marca antiga sai');
   assert.equal(hashMark('x'), hashMark('x')); assert.notEqual(hashMark('x'), hashMark('y'));
   assert.deepEqual(learn(L, [], 'X'), L);
+});
+
+test('recorrentes: "subiu" só com 3 meses de histórico antes da última cobrança', async () => {
+  const { findRecurring } = await import('../public/js/lib/recurring.js');
+  const mk = (vals, ms) => vals.map((v, i) => ({ id: 'x' + i, month: ms[i], source: 'cartao', description: 'LINKEDIN PREMIUM', amount: v, category: 'Assinaturas' }));
+  const ms = ['2026-08', '2026-09', '2026-10', '2026-11'];
+  const novo = findRecurring(mk([59.99, 59.99, 69.99], ms.slice(1)), ms, {})[0];
+  assert.ok(novo && novo.rise === 0, 'só 2 meses antes: não "subiu"');
+  const velho = findRecurring(mk([59.99, 59.99, 59.99, 69.99], ms), ms, {})[0];
+  assert.equal(velho.rise, 10);
+});
+
+test('extrato atualizado lido com o banco errado: os lançamentos dizem que é a conta já salva (rekey)', async () => {
+  const { compareStatement } = await import('../public/js/lib/statements.js');
+  const base = [1, 2, 3, 4, 5, 6].map(d => ({ day: '2026-11-0' + d, amount: -(d * 10 + 0.5), description: 'PIX ' + d }));
+  const santander = base.map(r => ({ ...r, card: '@santander' }));
+  const novo = [...base, { day: '2026-11-20', amount: -77, description: 'PIX NOVO' }, { day: '2026-11-21', amount: -88, description: 'PIX NOVO 2' }];
+  let c = compareStatement({ keys: ['@bradesco'], rows: novo, existing: santander });
+  assert.equal(c.rekey, '@santander'); assert.equal(c.mode, 'complement'); assert.deepEqual(c.fresh, [6, 7], 'só o que é novo');
+  // The wrong account was already saved before: the rows still point to Santander when they match it more.
+  const bradescoVelho = base.slice(0, 2).map(r => ({ ...r, card: '@bradesco' }));
+  c = compareStatement({ keys: ['@bradesco'], rows: novo, existing: [...santander, ...bradescoVelho] });
+  assert.equal(c.rekey, '@santander');
+  // Another account of the family with other entries: stays a separate account.
+  c = compareStatement({ keys: ['@itau'], rows: [{ day: '2026-11-03', amount: -999, description: 'X' }, { day: '2026-11-04', amount: -5, description: 'Y' }], existing: santander });
+  assert.equal(c.rekey, undefined); assert.equal(c.mode, 'alongside');
+});
+
+test('financiamento: pagamento já abatido por outro lançamento igual não pergunta de novo', async () => {
+  const { pendingAmortizations } = await import('../public/js/lib/debt.js');
+  const debts = [{ id: 'd1', name: 'Apto', parcela: 3000, log: [{ kind: 'amortizacao', value: 20000, date: '2026-11-10', txId: 'a' }] }];
+  const t = (id, date) => ({ id, source: 'conta', amount: -20000, date, month: '2026-11', description: 'AMORTIZACAO FINANCIAMENTO HABITACIONAL' });
+  const p = pendingAmortizations([t('a', '2026-11-10'), t('b', '2026-11-10')], debts, []);
+  assert.equal(p.length, 0, 'a cópia (b) do pagamento já abatido (a) não volta a perguntar');
+  assert.equal(pendingAmortizations([t('c', '2026-11-10')], [{ ...debts[0], log: [] }], []).length, 1, 'sem abatimento: pergunta');
+});
+
+test('repetidos: o mesmo extrato salvo em duas contas (banco lido errado) vira par de cópia, a conta certa fica', async () => {
+  const { findDups } = await import('../public/js/lib/dups.js');
+  const row = (id, card, d, v, desc) => ({ id, card, source: 'conta', month: '2026-11', date: '2026-11-' + d, amount: v, description: desc });
+  const txs = [row('s1', '@santander', '02', -50, 'PIX A'), row('s2', '@santander', '03', -60, 'PIX B'), row('s3', '@santander', '04', -70, 'PIX C'),
+    row('b1', '@bradesco', '02', -50, 'PIX A'), row('b2', '@bradesco', '03', -60, 'PIX B'), row('i1', '@itau', '02', -50, 'OUTRA COISA')];
+  const { pairs } = findDups(txs, [], []);
+  assert.deepEqual(pairs.filter(p => p.copy).map(p => p.manual.id + '>' + p.bank.id).sort(), ['b1>s1', 'b2>s2']);
+  assert.equal(findDups(txs, [], ['b1|s1']).pairs.filter(p => p.copy).length, 1, '"Não é repetido" vale');
 });

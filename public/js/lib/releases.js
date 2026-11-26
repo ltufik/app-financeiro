@@ -625,4 +625,13 @@ export const RELEASES = [
       { id: 'jornada_3_1', title: 'Jornada 3.1: abas Início · Gastos · + Adicionar · Ferramentas · Mais, página Ferramentas, nomes do dia a dia e a pergunta no Início', status: 'feito', origin: 'Luiz', effort: 'G', problem: 'Funções escondidas e nomes de banco ou de contador (Lançar, Extrato, Patrimônio, Previsão).', from: ['jornada_for_dummies'] },
       { id: 'mes_em_gastos', title: 'Seletor de mês dentro de Gastos (e o Início sempre no mês atual)', status: 'proximo', origin: 'Luiz', effort: 'M', problem: 'Parte da proposta da jornada que ficou para depois: o Início também usa o mês do topo.', from: ['jornada_for_dummies'] },
     ], backlog: ['jornada_3_1'] },
+  { id: 'r3.1.1', version: 'v3.1.1', at: '2026-11-26T13:00:00Z',
+    news: { id: 'n20261126a', title: 'Extrato atualizado sem duplicar', items: [
+      'Mandou o extrato de novo, atualizado? O app reconhece a conta pelos lançamentos e entra só o que é novo, mesmo se o banco vier errado.',
+      'Se o mesmo extrato entrou em duas contas, ele aparece em Gastos → Repetidos para juntar com um toque.',
+      '"Subiu" só para conta com histórico: assinatura nova não aparece como aumento.'] },
+    addBacklog: [
+      { id: 'extrato_duplica_banco', title: 'Extrato atualizado do Santander lido como Bradesco duplicava a conta e voltava a pedir para abater o financiamento', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'M', problem: 'O banco vinha da 2ª linha do pix (entre os lançamentos); com o banco errado, o extrato virava outra conta e tudo entrava de novo, inclusive a amortização já abatida.' },
+      { id: 'subiu_sem_historico', title: '"Subiu" para conta nova (LinkedIn sem histórico)', status: 'feito', tipo: 'bug', origin: 'Luiz', effort: 'P', problem: 'Conta nova ou com o 1º mês promocional aparecia como aumento. Agora só com 3 meses de histórico antes da última cobrança.' },
+    ], backlog: ['extrato_duplica_banco', 'subiu_sem_historico'] },
 ];
